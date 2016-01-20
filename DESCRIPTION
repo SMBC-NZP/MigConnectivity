@@ -1,0 +1,24 @@
+Package: MigConnectivity
+Type: Package
+Title: Estimate Strength of Migratory Connectivity for Migratory Animals
+Version: 0.0.0.9000
+Date: 2015-10-05
+Author: Jeff Hostetler, Emily Cohen, Mike Hallworth, Clark Rushing
+Maintainer: Jeff Hostetler <jeffrey.hostetler@myfwc.com>
+Description: More about what it does (maybe more than one line)
+License: GPL (>=3)
+LazyData: true
+Depends: R (>= 3.0.0)
+Imports:
+  ade4,
+  geosphere,
+  maptools,
+  ncf,
+  raster,
+  rgdal,
+  rgeos,
+  RMark (>= 2.1.14),
+  shape,
+  sp,
+  SpatialTools
+Suggests: testthat
