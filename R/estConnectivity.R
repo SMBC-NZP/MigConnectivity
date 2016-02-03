@@ -47,24 +47,25 @@
 #'   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
 #'      estimated using the highest posterior density (HPD) method.}
 #' }
+#' @example inst/examples/estMCCmrAbundExamples.R
 estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
                              originSites=NULL, targetSites=NULL,
                              nSamples = 1000, row0 = 0, verbose=0,
                              alpha = 0.05) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
-  if ('numeric' %in% class(originRelAbund)) {
+  if (coda::is.mcmc(originRelAbund)) {
+    abundFixed <- FALSE
+    abundParams <- paste('relN[', 1:nOrigin, ']', sep='')
+    abundBase <- colMeans(originRelAbund[row0 + 1:nSamples, abundParams])
+  }
+  else {
     abundFixed <- TRUE
     if (length(originRelAbund)!=nOrigin)
       stop('Number of origin sites must be constant between distance matrix and abundance')
     abundBase <- originRelAbund
   }
-  else {
-    abundFixed <- FALSE
-    abundParams <- paste('relN[', 1:nOrigin, ']', sep='')
-    abundBase <- colMeans(originRelAbund[row0 + 1:nSamples, abundParams])
-  }
-  if ('matrix' %in% class(psi)) {
+  if (is.matrix(psi)) {
     psiFixed <- TRUE
     if (nrow(psi)!=nOrigin || ncol(psi)!=nTarget)
       stop('Size of psi matrix must be consistant with distance matrices')
@@ -72,10 +73,11 @@ estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
   }
   else {
     psiFixed <- FALSE
-    if (!('numeric' %in% class(originSites)) ||
-        !('numeric' %in% class(targetSites)))
+    if (!is.numeric(originSites) || !is.numeric(targetSites))
       stop('Must specify which RMark Psi parameters represent origin and target sites')
-    psiBase <- TransitionMatrix(get.real(psi, "Psi", se=T))[originSites, targetSites]
+    psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
+                                                       se=T))[originSites,
+                                                              targetSites]
     if (any(diag(psi$results$beta.vcv) < 0))
       stop("Can't sample model, negative beta variances")
   }
@@ -91,7 +93,7 @@ estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
     if (psiFixed)
       psiNew <- psiBase
     else
-      psiNew <- make.psiMat.rand(psi, originSites, targetSites)
+      psiNew <- makePsiRand(psi, originSites, targetSites)
     # Point estimates of breeding densities
     if (abundFixed)
       abundNew <- abundBase
@@ -108,16 +110,94 @@ estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
   z0 <- qnorm(sum((sampleMC)<pointMC)/nSamples)
   bcCI <- quantile(sampleMC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=T, type = 8)
-  MC.mcmc <- as.mcmc(sampleMC) # Ha!
-  hpdCI <- HPDinterval(MC.mcmc, 1-alpha)
+  MC.mcmc <- coda::as.mcmc(sampleMC) # Ha!
+  hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
   return(list(sampleMC=sampleMC, pointMC=pointMC, meanMC=meanMC,
               medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
               bcCI=bcCI, hpdCI=hpdCI))
 }
 
 ###############################################################################
-# Resampling of uncertainty from geolocators and/or GPS data
+#
 ###############################################################################
+#' Resampling of uncertainty from geolocators and/or GPS data
+#'
+#' @param isGL Vector indicating which animals were tracked with geolocators.
+#'    Should be length of number of animals tracked, with TRUE for animals in
+#'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
+#' @param geoBias Vector of length 2 indicating expected bias in longitude and
+#'    latitude of \code{targetPoints}, in meters.
+#' @param geoVCov 2x2 matrix with expected variance/covariance in longitude and
+#'    latitude of \code{targetPoints}, in meters.
+#' @param originRelAbund Relative abundances at B origin sites. A numeric
+#'    vector of length B that sums to 1.
+#' @param originDist Distances between the B origin sites.  Symmetric B by B
+#'    matrix.
+#' @param targetDist Distances between the W target sites.  Symmetric W by W
+#'    matrix.
+#' @param targetPoints A \code{SpatialPoints} object, with length number of
+#'    animals tracked.  Each point indicates the point estimate location in
+#'    the non-release season.
+#' @param targetSites Geographic definition of sites in the non-release season.
+#' @param targetAssignment Optional. Point estimate assignment of
+#'    \code{targetPoints} to non-release season sites. Integer vector with
+#'    length number of animals tracked.
+#' @param originPoints A \code{SpatialPoints} object, with length number of
+#'    animals tracked.  Each point indicates the release location of an animal.
+#' @param originSites Geographic definition of sites in the release season.
+#' @param originAssignment Assignment of \code{originPoints} to release season
+#'    sites. Integer vector with length number of animals tracked. Optional,
+#'    but either \code{originAssignment} or \code{originSites} and
+#'    \code{originPoints} should be defined.
+#' @param originNames Optional. Vector of names for the release season sites.
+#' @param targetNames Optional. Vector of names for the non-release season
+#'    sites.
+#' @param nBoot Number of bootstrap runs. Animals are sampled with replacement
+#'    for each of these to estimate sampling uncertainty.
+#' @param verbose Integer 0-3 for level of output during bootstrap: 0 = none,
+#'    1 = every 10, 2 = every run, 3 = every animal.
+#' @param nSim Number of times to sample random points for each animal from
+#'    parametric distribution of non-release season error. Ignored for GPS
+#'    points (assumed to have no geographic error).
+#' @param calcCorr In addition to MC, should function also estimate continuous
+#'    correlation between release and non-release locations?  Default is TRUE.
+#' @param alpha Level for confidence intervals provided.
+#'
+#' @return A list with elements:
+#' \describe{
+#'   \item{\code{sampleMC}}{\code{nBoot} sampled values for MC. Provided
+#'      to allow the user to compute own summary statistics.}
+#'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nBoot} x
+#'      [number of origin sites] x [number of target sites]. Provided
+#'      to allow the user to compute own summary statistics.}
+#'   \item{\code{pointSites}}{Matrix of point assignment of number of animals
+#'      to each origin and target site combination.}
+#'   \item{\code{pointPsi}}{Simple point estimate of psi matrix, as
+#'      \code{prop.table(pointSites, 1)}.}
+#'   \item{\code{pointMC}}{Simple point estimate of MC, using \code{pointPsi}
+#'      and \code{originRelAbund}.}
+#'   \item{\code{meanMC, medianMC}}{Mean and median of \code{sampleMC}.
+#'      Estimates of MC incorporating parametric uncertainty.}
+#'   \item{\code{seMC}}{Standard error of MC, estimated from SD of
+#'      \code{sampleMC}.}
+#'   \item{\code{simpleCI}}{\code{1 - alpha} confidence interval for MC,
+#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'      \code{sampleMC}.}
+#'   \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
+#'      for MC.  Preferable to \code{simpleCI} when \code{pointMC} is the
+#'      best estimate of MC. \code{simpleCI} is preferred when
+#'      \code{medianMC} is a better estimator. When \code{pointMC==medianMC},
+#'      these should be equivalent.}
+#'   \item{\code{sampleCorr}}{\code{nBoot} sampled values for continuous
+#'      correlation. Provided to allow the user to compute own summary
+#'      statistics.}
+#'   \item{\code{pointCorr}}{Simple point estimate of continuous correlation,
+#'      using \code{originPoints} and \code{targetPoints}.}
+#'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
+#'      statistics for continuous correlation bootstraps.}
+#' }
+#'
+# @examples
 estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
                           originDist, targetDist, targetPoints,
                           targetSites, targetAssignment=NULL,
@@ -269,13 +349,14 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     pointCorr <- meanCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array, pointSites=pointSites,
               pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC),
-              seMC = sd(MC), simpleCI = quantile(MC, c(alpha/2, 1-alpha/2),
-                                                      na.rm=T, type = 8),
+              medianMC = median(MC), seMC = sd(MC),
+              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=T, type = 8),
               bcCI = bcCI, sampleCorr = corr, pointCorr = pointCorr,
-              meanCorr = meanCorr, seCorr=seCorr,
+              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
 }
 
+#' @describeIn estMCGlGps Convenience function if all points are from geolocators.
 estMCGl <- function(geoBias, geoVCov, originRelAbund, originDist,
                       targetDist, targetPoints, targetSites,
                       targetAssignment=NULL, originPoints=NULL,
@@ -302,10 +383,11 @@ estMCGl <- function(geoBias, geoVCov, originRelAbund, originDist,
                        calcCorr=calcCorr, alpha = alpha))
 }
 
+#' @describeIn estMCGlGps Convenience function if all points are from GPS.
 estMCGps <- function(originPoints, targetPoints, originSites,
                        targetSites, originRelAbund, originDist,
                        targetDist, originNames=NULL, targetNames=NULL,
-                       nBoot = 1000, verbose=0, nSim = 1000, calcCorr=T) {
+                       nBoot = 1000, verbose=0, calcCorr=T, alpha = 0.05) {
   if (is.null(originPoints) && is.null(originAssignment))
     stop("Need to define either originAssignment or originSites and originPoints")
   else if (is.null(originAssignment))
@@ -324,5 +406,5 @@ estMCGps <- function(originPoints, targetPoints, originSites,
                        originAssignment=originAssignment,
                        originNames=originNames, targetNames=targetNames,
                        nBoot = nBoot, verbose=verbose,
-                       nSim = nSim, calcCorr=calcCorr, alpha = alpha))
+                       nSim = 0, calcCorr=calcCorr, alpha = alpha))
 }

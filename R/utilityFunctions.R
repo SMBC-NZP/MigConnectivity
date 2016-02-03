@@ -1,16 +1,17 @@
 # Function for generating random transition probability matrix (expression of parametric uncertainty)
-make.psi.rand <- function(model,origin.set, target.set) {
+makePsiRand <- function(model, origin.set, target.set) {
   vcv1 <- model$results$beta.vcv
   beta1 <- model$results$beta$estimate
-  new.beta <- mvrnorm(1, beta1, vcv1)
+  new.beta <- MASS::mvrnorm(1, beta1, vcv1)
   full.beta <- rep(NA, length(model$results$beta$estimate))
-  new.real <- get.real(model, "Psi", new.beta, design=model$design.matrix, vcv=F, se=F)
-  mat <- TransitionMatrix(new.real)[origin.set, target.set]
+  new.real <- RMark::get.real(model, "Psi", new.beta,
+                              design = model$design.matrix, vcv=F, se=F)
+  mat <- RMark::TransitionMatrix(new.real)[origin.set, target.set]
   return(mat)
 }
 
 # Calculates probability matrix based on exponential decline with distance
-mlogit.mat <- function(slope, dist) {
+mlogitMat <- function(slope, dist) {
   preMat <- exp(-slope/mean(dist)*dist)
   diag(preMat) <- 0
   nr <- nrow(dist)
@@ -24,7 +25,7 @@ mlogit.mat <- function(slope, dist) {
 }
 
 # Calculates row of probability matrix based on exponential decline with distance
-mlogit.row <- function(slope, dist, row.num) {
+mlogitRow <- function(slope, dist, row.num) {
   preMat <- exp(-slope/mean(dist)*dist)
   diag(preMat) <- 0
   out.row <- preMat[row.num,]/(1+sum(preMat[row.num, ]))
@@ -33,13 +34,34 @@ mlogit.row <- function(slope, dist, row.num) {
 }
 
 # Crude optimizable function for developing MC pattern based on MC strength
-MC.mlogit <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
+mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   nBreeding <- nrow(origin.dist)
   nWintering <- nrow(target.dist)
-  psi <- mlogit.mat(slope, origin.dist)
+  psi <- mlogitMat(slope, origin.dist)
   if (any(psi<0))
     return(5*slope^2)
   MC <- calcMC(origin.dist, target.dist, psi, origin.rel.abund)
   return((MC.in - MC)^2)
 }
 
+distFromPos <- function(pos, surface = 'ellipsoid') {
+  if (!(surface %in% c('plane', 'sphere', 'ellipsoid')))
+    stop('surface must be "plane", "sphere", or "ellipsoid".')
+  nSites <- nrow(pos)
+  dist <- matrix(0, nSites, nSites)
+  for (b1 in 2:nSites) {
+    for (b2 in 1:(b1-1)) {
+      if (surface == 'ellipsoid')
+        dist[b1, b2] <- geosphere::distVincentyEllipsoid(pos[b1, ],
+                                                         pos[b2, ]) / 1000
+      else if (surface == 'sphere')
+        dist[b1, b2] <- geosphere::distVincentySphere(pos[b1, ],
+                                                      pos[b2, ]) / 1000
+      else
+        dist[b1, b2] <- sqrt((dist[b1, 1] - dist[b2, 1]) ^ 2 +
+                              (dist[b1, 2] - dist[b2, 2]) ^ 2)
+      dist[b2, b1] <- dist[b1, b2]
+    }
+  }
+  return(dist)
+}

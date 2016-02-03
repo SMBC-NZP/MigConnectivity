@@ -3,16 +3,20 @@
 ###############################################################################
 #' Migratory connectivity strength function
 #'
-#' @param originDist
-#' @param targetDist
-#' @param psi
-#' @param originRelN
+#' @param originDist Distances between the B origin sites.  Symmetric B by B
+#'    matrix.
+#' @param targetDist Distances between the W target sites.  Symmetric W by W
+#'    matrix.
+#' @param psi Transition probabilities between B origin and W target sites.
+#'    Matrix with B rows and W columns where rows sum to 1.
+#' @param originRelAbund Relative abundances at B origin sites. Numeric vector
+#'    of length B that sums to 1.
 #'
 #' @return real value between -1 and 1, inclusive (usually between 0 and 1)
 #'    indicating the degree of migratory connectivity.
 #'
-# @examples
-calcMC <- function(originDist, targetDist, psi, originRelN) {
+#' @example inst/examples/calcMCExamples.R
+calcMC <- function(originDist, targetDist, psi, originRelAbund) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
@@ -20,8 +24,12 @@ calcMC <- function(originDist, targetDist, psi, originRelN) {
     stop('originDist (distances between origin sites) must be a square, symmetric matrix.')
   if (nrow(targetDist)!=ncol(targetDist) || !isSymmetric(unname(targetDist)))
     stop('targetDist (distances between target sites) must be a square, symmetric matrix.')
-  if (ncol(originDist)!=nOrigin || ncol(targetDist)!=nTarget || any(rowSums(psi)!=1)) {
-    if (ncol(targetDist)!=nOrigin || ncol(originDist)!=nTarget || any(colSums(psi)!=1))
+  if (ncol(originDist)!=nOrigin || ncol(targetDist)!=nTarget ||
+      !isTRUE(all.equal(rowSums(psi), rep(1, nOrigin), tolerance = 1e-6,
+                        check.attributes = F))) {
+    if (ncol(targetDist)!=nOrigin || ncol(originDist)!=nTarget ||
+        !isTRUE(all.equal(colSums(psi), rep(1, nTarget), tolerance = 1e-6,
+                          check.attributes = F)))
       stop('psi should have [number of origin sites] rows and [number of target sites] columns and rows that sum to 1.')
     else { #Just turn it around
       psi <- t(psi)
@@ -29,14 +37,15 @@ calcMC <- function(originDist, targetDist, psi, originRelN) {
       nTarget <- ncol(psi)
     }
   }
-  if (length(originRelN)!=nOrigin || sum(originRelN)!=1)
-    stop('originRelN must be a vector with [number of origin sites] values that sum to 1.')
+  if (length(originRelAbund)!=nOrigin || !isTRUE(all.equal(sum(originRelAbund), 1,
+                                                       tolerance = 1e-6)))
+    stop('originRelAbund must be a vector with [number of origin sites] values that sum to 1.')
   # Relative abundance at each combination of origin and target sites
-  sumWinRelN <- apply(psi, 2, "*", originRelN)
+  sumWinRelN <- apply(psi, 2, "*", originRelAbund)
   # Average origin distance between any two given birds.  Using matrix product (%*%) to get all probabilities of two birds origin in each site.
-  mu.bD <- sum(originDist * (originRelN %*% t(originRelN)))
+  mu.bD <- sum(originDist * (originRelAbund %*% t(originRelAbund)))
   # SD in origin distance between any two given birds
-  sd.bD <- sqrt(sum((originDist - mu.bD)^2 * (originRelN %*% t(originRelN))))
+  sd.bD <- sqrt(sum((originDist - mu.bD)^2 * (originRelAbund %*% t(originRelAbund))))
   # Average target distance between any two given birds.  Using Kronecker product (%x%) to get all probabilities of two birds origin and target in each pair of sites.
   mu.wD <- sum(targetDist * matrix(colSums(sumWinRelN %x% sumWinRelN), nTarget, nTarget))
   # SD in target distance between any two given birds
@@ -70,7 +79,7 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, latl
 # Simple approach to estimate psi matrix and MC from simulated (or real) data
 # (doesn't include uncertainty)
 ###############################################################################
-calcPsiMC <- function(originDist, targetDist, originRelN, locations, verbose=F) {
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose=F) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -90,7 +99,7 @@ calcPsiMC <- function(originDist, targetDist, originRelN, locations, verbose=F) 
           psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
   }
   psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
-  MC <- calcMC(originDist, targetDist, psiMat, originRelN)
+  MC <- calcMC(originDist, targetDist, psiMat, originRelAbund)
   return(list(psi=psiMat, MC=MC))
 }
 
