@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.0.0.9000
-Date: 2016-02-03
+Version: 0.0.0.9001
+Date: 2016-02-07
 Author: Jeff Hostetler, Emily Cohen, Mike Hallworth, Clark Rushing
 Maintainer: Jeff Hostetler <jeffrey.hostetler@myfwc.com>
 Description: More about what it does (maybe more than one line)

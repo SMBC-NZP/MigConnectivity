@@ -32,14 +32,12 @@ summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC, estimate=N
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\n")
   fm <- cmrExamples[[r]]
-  summaryCMR$estimate[r] <- calcMC(originDist, targetDist,
-                                   RMark::TransitionMatrix(RMark::get.real(
-                                     fm, "Psi", se=T))[5:8, c(3,2,1,4)],
-                                   originRelAbundTrue)
-  results <- estMCCmrAbund(originRelAbundTrue, fm, originDist, targetDist,
-                           originSites = 5:8, targetSites = c(3,2,1,4),
-                           nSamples = nSamplesCMR, verbose = 0)
+  results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
+                   originDist = originDist, targetDist = targetDist,
+                   originSites = 5:8, targetSites = c(3,2,1,4),
+                   nSamples = nSamplesCMR, verbose = 0)
   cmrMCSample[ , r] <- results$sampleMC
+  summaryCMR$estimate[r] <- results$pointMC
   summaryCMR$mean[r] <- results$meanMC
   summaryCMR$median[r] <- results$medianMC
   summaryCMR$se[r] <- results$seMC
@@ -76,8 +74,9 @@ summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
 for (r in 1:nSimulationsAbund) {
   cat("Simulation",r,"of",nSimulationsAbund,"\n")
   row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
-  results <- estMCCmrAbund(abundExamples[[r]], psiTrue, originDist, targetDist,
-                           row0 = row0, nSamples = nSamplesAbund, verbose = 1)
+  results <- estMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
+                   originDist = originDist, targetDist = targetDist,
+                   row0 = row0, nSamples = nSamplesAbund, verbose = 1)
   abundMCSample[ , r] <- results$sampleMC
   summaryAbund$estimate[r] <- results$pointMC
   summaryAbund$mean[r] <- results$meanMC
