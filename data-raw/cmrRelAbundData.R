@@ -29,6 +29,6 @@ for (r in 1:nSimulationsCMR) {
 }
 devtools::use_data(cmrExamples, overwrite = T)
 
-load("rel_abun_sim2.RData")   #Modeled seperately, see above
+load("rel_abun_sim2.RData")   #Modeled seperately
 abundExamples <- sim_out
 devtools::use_data(abundExamples, overwrite = T)

@@ -22,6 +22,7 @@ psi.scenario.names <- c("Full Mix", "Avoid One Site", "Full Connectivity",
                         "Half Mix", "Low", "Medium", "One Site Preference",
                         "Negative")
 names(samplePsis) <- psi.scenario.names
+samplePsis <- lapply(samplePsis, provideDimnames, base = list(LETTERS[1:4], as.character(1:4)))
 devtools::use_data(samplePsis, overwrite = T)
 nOrigin <- sapply(samplePsis, nrow)
 nTarget <- sapply(samplePsis, ncol)
