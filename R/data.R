@@ -121,3 +121,4 @@
 #'
 #' @format A list with 100 mcmc (coda) estimates in it.
 "abundExamples"
+
