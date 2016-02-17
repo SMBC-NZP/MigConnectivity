@@ -215,7 +215,7 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
   if (length(geoBias)!=2)
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
-  if (dim(geoVCov)!=c(2,2))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
@@ -348,13 +348,14 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
   if (calcCorr) {
     meanCorr <- mean(corr)
+    medianCorr <- median(corr)
     seCorr <- sd(corr)
     simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=T, type = 8)
     corr.z0 <- qnorm(sum((corr)<pointCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                            na.rm=T, type = 8)
   } else
-    pointCorr <- meanCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
+    pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
               pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC),
               medianMC = median(MC), seMC = sd(MC),
