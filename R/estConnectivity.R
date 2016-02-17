@@ -226,9 +226,9 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
   if (is.null(originAssignment))
-    originAssignment <- over(originPoints, originSites)
+    originAssignment <- sp::over(originPoints, originSites)
   if (is.null(targetAssignment))
-    targetAssignment <- over(targetPoints, targetSites)
+    targetAssignment <- sp::over(targetPoints, targetSites)
   nOriginSites <- length(unique(originAssignment))
   nTargetSites <- length(targetSites)
   if (length(targetPoints)!=nAnimals || length(targetAssignment)!=nAnimals ||
@@ -261,17 +261,17 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     targetDist <- matrix(NA, nAnimals, nAnimals)
     targetDist[lower.tri(targetDist)] <- 1
     distIndices <- which(!is.na(targetDist), arr.ind = T)
-    targetPoints2<-spTransform(targetPoints,CRS(WGS84))
-    targetDist0 <- distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
                                          targetPoints2[distIndices[,'col'],])
     targetDist[lower.tri(targetDist)] <- targetDist0
-    originPoints2<-spTransform(originPoints,CRS(WGS84))
-    originDistStart <- matrix(distVincentyEllipsoid(originPoints2[
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
+    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[
       rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,
                                                      each=nAnimals)]),
       nAnimals, nAnimals)
     originDist <- originDistStart[1:nAnimals, 1:nAnimals]
-    pointCorr <- mantel.rtest(as.dist(originDist), as.dist(targetDist),
+    pointCorr <- ade4::mantel.rtest(as.dist(originDist), as.dist(targetDist),
                                nrepet=0)
   }
   for (boot in 1:nBoot) {
@@ -297,12 +297,12 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
         while (is.na(target.sample[i])) {
           draws <- draws + 1
           # Sample random point for each bird from parametric distribution of NB error
-          point.sample<-SpatialPoints(t(rmvnorm(nsim=nSim, mu=cbind(
-                          targetPoints@coords[animal.sample[i],1],
-                          targetPoints@coords[animal.sample[i],2]), V=geoVCov))+
-                            geoBias2, CRS(Lambert))
+          point.sample <- sp::SpatialPoints(t(rmvnorm(nsim=nSim, mu=cbind(
+            targetPoints@coords[animal.sample[i],1],
+            targetPoints@coords[animal.sample[i],2]), V=geoVCov))+
+              geoBias2, sp::CRS(Lambert))
           # filtered to stay in NB areas (land)
-          target.sample0 <- over(point.sample, targetSites)
+          target.sample0 <- sp::over(point.sample, targetSites)
           target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
         }
         target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
@@ -320,7 +320,7 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     # Create psi matrix as proportion of those from each breeding site that went to each NB site
     psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
     # Calculate MC from that psi matrix
-    MC[boot] <- calcMC(originDist,targetDist,psi.array[boot, , ],
+    MC[boot] <- calcMC(originDist, targetDist, psi.array[boot, , ],
                        originRelAbund)
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" MC mean:", mean(MC, na.rm=T), "SD:", sd(MC, na.rm=T),
@@ -328,12 +328,12 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=T), "\n")
     if (calcCorr) {
       originDist <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- SpatialPoints(target.point.sample,CRS(Lambert))
-      target.point.sample2<-spTransform(target.point.sample,CRS(WGS84))
-      targetDist0 <- distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
+      target.point.sample <- sp::SpatialPoints(target.point.sample,CRS(Lambert))
+      target.point.sample2 <- sp::spTransform(target.point.sample,CRS(WGS84))
+      targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist[lower.tri(targetDist)] <- targetDist0
-      corr[boot] <- mantel.rtest(as.dist(originDist),as.dist(targetDist),
+      corr[boot] <- ade4::mantel.rtest(as.dist(originDist),as.dist(targetDist),
                                  nrepet=0)
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=T), "SD:", sd(corr, na.rm=T),
