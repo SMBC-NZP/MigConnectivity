@@ -223,7 +223,7 @@ for (sim in 1:nSims15) {
                                    breedingRelN15[[i]], animalLoc15[[i]], T)
     compare15.array[sim, i, 'MC'] <- results15[[i]]$results$MC
     compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]], nonbreedDist15[[1]],
-                                                         sim15[[scenarioToSampleMap15[i]]]$animalLoc, resamp=0, latlon=T)$correlation
+                                                         sim15[[scenarioToSampleMap15[i]]]$animalLoc, resamp=0)$correlation
   }
 }
 compare15$MC[1:nScenarios15 + 1] <- apply(compare15.array[,,'MC'], 2, mean)
@@ -356,7 +356,7 @@ for (sim in 1:nSims16) {
     results16[[i]] <- psiFromData1(breedDist16[[i]], nonbreedDist16[[i]], breedingRelN16[[i]], animalLoc16[[i]], T)
     compare16.array[sim, i, 'MC'] <- results16[[i]]$results$MC
     compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]], nonbreedDist16[[1]],
-                                                         sim16[[scenarioToSampleMap16[i]]]$animalLoc, resamp=0, latlon=T)$correlation
+                                                         sim16[[scenarioToSampleMap16[i]]]$animalLoc, resamp=0)$correlation
   }
 }
 compare16$MC[1:nScenarios16 + 1] <- apply(compare16.array[,,'MC'], 2, mean)

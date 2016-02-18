@@ -275,8 +275,9 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
                                                      each=nAnimals)]),
       nAnimals, nAnimals)
     originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
-    pointCorr <- ade4::mantel.rtest(as.dist(originDist1), as.dist(targetDist1),
-                               nrepet=0)
+    pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = T)$correlation
+    #ade4::mantel.rtest(as.dist(originDist1), as.dist(targetDist1),
+                 #              nrepet=0)
   }
   for (boot in 1:nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
@@ -337,8 +338,9 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
-      corr[boot] <- ade4::mantel.rtest(as.dist(originDist1),as.dist(targetDist1),
-                                 nrepet=0)
+      corr[boot] <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = T)$correlation
+        #ade4::mantel.rtest(as.dist(originDist1),as.dist(targetDist1),
+        #                         nrepet=0)
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=T), "SD:", sd(corr, na.rm=T),
             "low quantile:", quantile(corr, alpha/2, na.rm=T),

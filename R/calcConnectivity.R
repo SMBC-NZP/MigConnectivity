@@ -63,7 +63,7 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund) {
 ###############################################################################
 # rho function for individuals
 ###############################################################################
-calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, latlon=F) {
+calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verbose = 0) {
   nInd <- dim(locations)[1]
   originDist2 <- targetDist2 <- matrix(0, nInd, nInd)
   for (i in 1:(nInd-1)) {
@@ -72,7 +72,7 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, latl
       targetDist2[i,j] <- targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
     }
   }
-  return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, latlon=latlon))
+  return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, quiet = !verbose))
 }
 
 ###############################################################################

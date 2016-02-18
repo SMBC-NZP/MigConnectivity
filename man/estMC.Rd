@@ -132,6 +132,7 @@ Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
 relative abundance MCMC samples.
 }
 \examples{
+set.seed(101)
 # Uncertainty in detection with equal abundances
 nSamplesCMR <- 100 #10000 # Number of resampling iterations for generating confidence intervals
 nSimulationsCMR <- 10 #length(cmrExamples)
@@ -235,21 +236,14 @@ mseAbund
 rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
+# Ovenbird example with GL and GPS data
 nSamplesGLGPS <- 100 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
 }
 
+# Estimate MC only, treat all data as is
 glGPSMC <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
-              targetSites=targetSites,
-              targetPoints=targetPoints,
-              targetDist=targetDist,
-              originPoints=originPoints,
-              originSites=originSites,
-              originDist=originDist,
-              originRelAbund = originRelAbund,
-              nSamples = nSamplesGLGPS, verbose=1, calcCorr=FALSE)
-glGPSMCCorr <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
                  targetSites=targetSites,
                  targetPoints=targetPoints,
                  targetDist=targetDist,
@@ -257,8 +251,10 @@ glGPSMCCorr <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
                  originSites=originSites,
                  originDist=originDist,
                  originRelAbund = originRelAbund,
-                 nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
-glMCCorr <- estMC(isGL = TRUE, geoBias = geo.bias, geoVCov = geo.vcov,
+                 nSamples = nSamplesGLGPS, verbose=1, calcCorr=FALSE)
+
+# Estimate MC and correlation, treat all data as is
+glGPSMCCorr <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
                      targetSites=targetSites,
                      targetPoints=targetPoints,
                      targetDist=targetDist,
@@ -267,5 +263,19 @@ glMCCorr <- estMC(isGL = TRUE, geoBias = geo.bias, geoVCov = geo.vcov,
                      originDist=originDist,
                      originRelAbund = originRelAbund,
                      nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
+
+# Estimate MC and correlation, treat GPS data as GL
+glMCCorr <- estMC(isGL = TRUE, geoBias = geo.bias, geoVCov = geo.vcov,
+                  targetSites=targetSites,
+                  targetPoints=targetPoints,
+                  targetDist=targetDist,
+                  originPoints=originPoints,
+                  originSites=originSites,
+                  originDist=originDist,
+                  originRelAbund = originRelAbund,
+                  nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
+str(glGPSMC)
+str(glGPSCorr)
+str(glMCCorr)
 }
 
