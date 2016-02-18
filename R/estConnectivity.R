@@ -262,20 +262,20 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   pointMC <- calcMC(originDist,targetDist,pointPsi,originRelAbund)
 
   if (calcCorr) {
-    targetDist <- matrix(NA, nAnimals, nAnimals)
-    targetDist[lower.tri(targetDist)] <- 1
-    distIndices <- which(!is.na(targetDist), arr.ind = T)
+    targetDist1 <- matrix(NA, nAnimals, nAnimals)
+    targetDist1[lower.tri(targetDist1)] <- 1
+    distIndices <- which(!is.na(targetDist1), arr.ind = T)
     targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
     targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
                                          targetPoints2[distIndices[,'col'],])
-    targetDist[lower.tri(targetDist)] <- targetDist0
+    targetDist1[lower.tri(targetDist1)] <- targetDist0
     originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
     originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[
       rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,
                                                      each=nAnimals)]),
       nAnimals, nAnimals)
-    originDist <- originDistStart[1:nAnimals, 1:nAnimals]
-    pointCorr <- ade4::mantel.rtest(as.dist(originDist), as.dist(targetDist),
+    originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
+    pointCorr <- ade4::mantel.rtest(as.dist(originDist1), as.dist(targetDist1),
                                nrepet=0)
   }
   for (boot in 1:nBoot) {
@@ -331,13 +331,13 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
           "low quantile:", quantile(MC, alpha/2, na.rm=T),
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=T), "\n")
     if (calcCorr) {
-      originDist <- originDistStart[animal.sample, animal.sample]
+      originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,CRS(Lambert))
       target.point.sample2 <- sp::spTransform(target.point.sample,CRS(WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
-      targetDist[lower.tri(targetDist)] <- targetDist0
-      corr[boot] <- ade4::mantel.rtest(as.dist(originDist),as.dist(targetDist),
+      targetDist1[lower.tri(targetDist1)] <- targetDist0
+      corr[boot] <- ade4::mantel.rtest(as.dist(originDist1),as.dist(targetDist1),
                                  nrepet=0)
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=T), "SD:", sd(corr, na.rm=T),
@@ -463,11 +463,11 @@ estMCGps <- function(originPoints, targetPoints, originSites,
 #' @param targetNames Optional. Vector of names for the non-release season
 #'    sites.
 #' @param nSamples Number of times to resample \code{psi} and/or
-#'  \code{originRelAbund} OR number of samples from individual points for
-#'  geolocator data.
-#' @param nBoot Number of bootstrap runs for GL or GPS data. Animals are
-#'    sampled with replacement for each of these to estimate sampling
-#'    uncertainty.
+#'    \code{originRelAbund} OR number of bootstrap runs for GL or GPS data. In
+#'    the latter case, animals are sampled with replacement for each. For all,
+#'    the purpose is to estimate sampling uncertainty.
+#' @param nSim Tuning parameter for GL data. Affects only the speed; 1000 seems
+#'    to work well with our data.  Should be integer > 0.
 #' @param isGL Indicates whether or which animals were tracked with geolocators.
 #'    Should be either single TRUE or FALSE value, or vector with length of
 #'    number of animals tracked, with TRUE for animals in
@@ -520,13 +520,13 @@ estMCGps <- function(originPoints, targetPoints, originSites,
 #'      statistics for continuous correlation bootstraps.  NULL when
 #'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
 #' }
-#' @example inst/examples/estMCCmrAbundExamples.R
+#' @example inst/examples/estMCExamples.R
 estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   originSites = NULL, targetSites = NULL,
                   originPoints = NULL, targetPoints = NULL,
                   originAssignment = NULL, targetAssignment = NULL,
                   originNames = NULL, targetNames = NULL,
-                  nSamples = 1000, nBoot = 1000, isGL = FALSE,
+                  nSamples = 1000, nSim = 1000, isGL = FALSE,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05) {
   if (is.null(psi)) {
@@ -539,8 +539,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       originPoints=originPoints, originSites=originSites,
                       originAssignment=originAssignment,
                       originNames=originNames, targetNames=targetNames,
-                      nBoot = nBoot, verbose=verbose,
-                      nSim = nSamples, calcCorr=calcCorr, alpha = alpha))
+                      nBoot = nSamples, verbose=verbose,
+                      nSim = nSim, calcCorr=calcCorr, alpha = alpha))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund, psi = psi,

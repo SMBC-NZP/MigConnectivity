@@ -202,7 +202,7 @@
 #' Distance between Ovenbird non-breeding distribution target sites
 #'
 #'The pairwise Great Circle Distance between the center of the polygons contained within
-#'\code {targetSites}. See "Ovenbird non-breeding distribution target sites" or \code{targetSites}
+#'\code{targetSites}. See "Ovenbird non-breeding distribution target sites" or \code{targetSites}
 #'
 #'
 #' @format square distance matrix
@@ -222,7 +222,7 @@
 #' Distance between Ovenbird breeding distribution origin sites
 #'
 #'The pairwise Great Circle Distance between the center of the polygons contained within
-#'\code {originSites}. See "Ovenbird breeding distribution origin sites" or \code{originSites}
+#'\code{originSites}. See "Ovenbird breeding distribution origin sites" or \code{originSites}
 #'
 #'
 #' @format square distance matrix

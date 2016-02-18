@@ -8,7 +8,7 @@ geolocator and/or GPS data.}
 estMC(originDist, targetDist, originRelAbund, psi = NULL,
   originSites = NULL, targetSites = NULL, originPoints = NULL,
   targetPoints = NULL, originAssignment = NULL, targetAssignment = NULL,
-  originNames = NULL, targetNames = NULL, nSamples = 1000, nBoot = 1000,
+  originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05)
 }
@@ -59,12 +59,12 @@ length number of animals tracked.}
 sites.}
 
 \item{nSamples}{Number of times to resample \code{psi} and/or
-\code{originRelAbund} OR number of samples from individual points for
-geolocator data.}
+\code{originRelAbund} OR number of bootstrap runs for GL or GPS data. In
+the latter case, animals are sampled with replacement for each. For all,
+the purpose is to estimate sampling uncertainty.}
 
-\item{nBoot}{Number of bootstrap runs for GL or GPS data. Animals are
-sampled with replacement for each of these to estimate sampling
-uncertainty.}
+\item{nSim}{Tuning parameter for GL data. Affects only the speed; 1000 seems
+to work well with our data.  Should be integer > 0.}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators.
 Should be either single TRUE or FALSE value, or vector with length of
@@ -234,5 +234,38 @@ mseAbund <- mean((summaryAbund$estimate - trueMC)^2)
 mseAbund
 rmseAbund <- sqrt(mseAbund)
 rmseAbund
+
+nSamplesGLGPS <- 100 # Number of bootstrap iterations
+\dontrun{
+  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+}
+
+glGPSMC <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
+              targetSites=targetSites,
+              targetPoints=targetPoints,
+              targetDist=targetDist,
+              originPoints=originPoints,
+              originSites=originSites,
+              originDist=originDist,
+              originRelAbund = originRelAbund,
+              nSamples = nSamplesGLGPS, verbose=1, calcCorr=FALSE)
+glGPSMCCorr <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
+                 targetSites=targetSites,
+                 targetPoints=targetPoints,
+                 targetDist=targetDist,
+                 originPoints=originPoints,
+                 originSites=originSites,
+                 originDist=originDist,
+                 originRelAbund = originRelAbund,
+                 nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
+glMCCorr <- estMC(isGL = TRUE, geoBias = geo.bias, geoVCov = geo.vcov,
+                     targetSites=targetSites,
+                     targetPoints=targetPoints,
+                     targetDist=targetDist,
+                     originPoints=originPoints,
+                     originSites=originSites,
+                     originDist=originDist,
+                     originRelAbund = originRelAbund,
+                     nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
 }
 

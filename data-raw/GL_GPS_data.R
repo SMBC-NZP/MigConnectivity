@@ -1,9 +1,9 @@
 ################################################################################
 #
-#      Migratory Connectivity Metric - Cohen et al. 
-#          
+#      Migratory Connectivity Metric - Cohen et al.
+#
 #      Geolocator data and GPS data from OVENBIRDS
-#      Geolocator data - Hallworth et al. 2015 - Ecological Applications 
+#      Geolocator data - Hallworth et al. 2015 - Ecological Applications
 #      GPS data - Hallworth and Marra 2015 Scientific Reports
 #
 #      Script written by M.T.Hallworth & J.A.Hostetler
@@ -30,24 +30,24 @@ WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 
 
-# Define capture locations in the winter # 
+# Define capture locations in the winter #
 
 captureLocations<-matrix(c(-77.93,18.04,  # Jamaica
                            -80.94,25.13,  # Florida
                            -66.86,17.97,  # Puerto Rico
-                           -71.72,43.95), # New Hampshire 
+                           -71.72,43.95), # New Hampshire
                             nrow=4,ncol=2,byrow=TRUE)
 
 CapLocs<-SpatialPoints(captureLocations,CRS(WGS84))
 
-# Project Capture locations # 
+# Project Capture locations #
 
 CapLocsM<-spTransform(CapLocs, CRS(Lambert))
 
 #  Non-breeding GL location data
 #  Locations derived during the non-breeding season - ALL birds
 
-# non-breeding file names # 
+# non-breeding file names #
 
 NB_shapefile_names<-list.files("data-raw/GL_NonBreedingFiles", pattern="*.shp",full.names=TRUE)
 
@@ -58,7 +58,7 @@ NB_GL<-lapply(NB_shapefile_names, shapefile)
 # Better to use variables for frequently used numbers - clearer, more portable code
 nGL <- length(NB_GL)
 
-# Remove locations around spring Equinox and potential migration points - same NB time frame as Hallworth et al. 2014 # 
+# Remove locations around spring Equinox and potential migration points - same NB time frame as Hallworth et al. 2014 #
 # two steps because subset on shapefile doesn't like it in a single step
 
 for(i in 1:nGL){
@@ -98,7 +98,7 @@ LongError<-rep(NA,nNB_GL) # 16 birds were recovered during the non-breeding seas
 LatError<-rep(NA,nNB_GL)  # 16 birds were recovered during the non-breeding season
 
 for(i in 1:nJam){   # loop through the 9 Jam birds
-#error in 
+#error in
 LongError[i]<-mean(NB_GLm[[Jam[i]]]@coords[,1]-CapLocsM@coords[1,1])
 LatError[i]<-mean(NB_GLm[[Jam[i]]]@coords[,2]-CapLocsM@coords[1,2])
 }
@@ -128,7 +128,7 @@ geo.vcov <- vcov(geo.error.model)
 
 #########################################################################################
 #
-# Here instead of using the raw points - use the KDE to estimate location mean locations 
+# Here instead of using the raw points - use the KDE to estimate location mean locations
 #
 #########################################################################################
 # Non-breeding #
@@ -137,7 +137,7 @@ NB_KDE_names<-list.files("data-raw/NonBreeding_Clipped_KDE", pattern="*_clip.txt
 NB_KDE_names<-NB_KDE_names[c(1:28,30:37)]
 NB_KDE<-lapply(NB_KDE_names,raster)
 
-# Get weighted means from KDE # 
+# Get weighted means from KDE #
 kdelist<-vector('list',nGL)
 NB_kde_long<-NB_kde_lat<-rep(NA,nGL)
 
@@ -148,11 +148,11 @@ NB_kde_lat[i]<-weighted.mean(x=kdelist[[i]][,2],w=kdelist[[i]][,3])
 }
 
 # Replace estimated locations with TRUE capture locations - Jam, Fla, PR birds #
-NB_kde_long[c(1,9,21,22,24,25,29,31,36)]<--77.94 # Jamaica 
-NB_kde_lat[c(1,9,21,22,24,25,29,31,36)]<-18.04 # Jamaica 
+NB_kde_long[c(1,9,21,22,24,25,29,31,36)]<--77.94 # Jamaica
+NB_kde_lat[c(1,9,21,22,24,25,29,31,36)]<-18.04 # Jamaica
 
 NB_kde_long[c(17,18,23)]<--80.94 # FLA
-NB_kde_lat[c(17,18,23)]<-25.13 # FLA 
+NB_kde_lat[c(17,18,23)]<-25.13 # FLA
 
 NB_kde_long[c(32,33,34,35)]<--66.86 # PR
 NB_kde_lat[c(32,33,34,35)]<-17.97 # PR
@@ -167,19 +167,19 @@ nB_GL <- length(summerDeploy)
 
 #######################################################################################################################################################
 #
-# Add the GPS data into the mix 
+# Add the GPS data into the mix
 #
-####################################################################################################################################################### 
+#######################################################################################################################################################
 GPSdata<-read.csv("data-raw/Ovenbird_GPS_HallworthMT_FirstLast.csv")
 nGPS <- nrow(GPSdata)/2
 GPSpts<-SpatialPoints(as.matrix(cbind(GPSdata[,2],GPSdata[,1]),nrow=nGPS,ncol=2,byrow=TRUE),CRS(WGS84))
 GPSptsm<-spTransform(GPSpts,CRS(Lambert))
 
-# First add GPS locations to both breeding and non-breeding data sets # 
-cap<-seq(1,2*nGPS,2) 
+# First add GPS locations to both breeding and non-breeding data sets #
+cap<-seq(1,2*nGPS,2)
 wint<-seq(2,2*nGPS,2)
 
-# Using the weighted locations # 
+# Using the weighted locations #
 
 weightedNB_breeDeployOnly<-SpatialPoints(as.matrix(cbind(c(NB_kde_long[summerDeploy],GPSdata[wint,2]),c(NB_kde_lat[summerDeploy],GPSdata[wint,1]))))
 crs(weightedNB_breeDeployOnly)<-WGS84
@@ -204,7 +204,7 @@ originPoints<-spTransform(Origin,CRS(Lambert))
 
 ###################################################################
 #
-#  Origin & Target sites 
+#  Origin & Target sites
 #
 ###################################################################
 World<-shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
@@ -212,7 +212,7 @@ World<-spTransform(World,CRS(Lambert))
 States<-shapefile("data-raw/Spatial_Layers/st99_d00.shp")
 States<-spTransform(States,CRS(Lambert))
 
-# Non-breeding - Target sites # 
+# Non-breeding - Target sites #
 Florida<-subset(States,subset=NAME=="Florida")
 Florida<-gUnaryUnion(Florida)
 Cuba<-subset(World,subset=NAME=="Cuba")
@@ -230,7 +230,7 @@ WinterRegions<-spRbind(WinterRegion1,Hisp)
 targetSites<-WinterRegions
 
 # Make polygons -
-# Breeding - Make square region around capture location - equal size around NH and MD. 
+# Breeding - Make square region around capture location - equal size around NH and MD.
 
 # Polygon around MD #
 mdvertx<-c((1569680-(536837/2)),(1569680-(536837/2)),(1569680+(536837/2)),(1569680+(536837/2)))
@@ -256,7 +256,7 @@ crs(originSites)<-Lambert
 #
 ###################################################################
 
-# Breeding Bird Survey Abundance Data # 
+# Breeding Bird Survey Abundance Data #
 BBSoven<-raster("data-raw/Spatial_Layers/bbsoven.txt")
 crs(BBSoven)<-WGS84
 BBSovenMeters<-projectRaster(BBSoven,crs=Lambert)
@@ -271,11 +271,11 @@ BreedRelAbund<-array(NA,c(2,1))
 BreedRelAbund[1,1]<-sum(NHabund[[1]],na.rm=TRUE)/TotalOvenAbund
 BreedRelAbund[2,1]<-sum(MDabund[[1]],na.rm=TRUE)/TotalOvenAbund
 
-originRelAbun<-BreedRelAbund
+originRelAbund<-BreedRelAbund
 
 ###################################################################
 #
-#  Generate Distance matrices                 
+#  Generate Distance matrices
 #
 ###################################################################
 # First need to project from meters to Lat/Long -WGS84
@@ -318,7 +318,7 @@ targetDist<-NBreedDistMat
 
 ###################################################################
 #
-#  Write required data to the data folder                
+#  Write required data to the data folder
 #
 ###################################################################
 
@@ -329,7 +329,7 @@ devtools::use_data(targetPoints, overwrite = T)
 devtools::use_data(originPoints, overwrite = T)
 devtools::use_data(targetSites, overwrite = T)
 devtools::use_data(originSites, overwrite = T)
-devtools::use_data(originRelAbun, overwrite = T)
+devtools::use_data(originRelAbund, overwrite = T)
 devtools::use_data(originDist, overwrite = T)
 devtools::use_data(targetDist, overwrite = T)
 
