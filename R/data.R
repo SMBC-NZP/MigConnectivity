@@ -122,3 +122,108 @@
 #' @format A list with 100 mcmc (coda) estimates in it.
 "abundExamples"
 
+#' Relative abundance estimates of Ovenbird within two breeding regions
+#'
+#' A dataset containing relative abundance estimates from BBS data
+#' reported in Cohen et al. (in prep). These estimates can
+#' be used in \code{estMC} function as \code{originRelAbund} in conjuction
+#' with archival light-level geolocator and GPS locations.
+#'
+#' @format A vector of length two with relative abundance estimates.
+"originRelAbund"
+
+#' Archival light-level geolocator bias estimates
+#'
+#' Location bias estimates in light-level geolocator estimates calculated
+#' using birds captured at known locations in Florida, Jamaica and Puerto Rico.
+#' Location bias is reported in meters.
+#'
+#' @format A vector of length two with bias esimates in geolocator locations.
+"geo.bias"
+
+#' Archival light-level geolocator covariance matrix
+#'
+#' Covariance estimates in light-level geolocator estimates calculated
+#' using birds captured at known locations in Florida, Jamaica and Puerto Rico.
+#' Covariance is reported in meters.
+#'
+#' @format A 2x2 matrix of covariance estimates.
+"geo.vcov"
+
+#' Ovenbird capture locations
+#'
+#' Capture locations for 39 Ovenbirds caught during the breeding season who carried
+#' either a light-level geolocator or PinPoint-10 GPS tag. Ovenbirds were captured
+#' at Hubbard Brook Experimental Forest, NH and Jug Bay Wetland Sanctuary, MD. These
+#' data are used as \code{originPoints} in the \code{estMC} function. \code{coords.x1}
+#' and \code{coords.x2} represent the longitude and latitude of the capture sites,
+#' respectively. The data are projected in Lambert Conformal Conic.
+#'
+#' "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80
+#' +datum=NAD83 +units=m +no_defs +towgs84=0,0,0"
+#'
+#' @format SpatialPoints in Lambert Conformal Conic
+"originPoints"
+
+#' Ovenbird non-breeding locations
+#'
+#' Non-breeding locations for 39 Ovenbirds caught during the breeding season who carried
+#' either a light-level geolocator or PinPoint-10 GPS tag. Ovenbirds were captured
+#' at Hubbard Brook Experimental Forest, NH and Jug Bay Wetland Sanctuary, MD. These
+#' data are used as \code{originPoints} in the \code{estMC} function. \code{coords.x1}
+#' and \code{coords.x2} represent the longitude and latitude of the capture sites,
+#' respectively. The data are projected in Lambert Conformal Conic.
+#'
+#' "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80
+#' +datum=NAD83 +units=m +no_defs +towgs84=0,0,0"
+#'
+#' @format \code{SpatialPoints} in Lambert Conformal Conic
+"targetPoints"
+
+#' Archival light-level geolocator or PinPoint-10 GPS tag
+#'
+#' \code{logical} vector indicating whether location estimates were obtained with a
+#' light-level geolocator (\code{TRUE}) or PinPoint-10 GPS tag (\code{FALSE})
+#'
+#' @format \code{logical} of length 39
+"isGL"
+
+#' Ovenbird non-breeding distribution target sites
+#'
+#'Non-breeding distribution target sites used in Cohen et al. (in prep) to estimate
+#'MC of Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags. There
+#'are three non-breeding target sites 1) Florida, United States, 2) Cuba, and 3) Hispaniola
+#'(Dominican Republic and Haiti).
+#'
+#'
+#' @format \code{SpatialPolygons}
+"targetSites"
+
+#' Distance between Ovenbird non-breeding distribution target sites
+#'
+#'The pairwise Great Circle Distance between the center of the polygons contained within
+#'\code {targetSites}. See "Ovenbird non-breeding distribution target sites" or \code{targetSites}
+#'
+#'
+#' @format square distance matrix
+"targetDist"
+
+#' Ovenbird breeding distribution origin sites
+#'
+#'Breeding distribution prigin sites used in Cohen et al. (in prep) to estimate
+#'MC of Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags. There
+#'are two breeding origin sites, one that encompasses NH and another that encompasses MD capture
+#'deployment locations.
+#'
+#'
+#' @format \code{SpatialPolygons}
+"originSites"
+
+#' Distance between Ovenbird breeding distribution origin sites
+#'
+#'The pairwise Great Circle Distance between the center of the polygons contained within
+#'\code {originSites}. See "Ovenbird breeding distribution origin sites" or \code{originSites}
+#'
+#'
+#' @format square distance matrix
+"originDist"
