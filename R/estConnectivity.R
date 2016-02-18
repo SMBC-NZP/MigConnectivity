@@ -244,6 +244,10 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
+
+ WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+ Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+
   MC <- corr <- rep(NA, nBoot)
   geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
   nAnimals <- length(originAssignment)
