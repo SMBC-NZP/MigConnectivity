@@ -315,6 +315,30 @@ NBreedDistMat[3,2]<-NBreedDistMat[2,3]<-distVincentyEllipsoid(gCentroid(CubaWGS,
 originDist<-BreedDistMat
 targetDist<-NBreedDistMat
 
+###################################################################
+#
+#  Write required data to the data folder
+#
+###################################################################
+
+# Put all components of the OVEN Geolocator and GPS data into a named list
+OVENdata<-vector('list',10)
+names(OVENdata)<-c("geo.bias","geo.vcov","isGL","targetPoints","originPoints",
+                   "targetSites","originSites","originRelAbund","originDist","targetDist")
+
+OVENdata[[1]]<-geo.bias
+OVENdata[[2]]<-geo.vcov
+OVENdata[[3]]<-isGL
+OVENdata[[4]]<-targetPoints
+OVENdata[[5]]<-originPoints
+OVENdata[[6]]<-targetSites
+OVENdata[[7]]<-originSites
+OVENdata[[8]]<-originRelAbund
+OVENdata[[9]]<-originDist
+OVENdata[[10]]<-targetDist
+
+# Save to data folder
+devtools::use_data(OVENdata, overwrite = T)
 
 ###################################################################
 #
@@ -322,16 +346,16 @@ targetDist<-NBreedDistMat
 #
 ###################################################################
 
-devtools::use_data(geo.bias, overwrite = T)
-devtools::use_data(geo.vcov, overwrite = T)
-devtools::use_data(isGL, overwrite = T)
-devtools::use_data(targetPoints, overwrite = T)
-devtools::use_data(originPoints, overwrite = T)
-devtools::use_data(targetSites, overwrite = T)
-devtools::use_data(originSites, overwrite = T)
-devtools::use_data(originRelAbund, overwrite = T)
-devtools::use_data(originDist, overwrite = T)
-devtools::use_data(targetDist, overwrite = T)
+#devtools::use_data(geo.bias, overwrite = T)
+#devtools::use_data(geo.vcov, overwrite = T)
+#devtools::use_data(isGL, overwrite = T)
+#devtools::use_data(targetPoints, overwrite = T)
+#devtools::use_data(originPoints, overwrite = T)
+#devtools::use_data(targetSites, overwrite = T)
+#devtools::use_data(originSites, overwrite = T)
+#devtools::use_data(originRelAbund, overwrite = T)
+#devtools::use_data(originDist, overwrite = T)
+#devtools::use_data(targetDist, overwrite = T)
 
 
 
