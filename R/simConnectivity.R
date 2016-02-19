@@ -62,6 +62,7 @@
 #'      from row to column, so each row sums to 1.}
 #' }
 #'
+#' @export
 # @examples
 simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
                     nYears = 10, nMonths = 3, winMoveRate = 0,

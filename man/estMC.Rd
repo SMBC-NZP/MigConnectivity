@@ -243,37 +243,49 @@ nSamplesGLGPS <- 100 # Number of bootstrap iterations
 }
 
 # Estimate MC only, treat all data as is
-glGPSMC <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
-                 targetSites=targetSites,
-                 targetPoints=targetPoints,
-                 targetDist=targetDist,
-                 originPoints=originPoints,
-                 originSites=originSites,
-                 originDist=originDist,
-                 originRelAbund = originRelAbund,
-                 nSamples = nSamplesGLGPS, verbose=1, calcCorr=FALSE)
+glGPSMC <- estMC(isGL = OVENdata$isGL,
+                 geoBias = OVENdata$geo.bias,
+                 geoVCov = OVENdata$geo.vcov,
+                 targetSites = OVENdata$targetSites,
+                 targetPoints = OVENdata$targetPoints,
+                 targetDist = OVENdata$targetDist,
+                 originPoints = OVENdata$originPoints,
+                 originSites = OVENdata$originSites,
+                 originDist = OVENdata$originDist,
+                 originRelAbund = OVENdata$originRelAbund,
+                 nSamples = nSamplesGLGPS,
+                 verbose=1,
+                 calcCorr=FALSE)
 
 # Estimate MC and correlation, treat all data as is
-glGPSMCCorr <- estMC(isGL=isGL,geoBias=geo.bias,geoVCov=geo.vcov,
-                     targetSites=targetSites,
-                     targetPoints=targetPoints,
-                     targetDist=targetDist,
-                     originPoints=originPoints,
-                     originSites=originSites,
-                     originDist=originDist,
-                     originRelAbund = originRelAbund,
-                     nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
+glGPSMCCorr <- estMC(isGL = OVENdata$isGL,
+                     geoBias = OVENdata$geo.bias,
+                     geoVCov = OVENdata$geo.vcov,
+                     targetSites = OVENdata$targetSites,
+                     targetPoints = OVENdata$targetPoints,
+                     targetDist = OVENdata$targetDist,
+                     originPoints = OVENdata$originPoints,
+                     originSites = OVENdata$originSites,
+                     originDist = OVENdata$originDist,
+                     originRelAbund = OVENdata$originRelAbund,
+                     nSamples = nSamplesGLGPS,
+                     verbose=1,
+                     calcCorr=TRUE)
 
 # Estimate MC and correlation, treat GPS data as GL
-glMCCorr <- estMC(isGL = TRUE, geoBias = geo.bias, geoVCov = geo.vcov,
-                  targetSites=targetSites,
-                  targetPoints=targetPoints,
-                  targetDist=targetDist,
-                  originPoints=originPoints,
-                  originSites=originSites,
-                  originDist=originDist,
-                  originRelAbund = originRelAbund,
-                  nSamples = nSamplesGLGPS, verbose=1, calcCorr=TRUE)
+glMCCorr <- estMC(isGL = TRUE,
+                  geoBias = OVENdata$geo.bias,
+                  geoVCov = OVENdata$geo.vcov,
+                  targetSites = OVENdata$targetSites,
+                  targetPoints = OVENdata$targetPoints,
+                  targetDist = OVENdata$targetDist,
+                  originPoints = OVENdata$originPoints,
+                  originSites = OVENdata$originSites,
+                  originDist = OVENdata$originDist,
+                  originRelAbund = OVENdata$originRelAbund,
+                  nSamples = nSamplesGLGPS,
+                  verbose=1,
+                  calcCorr=TRUE)
 str(glGPSMC)
 str(glGPSCorr)
 str(glMCCorr)

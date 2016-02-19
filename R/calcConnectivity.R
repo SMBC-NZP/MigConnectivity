@@ -16,6 +16,7 @@
 #'    indicating the degree of migratory connectivity.
 #'
 #' @example inst/examples/calcMCExamples.R
+#' @export
 calcMC <- function(originDist, targetDist, psi, originRelAbund) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
