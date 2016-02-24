@@ -2,7 +2,7 @@
 model{
 
     # Priors
-      for(p in 1:npops){
+      for(p in 1:nPops){
         alpha[p] ~ dnorm(mu, tau.alpha)
       }
 
@@ -10,7 +10,7 @@ model{
       tau.alpha ~ dgamma(0.001,0.001)
       sd.alpha <- 1/pow(tau.alpha, 0.5)
 
-      for(r in 1:nroutes){
+      for(r in 1:nRoutes){
         route[r] ~ dnorm(0, tau.rte)
       }
       tau.rte ~ dgamma(0.001, 0.001)
@@ -22,21 +22,22 @@ model{
       beta1 ~ dnorm(0, 0.01)
 
     # Likelihood
-     for(i in 1:nyear){
+     for(i in 1:nYears){
       eps[i] ~ dnorm(0, tau.noise)
-      for(j in 1:nroutes){
+      for(j in 1:nRoutes){
         C[i,j] ~ dpois(lambda[i,j])
         log(lambda[i,j]) <- alpha[pop[j]] + beta1*year[i] + route[j] + eps[i]
       }
      }
 
     # Derived parameters
-      totalN <- sum(popN)
-
-      for(i in 1:npops){
-        popN[i] <- exp(alpha[i] + beta1*nyear + eps[nyear])*routes.per.pop
+      for(i in 1:nPops){
+        popN[i] <- exp(alpha[i] + beta1*nYears + eps[nYears])*routePerPop[i]
         relN[i] <- popN[i]/totalN
       }
+      
+      totalN <- sum(popN[])
+
 
   }
 

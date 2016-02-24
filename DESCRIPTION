@@ -20,5 +20,8 @@ Imports:
   RMark (>= 2.1.14),
   shape,
   sp,
-  SpatialTools
+  SpatialTools,
+  R2jags,
+  coda,
+  ggmcmc
 Suggests: testthat

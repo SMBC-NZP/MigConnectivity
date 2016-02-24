@@ -171,19 +171,64 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 }
 
 
-### Function for generating simulated count data ----
+###############################################################################
+# Function for generating simulated count data
+###############################################################################
+#' Simulates Breeding Bird Survey-style count data
+#'
+#'
+#' @param nPops Number of populations/regions
+#' @param routePerPop Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population
+#' @param nYears Number of years surveys were conducted
+#' @param alphaPop Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaPop) == 1, expected counts are identical for each population 
+#' @param beta Coefficient of linear year effect (default = 0)
+#' @param sdRoute Standard deviation of random route-level variation
+#' @param sdYear Standard deviation of random year-level variation
+#'
+#' @return \code{simCountData} returns a list containing:
+#'  \describe{
+#'    \item{\code{nPops}}{Number of populations/regions.}
+#'    \item{\code{nRoutes}}{Total number of routes.}
+#'    \item{\code{nYears}}{Number of years.}
+#'    \item{\code{routePerPop}}{Number of routes per population.}
+#'    \item{\code{year}}{Vector of length nYears with standardized year values.}
+#'    \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+#'    \item{\code{alphaPop}}{log expected count for each populations.}
+#'    \item{\code{epsRoute}}{realized deviation from alphaPop for each route.}
+#'    \item{\code{epsYear}}{realized deviation from alphaPop for each year.}
+#'    \item{\code{beta}}{linear year effect.}
+#'    \item{\code{sdRoute}}{standard deviation of random route-level variation.}
+#'    \item{\code{sdYear}}{standard deviation of random year-level variation.}
+#'    \item{\code{expectedCount}}{nRoutes by nYears matrix containing deterministic expected counts.}
+#'    \item{\code{C}}{nRoutes by nYears matrix containing observed counts.}
+#'   }
+#' 
+#'
+#' @export
+#' @example inst/examples/simCountExamples.R
+# 
 
-simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta,
-                          sdPop, sdRoute, sdYear){
+simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear){
 
-  nRoutes <- nPops*routePerPop # Total number of routes
+  if(length(routePerPop) == 1){
+    nRoutes <- nPops*routePerPop # Total number of routes
+    pop <- gl(nPops, routePerPop, nRoutes) # Population index for each route
+  }else{
+    nRoutes <- sum(routePerPop)
+    pop <- as.factor(rep(seq(1:nPops), routePerPop)) # Population index for each route
+  }
+
+  if(length(alphaPop) == 1) {
+    alphaPop <- rep(alphaPop, nPops)
+  }
+  
+  
   # Generate data structure to hold counts and log (lambda)
   C <- log.expectedCount <- array(NA, dim = c(nYears, nRoutes))
 
   # Generate covariate values
   year <- 1:nYears
   yr <- (year - (nYears/2))/(nYears/2) # Standardize
-  pops <- rep(1:nPops, each=routePerPop)
 
   # Draw two sets of random effects from their respective distributions
   epsRoute <- rnorm(n = nRoutes, mean = 0, sd = sdRoute)
@@ -193,7 +238,7 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta,
   for (i in 1:nRoutes){
 
     # Build up systematic part of the GLM including random effects
-    log.expectedCount[,i] <- alphaPop[pops[i]] + beta*yr + epsRoute[i] +
+    log.expectedCount[,i] <- alphaPop[pop[i]] + beta*yr + epsRoute[i] +
       epsYear
     expectedCount <- exp(log.expectedCount[,i])
 
@@ -201,33 +246,66 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta,
   }
 
   return(list(nPops = nPops, nRoutes = nRoutes, nYears = nYears,
-              routePerPop = routePerPop,
-              alphaPop = alphaPop, pop = pops, epsRoute = epsRoute,
-              epsYear = epsYear, beta = beta, year = yr, sdPop = sdPop,
+              routePerPop = routePerPop, year = yr, pop = pop, 
+              alphaPop = alphaPop, epsRoute = epsRoute,
+              epsYear = epsYear, beta = beta,
               sdRoute = sdRoute, sdYear = sdYear,
               expectedCount = expectedCount, C = C))
 }
 
 
-modelCountDataJAGS <- function (sim_data, ni, nt, nb, nc) {
-  nPops <- sim_data$nPops
-  nRoutes <- sim_data$nRoutes
+
+###############################################################################
+# Estimates population-level relative abundance from count data
+###############################################################################
+#' Estimates population-level relative abundance from count data
+#'
+#' Uses a Bayesian heirarchical model to estimate relative abundance of regional 
+#' populations from count-based data (e.g., Breeding Bird Survey) 
+#'
+#' @param count_data List containing the following elements:
+#' ' \describe{
+#'    \item{\code{C}}{nYears by nRoutes matrix containing the observed number of individuals counted at each route in each year.}
+#'    \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+#'    \item{\code{routePerPop}}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population.}
+#' }
+#' @param ni Number of MCMC iterations. Default = 20000.
+#' @param nt Thinning rate. Default = 5.
+#' @param nb Number of MCMC iterations to discard as burn-in. Default = 5000.
+#' @param nc Number of chains. Default = 3.
+#'
+#' @return \code{modelCountDataJAGS} returns an mcmc object containing posterior samples for each monitored parameter.
+#
+#'
+#' @export
+#' @example inst/examples/simCountExamples.R
+# 
+modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 3) {
+  nPops <- length(unique(count_data$pop))
+  nRoutes <- dim(count_data$C)[2]
+  nYears = dim(count_data$C)[1]
+  if(length(count_data$routePerPop) == 1){
+    routePerPop = rep(count_data$routePerPop, nPops)
+  } else {
+    routePerPop = count_data$routePerPop
+  }
+  
   # Initial values
   jags.inits <- function()list(mu = runif(1,0,2), alpha = runif(nPops, -1,1), beta1 = runif(1,-1,1),
                                tau.alpha = runif(1,0,0.1), tau.noise = runif(1,0,0.1),
                                tau.rte = runif(1,0,0.1), route = runif(nRoutes,-1,1))
   # Parameters to monitor
-  params <- c("mu", "alpha", "beta1", "sd.alpha", "sdRoute", "sd.noise", "totalN", "popN", "relN")
-#   jags.data <- list(C = sim_data$C, nPops=sim_data$nPops, nRoutes = sim_data$nRoutes,
-#                     routePerPop=sim_data$nRoutes/sim_data$nPops,
-#                     year = sim_data$year, nYears = length(sim_data$year), pop = sim_data$pop)
+  params <- c("mu", "alpha", "beta1", "sd.alpha", "sd.rte", "sd.noise", "totalN", "popN", "relN")
+  
+  # Data
+  jags.data <- list(C = count_data$C, nPops = length(unique(count_data$pop)), nRoutes = nRoutes,
+                    routePerPop = routePerPop,
+                    year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, pop = count_data$pop)
 
-  out <- jags(sim_data, inits=jags.inits, params, "sim_Poisson2.txt",
+
+  out <- R2jags::jags(data = jags.data, inits = jags.inits, params, "sim_Poisson2.txt",
                           n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
-                          working.directory = file.path(R_PACKAGE_DIR, 'inst', paste0('JAGS', R_ARCH)))
-  return(as.mcmc(out))
+                          working.directory = file.path('inst/JAGS'))
+  
+  return(coda::as.mcmc(out))
 }
-
-
-
-
