@@ -9,7 +9,7 @@ Description: More about what it does (maybe more than one line)
 License: GPL (>=3)
 LazyData: true
 Depends: R (>= 3.0.0)
-Imports:
+Imports: 
   geosphere,
   maptools,
   MASS,
@@ -24,4 +24,7 @@ Imports:
   R2jags,
   coda,
   ggmcmc
-Suggests: testthat
+Suggests: testthat,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
