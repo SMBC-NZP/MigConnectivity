@@ -27,8 +27,23 @@ real value between -1 and 1, inclusive (usually between 0 and 1)
 Migratory connectivity strength function
 }
 \examples{
+# Example with three breeding and three nonbreeding sites
+nBreeding <- 3
+nNonBreeding <- 3
+psi <- matrix(c(0.4, 0.35, 0.25,
+                0.3, 0.4, 0.3,
+                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE)
+breedDist <- matrix(c(0, 1, 2,
+                      1, 0, 1,
+                      2, 1, 0), nBreeding, nBreeding)
+nonBreedDist <- matrix(c(0, 5, 10,
+                      5, 0, 5,
+                      10, 5, 0), nNonBreeding, nNonBreeding)
+relN <- rep(1/nBreeding, nBreeding)
+round(calcMC(breedDist, nonBreedDist, psi, relN), 3) # == 0.05
+
 ###############################################################################
-# Input values
+# Example data input values
 ###############################################################################
 
 #########################
@@ -38,7 +53,8 @@ Migratory connectivity strength function
 nScenarios1 <- length(samplePsis)
 MC1 <- rep(NA, nScenarios1)
 for (i in 1:nScenarios1) {
-  MC1[i] <- calcMC(sampleOriginDist[[1]], sampleTargetDist[[1]], samplePsis[[i]], sampleOriginRelN[[1]])
+  MC1[i] <- calcMC(sampleOriginDist[[1]], sampleTargetDist[[1]],
+                   samplePsis[[i]], sampleOriginRelN[[1]])
 }
 names(MC1) <- names(samplePsis)
 round(MC1, 6)
@@ -68,7 +84,8 @@ rownames(MC2) <- names(samplePsis)
 colnames(MC2) <- names(sampleOriginPos)
 for (i in 1:nScenarios1) {
   for (j in 1:nScenarios2) {
-    MC2[i, j] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]], samplePsis[[i]], sampleOriginRelN[[1]])
+    MC2[i, j] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
+                        samplePsis[[i]], sampleOriginRelN[[1]])
   }
 }
 
@@ -98,7 +115,8 @@ colnames(MC3) <- names(sampleOriginRelN)
 for (i in 1:nScenarios1) {
   for (j in 1) {
     for (k in 1:nScenarios3) {
-      MC3[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]], samplePsis[[i]], sampleOriginRelN[[k]])
+      MC3[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
+                          samplePsis[[i]], sampleOriginRelN[[k]])
     }
   }
 }
@@ -124,7 +142,8 @@ colnames(MC5) <- names(sampleOriginRelN)
 for (i in 1:nScenarios1) {
   for (j in 6) {
     for (k in 1:nScenarios3) {
-      MC5[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]], samplePsis[[i]], sampleOriginRelN[[k]])
+      MC5[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
+                          samplePsis[[i]], sampleOriginRelN[[k]])
     }
   }
 }

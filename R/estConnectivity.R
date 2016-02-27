@@ -369,59 +369,6 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
 }
 
-# @describeIn estMCGlGps Convenience function if all points are from geolocators.
-estMCGl <- function(geoBias, geoVCov, originRelAbund, originDist,
-                      targetDist, targetPoints, targetSites,
-                      targetAssignment=NULL, originPoints=NULL,
-                      originSites=NULL, originAssignment=NULL,
-                      originNames=NULL, targetNames=NULL, nBoot = 1000,
-                      verbose=0, nSim = 1000, calcCorr=T, alpha = 0.05) {
-  if (is.null(originPoints) && is.null(originAssignment))
-    stop("Need to define either originAssignment or originSites and originPoints")
-  else if (is.null(originAssignment))
-    nAnimals <- length(originPoints)
-  else
-    nAnimals <- length(originAssignment)
-  isGL <- rep(T, nAnimals)
-  return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                       originRelAbund=originRelAbund,
-                       originDist=originDist,
-                       targetDist=targetDist,
-                       targetPoints=targetPoints, targetSites=targetSites,
-                       targetAssignment=targetAssignment,
-                       originPoints=originPoints, originSites=originSites,
-                       originAssignment=originAssignment,
-                       originNames=originNames, targetNames=targetNames,
-                       nBoot = nBoot, verbose=verbose, nSim = nSim,
-                       calcCorr=calcCorr, alpha = alpha))
-}
-
-# @describeIn estMCGlGps Convenience function if all points are from GPS.
-estMCGps <- function(originPoints, targetPoints, originSites,
-                       targetSites, originRelAbund, originDist,
-                       targetDist, originNames=NULL, targetNames=NULL,
-                       nBoot = 1000, verbose=0, calcCorr=T, alpha = 0.05) {
-  if (is.null(originPoints) && is.null(originAssignment))
-    stop("Need to define either originAssignment or originSites and originPoints")
-  else if (is.null(originAssignment))
-    nAnimals <- length(originPoints)
-  else
-    nAnimals <- length(originAssignment)
-  isGL <- rep(F, nAnimals)
-  geoBias <- rep(0,2); geoVCov <- matrix(0,2,2)
-  return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                       originRelAbund=originRelAbund,
-                       originDist=originDist,
-                       targetDist=targetDist,
-                       targetPoints=targetPoints, targetSites=targetSites,
-                       targetAssignment=targetAssignment,
-                       originPoints=originPoints, originSites=originSites,
-                       originAssignment=originAssignment,
-                       originNames=originNames, targetNames=targetNames,
-                       nBoot = nBoot, verbose=verbose,
-                       nSim = 0, calcCorr=calcCorr, alpha = alpha))
-}
-
 ###############################################################################
 #' Estimate MC from abundance and/or transition probability estimates OR
 #' geolocator and/or GPS data.
