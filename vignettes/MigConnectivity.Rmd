@@ -143,6 +143,63 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 ## Examples 
 
 ### `calcMC` - Calculate strength of Migratory Connectivity 
+
+### Calculate MC for one set of input values
+Simple example with three breeding and three non-breeding regions
+
+Define the number of breeding and non-breeding populations
+
+```{r}
+nBreeding <- 3 #number of breeding regions
+nNonBreeding <- 3 #number of non-breeding regions
+```
+
+Generate a distance matrix between the different regions
+```{r}
+#distances between centriods of three breeding regions
+breedDist <- matrix(c(0, 1, 2,
+                      1, 0, 1,
+                      2, 1, 0), nBreeding, nBreeding) 
+
+#distances between centriods of three non-breeding regions
+nonBreedDist <- matrix(c(0, 5, 10,
+                         5, 0, 5,
+                        10, 5, 0), nNonBreeding, nNonBreeding)
+```
+
+Define the transition probabilities between the breeding and non-breeding regions
+```{r}
+#transition probabilities form each breeding to each non-breeding region
+psi <- matrix(c(0.4, 0.35, 0.25,
+                0.3, 0.4, 0.3,
+                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE) 
+```
+
+Define the relative abundance within the three breeding regions
+```{r}
+#equal relative abundance among the three breeding regions, must sum to 1                      
+relN <- rep(1/nBreeding, nBreeding) 
+```
+```{r}
+psi
+breedDist
+nonBreedDist
+relN
+```
+
+Calculate the strength of Migratory Connectivity using the simulated data above
+```{r}
+# Calculate the strength of Migratory Connectivity 
+MC <- calcMC(originDist = breedDist,
+             targetDist = nonBreedDist,
+             psi = psi,
+             originRelAbund = relN)
+```
+```{r, echo=FALSE}
+round(MC,3)
+```
+
+### Advanced example - 
 Calculate the strength of Migratory Connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. 
 
 Simulate data to demonstrate the use of `calcMC`   
@@ -255,48 +312,6 @@ str(sim)
 ```
 
 ## Additional Examples / Scenarios 
-
-### Calculate MC for one set of input values 
-
-Simple example with three breeding and three non-breeding regions
-
-```{r}
-nBreeding <- 3 #number of breeding regions
-nNonBreeding <- 3 #number of non-breeding regions
-
-#transition probabilities form each breeding to each non-breeding region
-psi <- matrix(c(0.4, 0.35, 0.25,
-                0.3, 0.4, 0.3,
-                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE) 
-
-#distances between centriods of three breeding regions
-breedDist <- matrix(c(0, 1, 2,
-                      1, 0, 1,
-                      2, 1, 0), nBreeding, nBreeding) 
-
-#distances between centriods of three non-breeding regions
-nonBreedDist <- matrix(c(0, 5, 10,
-                         5, 0, 5,
-                        10, 5, 0), nNonBreeding, nNonBreeding)
-
-#equal relative abundance among the three breeding regions, must sum to 1                      
-relN <- rep(1/nBreeding, nBreeding) 
-```
-```{r}
-psi
-breedDist
-nonBreedDist
-relN
-
-# Calculate the strength of Migratory Connectivity 
-MC <- calcMC(originDist = breedDist,
-             targetDist = nonBreedDist,
-             psi = psi,
-             originRelAbund = relN)
-```
-```{r, echo=FALSE}
-round(MC,3)
-```
 
 ### Calculate Migratory Connectivity for a range of input values 
 
