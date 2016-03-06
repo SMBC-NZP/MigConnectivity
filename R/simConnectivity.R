@@ -63,7 +63,7 @@
 #' }
 #'
 #' @export
-# @examples
+#' @example inst/examples/simMoveExamples.R
 simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
                     nYears = 10, nMonths = 3, winMoveRate = 0,
                     sumMoveRate = 0, winDispRate = 0, sumDispRate = 0,
@@ -82,17 +82,17 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 
   # Turn rate terms into probabilities
   if (winMoveRate>0) {
-    winMoveMat <- mlogit.mat(1/sqrt(winMoveRate), winteringDist)
+    winMoveMat <- mlogitMat(1/sqrt(winMoveRate), winteringDist)
   }
   else
     winMoveMat <- NULL
   if (sumMoveRate>0) {
-    sumMoveMat <- mlogit.mat(1/sqrt(sumMoveRate), breedingDist)
+    sumMoveMat <- mlogitMat(1/sqrt(sumMoveRate), breedingDist)
   }
   else
     sumMoveMat <- NULL
   if (winDispRate>0) {
-    winDispMat <- mlogit.mat(1/sqrt(winDispRate), winteringDist)
+    winDispMat <- mlogitMat(1/sqrt(winDispRate), winteringDist)
   }
   else
     winDispMat <- NULL
@@ -101,12 +101,12 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
     breedDispRate <- sumDispRate
   }
   if (natalDispRate>0) {
-    natalDispMat <- mlogit.mat(1/sqrt(natalDispRate), breedingDist)
+    natalDispMat <- mlogitMat(1/sqrt(natalDispRate), breedingDist)
   }
   else
     natalDispMat <- NULL
   if (breedDispRate>0) {
-    breedDispMat <- mlogit.mat(1/sqrt(breedDispRate), breedingDist)
+    breedDispMat <- mlogitMat(1/sqrt(breedDispRate), breedingDist)
   }
   else
     breedDispMat <- NULL
@@ -180,7 +180,7 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' @param nPops Number of populations/regions
 #' @param routePerPop Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population
 #' @param nYears Number of years surveys were conducted
-#' @param alphaPop Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaPop) == 1, expected counts are identical for each population 
+#' @param alphaPop Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaPop) == 1, expected counts are identical for each population
 #' @param beta Coefficient of linear year effect (default = 0)
 #' @param sdRoute Standard deviation of random route-level variation
 #' @param sdYear Standard deviation of random year-level variation
@@ -202,11 +202,11 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #'    \item{\code{expectedCount}}{nRoutes by nYears matrix containing deterministic expected counts.}
 #'    \item{\code{C}}{nRoutes by nYears matrix containing observed counts.}
 #'   }
-#' 
+#'
 #'
 #' @export
 #' @example inst/examples/simCountExamples.R
-# 
+#
 
 simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear){
 
@@ -221,8 +221,8 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRout
   if(length(alphaPop) == 1) {
     alphaPop <- rep(alphaPop, nPops)
   }
-  
-  
+
+
   # Generate data structure to hold counts and log (lambda)
   C <- log.expectedCount <- array(NA, dim = c(nYears, nRoutes))
 
@@ -246,7 +246,7 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRout
   }
 
   return(list(nPops = nPops, nRoutes = nRoutes, nYears = nYears,
-              routePerPop = routePerPop, year = yr, pop = pop, 
+              routePerPop = routePerPop, year = yr, pop = pop,
               alphaPop = alphaPop, epsRoute = epsRoute,
               epsYear = epsYear, beta = beta,
               sdRoute = sdRoute, sdYear = sdYear,
@@ -260,8 +260,8 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRout
 ###############################################################################
 #' Estimates population-level relative abundance from count data
 #'
-#' Uses a Bayesian heirarchical model to estimate relative abundance of regional 
-#' populations from count-based data (e.g., Breeding Bird Survey) 
+#' Uses a Bayesian heirarchical model to estimate relative abundance of regional
+#' populations from count-based data (e.g., Breeding Bird Survey)
 #'
 #' @param count_data List containing the following elements:
 #' ' \describe{
@@ -279,7 +279,7 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRout
 #'
 #' @export
 #' @example inst/examples/simCountExamples.R
-# 
+#
 modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 3) {
   nPops <- length(unique(count_data$pop))
   nRoutes <- dim(count_data$C)[2]
@@ -289,14 +289,14 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   } else {
     routePerPop = count_data$routePerPop
   }
-  
+
   # Initial values
   jags.inits <- function()list(mu = runif(1,0,2), alpha = runif(nPops, -1,1), beta1 = runif(1,-1,1),
                                tau.alpha = runif(1,0,0.1), tau.noise = runif(1,0,0.1),
                                tau.rte = runif(1,0,0.1), route = runif(nRoutes,-1,1))
   # Parameters to monitor
   params <- c("mu", "alpha", "beta1", "sd.alpha", "sd.rte", "sd.noise", "totalN", "popN", "relN")
-  
+
   # Data
   jags.data <- list(C = count_data$C, nPops = length(unique(count_data$pop)), nRoutes = nRoutes,
                     routePerPop = routePerPop,
@@ -306,6 +306,6 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params, "sim_Poisson2.txt",
                           n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
                           working.directory = file.path('inst/JAGS'))
-  
+
   return(coda::as.mcmc(out))
 }
