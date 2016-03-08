@@ -57,11 +57,312 @@ library(MigConnectivity)
 ```
 ### Functions    
 
-`calcMC`  Calculate strength of Migratory Connectivity  
-`estMC` Estimate the strength of Migratory Connectivity while incorporting location uncertainty   
-`simMove` Simulates position of animals by individual, season, year, and month  
+`calcMC`  Calculate strength of Migratory Connectivity (MC)  
+`estMC` Estimate the strength of Migratory Connectivity (MC) while incorporting location uncertainty   
+  
 
-#### Utility Functions for use in simulations 
+## Examples 
+
+### `calcMC` - Calculate strength of Migratory Connectivity 
+
+This function calculates the strength of Migratory Connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to calculate the strength of MC between three breeding and non-breeding regions. 
+
+To calculate the strength of MC, you will need:   
+
+1. to define the number of breeding and non-breeding regions  
+1. the distance between the breeding regions and the distance between the non-breeding regions  
+1. the transition probabilities between each breeding and non-breeding region (`psi`)  
+1. the relative abundance within each of the regions where individuals originate from (here the breeding regions). 
+
+### Calculate MC between breeding and non-breeding regions
+
+Simple example with three breeding and three non-breeding regions
+
+Define the number of breeding and non-breeding populations
+
+```{r}
+nBreeding <- 3 #number of breeding regions
+nNonBreeding <- 3 #number of non-breeding regions
+```
+
+Generate a distance matrix between the different regions
+```{r}
+#distances between centriods of three breeding regions
+breedDist <- matrix(c(0, 1, 2,
+                      1, 0, 1,
+                      2, 1, 0), nBreeding, nBreeding) 
+
+#distances between centriods of three non-breeding regions
+nonBreedDist <- matrix(c(0, 5, 10,
+                         5, 0, 5,
+                        10, 5, 0), nNonBreeding, nNonBreeding)
+```
+```{r echo=FALSE}
+par(bty="n")
+plot(c(4,5,6),rep(1,3),ylim=c(-0.05,1.05),xlim=c(-1,11),pch=19,axes=FALSE,yaxt="n",xaxt="n",cex=2,ylab="",xlab="Non-breeding",main="Breeding")
+points(c(0,5,10),rep(0,3),pch=15,cex=2)
+```  
+
+Define the transition probabilities between the breeding and non-breeding regions
+```{r}
+#transition probabilities form each breeding to each non-breeding region
+psi <- matrix(c(0.4, 0.35, 0.25,
+                0.3, 0.4, 0.3,
+                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE) 
+
+```
+```{r echo=FALSE}
+par(bty="n")
+plot(c(4,5,6),rep(1,3),ylim=c(-0.05,1.05),xlim=c(-1,11),pch=19,axes=FALSE,yaxt="n",xaxt="n",cex=2,ylab="",xlab="Non-breeding",main="Breeding")
+points(c(0,5,10),rep(0,3),pch=15,cex=2)
+
+segments(4,1,0,0,lwd=0.4*10)
+segments(4,1,5,0,lwd=0.35*10)
+segments(4,1,10,0,lwd=0.25*10)
+
+segments(5,1,0,0,lwd=0.3*10, lty = 2)
+segments(5,1,5,0,lwd=0.4*10, lty = 2)
+segments(5,1,10,0,lwd=0.3*10, lty = 2)
+
+segments(6,1,0,0,lwd=0.2*10, lty = 3)
+segments(6,1,5,0,lwd=0.3*10, lty = 3)
+segments(6,1,10,0,lwd=0.5*10, lty = 3)
+```  
+
+Define the relative abundance within the three breeding regions
+```{r}
+#equal relative abundance among the three breeding regions, must sum to 1                      
+relN <- rep(1/nBreeding, nBreeding) 
+```
+```{r}
+relN
+```
+Calculate the strength of Migratory Connectivity using the simulated data above
+```{r}
+# Calculate the strength of Migratory Connectivity 
+MC <- calcMC(originDist = breedDist,
+             targetDist = nonBreedDist,
+             psi = psi,
+             originRelAbund = relN)
+```
+```{r, echo=FALSE}
+round(MC,3)
+```
+
+### `estMC` - Calculate strength of Migratory Connectivity incorporating location uncertainty
+
+Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. 
+
+To estimate MC and include location uncertainty the following data are needed:  
+
+1. A logical vector indicating the type of device the location estimates were derived from (GPS = FALSE, Light-level geolocator = TRUE)    
+1. Location Bias - a vector that has error estimates for both longitude and latitude    
+1. Location error - a variance, covariance matrix of longitude and latitude    
+1. Distance matrix between breeding and non-breeding regions    
+1. A shapefile of both breeding and non-breeding regions    
+1. The deployment locations and the 'unknown' locations derived from the tracking devices    
+1. The relative abundance within each region where the birds originate from (deployment regions)     
+
+We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
+
+Load location data that accompanies the `MigConnectivity` package. The location data are data from breeding Ovenbirds that were fit with Light-level geolocators or PinPoint-10 GPS tags. 
+
+```{r}
+data(OVENdata) # Ovenbird 
+
+names(OVENdata)
+```
+
+The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. *in review* to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, error=FALSE}
+library(maptools)
+data(wrld_simpl)
+raster::crs(wrld_simpl)
+par(mar=c(0,0,0,0))
+plot(OVENdata$originSites,xlim=c(raster::extent(OVENdata$targetSites)[1],raster::extent(OVENdata$targetSites)[2]),
+                          ylim=c(raster::extent(OVENdata$targetSites)[3],raster::extent(OVENdata$originSites)[4]))
+plot(OVENdata$targetSites, add = TRUE, col=c("gray70","gray35","gray10"))
+wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
+plot(wrld_simple,add=TRUE)
+```
+
+The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
+```{r}
+M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+      geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+      geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+      targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
+      originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+      targetSites = OVENdata$targetSites, # Non-breeding target sites
+      originSites = OVENdata$originSites, # Breeding origin sites 
+      originPoints = OVENdata$originPoints, # Capture Locations 
+      targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+      originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+      verbose = 1,   # output options - see help ??estMC
+      nSim = 10,     # This is set low for example
+      nSamples = 10) # This is set low for example 
+```
+```{r echo = FALSE, message=FALSE, warning = FALSE, error=FALSE}
+library(rgeos)
+library(shape)
+library(raster)
+M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+      geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+      geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+      targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
+      originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+      targetSites = OVENdata$targetSites, # Non-breeding target sites
+      originSites = OVENdata$originSites, # Breeding origin sites 
+      originPoints = OVENdata$originPoints, # Capture Locations 
+      targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+      originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+      verbose = 0,   # output options - see help ??estMC
+      nSim = 10,     # This is set low for example
+      nSamples = 10) # This is set low for example 
+
+par(mar=c(0,0,0,0))
+plot(wrld_simple,xlim=c(raster::extent(OVENdata$targetSites)[1],raster::extent(OVENdata$targetSites)[2]),
+                          ylim=c(raster::extent(OVENdata$targetSites)[3],raster::extent(OVENdata$originSites)[4]))
+plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
+plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
+plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
+
+legend(400000,-2105956,legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+
+shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],gCentroid(OVENdata$originSites[1])@coords[,2],
+         gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,extent(OVENdata$targetSites[2])[4]+150000,
+         arr.length = 0.3,
+         arr.adj = 0.5,
+         arr.lwd = 1,
+         arr.width = 0.4,
+         arr.type = "triangle",
+         lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
+         lty=1)
+
+shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],gCentroid(OVENdata$originSites[1])@coords[,2],
+         gCentroid(OVENdata$targetSites[3])@coords[,1],extent(OVENdata$targetSites[3])[4]+150000,
+         arr.length = 0.3,
+         arr.adj = 0.5,
+         arr.lwd = 1,
+         arr.width = 0.4, 
+         arr.type = "triangle",
+         lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+         lty=1)
+
+shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],gCentroid(OVENdata$originSites[2])@coords[,2],
+         gCentroid(OVENdata$targetSites[1])@coords[,1],extent(OVENdata$targetSites[1])[4]+150000,
+         arr.length = 0.3,
+         arr.adj = 0.5,
+         arr.lwd = 1,
+         arr.width = 0.4,
+         arr.type = "triangle",
+         lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+         lty=1)
+
+shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],gCentroid(OVENdata$originSites[2])@coords[,2],
+         (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),extent(OVENdata$targetSites[2])[4]+150000,
+         arr.length = 0.3,
+         arr.adj = 0.5,
+         arr.lwd = 1,
+         arr.width = 0.4,
+         arr.type = "triangle",
+         lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+
+box(which="plot")
+```
+
+```{r}
+str(M)
+```
+
+### Advanced example - 
+Calculate the strength of Migratory Connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. These simulations use ulitily functions included in the package. See below for details regarding the Utility Functions to help simulate data. 
+
+Simulate data to demonstrate the use of `calcMC`   
+
+```{r}
+set.seed(75)
+
+# Parameters for simulations
+
+nSeasons <- 2 # population with two discrete seasons - breeding / non-breeding
+nYears <- 10 # Ten years of data
+nMonths <- 4 # Four months within each season
+
+nBreeding <- 100 # Number of populations
+nWintering <- 100 # Number of populations 
+```
+Generate the spatial arrangement of breeding and non-breeding populations  
+
+```{r}
+breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
+                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
+winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
+                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
+
+
+breedDist <- distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
+nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
+```
+
+The relative abundance of the study species is needed in each population. Here we generate those data below.
+```{r}
+# Breeding Abundance
+breedingN <- rep(500, nBreeding)
+breedingRelN <- breedingN/sum(breedingN)
+```
+
+The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
+```{r}
+# Set up psi matrix
+o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
+              target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
+              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+
+slope <- o$minimum
+
+psi <- mlogitMat(slope, breedDist)
+
+```
+
+Now that we have all the data needed to calculate the strength of Migratory Connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
+```{r}
+# Baseline strength of migratory connectivity
+MC <- calcMC(originDist = breedDist, 
+             targetDist = nonbreedDist,
+             psi = psi, 
+             originRelAbund = breedingRelN)
+
+# Show Results
+MC
+```
+
+### `simMove` Simulation of movement between breeding and non-breeding
+
+Recycle data generated within the calcMC function - see above 
+```{r}
+sim <- simMove(breedingAbund = breedingN, # Breeding relative abundance
+               breedingDist = breedDist,  # Breeding distance
+               winteringDist = nonbreedDist, # Non-breeding distance
+               psi = psi, # Transition probabilities
+               nYears = nYears, # Number of years
+               nMonths = nMonths, # Number of months
+               winMoveRate = 0, # winter movement rate
+               sumMoveRate = 0, # breeding movement rate
+               winDispRate = 0, # winter dispersal rate
+               sumDispRate = 0, # summer disperal rate
+               natalDispRate = 0, # natal dispersal rate
+               breedDispRate = 0, # breeding dispersal rate
+               verbose = 0) # verbose output
+
+
+str(sim)
+```
+
+#### Utility Functions for use in simulations    
+
+`simMove` Simulates position of animals by individual, season, year, and month   
 
 `mlogitMat`: Calculates probability matrix based on exponential decline with distance
 
@@ -138,178 +439,8 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
   MC <- calcMC(originDist, targetDist, psiMat, originRelAbund)
   return(list(psi=psiMat, MC=MC))
 } 
-```
+```   
 
-## Examples 
-
-### `calcMC` - Calculate strength of Migratory Connectivity 
-
-### Calculate MC for one set of input values
-Simple example with three breeding and three non-breeding regions
-
-Define the number of breeding and non-breeding populations
-
-```{r}
-nBreeding <- 3 #number of breeding regions
-nNonBreeding <- 3 #number of non-breeding regions
-```
-
-Generate a distance matrix between the different regions
-```{r}
-#distances between centriods of three breeding regions
-breedDist <- matrix(c(0, 1, 2,
-                      1, 0, 1,
-                      2, 1, 0), nBreeding, nBreeding) 
-
-#distances between centriods of three non-breeding regions
-nonBreedDist <- matrix(c(0, 5, 10,
-                         5, 0, 5,
-                        10, 5, 0), nNonBreeding, nNonBreeding)
-```
-
-Define the transition probabilities between the breeding and non-breeding regions
-```{r}
-#transition probabilities form each breeding to each non-breeding region
-psi <- matrix(c(0.4, 0.35, 0.25,
-                0.3, 0.4, 0.3,
-                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE) 
-```
-
-Define the relative abundance within the three breeding regions
-```{r}
-#equal relative abundance among the three breeding regions, must sum to 1                      
-relN <- rep(1/nBreeding, nBreeding) 
-```
-```{r}
-psi
-breedDist
-nonBreedDist
-relN
-```
-
-Calculate the strength of Migratory Connectivity using the simulated data above
-```{r}
-# Calculate the strength of Migratory Connectivity 
-MC <- calcMC(originDist = breedDist,
-             targetDist = nonBreedDist,
-             psi = psi,
-             originRelAbund = relN)
-```
-```{r, echo=FALSE}
-round(MC,3)
-```
-
-### Advanced example - 
-Calculate the strength of Migratory Connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. 
-
-Simulate data to demonstrate the use of `calcMC`   
-
-```{r}
-set.seed(75)
-
-# Parameters for simulations
-
-nSeasons <- 2 # population with two discrete seasons - breeding / non-breeding
-nYears <- 10 # Ten years of data
-nMonths <- 4 # Four months within each season
-
-nBreeding <- 100 # Number of populations
-nWintering <- 100 # Number of populations 
-```
-Generate the spatial arrangement of breeding and non-breeding populations  
-
-```{r}
-breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
-                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
-winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
-                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
-
-
-breedDist <- distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
-nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
-```
-
-The relative abundance of the study species is needed in each population. Here we generate those data below.
-```{r}
-# Breeding Abundance
-breedingN <- rep(500, nBreeding)
-breedingRelN <- breedingN/sum(breedingN)
-```
-
-The transition probability (psi) between the breeding and non-breeding populations is calculated below 
-```{r}
-# Set up psi matrix
-o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
-              target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
-              interval = c(0, 10), tol = .Machine$double.eps^0.5)
-
-slope <- o$minimum
-
-psi <- mlogitMat(slope, breedDist)
-
-```
-
-Now that we have all the data needed to calculate the strength of Migratory Connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
-```{r}
-# Baseline strength of migratory connectivity
-MC <- calcMC(originDist = breedDist, 
-             targetDist = nonbreedDist,
-             psi = psi, 
-             originRelAbund = breedingRelN)
-
-# Show Results
-MC
-```
-
-### `estMC` - Calculate strength of Migratory Connectivity incorporating location uncertainty
-
-Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
-
-Load location data that accompanies the `MigConnectivity` package. The location data are data from breeding Ovenbirds that were fit with Light-level geolocators or PinPoint-10 GPS tags. 
-```{r}
-data(OVENdata) # Ovenbird 
-
-names(OVENdata)
-```
-
-
-```{r}
-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
-      geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-      geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-      targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
-      originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
-      targetSites = OVENdata$targetSites, # Non-breeding target sites
-      originSites = OVENdata$originSites, # Breeding origin sites 
-      originPoints = OVENdata$originPoints, # Capture Locations 
-      targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-      originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
-      verbose = 1,   # output options - see help ??estMC
-      nSim = 10,     # This is set low for example
-      nSamples = 10) # This is set low for example 
-```
-
-### `simMove` Simulation of movement between breeding and non-breeding
-
-Recycle data generated within the calcMC function - see above 
-```{r}
-sim <- simMove(breedingAbund = breedingN, # Breeding relative abundance
-               breedingDist = breedDist,  # Breeding distance
-               winteringDist = nonbreedDist, # Non-breeding distance
-               psi = psi, # Transition probabilities
-               nYears = nYears, # Number of years
-               nMonths = nMonths, # Number of months
-               winMoveRate = 0, # winter movement rate
-               sumMoveRate = 0, # breeding movement rate
-               winDispRate = 0, # winter dispersal rate
-               sumDispRate = 0, # summer disperal rate
-               natalDispRate = 0, # natal dispersal rate
-               breedDispRate = 0, # breeding dispersal rate
-               verbose = 0) # verbose output
-
-
-str(sim)
-```
 
 ## Additional Examples / Scenarios 
 
