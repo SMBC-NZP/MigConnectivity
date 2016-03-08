@@ -29,10 +29,8 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   return((MC.in - MC)^2)
 }
 
-###############################################################################
 # Simple approach to estimate psi matrix and MC from simulated (or real) data
-# (doesn't include uncertainty).  Only uses one year
-###############################################################################
+# (doesn't include uncertainty).  Only uses one year for computation
 calcPsiMC3 <- function(originDist, targetDist, originRelAbund, locations, year,
                        verbose=F) {
   nOrigin <- nrow(originDist)
@@ -62,10 +60,10 @@ calcPsiMC3 <- function(originDist, targetDist, originRelAbund, locations, year,
 ## Simulation ----
 nBreeding <- 100
 nWintering <- 100
-breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
-                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
-winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
-                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
+breedingPos <- matrix(c(rep(seq(-99, -81, 2), each=sqrt(nBreeding)),
+                        rep(seq(49, 31, -2), sqrt(nBreeding))), nBreeding, 2)
+winteringPos <- matrix(c(rep(seq(-79, -61, 2), each=sqrt(nWintering)),
+                         rep(seq(9, -9, -2), sqrt(nWintering))), nWintering, 2)
 head(breedingPos)
 tail(breedingPos)
 head(winteringPos)
@@ -75,7 +73,7 @@ breedDist <- distFromPos(breedingPos, 'ellipsoid')
 nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 
 # Breeding Abundance
-breedingN <- rep(500, nBreeding)
+breedingN <- rep(5000, nBreeding)
 breedingRelN <- breedingN/sum(breedingN)
 
 # Set up psi matrix
@@ -93,13 +91,13 @@ MC
 # Other basic simulation parameters
 
 ## Dispersal simulations---
+set.seed(1516)
 nYears <- 15
 nMonths <- 4 # Each season
 Drates <- c(0.02, 0.04, 0.08, 0.16, 0.32, 0.64)    #rates of dispersal
-birdLocDisp <- list()
-Disp.df  <- data.frame(Year=rep(rep(seq(1:nYears),length(Drates))),
-                       Rate=rep(Drates, each=nYears),
-                       MC=NA)
+birdLocDisp <- vector('list', length(Drates))
+Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
+                       Rate=rep(Drates, each = nYears), MC = NA)
 for(i in 1:length(Drates)){
   cat('Dispersal Rate', Drates[i], '\n')
   birdLocDisp[[i]] <- simMove(breedingN, breedDist, nonbreedDist, psi, nYears, nMonths,
@@ -108,32 +106,43 @@ for(i in 1:length(Drates)){
     cat('\tYear', j, '\n')
     temp.results <- calcPsiMC3(breedDist, nonbreedDist, breedingRelN,
                                  birdLocDisp[[i]]$animalLoc, year=j, F)
-    Disp.df$MC[j+(i-1)*nYears] <- temp.results$MC
+    Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC
   }
 } # end i loop
 
-Disp.df
+Disp.df$Year <- Disp.df$Year - 1 #just run once!
+data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
 
-write.csv(Disp.df, "Disp.df.csv")
+write.csv(Disp.df, "../Disp.df.csv")
 
-#process error
-#Dispersal
+# Convert dispersal rates to probabilities of dispersing at least certain distance
+threshold <- 1000
+probFarDisp <- matrix(NA, nBreeding, length(Drates), dimnames = list(NULL, Drates))
+for (i in 1:length(Drates)) {
+  for (k in 1:nBreeding) {
+    probFarDisp[k, i] <- sum(birdLocDisp[[i]]$natalDispMat[k, which(breedDist[k, ]>= threshold)])
+  }
+}
+summary(probFarDisp)
+
+
+
 #plot results
 \dontrun{
 require(ggplot2)
 require(ggthemes)
-$Rate2<- as.factor(Disp.df$Rate)
-#Disp.df$Rate3<- as.numeric(Disp.df$Rate2)
-#ggplot(Disp.df, aes(x=Year, y=Rho, size=as.factor(Rate)))+
-line_set=c(0.5, 0.75, 1, 1.25,1.75, 2.25)
+
+line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
+png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
 ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
   geom_line()+
   scale_size_manual(values=line_set)+
   labs(size="Dispersal Rate")+
-  scale_y_continuous("MC", limits=c(-.005,0.26), breaks=c(0,0.05, 0.1, 0.15,0.2,0.25))+
-  scale_x_continuous(breaks=c(0,3,6,9,12,15))+
+  scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
   theme_bw()+
   theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
         panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
         legend.title=element_text(size=14), legend.text=element_text(size=14))
+dev.off()
 }

@@ -242,112 +242,68 @@ nSamplesGLGPS <- 1000 # Number of bootstrap iterations
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
 }
 
-# Estimate MC only, treat all data as is
-glGPSMC <- estMC(isGL = OVENdata$isGL,
-                 geoBias = OVENdata$geo.bias,
-                 geoVCov = OVENdata$geo.vcov,
-                 targetSites = OVENdata$targetSites,
-                 targetPoints = OVENdata$targetPoints,
-                 targetDist = OVENdata$targetDist,
-                 originPoints = OVENdata$originPoints,
-                 originSites = OVENdata$originSites,
-                 originDist = OVENdata$originDist,
-                 originRelAbund = OVENdata$originRelAbund,
-                 nSamples = nSamplesGLGPS,
-                 verbose=1,
-                 calcCorr=FALSE)
+# Estimate MC only, treat all data as geolocator
+GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (T) GPS (F)
+             geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+             geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+             targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+             originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+             targetSites = OVENdata$targetSites, # Non-breeding target sites
+             originSites = OVENdata$originSites, # Breeding origin sites
+             originPoints = OVENdata$originPoints, # Capture Locations
+             targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+             originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+             verbose = 1,   # output options
+             nSamples = nSamplesGLGPS) # This is set low for example
 
-# Estimate MC and correlation, treat all data as is
-glGPSMCCorr <- estMC(isGL = OVENdata$isGL,
-                     geoBias = OVENdata$geo.bias,
-                     geoVCov = OVENdata$geo.vcov,
-                     targetSites = OVENdata$targetSites,
-                     targetPoints = OVENdata$targetPoints,
-                     targetDist = OVENdata$targetDist,
-                     originPoints = OVENdata$originPoints,
-                     originSites = OVENdata$originSites,
-                     originDist = OVENdata$originDist,
-                     originRelAbund = OVENdata$originRelAbund,
-                     nSamples = nSamplesGLGPS,
-                     verbose=1,
-                     calcCorr=TRUE)
+# Estimate MC and rM, treat all data as is
+Combined<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+                geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+                geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+                targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+                originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+                targetSites = OVENdata$targetSites, # Non-breeding target sites
+                originSites = OVENdata$originSites, # Breeding origin sites
+                originPoints = OVENdata$originPoints, # Capture Locations
+                targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+                originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+                verbose = 1,   # output options
+                calcCorr = T, # estimate rM as well
+                nSamples = nSamplesGLGPS) # This is set low for example
 
-# Estimate MC and correlation, treat GPS data as GL
-glMCCorr <- estMC(isGL = TRUE,
-                  geoBias = OVENdata$geo.bias,
-                  geoVCov = OVENdata$geo.vcov,
-                  targetSites = OVENdata$targetSites,
-                  targetPoints = OVENdata$targetPoints,
-                  targetDist = OVENdata$targetDist,
-                  originPoints = OVENdata$originPoints,
-                  originSites = OVENdata$originSites,
-                  originDist = OVENdata$originDist,
-                  originRelAbund = OVENdata$originRelAbund,
-                  nSamples = nSamplesGLGPS,
-                  verbose=1,
-                  calcCorr=TRUE)
-str(glGPSMC)
-str(glGPSMCCorr)
-str(glMCCorr)
-# Estimate MC and correlation, treat GPS data as GL
-gpsMCCorr <- estMC(isGL = FALSE,
-                  geoBias = OVENdata$geo.bias,
-                  geoVCov = OVENdata$geo.vcov,
-                  targetSites = OVENdata$targetSites,
-                  targetPoints = OVENdata$targetPoints,
-                  targetDist = OVENdata$targetDist,
-                  originPoints = OVENdata$originPoints,
-                  originSites = OVENdata$originSites,
-                  originDist = OVENdata$originDist,
-                  originRelAbund = OVENdata$originRelAbund,
-                  nSamples = nSamplesGLGPS,
-                  verbose=1,
-                  calcCorr=TRUE)
+# For treating all data as GPS,
+# Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #
+tp<-OVENdata$targetPoints@coords
+sp::plot(OVENdata$targetPoints)
+sp::plot(OVENdata$targetSites,add=TRUE)
+text(OVENdata$targetPoints@coords[,1],OVENdata$targetPoints@coords[,2],label=c(1:39))
 
-glGPSMCCorr0 <- estMC(isGL = OVENdata$isGL,
-                     geoBias = rep(0, 2),
-                     geoVCov = OVENdata$geo.vcov,
-                     targetSites = OVENdata$targetSites,
-                     targetPoints = OVENdata$targetPoints,
-                     targetDist = OVENdata$targetDist,
-                     originPoints = OVENdata$originPoints,
-                     originSites = OVENdata$originSites,
-                     originDist = OVENdata$originDist,
-                     originRelAbund = OVENdata$originRelAbund,
-                     nSamples = nSamplesGLGPS,
-                     verbose=1,
-                     calcCorr=TRUE)
+tp[5,2]<- -1899469
+tp[10,2]<- -2007848
+tp[1,2]<- -2017930
+tp[11,2]<- -2136511
+tp[15,2]<- -2121268
+tp[16,2]<- -2096063
 
-# Estimate MC and correlation, treat GPS data as GL
-glMCCorr0 <- estMC(isGL = TRUE,
-                  geoBias = rep(0, 2),
-                  geoVCov = OVENdata$geo.vcov,
-                  targetSites = OVENdata$targetSites,
-                  targetPoints = OVENdata$targetPoints,
-                  targetDist = OVENdata$targetDist,
-                  originPoints = OVENdata$originPoints,
-                  originSites = OVENdata$originSites,
-                  originDist = OVENdata$originDist,
-                  originRelAbund = OVENdata$originRelAbund,
-                  nSamples = nSamplesGLGPS,
-                  verbose=1,
-                  calcCorr=TRUE)
-str(glGPSMCCorr0)
-str(glMCCorr0)
-# Estimate MC and correlation, treat GPS data as GL
-gpsMCCorr0 <- estMC(isGL = FALSE,
-                   geoBias = rep(0, 2),
-                   geoVCov = OVENdata$geo.vcov,
-                   targetSites = OVENdata$targetSites,
-                   targetPoints = OVENdata$targetPoints,
-                   targetDist = OVENdata$targetDist,
-                   originPoints = OVENdata$originPoints,
-                   originSites = OVENdata$originSites,
-                   originDist = OVENdata$originDist,
-                   originRelAbund = OVENdata$originRelAbund,
-                   nSamples = nSamplesGLGPS,
-                   verbose=1,
-                   calcCorr=TRUE)
-str(gpsMCCorr)
+oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
+raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
+
+# Estimate MC only, treat all data as GPS
+GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (T) GPS (F)
+              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+              targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+              originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+              targetSites = OVENdata$targetSites, # Non-breeding target sites
+              originSites = OVENdata$originSites, # Breeding origin sites
+              originPoints = OVENdata$originPoints, # Capture Locations
+              targetPoints = oven_targetPoints, # Non-breeding Locations derived from devices
+              originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+              verbose = 1,   # output options
+              nSamples = nSamplesGLGPS) # This is set low for example
+
+str(GPS_mc)
+str(Combined)
+str(GL_mc)
 }
 

@@ -331,8 +331,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=T), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,CRS(Lambert))
-      target.point.sample2 <- sp::spTransform(target.point.sample,CRS(WGS84))
+      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(Lambert))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
