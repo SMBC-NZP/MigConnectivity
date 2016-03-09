@@ -44,6 +44,38 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   return((MC.in - MC)^2)
 }
 
+#' Distance matrix from position matrix
+#'
+#' @param pos Number of sites by 2 matrix with postions of each site.  If
+#'    \code{surface} is 'ellipsoid' or 'sphere', then column 1 should be
+#'    longitude and column 2 should be latitude.  If \code{surface} is 'plane',
+#'    column 1 can be x-position and column 2 y-position.
+#' @param surface Surface to calculate distances on.  Either 'ellipsoid'
+#'    (default), 'sphere', or 'plane'.
+#'
+#' @return Square matrix of distances between sites. If \code{surface} is
+#'    'ellipsoid' or 'sphere', then units will be km; if \code{surface} is
+#'    'plane', the units will be the same as the \code{pos} units.
+#' @export
+#'
+#' @examples
+#' nBreeding <- 100
+#' nWintering <- 100
+#' breedingPos <- matrix(c(rep(seq(-99, -81, 2), each = sqrt(nBreeding)),
+#'                         rep(seq(49, 31, -2), sqrt(nBreeding))),
+#'                       nBreeding, 2)
+#' winteringPos <- matrix(c(rep(seq(-79, -61, 2), each = sqrt(nWintering)),
+#'                          rep(seq(9, -9, -2), sqrt(nWintering))),
+#'                        nWintering, 2)
+#' head(breedingPos)
+#' tail(breedingPos)
+#' head(winteringPos)
+#' tail(winteringPos)
+#'
+#' breedDist <- distFromPos(breedingPos, 'ellipsoid')
+#' nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
+#' breedDist[1:12, 1:12]
+#' breedDist[1:12, c(1,91,100)]
 distFromPos <- function(pos, surface = 'ellipsoid') {
   if (!(surface %in% c('plane', 'sphere', 'ellipsoid')))
     stop('surface must be "plane", "sphere", or "ellipsoid".')

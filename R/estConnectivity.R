@@ -331,8 +331,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=T), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,CRS(Lambert))
-      target.point.sample2 <- sp::spTransform(target.point.sample,CRS(WGS84))
+      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(Lambert))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
@@ -367,59 +367,6 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
               bcCI = bcCI, hpdCI = hpdCI, sampleCorr = corr, pointCorr = pointCorr,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
-}
-
-# @describeIn estMCGlGps Convenience function if all points are from geolocators.
-estMCGl <- function(geoBias, geoVCov, originRelAbund, originDist,
-                      targetDist, targetPoints, targetSites,
-                      targetAssignment=NULL, originPoints=NULL,
-                      originSites=NULL, originAssignment=NULL,
-                      originNames=NULL, targetNames=NULL, nBoot = 1000,
-                      verbose=0, nSim = 1000, calcCorr=T, alpha = 0.05) {
-  if (is.null(originPoints) && is.null(originAssignment))
-    stop("Need to define either originAssignment or originSites and originPoints")
-  else if (is.null(originAssignment))
-    nAnimals <- length(originPoints)
-  else
-    nAnimals <- length(originAssignment)
-  isGL <- rep(T, nAnimals)
-  return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                       originRelAbund=originRelAbund,
-                       originDist=originDist,
-                       targetDist=targetDist,
-                       targetPoints=targetPoints, targetSites=targetSites,
-                       targetAssignment=targetAssignment,
-                       originPoints=originPoints, originSites=originSites,
-                       originAssignment=originAssignment,
-                       originNames=originNames, targetNames=targetNames,
-                       nBoot = nBoot, verbose=verbose, nSim = nSim,
-                       calcCorr=calcCorr, alpha = alpha))
-}
-
-# @describeIn estMCGlGps Convenience function if all points are from GPS.
-estMCGps <- function(originPoints, targetPoints, originSites,
-                       targetSites, originRelAbund, originDist,
-                       targetDist, originNames=NULL, targetNames=NULL,
-                       nBoot = 1000, verbose=0, calcCorr=T, alpha = 0.05) {
-  if (is.null(originPoints) && is.null(originAssignment))
-    stop("Need to define either originAssignment or originSites and originPoints")
-  else if (is.null(originAssignment))
-    nAnimals <- length(originPoints)
-  else
-    nAnimals <- length(originAssignment)
-  isGL <- rep(F, nAnimals)
-  geoBias <- rep(0,2); geoVCov <- matrix(0,2,2)
-  return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                       originRelAbund=originRelAbund,
-                       originDist=originDist,
-                       targetDist=targetDist,
-                       targetPoints=targetPoints, targetSites=targetSites,
-                       targetAssignment=targetAssignment,
-                       originPoints=originPoints, originSites=originSites,
-                       originAssignment=originAssignment,
-                       originNames=originNames, targetNames=targetNames,
-                       nBoot = nBoot, verbose=verbose,
-                       nSim = 0, calcCorr=calcCorr, alpha = alpha))
 }
 
 ###############################################################################
