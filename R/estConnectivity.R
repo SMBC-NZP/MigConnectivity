@@ -51,7 +51,7 @@
 estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
                              originSites=NULL, targetSites=NULL,
                              nSamples = 1000, row0 = 0, verbose=0,
-                             alpha = 0.05) {
+                             alpha = 0.1) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   if (coda::is.mcmc(originRelAbund)) {
