@@ -97,3 +97,15 @@ distFromPos <- function(pos, surface = 'ellipsoid') {
   }
   return(dist)
 }
+
+getCMRexample <- function(number = 1) {
+  obj.name <- paste0('psiB.enc2.band100.', number)
+  url <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/out_', obj.name, '.gzip')
+  temp <- tempfile()
+  download.file(url = url, temp)
+  load(temp)
+  fm <- get(obj.name)
+  #aap.file <- gzfile(temp, 'rb')
+  unlink(temp)
+  return(fm)
+}
