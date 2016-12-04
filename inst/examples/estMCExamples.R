@@ -32,7 +32,7 @@ summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC, estimate=N
                         lcl.BC=NA, ucl.BC=NA)
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\n")
-  fm <- cmrExamples[[r]]
+  fm <- getCMRexample(r)
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
                    originSites = 5:8, targetSites = c(3,2,1,4),

@@ -3,6 +3,7 @@
 export(calcMC)
 export(distFromPos)
 export(estMC)
+export(getCMRexample)
 export(modelCountDataJAGS)
 export(simCountData)
 export(simMove)

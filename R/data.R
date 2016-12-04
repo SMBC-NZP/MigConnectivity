@@ -102,17 +102,6 @@
 #' @rdname sampleOriginN
 "sampleOriginRelN"
 
-#' Example RMark transition probability estimates from simulated data
-#'
-#' A dataset containing RMark transition probability estimates from simulated
-#' mark-recapture-recovery data from Cohen et al. (2014).  These all represent
-#' the intermediate scenario for all settings (moderate connectivity, low
-#' re-encounter, 100,000 banded in each breeding area).  Each estimate can
-#' be used in \code{estMC} function to estimate MC with uncertainty.
-#'
-#' @format A list with 100 RMark estimates in it.
-"cmrExamples"
-
 #' Example relative abundance estimates from simulated data
 #'
 #' A dataset containing mcmc relative abundance estimates from simulated

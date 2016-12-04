@@ -19,15 +19,19 @@ psiMatCMR <- matrix(c(0.55, 0.2, 0.15, 0.1, 0.1, 0.55, 0.2, 0.15, 0.15, 0.1,
 MCCMR <- calcMC(originDCMR, targetDCMR, psiMatCMR, originRelNCMR)
 MCCMR
 # Storage list for examples
-cmrExamples <- vector('list', nSimulationsCMR)
+#cmrExamples <- vector('list', nSimulationsCMR)
+setwd('data-raw')
 for (r in 1:nSimulationsCMR) {
   mod.name <- paste('psiB.enc2.band100', r, sep='.')
   in.file <- paste('out_', mod.name, '.gzip', sep='')   #inputs/files are from Cohen et al 2014 Ecology and Evolution, Simulation
   load(in.file)
-  cmrExamples[[r]] <- get(mod.name)
+  out.file <- paste0('out_', mod.name, '.rds')
+  saveRDS(get(mod.name), out.file)
   rm(list=mod.name)
 }
-devtools::use_data(cmrExamples, overwrite = T)
+#devtools::use_data(cmrExamples, overwrite = T)
+
+
 
 load("rel_abun_sim2.RData")   #Modeled seperately
 abundExamples <- sim_out
