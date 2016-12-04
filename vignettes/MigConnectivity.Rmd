@@ -33,15 +33,15 @@ Three data inputs are needed to calculate MC:
 MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and determines the correlation between those distances. Earlier methods used the correlation between two distance matrices of individual birds captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.  
 
 
-Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In review. A quantitative definition for the strength of migratory connectivity.
+Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In revision. A quantitative definition for the strength of migratory connectivity.
 
 ### Overview of Functions  
 
 1. `calcMC`  calculates the strength of migratory connectivity (MC) with the probabilities of movement between regions, distances between regions within the two seasonal ranges, and relative abundance among regions within the seasonal range from which the transition probabilities originate.  
 
-1. `estMC` calculates the strength of migratory connectivity (MC) with estimates of uncertainty. MC calculated either with transition probability estimates or individual assignments to regions from tracking data. Uses resampling to measure MC uncertainty from RMark transition probability matrix estimates or JAGS relative abundance MCMC samples.   
+1. `estMC` estimates the strength of migratory connectivity (MC) with estimates of uncertainty. MC estimated either with transition probability estimates or individual assignments to regions from tracking data. Uses resampling to measure MC uncertainty from RMark transition probability matrix estimates and/or JAGS relative abundance MCMC samples OR geolocator and/or GPS data.   
 
-1. `simMove` Simulates annual movement of animals between regions across seasons for years and months with individual variability and strength of migratory connectivity (MC). Incorporates movement among regions within a season and movement among regions between seasons. Between seasons, animals either return to the same region each year or return to a different region in the subsequent year (dispersal). Between year dispersal rates occur during the first year (natal) or any subsequent year (breeding or non-breeding). Movement does not incorporate births or deaths.  
+1. `simMove` Simulates annual movement of animals between regions across seasons for years and months with individual variability and strength of migratory connectivity (MC). Incorporates movement among regions within a season and movement among regions between seasons. Between seasons, animals either return to the same region each year or return to a different region in the subsequent year (dispersal). Between year dispersal rates occur during the first year (natal) or any subsequent year (breeding or non-breeding). Simulation does not incorporate births or deaths.  
 
 
 ## Getting Started  
@@ -57,15 +57,15 @@ library(MigConnectivity)
 ```
 ### Functions    
 
-`calcMC`  Calculate strength of Migratory Connectivity (MC)  
-`estMC` Estimate the strength of Migratory Connectivity (MC) while incorporting location uncertainty   
+`calcMC`  Calculate strength of migratory connectivity (MC)  
+`estMC` Estimate the strength of migratory connectivity (MC) while incorporting location uncertainty   
   
 
 ## Examples 
 
-### `calcMC` - Calculate strength of Migratory Connectivity 
+### `calcMC` - Calculate strength of migratory connectivity 
 
-This function calculates the strength of Migratory Connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to calculate the strength of MC between three breeding and non-breeding regions. 
+This function calculates the strength of migratory connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to calculate the strength of MC between three breeding and non-breeding regions. 
 
 To calculate the strength of MC, you will need:   
 
@@ -137,19 +137,18 @@ relN <- rep(1/nBreeding, nBreeding)
 ```{r}
 relN
 ```
-Calculate the strength of Migratory Connectivity using the simulated data above
+Calculate the strength of migratory connectivity using the simulated data above
 ```{r}
-# Calculate the strength of Migratory Connectivity 
+# Calculate the strength of migratory connectivity 
 MC <- calcMC(originDist = breedDist,
              targetDist = nonBreedDist,
              psi = psi,
              originRelAbund = relN)
-```
-```{r, echo=FALSE}
+
 round(MC,3)
 ```
 
-### `estMC` - Calculate strength of Migratory Connectivity incorporating location uncertainty
+### `estMC` - Estimate strength of migratory connectivity incorporating location uncertainty
 
 Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. 
 
@@ -173,7 +172,7 @@ data(OVENdata) # Ovenbird
 names(OVENdata)
 ```
 
-The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. *in review* to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
+The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (*in revision*) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, error=FALSE}
 library(maptools)
@@ -276,93 +275,16 @@ box(which="plot")
 str(M)
 ```
 
+### Function
+
+`simMove` Simulates position of animals by individual, season, year, and month  
+
 ### Advanced example - 
-Calculate the strength of Migratory Connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. These simulations use ulitily functions included in the package. See below for details regarding the Utility Functions to help simulate data. 
+Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. These simulations use utility functions included in the package. See below for details regarding the utility functions to help simulate data. 
 
 Simulate data to demonstrate the use of `calcMC`   
 
-```{r}
-set.seed(75)
-
-# Parameters for simulations
-
-nSeasons <- 2 # population with two discrete seasons - breeding / non-breeding
-nYears <- 10 # Ten years of data
-nMonths <- 4 # Four months within each season
-
-nBreeding <- 100 # Number of populations
-nWintering <- 100 # Number of populations 
-```
-Generate the spatial arrangement of breeding and non-breeding populations  
-
-```{r}
-breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
-                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
-winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
-                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
-
-
-breedDist <- distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
-nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
-```
-
-The relative abundance of the study species is needed in each population. Here we generate those data below.
-```{r}
-# Breeding Abundance
-breedingN <- rep(500, nBreeding)
-breedingRelN <- breedingN/sum(breedingN)
-```
-
-The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
-```{r}
-# Set up psi matrix
-o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
-              target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
-              interval = c(0, 10), tol = .Machine$double.eps^0.5)
-
-slope <- o$minimum
-
-psi <- mlogitMat(slope, breedDist)
-
-```
-
-Now that we have all the data needed to calculate the strength of Migratory Connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
-```{r}
-# Baseline strength of migratory connectivity
-MC <- calcMC(originDist = breedDist, 
-             targetDist = nonbreedDist,
-             psi = psi, 
-             originRelAbund = breedingRelN)
-
-# Show Results
-MC
-```
-
-### `simMove` Simulation of movement between breeding and non-breeding
-
-Recycle data generated within the calcMC function - see above 
-```{r}
-sims <- simMove(breedingAbund = breedingN, # Breeding relative abundance
-               breedingDist = breedDist,  # Breeding distance
-               winteringDist = nonbreedDist, # Non-breeding distance
-               psi = psi, # Transition probabilities
-               nYears = nYears, # Number of years
-               nMonths = nMonths, # Number of months
-               winMoveRate = 0, # winter movement rate
-               sumMoveRate = 0, # breeding movement rate
-               winDispRate = 0, # winter dispersal rate
-               sumDispRate = 0, # summer disperal rate
-               natalDispRate = 0, # natal dispersal rate
-               breedDispRate = 0, # breeding dispersal rate
-               verbose = 0) # verbose output
-
-
-str(sims)
-```
-
 #### Utility Functions for use in simulations    
-
-`simMove` Simulates position of animals by individual, season, year, and month   
 
 `mlogitMat`: Calculates probability matrix based on exponential decline with distance
 
@@ -381,7 +303,7 @@ mlogitMat <- function(slope, dist) {
 }
 ```
 
-`mlogitMC`: Crude optimizable function for developing MC pattern based on MC strength
+`mlogitMC`: Crude optimizable function for developing migratory connectivity pattern based on migratory connectivity strength
 
 ```{r}
 mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
@@ -442,11 +364,90 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 ```   
 
 
+```{r}
+set.seed(75)
+
+# Parameters for simulations
+
+nSeasons <- 2 # population with two discrete seasons - breeding / non-breeding
+nYears <- 10 # Ten years of data
+nMonths <- 4 # Four months within each season
+
+nBreeding <- 100 # Number of populations
+nWintering <- 100 # Number of populations 
+```
+Generate the spatial arrangement of breeding and non-breeding populations  
+
+```{r}
+breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
+                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
+winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
+                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
+
+
+breedDist <- distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
+nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
+```
+
+The relative abundance of the study species is needed in each population. Here we generate those data below.
+```{r}
+# Breeding Abundance
+breedingN <- rep(500, nBreeding)
+breedingRelN <- breedingN/sum(breedingN)
+```
+
+The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
+```{r}
+# Set up psi matrix
+o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
+              target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
+              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+
+slope <- o$minimum
+
+psi <- mlogitMat(slope, breedDist)
+
+```
+
+Now that we have all the data needed to calculate the strength of migratory connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
+```{r}
+# Baseline strength of migratory connectivity
+MC <- calcMC(originDist = breedDist, 
+             targetDist = nonbreedDist,
+             psi = psi, 
+             originRelAbund = breedingRelN)
+
+# Show Results
+MC
+```
+
+### `simMove` Simulation of movement between breeding and non-breeding
+
+Recycle data generated within the calcMC function - see above 
+```{r}
+sims <- simMove(breedingAbund = breedingN, # Breeding relative abundance
+               breedingDist = breedDist,  # Breeding distance
+               winteringDist = nonbreedDist, # Non-breeding distance
+               psi = psi, # Transition probabilities
+               nYears = nYears, # Number of years
+               nMonths = nMonths, # Number of months
+               winMoveRate = 0, # winter movement rate
+               sumMoveRate = 0, # breeding movement rate
+               winDispRate = 0, # winter dispersal rate
+               sumDispRate = 0, # summer disperal rate
+               natalDispRate = 0, # natal dispersal rate
+               breedDispRate = 0, # breeding dispersal rate
+               verbose = 0) # verbose output
+
+
+str(sims)
+```
+
 ## Additional Examples / Scenarios 
 
-### Calculate Migratory Connectivity for a range of input values 
+### Calculate migratory connectivity for a range of input values 
 
-Cohen et al. *in review* used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
+Cohen et al. (*in revision*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
   
 1. matrix of transition probabilities from breeding regions to non-breeding regions  
 1. matrices of distances between breeding regions and between non-breeding regions  
@@ -538,7 +539,7 @@ t(round(MC.diff2, 4))
 
 ### Add the relative abundance breeding scenarios
 
-#### Calculate the strength of MC for breeding linear / winter linear arrangment 
+#### Calculate MC for breeding linear / winter linear arrangment 
 ```{r}
 nScenarios3 <- length(sampleOriginRelN)
 
@@ -561,7 +562,7 @@ MC3[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC3, 4)) # linear arrangement
 ```
 
-#### Calculate MC strengths for breeding grid/ winter grid arrangement
+#### Calculate MC for breeding grid/ winter grid arrangement
 ```{r}
 MC4 <- matrix(NA, nScenarios1, nScenarios3)
 
@@ -582,7 +583,7 @@ MC4[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC4, 4)) # grid arrangement
 ```
 
-#### Calculate MC strengths for breeding grid, winter linear arrangement
+#### Calculate MC for breeding grid, winter linear arrangement
 ```{r}
 MC5 <- matrix(NA, nScenarios1, nScenarios3)
 
@@ -603,7 +604,7 @@ MC5[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC5, 4)) # breeding grid, winter linear arrangement
 ```
 
-### EXAMPLES 4-9 (from sampling regime simulations in Cohen et al. in review)
+### EXAMPLES 4-9 (from sampling regime simulations in Cohen et al. in revision)
 
 Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:  
 
@@ -1164,17 +1165,17 @@ rownames(compare16a) <- compare16$Scenario[2:7]
 
 
 #### EXAMPLE 7
-`estMC` Calculate strength of Migratory Connectivity incorporating uncertainty in estimates of breeding abundance
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty in estimates of breeding abundance (see estMC help file)
  
 #### EXAMPLE 8
-`estMC` Calculate strength of Migratory Connectivity incorporating detection heterogeneaty
+`estMC` Estimate strength of migratory connectivity incorporating detection heterogeneity (see estMC help file)
 
 
 #### EXAMPLE 9
-`estMC` Calculate strength of Migratory Connectivity incorporating location uncertainty (***Examples*** see above)
+`estMC` Estimate strength of migratory connectivity incorporating location uncertainty (***Examples*** see above)
 Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
 
-#### EXAMPLE 10 (from process error simulation in Cohen et al. in review)
+#### EXAMPLE 10 (from process error simulation in Cohen et al. in revision)
 
 `estMC` for measuring the influence of dispersal rates on MC
 
@@ -1195,7 +1196,7 @@ mlogitMat <- function(slope, dist) {
   return(outMat)
 }
 
-# Crude optimizable function for developing MC pattern based on MC strength
+# Crude optimizable function for developing migratory connectivity pattern based on MC
 mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   nBreeding <- nrow(origin.dist)
   nWintering <- nrow(target.dist)

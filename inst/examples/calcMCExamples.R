@@ -100,7 +100,8 @@ colnames(MC4) <- names(sampleOriginRelN)
 for (i in 1:nScenarios1) {
   for (j in nScenarios2) {
     for (k in 1:nScenarios3) {
-      MC4[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]], samplePsis[[i]], sampleOriginRelN[[k]])
+      MC4[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
+                          samplePsis[[i]], sampleOriginRelN[[k]])
     }
   }
 }

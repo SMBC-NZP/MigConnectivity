@@ -135,10 +135,10 @@ relative abundance MCMC samples.
 set.seed(101)
 # Uncertainty in detection with equal abundances
 nSamplesCMR <- 100 #10000 # Number of resampling iterations for generating confidence intervals
-nSimulationsCMR <- 10 #length(cmrExamples)
+nSimulationsCMR <- 10 #100
 \dontrun{
   nSamplesCMR <- 10000 # Number of resampling iterations for generating confidence intervals
-  nSimulationsCMR <- length(cmrExamples)
+  nSimulationsCMR <- 100
 }
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                         rep(seq(49, 31, -2), 10)), 100, 2)
@@ -237,7 +237,7 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
-nSamplesGLGPS <- 1000 # Number of bootstrap iterations
+nSamplesGLGPS <- 500 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
 }

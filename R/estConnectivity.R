@@ -498,3 +498,31 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                          alpha = alpha))
   }
 }
+
+
+###############################################################################
+#' Grab (from GitHub server) example RMark transition probability estimates
+#' obtained from simulated data
+#'
+#' Get a dataset containing RMark transition probability estimates from
+#' simulated mark-recapture-recovery data from Cohen et al. (2014).  These all
+#' represent the intermediate scenario for all settings (moderate connectivity,
+#' low re-encounter, 100,000 banded in each breeding area).  Each estimate can
+#' be used in \code{estMC} function to estimate MC with uncertainty.  Requires
+#' internet connection.
+#'
+#' @param number Integer 1 - 100, which simulation and RMark estimate you want
+#'
+#' @return RMark object
+#' @export
+#' @seealso \code{\link{estMC}}
+getCMRexample <- function(number = 1) {
+  obj.name <- paste0('psiB.enc2.band100.', number)
+  file.name <- paste0('out_', obj.name, '.rds')
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/', file.name, '?raw=true')
+  temp <- paste(tempdir(), file.name, sep = '/')
+  download.file(url1, temp, mode = 'wb')
+  fm <- readRDS(temp)
+  unlink(temp)
+  return(fm)
+}
