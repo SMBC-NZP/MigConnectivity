@@ -8,12 +8,15 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
 
 ##Introduction  
 
 Technological advancements have spurred rapid growth in the study of migratory connectivity,
 the spatial and temporal linkage of migratory populations throughout the annual cycle. However, 
-the lack of a quantitative definition for migratory connectivity (MC) has limited our ability to draw 
+the lack of a quantitative definition for the strength of migratory connectivity (MC) has limited our ability to draw 
 inferences across species, studies, and data types about the seasonal co-occurrence of 
 populations. MC is a standardized metric to quantify migratory connectivity between two phases 
 of the annual cycle. It is independent of data type and accounts for the relative abundance of 
@@ -47,6 +50,8 @@ Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. M
 ## Getting Started  
 ### Installing 'MigConnectivity' from GitHub
 ```{r eval = FALSE}
+install.packages('devtools')
+
 devtools::install_github("SMBC-NZP/MigConnectivity")
 
 library(MigConnectivity)
@@ -133,8 +138,7 @@ Define the relative abundance within the three breeding regions
 ```{r}
 #equal relative abundance among the three breeding regions, must sum to 1                      
 relN <- rep(1/nBreeding, nBreeding) 
-```
-```{r}
+
 relN
 ```
 Calculate the strength of migratory connectivity using the simulated data above
@@ -187,22 +191,8 @@ plot(wrld_simple,add=TRUE)
 ```
 
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
-```{r}
-M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
-      geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-      geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-      targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-      originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
-      targetSites = OVENdata$targetSites, # Non-breeding target sites
-      originSites = OVENdata$originSites, # Breeding origin sites 
-      originPoints = OVENdata$originPoints, # Capture Locations 
-      targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-      originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
-      verbose = 1,   # output options - see help ??estMC
-      nSim = 10,     # This is set low for example
-      nSamples = 10) # This is set low for example 
-```
-```{r echo = FALSE, message=FALSE, warning = FALSE, error=FALSE}
+
+```{r message=FALSE, warning = FALSE, error=FALSE}
 library(rgeos)
 library(shape)
 library(raster)
@@ -221,52 +211,62 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator 
       nSamples = 10) # This is set low for example 
 
 par(mar=c(0,0,0,0))
-plot(wrld_simple,xlim=c(raster::extent(OVENdata$targetSites)[1],raster::extent(OVENdata$targetSites)[2]),
-                          ylim=c(raster::extent(OVENdata$targetSites)[3],raster::extent(OVENdata$originSites)[4]))
+plot(wrld_simple,xlim=c(raster::extent(OVENdata$targetSites)[1],
+                        raster::extent(OVENdata$targetSites)[2]),
+                 ylim=c(raster::extent(OVENdata$targetSites)[3],
+                        raster::extent(OVENdata$originSites)[4]))
 plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
 plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
 plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
 legend(400000,-2105956,legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
 
-shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],gCentroid(OVENdata$originSites[1])@coords[,2],
-         gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,extent(OVENdata$targetSites[2])[4]+150000,
-         arr.length = 0.3,
-         arr.adj = 0.5,
-         arr.lwd = 1,
-         arr.width = 0.4,
-         arr.type = "triangle",
-         lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
-         lty=1)
+shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+              gCentroid(OVENdata$originSites[1])@coords[,2],
+              gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,
+              extent(OVENdata$targetSites[2])[4]+150000,
+              arr.length = 0.3,
+              arr.adj = 0.5,
+              arr.lwd = 1,
+              arr.width = 0.4,
+              arr.type = "triangle",
+              lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
+              lty=1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],gCentroid(OVENdata$originSites[1])@coords[,2],
-         gCentroid(OVENdata$targetSites[3])@coords[,1],extent(OVENdata$targetSites[3])[4]+150000,
-         arr.length = 0.3,
-         arr.adj = 0.5,
-         arr.lwd = 1,
-         arr.width = 0.4, 
-         arr.type = "triangle",
-         lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
-         lty=1)
+shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+              gCentroid(OVENdata$originSites[1])@coords[,2],
+              gCentroid(OVENdata$targetSites[3])@coords[,1],
+              extent(OVENdata$targetSites[3])[4]+150000,
+              arr.length = 0.3,
+              arr.adj = 0.5,
+              arr.lwd = 1,
+              arr.width = 0.4, 
+              arr.type = "triangle",
+              lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+              lty=1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],gCentroid(OVENdata$originSites[2])@coords[,2],
-         gCentroid(OVENdata$targetSites[1])@coords[,1],extent(OVENdata$targetSites[1])[4]+150000,
-         arr.length = 0.3,
-         arr.adj = 0.5,
-         arr.lwd = 1,
-         arr.width = 0.4,
-         arr.type = "triangle",
-         lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
-         lty=1)
+shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+              gCentroid(OVENdata$originSites[2])@coords[,2],
+              gCentroid(OVENdata$targetSites[1])@coords[,1],
+              extent(OVENdata$targetSites[1])[4]+150000,
+              arr.length = 0.3,
+              arr.adj = 0.5,
+              arr.lwd = 1,
+              arr.width = 0.4,
+              arr.type = "triangle",
+              lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+              lty=1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],gCentroid(OVENdata$originSites[2])@coords[,2],
-         (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),extent(OVENdata$targetSites[2])[4]+150000,
-         arr.length = 0.3,
-         arr.adj = 0.5,
-         arr.lwd = 1,
-         arr.width = 0.4,
-         arr.type = "triangle",
-         lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+              gCentroid(OVENdata$originSites[2])@coords[,2],
+              (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),
+              extent(OVENdata$targetSites[2])[4]+150000,
+              arr.length = 0.3,
+              arr.adj = 0.5,
+              arr.lwd = 1,
+              arr.width = 0.4,
+              arr.type = "triangle",
+              lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
 
 box(which="plot")
 ```

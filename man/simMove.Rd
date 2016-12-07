@@ -114,7 +114,7 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
 # Simple approach to estimate psi matrix and MC from simulated (or real) data
 # (doesn't include uncertainty).  Only uses one year for computation
 calcPsiMC3 <- function(originDist, targetDist, originRelAbund, locations, year,
-                       verbose=F) {
+                       verbose=FALSE) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -155,28 +155,44 @@ breedDist <- distFromPos(breedingPos, 'ellipsoid')
 nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 
 # Breeding Abundance
-breedingN <- rep(5000, nBreeding)
+breedingN <- rep(50, nBreeding) # Lower for example speed
 breedingRelN <- breedingN/sum(breedingN)
+
+\dontrun{
+  # Breeding Abundance
+  breedingN <- rep(5000, nBreeding)
+  breedingRelN <- breedingN/sum(breedingN)
+}
 
 # Set up psi matrix
 o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
               target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
-              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+              interval = c(0, 10), tol = .Machine$double.eps^0.125)
+\dontrun{
+  o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
+                target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
+                interval = c(0, 10), tol = .Machine$double.eps^0.5)
+}
 o
 slope <- o$minimum
 psi <- mlogitMat(slope, breedDist)
 
 # Baseline strength of migratory connectivity
 MC <- calcMC(breedDist, nonbreedDist, psi, breedingRelN)
-MC
+round(MC, 4)
 
 # Other basic simulation parameters
 
 ## Dispersal simulations---
 set.seed(1516)
-nYears <- 15
-nMonths <- 4 # Each season
-Drates <- c(0.02, 0.04, 0.08, 0.16, 0.32, 0.64)    #rates of dispersal
+nYears <- 5 # Lower for example speed
+nMonths <- 2 # Each season, lower for example speed
+Drates <- c(0.04, 0.16, 0.64)    #rates of dispersal, fewer for example speed
+\dontrun{
+  nYears <- 15
+  nMonths <- 4 # Each season
+  Drates <- c(0.02, 0.04, 0.08, 0.16, 0.32, 0.64)    #rates of dispersal
+}
 birdLocDisp <- vector('list', length(Drates))
 Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
                        Rate=rep(Drates, each = nYears), MC = NA)
@@ -187,7 +203,7 @@ for(i in 1:length(Drates)){
   for(j in 1:nYears){
     cat('\\tYear', j, '\\n')
     temp.results <- calcPsiMC3(breedDist, nonbreedDist, breedingRelN,
-                                 birdLocDisp[[i]]$animalLoc, year=j, F)
+                                 birdLocDisp[[i]]$animalLoc, year=j, FALSE)
     Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC
   }
 } # end i loop
@@ -195,7 +211,9 @@ for(i in 1:length(Drates)){
 Disp.df$Year <- Disp.df$Year - 1 #just run once!
 data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
 
-write.csv(Disp.df, "../Disp.df.csv")
+\dontrun{
+  write.csv(Disp.df, "Disp.df.csv")
+}
 
 # Convert dispersal rates to probabilities of dispersing at least certain distance
 threshold <- 1000
@@ -211,22 +229,22 @@ summary(probFarDisp)
 
 #plot results
 \dontrun{
-require(ggplot2)
-require(ggthemes)
+  require(ggplot2)
+  require(ggthemes)
 
-line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
-ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
-  geom_line()+
-  scale_size_manual(values=line_set)+
-  labs(size="Dispersal Rate")+
-  scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
-  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
-  theme_bw()+
-  theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
-        panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
-        legend.title=element_text(size=14), legend.text=element_text(size=14))
-dev.off()
+  line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
+  png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
+  ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
+    geom_line()+
+    scale_size_manual(values=line_set)+
+    labs(size="Dispersal Rate")+
+    scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+    scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
+    theme_bw()+
+    theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
+          panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
+          legend.title=element_text(size=14), legend.text=element_text(size=14))
+  dev.off()
 }
 }
 

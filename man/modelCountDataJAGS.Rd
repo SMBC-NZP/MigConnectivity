@@ -37,9 +37,9 @@ set.seed(150)
 # Number of populations
 nPops. <- 4
 # Number of routes w/i each population (assumed to be balanced)
-routePerPop. <- 90
+routePerPop. <- 30 # reduced for example speed
 # Number of years
-nYears. <- 10
+nYears. <- 5 # reduced for example speed
 # log(Expected number of birds counted at each route)
 alphaPop. <- 1.95
 # standard deviation of normal distribution assumed for route/observer random
@@ -47,23 +47,45 @@ alphaPop. <- 1.95
 sdRoute. <- 0.6
 # standard deviation of normal distribution assumed for year random effects
 sdYear. <- 0.18
+
+
+# Number of simulated datasets to create and model
+nsims <- 50 # reduced for example speed
 # Number of MCMC iterations
-ni. <- 15000
+ni. <- 1500 # reduced for example speed
 # Number of iterations to thin from posterior
-nt. <- 5
+nt. <- 1
 # Number of iterations to discard as burn-in
-nb. <- 5000
+nb. <- 500 # reduced for example speed
 # Number of MCMC chains
-nc. <- 3
+nc. <- 1 # reduced for example speed
+
+\dontrun{
+  # Slower, more thorough version
+  # Number of routes w/i each population (assumed to be balanced)
+  routePerPop. <- 90
+  # Number of years
+  nYears. <- 10
+  # Number of simulated datasets to create and model
+  nsims <- 100
+  # Number of MCMC iterations
+  ni. <- 15000
+  # Number of iterations to thin from posterior
+  nt. <- 5
+  # Number of iterations to discard as burn-in
+  nb. <- 5000
+  # Number of MCMC chains
+  nc. <- 3
+}
 
 ### Create empty matrix to store model output ---
-nsims <- 100
 sim_in <- vector("list", nsims)
 sim_out <- vector("list", nsims)
 
 
 # Simulation ---
 system.time(for(s in 1:nsims){
+  cat("Simulation",s,"of",nsims,"\\n")
 
   # Simulate data
   sim_data <- simCountData(nPops = nPops., routePerPop = routePerPop.,
@@ -86,18 +108,19 @@ system.time(for(s in 1:nsims){
 ### Check that relative abundance is, on average, equal for each population
 prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$pop))), 2)
 
-nSamples <- (ni. - nb.)/nt. * nc.
-rel_abund0 <- array(NA, c(nsims, nSamples, nPops))
+#nSamples <- (ni. - nb.)/nt. * nc.
+#rel_abund0 <- array(NA, c(nsims, nSamples, nPops.))
+rel_names <- paste0('relN[', 1:nPops., ']')
 rel_abund1 <- data.frame(sim=1:nsims,
                          ra1.mean=NA, ra2.mean=NA, ra3.mean=NA, ra4.mean=NA,
                          ra1.low=NA, ra2.low=NA, ra3.low=NA, ra4.low=NA,
                          ra1.high=NA, ra2.high=NA, ra3.high=NA, ra4.high=NA,
                          ra1.cover=0, ra2.cover=0, ra3.cover=0, ra4.cover=0)
 for (s in 1:nsims) {
-  rel_abund0[s,,] <- prop.table(as.matrix(sim_out[[s]][,1:nPops]), 1)
-  rel_abund1[s, 2:5] <- colMeans(rel_abund0[s,,])
-  rel_abund1[s, 6:9] <- apply(rel_abund0[s,,], 2, quantile, probs=0.025)
-  rel_abund1[s, 10:13] <- apply(rel_abund0[s,,], 2, quantile, probs=0.975)
+#  rel_abund0[s,,] <- prop.table(as.matrix(sim_out[[s]][,1:nPops.]), 1)
+  rel_abund1[s, 2:5] <- summary(sim_out[[s]])$statistics[rel_names, "Mean"]
+  rel_abund1[s, 6:9] <- summary(sim_out[[s]])$quantiles[rel_names, 1]
+  rel_abund1[s, 10:13] <- summary(sim_out[[s]])$quantiles[rel_names, 5]
 }
 rel_abund1 <- transform(rel_abund1,
                         ra1.cover = (ra1.low<=0.25 & ra1.high>=0.25),
@@ -106,9 +129,5 @@ rel_abund1 <- transform(rel_abund1,
                         ra4.cover = (ra4.low<=0.25 & ra4.high>=0.25))
 
 summary(rel_abund1)
-
-
-
-
 }
 

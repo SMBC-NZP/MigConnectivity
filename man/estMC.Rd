@@ -134,10 +134,11 @@ relative abundance MCMC samples.
 \examples{
 set.seed(101)
 # Uncertainty in detection with equal abundances
-nSamplesCMR <- 100 #10000 # Number of resampling iterations for generating confidence intervals
+# Number of resampling iterations for generating confidence intervals
+nSamplesCMR <- 100 #10000
 nSimulationsCMR <- 10 #100
 \dontrun{
-  nSamplesCMR <- 10000 # Number of resampling iterations for generating confidence intervals
+  nSamplesCMR <- 10000
   nSimulationsCMR <- 100
 }
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
@@ -166,6 +167,7 @@ summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC, estimate=N
                         lcl.BC=NA, ucl.BC=NA)
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\\n")
+  # Note: getCMRexample requires a valid internet connection and that GitHub is accessible
   fm <- getCMRexample(r)
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
@@ -243,7 +245,7 @@ nSamplesGLGPS <- 500 # Number of bootstrap iterations
 }
 
 # Estimate MC only, treat all data as geolocator
-GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (T) GPS (F)
+GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
              targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
@@ -257,7 +259,7 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (T) G
              nSamples = nSamplesGLGPS) # This is set low for example
 
 # Estimate MC and rM, treat all data as is
-Combined<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
                 geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
                 targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
@@ -268,7 +270,7 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geol
                 targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
                 originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
                 verbose = 1,   # output options
-                calcCorr = T, # estimate rM as well
+                calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS) # This is set low for example
 
 # For treating all data as GPS,
@@ -289,7 +291,7 @@ oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
 raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
-GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (T) GPS (F)
+GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
               geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
               geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
               targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix

@@ -303,9 +303,10 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
                     year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, pop = count_data$pop)
 
 
-  out <- R2jags::jags(data = jags.data, inits = jags.inits, params, "sim_Poisson2.txt",
-                          n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
-                          working.directory = file.path('inst/JAGS'))
+  out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
+                      paste0(find.package('MigConnectivity'), "/JAGS/sim_Poisson2.txt"),
+                      n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
+                      progress.bar = 'none')
 
   return(coda::as.mcmc(out))
 }
