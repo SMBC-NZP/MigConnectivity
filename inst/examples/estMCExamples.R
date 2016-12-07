@@ -105,7 +105,7 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
-nSamplesGLGPS <- 500 # Number of bootstrap iterations
+nSamplesGLGPS <- 200 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
 }

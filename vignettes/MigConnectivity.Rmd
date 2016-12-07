@@ -179,6 +179,9 @@ names(OVENdata)
 The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (*in revision*) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE, error=FALSE}
+library(rgeos)
+library(shape)
+library(raster)
 library(maptools)
 data(wrld_simpl)
 raster::crs(wrld_simpl)
@@ -193,9 +196,6 @@ plot(wrld_simple,add=TRUE)
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
 
 ```{r message=FALSE, warning = FALSE, error=FALSE}
-library(rgeos)
-library(shape)
-library(raster)
 M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
       geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
       geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
