@@ -1,7 +1,7 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.1.3
+Version: 0.1.4
 Date: 2016-12-07
 Author: Jeff Hostetler, Mike Hallworth, Clark Rushing, Emily Cohen
 Maintainer: Jeff Hostetler <jeffrey.hostetler@myfwc.com>
@@ -16,17 +16,14 @@ Imports:
   ncf,
   R2jags,
   RMark (>= 2.1.14),
-  sp,
-  SpatialTools
+  sp
 Suggests:
   knitr,
   maptools,
   raster,
-  Rcpp,
   rgdal,
   rgeos,
   rmarkdown,
   shape,
-  spBayes,
   testthat
 VignetteBuilder: knitr

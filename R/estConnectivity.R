@@ -300,9 +300,9 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
         while (is.na(target.sample[i])) {
           draws <- draws + 1
           # Sample random point for each bird from parametric distribution of NB error
-          point.sample <- sp::SpatialPoints(t(SpatialTools::rmvnorm(nsim=nSim, mu=cbind(
+          point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
             targetPoints@coords[animal.sample[i],1],
-            targetPoints@coords[animal.sample[i],2]), V=geoVCov))+
+            targetPoints@coords[animal.sample[i],2]), Sigma=geoVCov)+
               geoBias2, sp::CRS(Lambert))
           # filtered to stay in NB areas (land)
           target.sample0 <- sp::over(point.sample, targetSites)
