@@ -644,7 +644,24 @@ Delineation of seasonal ranges into regions
 #Run functions and parameters above first
 set.seed(75)
 
-#each element is for a scenario (see above 1-8)
+scenarios14 <- c("Base", 
+                 "Breeding10",
+                 "Wintering10",
+                 "Breeding10Wintering10",
+                 "Breeding4",
+                 "Wintering4",
+                 "Breeding4Wintering10",
+                 "Breeding10Wintering4",
+                 "Breeding4Wintering4",
+                 "CentroidSampleBreeding10",
+                 "CentroidSampleBreeding10Wintering10",
+                 "CentroidSampleBreeding10Wintering4",
+                 "CentroidSampleBreeding4",
+                 "CentroidSampleBreeding4Wintering10",
+                 "CentroidSampleBreeding4Wintering4")
+
+# Each element is for a scenario (see above 1-8), transferring from natural 
+# breeding populations to defined ones
 breedingSiteTrans14 <- list(1:nBreeding, 
                            rep(1:10, each=10), 
                            1:nBreeding, 
@@ -661,6 +678,7 @@ breedingSiteTrans14 <- list(1:nBreeding,
                            c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
                            c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)))
 
+# Same for non-breeding populations
 winteringSiteTrans14 <- list(1:nWintering,
                              1:nWintering,
                              rep(1:10, each=10),
@@ -677,13 +695,11 @@ winteringSiteTrans14 <- list(1:nWintering,
                              rep(1:10, each=10),
                              c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)))
 
-
-
+# Examine the transfers in matrix form
 lapply(breedingSiteTrans14, matrix, nrow=10, ncol=10)
 lapply(winteringSiteTrans14, matrix, nrow=10, ncol=10)
 
 #positions of the human defined populations
-
 breedingPos14 <- list(breedingPos,
                       rowsum(breedingPos, rep(1:10, each=10))/10,
                       breedingPos,
@@ -705,8 +721,6 @@ breedingPos14 <- list(breedingPos,
                                             rep(3:4, 5, each=5)))/25,
                       rowsum(breedingPos, c(rep(1:2, 5, each=5),
                                             rep(3:4, 5, each=5)))/25)
-
-
 
 winteringPos14 <- list(winteringPos,
                        winteringPos,
@@ -730,38 +744,34 @@ winteringPos14 <- list(winteringPos,
                                               rep(3:4, 5, each=5)))/25)
 
 
-
+# Calculate distances between defined breeding populations
 breedDist14 <- lapply(breedingPos14, distFromPos, surface = 'ellipsoid')
 
+# Calculate distances between defined non-breeding populations
 nonbreedDist14 <- lapply(winteringPos14, distFromPos, surface = 'ellipsoid')
 
-
+# Numbers of defined populations
 nBreeding14 <- c(100, 10, 100, 10, 4, 100, 4, 10, 4, 10, 10, 10, 4, 4, 4)
 
 nWintering14 <- c(100, 100, 10, 10, 100, 4, 10, 4, 4, 100, 10, 4, 100, 10, 4)
 
+# Relative abundance by scenario and breeding population
 breedingRelN14 <- lapply(nBreeding14, function(x) rep(1/x, x))
 
 
 nSample14 <- 1000 # Total number sampled per simulation
 
+# How many sampled from each natural population (sampling scenarios separate 
+# from definition scenarios)
 sampleBreeding14 <- list(round(breedingRelN14[[1]]*nSample14),
                          c(rep(0, 22), round(breedingRelN14[[5]][1]*nSample14),
                            rep(0, 4), round(breedingRelN14[[5]][2]*nSample14),
                            rep(0, 44), round(breedingRelN14[[5]][3]*nSample14),
                            rep(0, 4), round(breedingRelN14[[5]][4]*nSample14),
                            rep(0, 22)),
-                         c(rep(0, 4), round(breedingRelN14[[2]][1]*nSample14),
-                           rep(0, 10), round(breedingRelN14[[2]][2]*nSample14),
-                           rep(0, 8), round(breedingRelN14[[2]][3]*nSample14),
-                           rep(0, 10), round(breedingRelN14[[2]][4]*nSample14),
-                           rep(0, 8), round(breedingRelN14[[2]][5]*nSample14),
-                           rep(0, 10), round(breedingRelN14[[2]][6]*nSample14),
-                           rep(0, 8), round(breedingRelN14[[2]][7]*nSample14),
-                           rep(0, 10), round(breedingRelN14[[2]][8]*nSample14),
-                           rep(0, 8), round(breedingRelN14[[2]][9]*nSample14),
-                           rep(0, 10), round(breedingRelN14[[2]][10]*nSample14),
-                           rep(0, 4)))
+                         rep(c(rep(0, 4), 
+                             rep(round(breedingRelN14[[2]][1]*nSample14/2), 2),
+                             rep(0, 4)), 10))
 
 lapply(sampleBreeding14, matrix, nrow=10, ncol=10)
 
@@ -775,52 +785,28 @@ changeLocations <- function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
   return(animalLoc)
 }
 
+# Number of scenarios and number of simulations to run
 nScenarios14 <- length(breedingSiteTrans14)
 nSims14 <- 100
 
-# Run sampling regimes
+# Connections between scenarios and sampling regimes
 scenarioToSampleMap14 <- c(rep(1, 9), rep(3, 3), rep(2, 3))
 
+# Set up data structures for storing results
 animalLoc14 <- vector("list", nScenarios14) #making an empty list to fill
 
-compare14 <- data.frame(Scenario = c("True", 
-                                     "Base", 
-                                     "Breeding10",
-                                     "Wintering10",
-                                     "Breeding10Wintering10",
-                                     "Breeding4",
-                                     "Wintering4",
-                                     "Breeding4Wintering10",
-                                     "Breeding10Wintering4",
-                                     "Breeding4Wintering4",
-                                     "CentroidSampleBreeding10",
-                                     "CentroidSampleBreeding10Wintering10",
-                                     "CentroidSampleBreeding10Wintering4",
-                                     "CentroidSampleBreeding4",
-                                     "CentroidSampleBreeding4Wintering10",
-                                     "CentroidSampleBreeding4Wintering4"),
-                        MC = c(MC, rep(NA, nScenarios14)), Mantel = c(MC, rep(NA, nScenarios14)))
+compare14 <- data.frame(Scenario = c("True", scenarios14),
+                        MC = c(MC, rep(NA, nScenarios14)), 
+                        Mantel = c(MC, rep(NA, nScenarios14)))
 
-compare14.array <- array(NA, c(nSims14, nScenarios14, 2), dimnames = list(1:nSims14,
-                                   c("Base", 
-                                     "Breeding10",
-                                     "Wintering10",
-                                     "Breeding10Wintering10",
-                                     "Breeding4",
-                                     "Wintering4",
-                                     "Breeding4Wintering10",
-                                     "Breeding10Wintering4",
-                                     "Breeding4Wintering4",
-                                     "CentroidSampleBreeding10",
-                                     "CentroidSampleBreeding10Wintering10",
-                                     "CentroidSampleBreeding10Wintering4",
-                                     "CentroidSampleBreeding4",
-                                     "CentroidSampleBreeding4Wintering10",
-                                     "CentroidSampleBreeding4Wintering4"),
-                                         c("MC", "Mantel")))
+compare14.array <- array(NA, c(nSims14, nScenarios14, 2), dimnames = 
+                           list(1:nSims14,
+                           scenarios14,
+                           c("MC", "Mantel")))
 
 results14 <- vector("list", nScenarios14)
 
+# Run simulations
 for (sim in 1:nSims14) {
   cat("Simulation", sim, "of", nSims14, '\n')
   sim14 <- lapply(sampleBreeding14, simMove, breedingDist = breedDist14[[1]],
@@ -836,15 +822,16 @@ for (sim in 1:nSims14) {
     compare14.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist14[[1]],
                                                          nonbreedDist14[[1]],
                                                          sim14[[scenarioToSampleMap14[i]]]$animalLoc,
-                                                         resamp=0)$correlation
   }
 }
 
+# Compute means for each scenario
 compare14$MC[1:nScenarios14 + 1] <- apply(compare14.array[,,'MC'], 2, mean)
-compare14$Mantel[1:nScenarios14 + 1] <- apply(compare14.array[,,'Mantel'], 2,mean)
+compare14$Mantel[1:nScenarios14 + 1] <- apply(compare14.array[,,'Mantel'], 2, mean)
 
 compare14 <- transform(compare14, MC.diff=MC - MC[1], Mantel.diff=Mantel - Mantel[1])
 compare14
+
 ```
 #### EXAMPLE 5
 
@@ -919,6 +906,7 @@ breedingRelN15 <- lapply(breedingN15, "/", sum(breedingN15base))
 
 nSample15 <- 1000 # Total number sampled per simulation
 
+# Number sampled per natural population
 sampleBreeding15 <- list(round(breedingRelN15[[1]]*nSample15),
                          c(rep(0, 22), round(breedingRelN15[[3]][1]*nSample15),
                            rep(0, 4), round(breedingRelN15[[3]][2]*nSample15),

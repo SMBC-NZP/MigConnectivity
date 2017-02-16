@@ -2,8 +2,8 @@
 % Please edit documentation in R/estConnectivity.R
 \name{getCMRexample}
 \alias{getCMRexample}
-\title{Grab (from GitHub server) example RMark transition probability estimates
-obtained from simulated data}
+\title{Grab (from https://github.com/SMBC-NZP/MigConnectivity) example RMark
+transition probability estimates obtained from simulated data}
 \usage{
 getCMRexample(number = 1)
 }

@@ -109,7 +109,7 @@ estMCCmrAbund <- function(originRelAbund, psi, originDist, targetDist,
   seMC <- sd(sampleMC)
   # Calculate confidence intervals using quantiles of sampled MC
   simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=T, type = 8)
-  z0 <- qnorm(sum((sampleMC)<pointMC)/nSamples)
+  z0 <- qnorm(sum((sampleMC)<meanMC)/nSamples)
   bcCI <- quantile(sampleMC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=T, type = 8)
   MC.mcmc <- coda::as.mcmc(sampleMC) # Ha!
@@ -211,16 +211,19 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
-  if (length(geoBias)!=2)
+  if (length(geoBias)!=2 && (any(isGL) || calcCorr))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && (any(isGL) || calcCorr))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
     stop("Need to define either originAssignment or originSites and originPoints")
   if (calcCorr && is.null(originPoints))
     stop('If calcCorr is TRUE, need to define originPoints')
-  nAnimals <- length(targetPoints)
+  if ((is.null(targetPoints) || is.null(targetSites)) &&
+      is.null(targetAssignment))
+    stop("Need to define either targetAssignment or targetSites and targetPoints")
+  nAnimals <- max(length(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
   if (is.null(originAssignment))
@@ -228,8 +231,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
   if (is.null(targetAssignment))
     targetAssignment <- sp::over(targetPoints, targetSites)
   nOriginSites <- length(unique(originAssignment))
-  nTargetSites <- length(targetSites)
-  if (length(targetPoints)!=nAnimals || length(targetAssignment)!=nAnimals ||
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
+  if (length(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
       length(originAssignment)!=nAnimals)
     stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
   if (any(is.na(originAssignment)))
@@ -243,11 +246,12 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
 
- WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
- Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+  WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+  Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 
   MC <- corr <- rep(NA, nBoot)
-  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+  if (any(isGL) || calcCorr)
+    geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
   nAnimals <- length(originAssignment)
 
   # Point estimate of MC
@@ -282,11 +286,12 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Make sure have birds from every origin site
     origin.sample <- 'Filler' # Start with one origin site
-    while (length(unique(origin.sample))<nOriginSites) {
+    while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
-      animal.sample <- sample(1:nAnimals, nAnimals, replace=T)
+      animal.sample <- sample.int(nAnimals, replace=T)
       # Get origin points for those animals
-      origin.point.sample <- originPoints[animal.sample]
+      if (calcCorr)
+        origin.point.sample <- originPoints[animal.sample]
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
@@ -312,7 +317,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
       }
       else { # Assume no location error for GPS
         target.sample[i] <- targetAssignment[animal.sample[i]]
-        target.point.sample[i, ] <- targetPoints[animal.sample[i],]@coords
+        if (calcCorr)
+          target.point.sample[i, ] <- targetPoints[animal.sample[i],]@coords
       }
       if (verbose > 2)
         cat(' ', draws, 'draws\n')
@@ -322,9 +328,16 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     }
     # Create psi matrix as proportion of those from each breeding site that went to each NB site
     psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
+    missingOrigin <- which(is.na(psi.array[boot, , 1]))
     # Calculate MC from that psi matrix
-    MC[boot] <- calcMC(originDist, targetDist, psi.array[boot, , ],
-                       originRelAbund)
+    if (length(missingOrigin)>0)
+      MC[boot] <- calcMC(originDist[-missingOrigin, -missingOrigin], targetDist,
+                         psi.array[boot, -missingOrigin, ],
+                         originRelAbund[-missingOrigin] / sum(originRelAbund[-missingOrigin]))
+    else
+      MC[boot] <- calcMC(originDist, targetDist,
+                         psi.array[boot, , ],
+                         originRelAbund)
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" MC mean:", mean(MC, na.rm=T), "SD:", sd(MC, na.rm=T),
           "low quantile:", quantile(MC, alpha/2, na.rm=T),
@@ -345,7 +358,7 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
             "high quantile:", quantile(corr, 1-alpha/2, na.rm=T), "\n")
     }
   }
-  MC.z0 <- qnorm(sum((MC)<pointMC)/nBoot)
+  MC.z0 <- qnorm(sum((MC)<mean(MC))/nBoot)
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=T, type = 8)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
@@ -355,7 +368,7 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
     medianCorr <- median(corr)
     seCorr <- sd(corr)
     simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=T, type = 8)
-    corr.z0 <- qnorm(sum((corr)<pointCorr)/nBoot)
+    corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                            na.rm=T, type = 8)
   } else
@@ -374,7 +387,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
 #' geolocator and/or GPS data.
 #'
 #' Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
-#' relative abundance MCMC samples.
+#' relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
+#' data.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
 #'  matrix.
@@ -451,9 +465,9 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originRelAbund,
 #'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
 #'      \code{sampleMC}.}
 #'   \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
-#'      for MC.  Preferable to \code{simpleCI} when \code{pointMC} is the
+#'      for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
 #'      best estimate of MC. \code{simpleCI} is preferred when
-#'      \code{medianMC} is a better estimator. When \code{pointMC==medianMC},
+#'      \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
 #'      these should be equivalent.}
 #'   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
 #'      estimated using the highest posterior density (HPD) method.}
@@ -501,8 +515,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 
 
 ###############################################################################
-#' Grab (from GitHub server) example RMark transition probability estimates
-#' obtained from simulated data
+#' Grab (from https://github.com/SMBC-NZP/MigConnectivity) example RMark
+#' transition probability estimates obtained from simulated data
 #'
 #' Get a dataset containing RMark transition probability estimates from
 #' simulated mark-recapture-recovery data from Cohen et al. (2014).  These all

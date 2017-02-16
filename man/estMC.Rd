@@ -110,9 +110,9 @@ only)?  Default is FALSE.}
      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
      \code{sampleMC}.}
   \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
-     for MC.  Preferable to \code{simpleCI} when \code{pointMC} is the
+     for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
      best estimate of MC. \code{simpleCI} is preferred when
-     \code{medianMC} is a better estimator. When \code{pointMC==medianMC},
+     \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
      these should be equivalent.}
   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
      estimated using the highest posterior density (HPD) method.}
@@ -129,7 +129,8 @@ only)?  Default is FALSE.}
 }
 \description{
 Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
-relative abundance MCMC samples.
+relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
+data.
 }
 \examples{
 set.seed(101)
@@ -242,13 +243,14 @@ rmseAbund
 nSamplesGLGPS <- 200 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
 }
 
 # Estimate MC only, treat all data as geolocator
 GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-             targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+             targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
              originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
              targetSites = OVENdata$targetSites, # Non-breeding target sites
              originSites = OVENdata$originSites, # Breeding origin sites
@@ -262,7 +264,7 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
 Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
                 geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-                targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+                targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
                 originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
                 targetSites = OVENdata$targetSites, # Non-breeding target sites
                 originSites = OVENdata$originSites, # Breeding origin sites
@@ -292,9 +294,7 @@ raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
 GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-              targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+              targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
               originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
               targetSites = OVENdata$targetSites, # Non-breeding target sites
               originSites = OVENdata$originSites, # Breeding origin sites

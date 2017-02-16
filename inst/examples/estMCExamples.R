@@ -108,13 +108,14 @@ rmseAbund
 nSamplesGLGPS <- 200 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
 }
 
 # Estimate MC only, treat all data as geolocator
 GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-             targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+             targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
              originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
              targetSites = OVENdata$targetSites, # Non-breeding target sites
              originSites = OVENdata$originSites, # Breeding origin sites
@@ -128,7 +129,7 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
 Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
                 geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-                targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+                targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
                 originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
                 targetSites = OVENdata$targetSites, # Non-breeding target sites
                 originSites = OVENdata$originSites, # Breeding origin sites
@@ -158,9 +159,7 @@ raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
 GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-              geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-              geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-              targetDist = OVENdata$targetDist, # Non-breeind target distribution distance matrix
+              targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
               originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
               targetSites = OVENdata$targetSites, # Non-breeding target sites
               originSites = OVENdata$originSites, # Breeding origin sites
