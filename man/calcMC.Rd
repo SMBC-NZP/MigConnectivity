@@ -4,7 +4,8 @@
 \alias{calcMC}
 \title{Migratory connectivity strength function}
 \usage{
-calcMC(originDist, targetDist, psi, originRelAbund)
+calcMC(originDist, targetDist, psi, originRelAbund = NULL,
+  originAbund = NULL)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -17,7 +18,14 @@ matrix.}
 Matrix with B rows and W columns where rows sum to 1.}
 
 \item{originRelAbund}{Relative abundances at B origin sites. Numeric vector
-   of length B that sums to 1.}
+of length B that sums to 1.  Optional, but either originRelAbund or
+originAbund must be defined.  When absolute abundances are known and
+small (maybe average < 1000), it's perferable to use originAbund.}
+
+\item{originAbund}{Actual or estimated abundances at B origin sites.
+   Numeric vector of length B with all values greater than or equal to 1.
+   These should be on the scale of number of individuals.  Optional, but
+   either originRelAbund or originAbund must be defined.}
 }
 \value{
 real value between -1 and 1, inclusive (usually between 0 and 1)
@@ -41,6 +49,10 @@ nonBreedDist <- matrix(c(0, 5, 10,
                       10, 5, 0), nNonBreeding, nNonBreeding)
 relN <- rep(1/nBreeding, nBreeding)
 round(calcMC(breedDist, nonBreedDist, psi, relN), 3) # == 0.05
+
+# Example with small absolute abundances rather than relative abundances
+N <- rep(20, nBreeding)
+round(calcMC(breedDist, nonBreedDist, psi, originAbund = N), 3) # == 0.026
 
 ###############################################################################
 # Example data input values

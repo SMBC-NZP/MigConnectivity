@@ -185,7 +185,7 @@ weightedNB_breeDeployOnly<-SpatialPoints(as.matrix(cbind(c(NB_kde_long[summerDep
 crs(weightedNB_breeDeployOnly)<-WGS84
 NB_breedDeploy<-spTransform(weightedNB_breeDeployOnly,CRS(Lambert))
 
-isGL<-c(rep("TRUE",20),rep("FALSE",19))
+isGL<-c(rep(TRUE,20),rep(FALSE,19))
 targetPoints<-NB_breedDeploy
 
 
@@ -340,22 +340,6 @@ OVENdata[[10]]<-targetDist
 # Save to data folder
 devtools::use_data(OVENdata, overwrite = T)
 
-###################################################################
-#
-#  Write required data to the data folder
-#
-###################################################################
-
-#devtools::use_data(geo.bias, overwrite = T)
-#devtools::use_data(geo.vcov, overwrite = T)
-#devtools::use_data(isGL, overwrite = T)
-#devtools::use_data(targetPoints, overwrite = T)
-#devtools::use_data(originPoints, overwrite = T)
-#devtools::use_data(targetSites, overwrite = T)
-#devtools::use_data(originSites, overwrite = T)
-#devtools::use_data(originRelAbund, overwrite = T)
-#devtools::use_data(originDist, overwrite = T)
-#devtools::use_data(targetDist, overwrite = T)
 
 
 

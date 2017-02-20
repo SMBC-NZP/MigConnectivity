@@ -13,6 +13,10 @@ nonBreedDist <- matrix(c(0, 5, 10,
 relN <- rep(1/nBreeding, nBreeding)
 round(calcMC(breedDist, nonBreedDist, psi, relN), 3) # == 0.05
 
+# Example with small absolute abundances rather than relative abundances
+N <- rep(20, nBreeding)
+round(calcMC(breedDist, nonBreedDist, psi, originAbund = N), 3) # == 0.026
+
 ###############################################################################
 # Example data input values
 ###############################################################################

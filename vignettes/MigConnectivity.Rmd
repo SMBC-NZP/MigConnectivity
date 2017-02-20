@@ -77,7 +77,7 @@ To calculate the strength of MC, you will need:
 1. to define the number of breeding and non-breeding regions  
 1. the distance between the breeding regions and the distance between the non-breeding regions  
 1. the transition probabilities between each breeding and non-breeding region (`psi`)  
-1. the relative abundance within each of the regions where individuals originate from (here the breeding regions). 
+1. the relative or the absolute abundance within each of the regions where individuals originate from (here the breeding regions). 
 
 ### Calculate MC between breeding and non-breeding regions
 
@@ -140,6 +140,9 @@ Define the relative abundance within the three breeding regions
 relN <- rep(1/nBreeding, nBreeding) 
 
 relN
+#equal absolute abundance among the three breeding regions, each must be >= 1 
+N <- rep(3000, nBreeding)
+
 ```
 Calculate the strength of migratory connectivity using the simulated data above
 ```{r}
@@ -148,6 +151,12 @@ MC <- calcMC(originDist = breedDist,
              targetDist = nonBreedDist,
              psi = psi,
              originRelAbund = relN)
+
+round(MC,3)
+MC <- calcMC(originDist = breedDist,
+             targetDist = nonBreedDist,
+             psi = psi,
+             originAbund = N)
 
 round(MC,3)
 ```
@@ -164,7 +173,7 @@ To estimate MC and include location uncertainty the following data are needed:
 1. Distance matrix between breeding and non-breeding regions    
 1. A shapefile of both breeding and non-breeding regions    
 1. The deployment locations and the 'unknown' locations derived from the tracking devices    
-1. The relative abundance within each region where the birds originate from (deployment regions)     
+1. The relative (or absolute) abundance within each region where the birds originate from (deployment regions)     
 
 We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
 

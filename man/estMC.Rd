@@ -5,12 +5,13 @@
 \title{Estimate MC from abundance and/or transition probability estimates OR
 geolocator and/or GPS data.}
 \usage{
-estMC(originDist, targetDist, originRelAbund, psi = NULL,
-  originSites = NULL, targetSites = NULL, originPoints = NULL,
-  targetPoints = NULL, originAssignment = NULL, targetAssignment = NULL,
-  originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
-  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
-  calcCorr = FALSE, alpha = 0.05)
+estMC(originDist, targetDist, originRelAbund = NULL, originAbund = NULL,
+  psi = NULL, originSites = NULL, targetSites = NULL,
+  originPoints = NULL, targetPoints = NULL, originAssignment = NULL,
+  targetAssignment = NULL, originNames = NULL, targetNames = NULL,
+  nSamples = 1000, nSim = 1000, isGL = FALSE, geoBias = NULL,
+  geoVCov = NULL, row0 = 0, verbose = 0, calcCorr = FALSE,
+  alpha = 0.05)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -23,6 +24,10 @@ matrix.}
 a numeric vector of length B that sums to 1 or an mcmc object with
 \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 Currently, an mcmc object doesn't work with geolocator or GPS data.}
+
+\item{originAbund}{Absolute abundance estimates at B origin sites.
+A numeric vector of length B with each element >= 1. Either originRelAbund
+or originAbund should be defined (but not both).}
 
 \item{psi}{Transition probabilities between B origin and W target sites.
 Either a matrix with B rows and W columns where rows sum to 1 or a MARK

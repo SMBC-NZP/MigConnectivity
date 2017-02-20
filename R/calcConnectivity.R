@@ -10,14 +10,20 @@
 #' @param psi Transition probabilities between B origin and W target sites.
 #'    Matrix with B rows and W columns where rows sum to 1.
 #' @param originRelAbund Relative abundances at B origin sites. Numeric vector
-#'    of length B that sums to 1.
+#'    of length B that sums to 1.  Optional, but either originRelAbund or
+#'    originAbund must be defined.  When absolute abundances are known and
+#'    small (maybe average < 1000), it's perferable to use originAbund.
+#' @param originAbund Actual or estimated abundances at B origin sites.
+#'    Numeric vector of length B with all values greater than or equal to 1.
+#'    These should be on the scale of number of individuals.  Optional, but
+#'    either originRelAbund or originAbund must be defined.
 #'
 #' @return real value between -1 and 1, inclusive (usually between 0 and 1)
 #'    indicating the degree of migratory connectivity.
 #'
 #' @example inst/examples/calcMCExamples.R
 #' @export
-calcMC <- function(originDist, targetDist, psi, originRelAbund) {
+calcMC <- function(originDist, targetDist, psi, originRelAbund=NULL, originAbund=NULL) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
@@ -38,6 +44,11 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund) {
       nTarget <- ncol(psi)
     }
   }
+  if (is.null(originRelAbund) + is.null(originAbund) != 1)
+    stop('originRelAbund or originAbund (but not both) should be defined.')
+  if (is.null(originRelAbund))
+    return(calcMCSmall(originDist = originDist, targetDist = targetDist,
+                       psi = psi, originAbund = originAbund))
   if (length(originRelAbund)!=nOrigin || !isTRUE(all.equal(sum(originRelAbund), 1,
                                                        tolerance = 1e-6)))
     stop('originRelAbund must be a vector with [number of origin sites] values that sum to 1.')
@@ -64,45 +75,27 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund) {
 ###############################################################################
 # Calculate MC for known actual abundance per site
 ###############################################################################
-#' Migratory connectivity strength function corrected for small absolute
-#' abundances
-#'
-#' @param originDist Distances between the B origin sites.  Symmetric B by B
-#'    matrix.
-#' @param targetDist Distances between the W target sites.  Symmetric W by W
-#'    matrix.
-#' @param psi Transition probabilities between B origin and W target sites.
-#'    Matrix with B rows and W columns where rows sum to 1.
-#' @param originAbund Actual or estimated abundances at B origin sites.
-#'    Numeric vector of length B with all values greater than or equal to 1.
-#'    These should be on the scale of number of individuals.
-#'
-#' @return real value between -1 and 1, inclusive (usually between 0 and 1)
-#'    indicating the degree of migratory connectivity.
-#'
-#' @seealso calcMC
-#' @export
+# Migratory connectivity strength function corrected for small absolute
+# abundances
+#
+# @param originDist Distances between the B origin sites.  Symmetric B by B
+#    matrix.
+# @param targetDist Distances between the W target sites.  Symmetric W by W
+#    matrix.
+# @param psi Transition probabilities between B origin and W target sites.
+#    Matrix with B rows and W columns where rows sum to 1.
+# @param originAbund Actual or estimated abundances at B origin sites.
+#    Numeric vector of length B with all values greater than or equal to 1.
+#    These should be on the scale of number of individuals.
+#
+# @return real value between -1 and 1, inclusive (usually between 0 and 1)
+#    indicating the degree of migratory connectivity.
+#
+# @seealso calcMC
 calcMCSmall <- function(originDist, targetDist, psi, originAbund) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
-  if (nrow(originDist)!=ncol(originDist) || !isSymmetric(unname(originDist)))
-    stop('originDist (distances between origin sites) must be a square, symmetric matrix.')
-  if (nrow(targetDist)!=ncol(targetDist) || !isSymmetric(unname(targetDist)))
-    stop('targetDist (distances between target sites) must be a square, symmetric matrix.')
-  if (ncol(originDist)!=nOrigin || ncol(targetDist)!=nTarget ||
-      !isTRUE(all.equal(rowSums(psi), rep(1, nOrigin), tolerance = 1e-6,
-                        check.attributes = F))) {
-    if (ncol(targetDist)!=nOrigin || ncol(originDist)!=nTarget ||
-        !isTRUE(all.equal(colSums(psi), rep(1, nTarget), tolerance = 1e-6,
-                          check.attributes = F)))
-      stop('psi should have [number of origin sites] rows and [number of target sites] columns and rows that sum to 1.')
-    else { #Just turn it around
-      psi <- t(psi)
-      nOrigin <- nrow(psi)
-      nTarget <- ncol(psi)
-    }
-  }
   if (length(originAbund)!=nOrigin || any(originAbund < 1))
     stop('originAbund must be a vector with [number of origin sites] values >= 1.')
   originRelAbund <- originAbund / sum(originAbund)
