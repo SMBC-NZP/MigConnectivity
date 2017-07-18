@@ -55,18 +55,21 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund=NULL, originAbund
   # Relative abundance at each combination of origin and target sites
   sumWinRelN <- apply(psi, 2, "*", originRelAbund)
   # Average origin distance between any two given birds.  Using matrix product (%*%) to get all probabilities of two birds origin in each site.
-  mu.bD <- sum(originDist * (originRelAbund %*% t(originRelAbund)))
+  relAbundProd <- originRelAbund %*% t(originRelAbund)
+  mu.bD <- sum(originDist * relAbundProd)
   # SD in origin distance between any two given birds
-  sd.bD <- sqrt(sum((originDist - mu.bD)^2 * (originRelAbund %*% t(originRelAbund))))
+  sd.bD <- sqrt(sum((originDist - mu.bD)^2 * relAbundProd))
   # Average target distance between any two given birds.  Using Kronecker product (%x%) to get all probabilities of two birds origin and target in each pair of sites.
-  mu.wD <- sum(targetDist * matrix(colSums(sumWinRelN %x% sumWinRelN), nTarget, nTarget))
+  M <- sumWinRelN %x% sumWinRelN
+  winRelNProd <- matrix(colSums(M), nTarget, nTarget)
+  mu.wD <- sum(targetDist * winRelNProd)
   # SD in target distance between any two given birds
-  sd.wD <- sqrt(sum((targetDist - mu.wD)^2 * matrix(colSums(sumWinRelN %x% sumWinRelN), nTarget, nTarget)))
+  sd.wD <- sqrt(sum((targetDist - mu.wD)^2 * winRelNProd))
   # Correlation between origin and target distances, calculated from formula:
   # sum(probability of each combination of origin sites and target sites *
   # (distance between origin sites - mean origin site distance) * (distance between target sites - mean target site distance)) /
   # (SD in origin site distances * SD in target site distances)
-  MC <- sum((sumWinRelN %x% sumWinRelN) *
+  MC <- sum(M *
               (matrix(rep(originDist, nTarget^2), nOrigin^2, nTarget^2) - mu.bD) *
               (matrix(rep(targetDist, nOrigin^2), nOrigin^2, nTarget^2, byrow=T) - mu.wD))/(sd.bD*sd.wD)
   return(MC)
@@ -96,8 +99,8 @@ calcMCSmall <- function(originDist, targetDist, psi, originAbund) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
-  if (length(originAbund)!=nOrigin || any(originAbund < 1))
-    stop('originAbund must be a vector with [number of origin sites] values >= 1.')
+#  if (length(originAbund)!=nOrigin || any(originAbund < 1))
+#    stop('originAbund must be a vector with [number of origin sites] values >= 1.')
   originRelAbund <- originAbund / sum(originAbund)
   originRelAbund2 <- (matrix(rep(originAbund, each = nOrigin), nOrigin, nOrigin) -
                         diag(nrow = nOrigin)) *
@@ -108,21 +111,22 @@ calcMCSmall <- function(originDist, targetDist, psi, originAbund) {
   subMat <- matrix(0, nOrigin ^ 2, nTarget ^ 2)
   subMat[rep(1:nOrigin, nOrigin) == rep(1:nOrigin, each = nOrigin),
          rep(1:nTarget, nTarget) == rep(1:nTarget, each = nTarget)] <- 1
-  sumWinRelN2 <- (sumWinRelN %x% matrix(1, nOrigin, nTarget)) *
+  M <- (sumWinRelN %x% matrix(1, nOrigin, nTarget)) *
     ((matrix(1, nOrigin, nTarget) %x% sumWinN) - subMat) / (sum(originAbund) - 1) #rep(sumWinRelN, each = nOrigin), nOrigin^2, nTarget^2)
+  sumWinRelN2 <- matrix(colSums(M), nTarget, nTarget)
   # Average origin distance between any two given birds.  Using matrix product (%*%) to get all probabilities of two birds origin in each site.
   mu.bD <- sum(originDist * originRelAbund2)
   # SD in origin distance between any two given birds
   sd.bD <- sqrt(sum((originDist - mu.bD)^2 * originRelAbund2))
   # Average target distance between any two given birds.  Using Kronecker product (%x%) to get all probabilities of two birds origin and target in each pair of sites.
-  mu.wD <- sum(targetDist * matrix(colSums(sumWinRelN2), nTarget, nTarget))
+  mu.wD <- sum(targetDist * sumWinRelN2)
   # SD in target distance between any two given birds
-  sd.wD <- sqrt(sum((targetDist - mu.wD)^2 * matrix(colSums(sumWinRelN2), nTarget, nTarget)))
+  sd.wD <- sqrt(sum((targetDist - mu.wD)^2 * sumWinRelN2))
   # Correlation between origin and target distances, calculated from formula:
   # sum(probability of each combination of origin sites and target sites *
   # (distance between origin sites - mean origin site distance) * (distance between target sites - mean target site distance)) /
   # (SD in origin site distances * SD in target site distances)
-  MC <- sum(sumWinRelN2 *
+  MC <- sum(M *
               (matrix(rep(originDist, nTarget^2), nOrigin^2, nTarget^2) - mu.bD) *
               (matrix(rep(targetDist, nOrigin^2), nOrigin^2, nTarget^2, byrow=T) - mu.wD))/(sd.bD*sd.wD)
   return(MC)

@@ -11,7 +11,7 @@ estMC(originDist, targetDist, originRelAbund = NULL, originAbund = NULL,
   targetAssignment = NULL, originNames = NULL, targetNames = NULL,
   nSamples = 1000, nSim = 1000, isGL = FALSE, geoBias = NULL,
   geoVCov = NULL, row0 = 0, verbose = 0, calcCorr = FALSE,
-  alpha = 0.05)
+  alpha = 0.05, approxSigTest = FALSE, sigConst = 0)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -95,15 +95,22 @@ correlation between release and non-release locations (GPS or GL data
 only)?  Default is FALSE.}
 
 \item{alpha}{Level for confidence/credible intervals provided.}
+
+\item{approxSigTest}{Should function compute approximate one-sided
+significance tests (p-values) for MC from the bootstrap?  Default is
+FALSE.}
+
+\item{sigConst}{Value to compare MC to in significance test.
+   Default is 0.}
 }
 \value{
 \code{estMC} returns a list with elements:
 \describe{
-  \item{\code{sampleMC}}{\code{nSamples} or \code{nBoot} sampled values for
+  \item{\code{sampleMC}}{\code{nSamples} sampled values for
      MC. Provided to allow the user to compute own summary statistics.}
-  \item{\code{samplePsi}}{Array of sampled values for psi. \code{nBoot}
-     OR \code{nSamples} x [number of origin sites] x [number of target
-     sites]. Provided to allow the user to compute own summary statistics.}
+  \item{\code{samplePsi}}{Array of sampled values for psi. \code{nSamples} x
+     [number of origin sites] x [number of target sites]. Provided to allow
+     the user to compute own summary statistics.}
   \item{\code{pointPsi}}{Simple point estimate of psi matrix.}
   \item{\code{pointMC}}{Simple point estimate of MC, using the point
      estimates of \code{psi} and \code{originRelAbund}.}
@@ -118,9 +125,23 @@ only)?  Default is FALSE.}
      for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
      best estimate of MC. \code{simpleCI} is preferred when
      \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
-     these should be equivalent.}
+     these should be equivalent.  Estimated as the
+     \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+     \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sampleMC},
+     where z0 is the proportion of \code{sampleMC < meanMC}.}
   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
      estimated using the highest posterior density (HPD) method.}
+  \item{\code{simpleP}}{Approximate p-value for MC, estimated as the
+     proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
+     \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+     proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+     but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+     \code{approxSigTest==FALSE}.}
+  \item{\code{bcP}}{Approximate bias-corrected p-value for MC, estimated as
+     \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+     \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+     than \code{simpleP}, but many of the same limitations apply.  NULL when
+     \code{approxSigTest==FALSE}.}
   \item{\code{sampleCorr}}{\code{nBoot} sampled values for continuous
      correlation. Provided to allow the user to compute own summary
      statistics.  NULL when \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
@@ -278,7 +299,8 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator 
                 originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
                 verbose = 1,   # output options
                 calcCorr = TRUE, # estimate rM as well
-                nSamples = nSamplesGLGPS) # This is set low for example
+                nSamples = nSamplesGLGPS, # This is set low for example
+                approxSigTest = T)
 
 # For treating all data as GPS,
 # Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #

@@ -2,7 +2,7 @@
 title: "'MigConnectivity' package"
 author: "Jeff Hostetler, Mike Hallworth, Clark Rushing, Emily Cohen"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output: rmarkdown::pdf_document
 vignette: >
   %\VignetteIndexEntry{MigConnectivity package}
   %\VignetteEngine{knitr::rmarkdown}
@@ -316,16 +316,19 @@ mlogitMat <- function(slope, dist) {
 }
 ```
 
-`mlogitMC`: Crude optimizable function for developing migratory connectivity pattern based on migratory connectivity strength
+`mlogitMC`: Crude optimizable function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
 
 ```{r}
-mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
+mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund) {
     nBreeding <- nrow(origin.dist)
     nWintering <- nrow(target.dist)
     psi <- mlogitMat(slope, origin.dist)
   if (any(psi<0))
     return(5*slope^2)
-  MC <- calcMC(origin.dist, target.dist, psi, origin.rel.abund)
+  if (sum(origin.abund) > 1)
+    MC <- calcMC(origin.dist, target.dist, psi, originAbund = origin.abund)
+  else
+    MC <- calcMC(origin.dist, target.dist, psi, originRelAbund = origin.abund)
   return((MC.in - MC)^2)
 }
 ```
@@ -349,8 +352,8 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verb
 `calcPsiMC`: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data
 
 ```{r}
-calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
-                      verbose=F) {
+calcPsiMC <- function(originDist, targetDist, locations, originRelAbund = NULL, 
+                      originAbund = NULL, verbose=F) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -371,7 +374,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
                                                          targetMat[wi]] + 1
   }
   psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
-  MC <- calcMC(originDist, targetDist, psiMat, originRelAbund)
+  MC <- NULL #calcMC(originDist, targetDist, psiMat, originRelAbund, originAbund)
   return(list(psi=psiMat, MC=MC))
 } 
 ```   
@@ -826,11 +829,14 @@ for (sim in 1:nSims14) {
     animalLoc14[[i]] <- changeLocations(sim14[[scenarioToSampleMap14[i]]]$animalLoc,
                                       breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
     results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
-                                   breedingRelN14[[i]], animalLoc14[[i]], F)
+                                animalLoc14[[i]], 
+                                originRelAbund = breedingRelN14[[i]], 
+                                verbose = F)
     compare14.array[sim, i, 'MC'] <- results14[[i]]$MC
     compare14.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist14[[1]],
                                                          nonbreedDist14[[1]],
                                                          sim14[[scenarioToSampleMap14[i]]]$animalLoc,
+                                                         resamp=0)$correlation
   }
 }
 
@@ -932,7 +938,7 @@ sampleBreeding15 <- list(round(breedingRelN15[[1]]*nSample15),
 # Set up psi matrix
 o15 <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist15[[1]],
                 target.dist = nonbreedDist15[[1]],
-                origin.rel.abund = breedingRelN15[[1]], interval = c(0,10),
+                origin.abund = breedingN15[[1]], interval = c(0,10),
                 tol = .Machine$double.eps^0.5)
 
 slope15 <- o15$minimum
@@ -943,7 +949,7 @@ psi15 <- mlogitMat(slope15, breedDist15[[1]])
 MC15 <- calcMC(originDist = breedDist15[[1]], 
                targetDist = nonbreedDist15[[1]],
                psi = psi15,
-               originRelAbund = breedingRelN15[[1]])
+               originAbund = breedingN15[[1]])
 
 # Run sampling regimes
 scenarioToSampleMap15 <- c(1, 1, 2, 3, 3, 4)
@@ -959,13 +965,15 @@ compare15 <- data.frame(Scenario = c("True",
                                      "BiasedSample", 
                                      "BiasedSampleBreeding4",
                                      "BiasedCentroidSampleBreeding4"),
-                        MC = c(MC15, rep(NA, nScenarios15)), Mantel = c(MC15, rep(NA, nScenarios15)))
+                        MC = c(MC15, rep(NA, nScenarios15)), 
+                        MCA = c(MC15, rep(NA, nScenarios15)), 
+                        Mantel = c(MC15, rep(NA, nScenarios15)))
 
-compare15.array <- array(NA, c(nSims15, nScenarios15, 2), dimnames = list(1:nSims15,
+compare15.array <- array(NA, c(nSims15, nScenarios15, 3), dimnames = list(1:nSims15,
                                          c("Base", "Breeding4", "CentroidSampleBreeding4",
                                            "BiasedSample", "BiasedSampleBreeding4",
                                            "BiasedCentroidSampleBreeding4"),
-                                         c("MC", "Mantel")))
+                                         c("MC", "MCA", "Mantel")))
 
 
 for (sim in 1:nSims15) {
@@ -978,8 +986,11 @@ for (sim in 1:nSims15) {
     animalLoc15[[i]] <- changeLocations(sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                       breedingSiteTrans15[[i]], 1:nWintering15[i])
     results15[[i]] <- calcPsiMC(breedDist15[[i]], nonbreedDist15[[i]],
-                                   breedingRelN15[[i]], animalLoc15[[i]], F)
+                                   animalLoc15[[i]], breedingRelN15[[i]], NULL, F)
     compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
+    compare15.array[sim, i, 'MCA'] <- calcMC(breedDist15[[i]], nonbreedDist15[[i]], 
+                                             results15[[i]]$psi, 
+                                             originAbund = breedingN15[[i]])
     compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
                                                          nonbreedDist15[[1]],
                                                          sim15[[scenarioToSampleMap15[i]]]$animalLoc,
@@ -988,16 +999,18 @@ for (sim in 1:nSims15) {
 }
 
 compare15$MC[1:nScenarios15 + 1] <- apply(compare15.array[,,'MC'], 2, mean)
+compare15$MCA[1:nScenarios15 + 1] <- apply(compare15.array[,,'MCA'], 2, mean)
 compare15$Mantel[1:nScenarios15 + 1] <- apply(compare15.array[,,'Mantel'], 2,mean)
 
-compare15 <- transform(compare15, MC.diff=MC - MC[1],
+compare15 <- transform(compare15, MC.diff=MC - MC[1], MCA.diff=MCA - MCA[1],
                        Mantel.diff=Mantel - Mantel[1],
-                       MC.prop=MC/MC[1], Mantel.prop=Mantel/Mantel[1])
+                       MC.prop=MC/MC[1], MCA.prop=MCA/MCA[1], 
+                       Mantel.prop=Mantel/Mantel[1])
 
 
-compare15a <- as.matrix(compare15[2:7,c(2,4,3,5)])
+compare15a <- as.matrix(compare15[1 + 1:nScenarios15, c(2,5,4,7)])
 
-rownames(compare15a) <- compare15$Scenario[2:7]
+rownames(compare15a) <- compare15$Scenario[1 + 1:nScenarios15]
 ```
 
 #### EXAMPLE 6
@@ -1066,7 +1079,7 @@ for (i in 1:nLevels16) {
   o16a <- optimize(mlogitMC, MC.in = MC.levels16[i],
                    origin.dist = breedDist16[[1]],
                    target.dist = nonbreedDist16[[1]],
-                   origin.rel.abund = breedingRelN16[[1]],
+                   origin.abund = breedingN16[[1]],
                    interval=c(0,10), tol=.Machine$double.eps^0.5)
   
   slope16a <- o16a$minimum
@@ -1085,13 +1098,25 @@ for (i in 1:nLevels16) {
 MC16 <- calcMC(originDist = breedDist16[[1]],
                targetDist = nonbreedDist16[[1]], 
                psi = psi16,
-               originRelAbund = breedingRelN16[[1]])
+               originAbund = breedingN16[[1]])
 
 
 # Set up sampling regimes (different number than number of scenarios)
-nSample16 <- 1000
-sampleBreeding16 <- sampleBreeding15
+nSample16 <- 150
+sampleBreeding16 <- list(round(breedingRelN16[[1]]*nSample16),
+                         c(rep(0, 22), round(breedingRelN16[[3]][1]*nSample16),
+                           rep(0, 4), round(breedingRelN16[[3]][2]*nSample16),
+                           rep(0, 44), round(breedingRelN16[[3]][3]*nSample16),
+                           rep(0, 4), round(breedingRelN16[[3]][4]*nSample16),
+                           rep(0, 22)),
+                         round(breedingRelN16[[1]]*nSample16)[100:1],
+                         c(rep(0, 22), round(breedingRelN16[[3]][1]*nSample16),
+                           rep(0, 4), round(breedingRelN16[[3]][2]*nSample16),
+                           rep(0, 44), round(breedingRelN16[[3]][3]*nSample16),
+                           rep(0, 4), round(breedingRelN16[[3]][4]*nSample16),
+                           rep(0, 22))[100:1])
 
+sapply(sampleBreeding16, sum)
 
 # Run sampling regimes
 scenarioToSampleMap16 <- c(1, 1, 2, 3, 3, 4)
@@ -1105,37 +1130,21 @@ compare16 <- data.frame(Scenario = c("True",
                                      "BiasedSampleBreeding4",
                                      "BiasedCentroidSampleBreeding4"),
                         MC = c(MC16, rep(NA, nScenarios16)),
+                        MCA = c(MC16, rep(NA, nScenarios16)),
+                        MCss1 = c(MC16, rep(NA, nScenarios16)),
+                        MCss2 = c(MC16, rep(NA, nScenarios16)),
                         Mantel = c(MC16, rep(NA, nScenarios16)))
 
-compare16.array <- array(NA, c(nSims16, nScenarios16, 2), 
+compare16.array <- array(NA, c(nSims16, nScenarios16, 5), 
                          dimnames = list(1:nSims16,
                                          c("Base", "Breeding4",
                                            "CentroidSampleBreeding4",
                                            "BiasedSample",
                                            "BiasedSampleBreeding4",
                                            "BiasedCentroidSampleBreeding4"),
-                                         c("MC", "Mantel")))
+                                         c("MC", "MCA", "MCss1", "MCss2", "Mantel")))
 
-for (sim in 1:nSims15) {
-  cat("Simulation", sim, "of", nSims15, '\n')
-  sim15 <- lapply(sampleBreeding15, simMove, breedingDist = breedDist15[[1]],
-                  winteringDist=nonbreedDist15[[1]], psi=psi15, nYears=nYears,
-                  nMonths=nMonths)
-  
-  for (i in 1:nScenarios15) {
-    cat("\tScenario", i, "\n")
-    animalLoc15[[i]] <- changeLocations(sim15[[scenarioToSampleMap15[i]]]$animalLoc,
-                                        breedingSiteTrans15[[i]], 1:nWintering15[i])
-    results15[[i]] <- calcPsiMC(breedDist15[[i]], nonbreedDist15[[i]],
-                                breedingRelN15[[i]], animalLoc15[[i]], F)
-    compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
-    compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
-                                                         nonbreedDist15[[1]],
-                                                         sim15[[scenarioToSampleMap15[i]]]$animalLoc,
-                                                         resamp=0)$correlation
-  }
-}
-
+set.seed(80)
 for (sim in 1:nSims16) {
   cat("Simulation", sim, "of", nSims16, '\n')
   sim16 <- lapply(sampleBreeding16, simMove, breedingDist = breedDist16[[1]],
@@ -1146,8 +1155,17 @@ for (sim in 1:nSims16) {
     animalLoc16[[i]] <- changeLocations(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                       breedingSiteTrans16[[i]], 1:nWintering16[i])
     results16[[i]] <- calcPsiMC(breedDist16[[i]], nonbreedDist16[[i]],
-                                breedingRelN16[[i]], animalLoc16[[i]], F)
+                                animalLoc16[[i]], breedingRelN16[[i]])
     compare16.array[sim, i, 'MC'] <- results16[[i]]$MC
+    compare16.array[sim, i, 'MCA'] <- calcMC(breedDist16[[i]], nonbreedDist16[[i]], 
+                                             results16[[i]]$psi, 
+                                             originAbund = breedingN16[[i]])
+    compare16.array[sim, i, 'MCss1'] <- calcMC(breedDist16[[i]], nonbreedDist16[[i]], 
+                                             results16[[i]]$psi, 
+                                             originAbund = table(animalLoc16[[i]][ , 1, 1, 1]))
+    compare16.array[sim, i, 'MCss2'] <- calcMC(breedDist16[[i]], nonbreedDist16[[i]], 
+                                             results16[[i]]$psi, 
+                                             originAbund = breedingRelN16[[i]] * nSample16) # pmax(breedingRelN16[[i]] * nSample16, 1))
     compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]],
                                                          nonbreedDist16[[1]],
                                                          sim16[[scenarioToSampleMap16[i]]]$animalLoc,
@@ -1156,12 +1174,17 @@ for (sim in 1:nSims16) {
 }
 
 compare16$MC[1:nScenarios16 + 1] <- apply(compare16.array[,,'MC'], 2, mean)
+compare16$MCA[1:nScenarios16 + 1] <- apply(compare16.array[,,'MCA'], 2, mean)
+compare16$MCss1[1:nScenarios16 + 1] <- apply(compare16.array[,,'MCss1'], 2, mean)
+compare16$MCss2[1:nScenarios16 + 1] <- apply(compare16.array[,,'MCss2'], 2, mean)
 compare16$Mantel[1:nScenarios16 + 1] <- apply(compare16.array[,,'Mantel'], 2, mean)
-compare16 <- transform(compare16, MC.diff=MC - MC[1], Mantel.diff=Mantel - Mantel[1],
-                       MC.prop=MC/MC[1], Mantel.prop=Mantel/Mantel[1])
+compare16 <- transform(compare16, MC.diff=MC - MC[1], MCA.diff=MCA - MCA[1],
+                       MCss1.diff = MCss1 - MCss1[1],
+                       MCss2.diff = MCss2 - MCss2[1],
+                       Mantel.diff=Mantel - Mantel[1])
 
-compare16a <- as.matrix(compare16[2:7,c(2,4,3,5)])
-rownames(compare16a) <- compare16$Scenario[2:7]
+compare16a <- as.matrix(compare16[1 + 1:nScenarios16, c('MC', 'MC.diff', "Mantel", "Mantel.diff")])
+rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 ```
 
 

@@ -52,7 +52,8 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
                           originRelAbund = NULL, originAbund = NULL,
                           originSites=NULL, targetSites=NULL,
                           nSamples = 1000, row0 = 0, verbose=0,
-                          alpha = 0.05) {
+                          alpha = 0.05,
+                          approxSigTest = F, sigConst = 0) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   if (is.null(originRelAbund) + is.null(originAbund) != 1)
@@ -119,7 +120,7 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
     # Calculate MC for new psis and relative breeding densities
     sampleMC[i] <- ifelse(absAbund, calcMC(originDist, targetDist, psiNew,
                                            originAbund = abundNew),
-                          calcMC(originDist, targetDist, psiBase,
+                          calcMC(originDist, targetDist, psiNew,
                                  originRelAbund = abundNew))
   }
   meanMC <- mean(sampleMC)
@@ -132,10 +133,24 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
                        na.rm=T, type = 8)
   MC.mcmc <- coda::as.mcmc(sampleMC) # Ha!
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
+  if (!approxSigTest)
+    simpleP <- bcP <- NULL
+  else {
+    if (pointMC > sigConst)
+      simpleP <- sum(sampleMC < sigConst) / nBoot
+    else
+      simpleP <- sum(sampleMC > sigConst) / nBoot
+    if (simpleP == 0)
+      simpleP <- 0.5 / nBoot
+    bcP <- pnorm(qnorm(simpleP) - 2 * z0)
+    if (pointMC < sigConst)
+      bcP <- 1 - bcP
+  }
   return(list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
               pointMC=pointMC, meanMC=meanMC,
               medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
-              bcCI=bcCI, hpdCI=hpdCI, sampleCorr = NULL, pointCorr = NULL,
+              bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+              sampleCorr = NULL, pointCorr = NULL,
               meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
               simpleCICorr=NULL, bcCICorr=NULL))
 }
@@ -226,7 +241,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
                        originPoints=NULL, originSites=NULL,
                        originAssignment=NULL, originNames=NULL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
-                       nSim = 1000, calcCorr=T, alpha = 0.05) {
+                       nSim = 1000, calcCorr=T, alpha = 0.05,
+                       approxSigTest = F, sigConst = 0) {
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
@@ -387,6 +403,19 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
                        na.rm=T, type = 8)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
+  if (!approxSigTest)
+    simpleP <- bcP <- NULL
+  else {
+    if (pointMC > sigConst)
+      simpleP <- sum(MC < sigConst) / nBoot
+    else
+      simpleP <- sum(MC > sigConst) / nBoot
+    if (simpleP == 0)
+      simpleP <- 0.5 / nBoot
+    bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
+    if (pointMC < sigConst)
+      bcP <- 1 - bcP
+  }
   if (calcCorr) {
     meanCorr <- mean(corr)
     medianCorr <- median(corr)
@@ -401,7 +430,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
               pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC),
               medianMC = median(MC), seMC = sd(MC),
               simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=T, type = 8),
-              bcCI = bcCI, hpdCI = hpdCI, sampleCorr = corr, pointCorr = pointCorr,
+              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
+              sampleCorr = corr, pointCorr = pointCorr,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
 }
@@ -474,13 +504,19 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
 #'    correlation between release and non-release locations (GPS or GL data
 #'    only)?  Default is FALSE.
 #' @param alpha Level for confidence/credible intervals provided.
+#' @param approxSigTest Should function compute approximate one-sided
+#'    significance tests (p-values) for MC from the bootstrap?  Default is
+#'    FALSE.
+#' @param sigConst Value to compare MC to in significance test.
+#'    Default is 0.
+#'
 #' @return \code{estMC} returns a list with elements:
 #' \describe{
-#'   \item{\code{sampleMC}}{\code{nSamples} or \code{nBoot} sampled values for
+#'   \item{\code{sampleMC}}{\code{nSamples} sampled values for
 #'      MC. Provided to allow the user to compute own summary statistics.}
-#'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nBoot}
-#'      OR \code{nSamples} x [number of origin sites] x [number of target
-#'      sites]. Provided to allow the user to compute own summary statistics.}
+#'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nSamples} x
+#'      [number of origin sites] x [number of target sites]. Provided to allow
+#'      the user to compute own summary statistics.}
 #'   \item{\code{pointPsi}}{Simple point estimate of psi matrix.}
 #'   \item{\code{pointMC}}{Simple point estimate of MC, using the point
 #'      estimates of \code{psi} and \code{originRelAbund}.}
@@ -495,9 +531,23 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
 #'      for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
 #'      best estimate of MC. \code{simpleCI} is preferred when
 #'      \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
-#'      these should be equivalent.}
+#'      these should be equivalent.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sampleMC},
+#'      where z0 is the proportion of \code{sampleMC < meanMC}.}
 #'   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
 #'      estimated using the highest posterior density (HPD) method.}
+#'   \item{\code{simpleP}}{Approximate p-value for MC, estimated as the
+#'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
+#'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+#'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+#'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+#'      \code{approxSigTest==FALSE}.}
+#'   \item{\code{bcP}}{Approximate bias-corrected p-value for MC, estimated as
+#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+#'      than \code{simpleP}, but many of the same limitations apply.  NULL when
+#'      \code{approxSigTest==FALSE}.}
 #'   \item{\code{sampleCorr}}{\code{nBoot} sampled values for continuous
 #'      correlation. Provided to allow the user to compute own summary
 #'      statistics.  NULL when \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
@@ -518,7 +568,8 @@ estMC <- function(originDist, targetDist, originRelAbund = NULL,
                   originNames = NULL, targetNames = NULL,
                   nSamples = 1000, nSim = 1000, isGL = FALSE,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
-                  verbose = 0,  calcCorr = FALSE, alpha = 0.05) {
+                  verbose = 0,  calcCorr = FALSE, alpha = 0.05,
+                  approxSigTest = FALSE, sigConst = 0) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, originAbund = originAbund,
@@ -530,7 +581,8 @@ estMC <- function(originDist, targetDist, originRelAbund = NULL,
                       originAssignment=originAssignment,
                       originNames=originNames, targetNames=targetNames,
                       nBoot = nSamples, verbose=verbose,
-                      nSim = nSim, calcCorr=calcCorr, alpha = alpha))
+                      nSim = nSim, calcCorr=calcCorr, alpha = alpha,
+                      approxSigTest = approxSigTest, sigConst = sigConst))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
@@ -538,7 +590,8 @@ estMC <- function(originDist, targetDist, originRelAbund = NULL,
                          originDist = originDist, targetDist = targetDist,
                          originSites=originSites, targetSites=targetSites,
                          nSamples = nSamples, row0 = row0, verbose=verbose,
-                         alpha = alpha))
+                         alpha = alpha, approxSigTest = approxSigTest,
+                         sigConst = sigConst))
   }
 }
 

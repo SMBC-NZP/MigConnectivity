@@ -138,7 +138,8 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator 
                 originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
                 verbose = 1,   # output options
                 calcCorr = TRUE, # estimate rM as well
-                nSamples = nSamplesGLGPS) # This is set low for example
+                nSamples = nSamplesGLGPS, # This is set low for example
+                approxSigTest = T)
 
 # For treating all data as GPS,
 # Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #
