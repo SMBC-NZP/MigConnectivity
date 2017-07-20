@@ -42,7 +42,7 @@ Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. M
 
 1. `calcMC`  calculates the strength of migratory connectivity (MC) with the probabilities of movement between regions, distances between regions within the two seasonal ranges, and relative abundance among regions within the seasonal range from which the transition probabilities originate.  
 
-1. `estMC` estimates the strength of migratory connectivity (MC) with estimates of uncertainty. MC estimated either with transition probability estimates or individual assignments to regions from tracking data. Uses resampling to measure MC uncertainty from RMark transition probability matrix estimates and/or JAGS relative abundance MCMC samples OR geolocator and/or GPS data.   
+1. `estMC` estimates the strength of migratory connectivity (MC) with estimates of uncertainty. MC estimated either with transition probability estimates or individual assignments to regions from tracking data. Uses re-sampling to measure MC uncertainty from RMark transition probability matrix estimates and/or JAGS relative abundance MCMC samples OR geolocator and/or GPS data.   
 
 1. `simMove` Simulates annual movement of animals between regions across seasons for years and months with individual variability and strength of migratory connectivity (MC). Incorporates movement among regions within a season and movement among regions between seasons. Between seasons, animals either return to the same region each year or return to a different region in the subsequent year (dispersal). Between year dispersal rates occur during the first year (natal) or any subsequent year (breeding or non-breeding). Simulation does not incorporate births or deaths.  
 
@@ -63,7 +63,7 @@ library(MigConnectivity)
 ### Functions    
 
 `calcMC`  Calculate strength of migratory connectivity (MC)  
-`estMC` Estimate the strength of migratory connectivity (MC) while incorporting location uncertainty   
+`estMC` Estimate the strength of migratory connectivity (MC) while incorporating location uncertainty   
   
 
 ## Examples 
@@ -163,7 +163,7 @@ round(MC,3)
 
 ### `estMC` - Estimate strength of migratory connectivity incorporating location uncertainty
 
-Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. 
+Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. 
 
 To estimate MC and include location uncertainty the following data are needed:  
 
@@ -319,7 +319,7 @@ mlogitMat <- function(slope, dist) {
 }
 ```
 
-`mlogitMC`: Crude optimizable function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
+`mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
 
 ```{r}
 mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund) {
@@ -634,7 +634,7 @@ Simulation was used to assess the influence of biased or incomplete sampling on 
 1. heterogeneity in detection among regions from mark re-encounter data   
 1. uncertainty in assignments to regions from tracking data
 
-We also demonstrate how to propagate sampling uncertainty into measurement of MC using a combination of parametric and nonparametric bootstrapping. For most simulations, we compare MC to the results of a distance-based correlation coefficient that does not incorporate relative abundance but has been used as a measure of migratory connectivity.
+We also demonstrate how to propagate sampling uncertainty into measurement of MC using a combination of parametric and non-parametric bootstrapping. For most simulations, we compare MC to the results of a distance-based correlation coefficient that does not incorporate relative abundance but has been used as a measure of migratory connectivity.
 
 
 
@@ -1200,7 +1200,7 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 
 #### EXAMPLE 9
 `estMC` Estimate strength of migratory connectivity incorporating location uncertainty (***Examples*** see above)
-Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in locational accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
+Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
 
 #### EXAMPLE 10 (from process error simulation in Cohen et al. in revision)
 
