@@ -416,7 +416,7 @@ The transition probability (psi) between the breeding and non-breeding populatio
 ```{r}
 # Set up psi matrix
 o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
-              target.dist = nonbreedDist, origin.rel.abund = breedingRelN,
+              target.dist = nonbreedDist, origin.abund = breedingRelN,
               interval = c(0, 10), tol = .Machine$double.eps^0.5)
 
 slope <- o$minimum
