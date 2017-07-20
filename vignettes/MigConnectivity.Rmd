@@ -191,13 +191,16 @@ The figure below shows the two breeding regions (squares), and the three non-bre
 install.packages(c('rgeos', 'shape', 'raster', 'maptools'))
 ```
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, error=FALSE}
+```{r, message = FALSE, warning = FALSE, error=FALSE}
 library(rgeos)
 library(shape)
 library(raster)
 library(maptools)
+
 data(wrld_simpl)
+
 raster::crs(wrld_simpl)
+
 par(mar=c(0,0,0,0))
 plot(OVENdata$originSites,xlim=c(raster::extent(OVENdata$targetSites)[1],raster::extent(OVENdata$targetSites)[2]),
                           ylim=c(raster::extent(OVENdata$targetSites)[3],raster::extent(OVENdata$originSites)[4]))
