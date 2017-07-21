@@ -7,23 +7,23 @@
 #'    matrix.
 #' @param targetDist Distances between the W target sites.  Symmetric W by W
 #'    matrix.
+#' @param originRelAbund Relative abundances at B origin sites. Numeric vector
+#'    of length B that sums to 1.
 #' @param psi Transition probabilities between B origin and W target sites.
 #'    Matrix with B rows and W columns where rows sum to 1.
-#' @param originRelAbund Relative abundances at B origin sites. Numeric vector
-#'    of length B that sums to 1.  Optional, but either originRelAbund or
-#'    originAbund must be defined.  When absolute abundances are known and
-#'    small (maybe average < 1000), it's perferable to use originAbund.
-#' @param originAbund Actual or estimated abundances at B origin sites.
-#'    Numeric vector of length B with all values greater than or equal to 1.
-#'    These should be on the scale of number of individuals.  Optional, but
-#'    either originRelAbund or originAbund must be defined.
+#' @param sampleSize Total sample size of animals that psi was calculated from.
+#'    Should be the number of animals released in one of the origin sites and
+#'    observed in one of the target sites.  Optional, but recommended.
 #'
 #' @return real value between -1 and 1, inclusive (usually between 0 and 1)
 #'    indicating the degree of migratory connectivity.
 #'
+#' If \code{sampleSize} is provided, this function uses the small-sample size
+#' corrected formula for MC.  If not, it uses the standard formula.
+#'
 #' @example inst/examples/calcMCExamples.R
 #' @export
-calcMC <- function(originDist, targetDist, psi, originRelAbund=NULL, originAbund=NULL) {
+calcMC <- function(originDist, targetDist, originRelAbund, psi, sampleSize=NULL) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
@@ -44,14 +44,17 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund=NULL, originAbund
       nTarget <- ncol(psi)
     }
   }
-  if (is.null(originRelAbund) + is.null(originAbund) != 1)
-    stop('originRelAbund or originAbund (but not both) should be defined.')
-  if (is.null(originRelAbund))
-    return(calcMCSmall(originDist = originDist, targetDist = targetDist,
-                       psi = psi, originAbund = originAbund))
   if (length(originRelAbund)!=nOrigin || !isTRUE(all.equal(sum(originRelAbund), 1,
                                                        tolerance = 1e-6)))
     stop('originRelAbund must be a vector with [number of origin sites] values that sum to 1.')
+  if (!is.null(sampleSize)) {
+    if (length(sampleSize)==1)
+      originAbund <- originRelAbund * sampleSize
+    else
+      stop('sampleSize must be a single positive number.')
+    return(calcMCSmall(originDist = originDist, targetDist = targetDist,
+                       psi = psi, originAbund = originAbund))
+  }
   # Relative abundance at each combination of origin and target sites
   sumWinRelN <- apply(psi, 2, "*", originRelAbund)
   # Average origin distance between any two given birds.  Using matrix product (%*%) to get all probabilities of two birds origin in each site.
@@ -78,29 +81,12 @@ calcMC <- function(originDist, targetDist, psi, originRelAbund=NULL, originAbund
 ###############################################################################
 # Calculate MC for known actual abundance per site
 ###############################################################################
-# Migratory connectivity strength function corrected for small absolute
-# abundances
-#
-# @param originDist Distances between the B origin sites.  Symmetric B by B
-#    matrix.
-# @param targetDist Distances between the W target sites.  Symmetric W by W
-#    matrix.
-# @param psi Transition probabilities between B origin and W target sites.
-#    Matrix with B rows and W columns where rows sum to 1.
-# @param originAbund Actual or estimated abundances at B origin sites.
-#    Numeric vector of length B with all values greater than or equal to 1.
-#    These should be on the scale of number of individuals.
-#
-# @return real value between -1 and 1, inclusive (usually between 0 and 1)
-#    indicating the degree of migratory connectivity.
-#
-# @seealso calcMC
-calcMCSmall <- function(originDist, targetDist, psi, originAbund) {
+calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
   # Check inputs
-#  if (length(originAbund)!=nOrigin || any(originAbund < 1))
-#    stop('originAbund must be a vector with [number of origin sites] values >= 1.')
+ if (length(originAbund)!=nOrigin)
+   stop('originAbund must be a vector with [number of origin sites] values >= 1.')
   originRelAbund <- originAbund / sum(originAbund)
   originRelAbund2 <- (matrix(rep(originAbund, each = nOrigin), nOrigin, nOrigin) -
                         diag(nrow = nOrigin)) *
@@ -134,7 +120,7 @@ calcMCSmall <- function(originDist, targetDist, psi, originAbund) {
 
 
 ###############################################################################
-# rho function for individuals
+# Mantel function for individuals
 ###############################################################################
 calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verbose = 0) {
   nInd <- dim(locations)[1]
@@ -172,7 +158,8 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
           psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
   }
   psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
-  MC <- calcMC(originDist, targetDist, psiMat, originRelAbund)
+  MC <- calcMC(originDist, targetDist, psi = psiMat,
+               originRelAbund = originRelAbund, sampleSize = nInd)
   return(list(psi=psiMat, MC=MC))
 }
 

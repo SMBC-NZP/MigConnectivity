@@ -48,21 +48,15 @@
 #      estimated using the highest posterior density (HPD) method.}
 # }
 # @example inst/examples/estMCCmrAbundExamples.R
-estMCCmrAbund <- function(psi, originDist, targetDist,
-                          originRelAbund = NULL, originAbund = NULL,
+estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
+                          sampleSize = NULL,
                           originSites=NULL, targetSites=NULL,
                           nSamples = 1000, row0 = 0, verbose=0,
                           alpha = 0.05,
                           approxSigTest = F, sigConst = 0) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
-  if (is.null(originRelAbund) + is.null(originAbund) != 1)
-    stop('originRelAbund or originAbund (but not both) should be defined.')
-  absAbund <- !is.null(originAbund)
-  if (absAbund && (length(originAbund)!=nOrigin || any(originAbund < 1)))
-    stop('originAbund must be a vector with [number of origin sites] values >= 1.')
-  if (absAbund)
-    originRelAbund <- originAbund / sum(originAbund)
+  absAbund <- !is.null(sampleSize)
   if (coda::is.mcmc(originRelAbund)) {
     abundFixed <- FALSE
     abundParams <- paste('relN[', 1:nOrigin, ']', sep='')
@@ -72,10 +66,7 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
     abundFixed <- TRUE
     if (length(originRelAbund)!=nOrigin)
       stop('Number of origin sites must be constant between distance matrix and abundance')
-    if (absAbund)
-      abundBase <- originAbund
-    else
-      abundBase <- originRelAbund
+    abundBase <- originRelAbund
   }
   if (is.matrix(psi)) {
     psiFixed <- TRUE
@@ -94,10 +85,10 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
       stop("Can't sample model, negative beta variances")
   }
   pointMC <- ifelse(absAbund,
-                    calcMC(originDist, targetDist, psiBase,
-                           originAbund = abundBase),
-                    calcMC(originDist, targetDist, psiBase,
-                           originRelAbund = abundBase))
+                    calcMC(originDist, targetDist, originRelAbund = abundBase,
+                           psi = psiBase, sampleSize = sampleSize),
+                    calcMC(originDist, targetDist, originRelAbund = abundBase,
+                           psi = psiBase))
   sampleMC <- vector('numeric', nSamples)
   psi.array <- array(0, c(nSamples, nOrigin, nTarget))
   for (i in 1:nSamples) {
@@ -118,10 +109,11 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
     else
       abundNew <- originRelAbund[row0 + i, abundParams]
     # Calculate MC for new psis and relative breeding densities
-    sampleMC[i] <- ifelse(absAbund, calcMC(originDist, targetDist, psiNew,
-                                           originAbund = abundNew),
-                          calcMC(originDist, targetDist, psiNew,
-                                 originRelAbund = abundNew))
+    sampleMC[i] <- ifelse(absAbund,
+                          calcMC(originDist, targetDist, originRelAbund = abundNew,
+                                 psi = psiNew, sampleSize = sampleSize),
+                          calcMC(originDist, targetDist, originRelAbund = abundNew,
+                                 psi = psiNew))
   }
   meanMC <- mean(sampleMC)
   medianMC <- median(sampleMC)
@@ -152,7 +144,7 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
               bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = NULL, pointCorr = NULL,
               meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
-              simpleCICorr=NULL, bcCICorr=NULL))
+              simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize))
 }
 
 ###############################################################################
@@ -234,9 +226,9 @@ estMCCmrAbund <- function(psi, originDist, targetDist,
 # }
 #
 # @examples
-estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
-                       targetPoints, targetSites,
-                       originRelAbund = NULL, originAbund = NULL,
+estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
+                       geoBias, geoVCov, targetPoints, targetSites,
+                       sampleSize = NULL,
                        targetAssignment=NULL,
                        originPoints=NULL, originSites=NULL,
                        originAssignment=NULL, originNames=NULL,
@@ -272,13 +264,10 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
     stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
   if (any(is.na(originAssignment)))
     stop("NAs in origin sites (make sure all points fall within polygons)")
-  if (is.null(originRelAbund) + is.null(originAbund) != 1)
-    stop('originRelAbund or originAbund (but not both) should be defined.')
-  absAbund <- !is.null(originAbund)
-  if (absAbund && (length(originAbund)!=nOriginSites || any(originAbund < 1)))
-    stop('originAbund must be a vector with [number of origin sites] values >= 1.')
-  if (!absAbund && (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1))
+  if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
+  if (is.null(sampleSize))
+    sampleSize <- nAnimals
   if (dim(originDist)!=rep(nOriginSites,2) ||
       dim(targetDist)!=rep(nTargetSites,2))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
@@ -301,9 +290,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
     pointSites[originAssignment[i], targetAssignment[i]] <-
       pointSites[originAssignment[i], targetAssignment[i]] + 1
   pointPsi <- prop.table(pointSites, 1)
-  pointMC <- ifelse(absAbund,
-                    calcMC(originDist,targetDist,pointPsi,originAbund=originAbund),
-                    calcMC(originDist,targetDist,pointPsi,originRelAbund))
+  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+                    sampleSize = sampleSize)
   if (calcCorr) {
     targetDist1 <- matrix(NA, nAnimals, nAnimals)
     targetDist1[lower.tri(targetDist1)] <- 1
@@ -370,14 +358,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
     # Create psi matrix as proportion of those from each breeding site that went to each NB site
     psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
     # Calculate MC from that psi matrix
-    if (absAbund)
-      MC[boot] <- calcMC(originDist, targetDist,
-                         psi.array[boot, , ],
-                         originAbund = originAbund)
-    else
-      MC[boot] <- calcMC(originDist, targetDist,
-                         psi.array[boot, , ],
-                         originRelAbund)
+    MC[boot] <- calcMC(originDist, targetDist, originRelAbund,
+                       psi.array[boot, , ], sampleSize)
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" MC mean:", mean(MC, na.rm=T), "SD:", sd(MC, na.rm=T),
           "low quantile:", quantile(MC, alpha/2, na.rm=T),
@@ -433,7 +415,8 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = corr, pointCorr = pointCorr,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
+              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+              inputSampleSize = sampleSize))
 }
 
 ###############################################################################
@@ -452,13 +435,15 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
 #'  a numeric vector of length B that sums to 1 or an mcmc object with
 #'  \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 #'  Currently, an mcmc object doesn't work with geolocator or GPS data.
-#' @param originAbund Absolute abundance estimates at B origin sites.
-#'  A numeric vector of length B with each element >= 1. Either originRelAbund
-#'  or originAbund should be defined (but not both).
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1 or a MARK
 #'  object with estimates of transition probabilities.  If you are estimating
 #'  MC from GPS or geolocator data, leave this as NULL.
+#' @param sampleSize Total sample size of animals that psi will be estimated from.
+#'    Should be the number of animals released in one of the origin sites and
+#'    observed in one of the target sites.  Optional, but recommended, unless
+#'    you are estimating MC from GPS or geolocator data (in which case the
+#'    function can calculate it for you).
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are origin.  If using GL or GPS data,
 #'  this can be the geographic definition of sites in the release season.
@@ -557,11 +542,14 @@ estMCGlGps <- function(isGL, geoBias, geoVCov, originDist, targetDist,
 #'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
 #'      statistics for continuous correlation bootstraps.  NULL when
 #'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
+#'   \item{\code{inputSampleSize}}{If \code{sampleSize} was provided, this is
+#'      that.  If not, it is either the calculated sample size (if that can be
+#'      done), or left at NULL.}
 #' }
 #' @example inst/examples/estMCExamples.R
 #' @export
-estMC <- function(originDist, targetDist, originRelAbund = NULL,
-                  originAbund = NULL, psi = NULL,
+estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
+                  sampleSize = NULL,
                   originSites = NULL, targetSites = NULL,
                   originPoints = NULL, targetPoints = NULL,
                   originAssignment = NULL, targetAssignment = NULL,
@@ -572,7 +560,7 @@ estMC <- function(originDist, targetDist, originRelAbund = NULL,
                   approxSigTest = FALSE, sigConst = 0) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                      originRelAbund=originRelAbund, originAbund = originAbund,
+                      originRelAbund=originRelAbund, sampleSize = sampleSize,
                       originDist=originDist,
                       targetDist=targetDist,
                       targetPoints=targetPoints, targetSites=targetSites,
@@ -586,7 +574,7 @@ estMC <- function(originDist, targetDist, originRelAbund = NULL,
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
-                         originAbund = originAbund, psi = psi,
+                         sampleSize = sampleSize, psi = psi,
                          originDist = originDist, targetDist = targetDist,
                          originSites=originSites, targetSites=targetSites,
                          nSamples = nSamples, row0 = row0, verbose=verbose,

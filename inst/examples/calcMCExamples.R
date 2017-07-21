@@ -11,11 +11,11 @@ nonBreedDist <- matrix(c(0, 5, 10,
                       5, 0, 5,
                       10, 5, 0), nNonBreeding, nNonBreeding)
 relN <- rep(1/nBreeding, nBreeding)
-round(calcMC(breedDist, nonBreedDist, psi, relN), 3) # == 0.05
+round(calcMC(breedDist, nonBreedDist, relN, psi), 3) # == 0.05
 
-# Example with small absolute abundances rather than relative abundances
-N <- rep(20, nBreeding)
-round(calcMC(breedDist, nonBreedDist, psi, originAbund = N), 3) # == 0.026
+# Example with small sample size
+sampleSize <- 20 * nBreeding
+round(calcMC(breedDist, nonBreedDist, relN, psi, sampleSize = sampleSize), 3) # == 0.026
 
 ###############################################################################
 # Example data input values
@@ -29,7 +29,7 @@ nScenarios1 <- length(samplePsis)
 MC1 <- rep(NA, nScenarios1)
 for (i in 1:nScenarios1) {
   MC1[i] <- calcMC(sampleOriginDist[[1]], sampleTargetDist[[1]],
-                   samplePsis[[i]], sampleOriginRelN[[1]])
+                   sampleOriginRelN[[1]], samplePsis[[i]])
 }
 names(MC1) <- names(samplePsis)
 round(MC1, 6)
@@ -60,7 +60,7 @@ colnames(MC2) <- names(sampleOriginPos)
 for (i in 1:nScenarios1) {
   for (j in 1:nScenarios2) {
     MC2[i, j] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
-                        samplePsis[[i]], sampleOriginRelN[[1]])
+                        sampleOriginRelN[[1]], samplePsis[[i]])
   }
 }
 
@@ -91,7 +91,7 @@ for (i in 1:nScenarios1) {
   for (j in 1) {
     for (k in 1:nScenarios3) {
       MC3[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
-                          samplePsis[[i]], sampleOriginRelN[[k]])
+                          sampleOriginRelN[[k]], samplePsis[[i]])
     }
   }
 }
@@ -105,7 +105,7 @@ for (i in 1:nScenarios1) {
   for (j in nScenarios2) {
     for (k in 1:nScenarios3) {
       MC4[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
-                          samplePsis[[i]], sampleOriginRelN[[k]])
+                          sampleOriginRelN[[k]], samplePsis[[i]])
     }
   }
 }
@@ -119,7 +119,7 @@ for (i in 1:nScenarios1) {
   for (j in 6) {
     for (k in 1:nScenarios3) {
       MC5[i, k] <- calcMC(sampleOriginDist[[j]], sampleTargetDist[[j]],
-                          samplePsis[[i]], sampleOriginRelN[[k]])
+                          sampleOriginRelN[[k]], samplePsis[[i]])
     }
   }
 }

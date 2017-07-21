@@ -5,13 +5,12 @@
 \title{Estimate MC from abundance and/or transition probability estimates OR
 geolocator and/or GPS data.}
 \usage{
-estMC(originDist, targetDist, originRelAbund = NULL, originAbund = NULL,
-  psi = NULL, originSites = NULL, targetSites = NULL,
-  originPoints = NULL, targetPoints = NULL, originAssignment = NULL,
-  targetAssignment = NULL, originNames = NULL, targetNames = NULL,
-  nSamples = 1000, nSim = 1000, isGL = FALSE, geoBias = NULL,
-  geoVCov = NULL, row0 = 0, verbose = 0, calcCorr = FALSE,
-  alpha = 0.05, approxSigTest = FALSE, sigConst = 0)
+estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
+  originSites = NULL, targetSites = NULL, originPoints = NULL,
+  targetPoints = NULL, originAssignment = NULL, targetAssignment = NULL,
+  originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
+  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
+  calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -25,14 +24,16 @@ a numeric vector of length B that sums to 1 or an mcmc object with
 \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 Currently, an mcmc object doesn't work with geolocator or GPS data.}
 
-\item{originAbund}{Absolute abundance estimates at B origin sites.
-A numeric vector of length B with each element >= 1. Either originRelAbund
-or originAbund should be defined (but not both).}
-
 \item{psi}{Transition probabilities between B origin and W target sites.
 Either a matrix with B rows and W columns where rows sum to 1 or a MARK
 object with estimates of transition probabilities.  If you are estimating
 MC from GPS or geolocator data, leave this as NULL.}
+
+\item{sampleSize}{Total sample size of animals that psi will be estimated from.
+Should be the number of animals released in one of the origin sites and
+observed in one of the target sites.  Optional, but recommended, unless
+you are estimating MC from GPS or geolocator data (in which case the
+function can calculate it for you).}
 
 \item{originSites}{If \code{psi} is a MARK object, this must be a numeric
 vector indicating which sites are origin.  If using GL or GPS data,
@@ -151,6 +152,9 @@ FALSE.}
   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
      statistics for continuous correlation bootstraps.  NULL when
      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
+  \item{\code{inputSampleSize}}{If \code{sampleSize} was provided, this is
+     that.  If not, it is either the calculated sample size (if that can be
+     done), or left at NULL.}
 }
 }
 \description{
@@ -184,7 +188,7 @@ targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
 originRelAbundTrue <- rep(0.25, 4)
 # the second intermediate psi scenario, the "low" level
 psiTrue <- samplePsis[["Low"]]
-trueMC <- calcMC(originDist, targetDist, psiTrue, originRelAbundTrue)
+trueMC <- calcMC(originDist, targetDist, originRelAbundTrue, psiTrue)
 trueMC
 
 # Storage matrix for samples
@@ -199,7 +203,8 @@ for (r in 1:nSimulationsCMR) {
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
                    originSites = 5:8, targetSites = c(3,2,1,4),
-                   nSamples = nSamplesCMR, verbose = 0)
+                   nSamples = nSamplesCMR, verbose = 0,
+                   sampleSize = length(grep('[2-5]', fm$data$data$ch))) #Not really needed (big sample sizes)
   cmrMCSample[ , r] <- results$sampleMC
   summaryCMR$estimate[r] <- results$pointMC
   summaryCMR$mean[r] <- results$meanMC

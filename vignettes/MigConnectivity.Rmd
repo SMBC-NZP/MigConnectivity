@@ -322,21 +322,19 @@ mlogitMat <- function(slope, dist) {
 `mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
 
 ```{r}
-mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund) {
+mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
     nBreeding <- nrow(origin.dist)
     nWintering <- nrow(target.dist)
     psi <- mlogitMat(slope, origin.dist)
   if (any(psi<0))
     return(5*slope^2)
-  if (sum(origin.abund) > 1)
-    MC <- calcMC(origin.dist, target.dist, psi, originAbund = origin.abund)
-  else
-    MC <- calcMC(origin.dist, target.dist, psi, originRelAbund = origin.abund)
+  MC <- calcMC(origin.dist, target.dist, originRelAbund = origin.abund, psi, 
+               sampleSize = sample.size)
   return((MC.in - MC)^2)
 }
 ```
 
-`calcStrengthInd`:  rho function for individuals
+`calcStrengthInd`:  rM function for individuals
 
 ```{r}
 calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verbose = 0) {
@@ -355,8 +353,7 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verb
 `calcPsiMC`: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data
 
 ```{r}
-calcPsiMC <- function(originDist, targetDist, locations, originRelAbund = NULL, 
-                      originAbund = NULL, verbose=F) {
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose=F) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -373,13 +370,13 @@ calcPsiMC <- function(originDist, targetDist, locations, originRelAbund = NULL,
     if (length(bIndices) && length(wIndices))
       for (bi in bIndices)
         for (wi in wIndices)
-          psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi],
-                                                         targetMat[wi]] + 1
+          psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
   }
   psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
-  MC <- NULL #calcMC(originDist, targetDist, psiMat, originRelAbund, originAbund)
+  MC <- calcMC(originDist, targetDist, psi = psiMat,
+               originRelAbund = originRelAbund, sampleSize = nInd)
   return(list(psi=psiMat, MC=MC))
-} 
+}
 ```   
 
 

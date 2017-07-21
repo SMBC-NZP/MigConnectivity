@@ -23,7 +23,7 @@ targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
 originRelAbundTrue <- rep(0.25, 4)
 # the second intermediate psi scenario, the "low" level
 psiTrue <- samplePsis[["Low"]]
-trueMC <- calcMC(originDist, targetDist, psiTrue, originRelAbundTrue)
+trueMC <- calcMC(originDist, targetDist, originRelAbundTrue, psiTrue)
 trueMC
 
 # Storage matrix for samples
@@ -38,7 +38,8 @@ for (r in 1:nSimulationsCMR) {
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
                    originSites = 5:8, targetSites = c(3,2,1,4),
-                   nSamples = nSamplesCMR, verbose = 0)
+                   nSamples = nSamplesCMR, verbose = 0,
+                   sampleSize = length(grep('[2-5]', fm$data$data$ch))) #Not really needed (big sample sizes)
   cmrMCSample[ , r] <- results$sampleMC
   summaryCMR$estimate[r] <- results$pointMC
   summaryCMR$mean[r] <- results$meanMC
