@@ -253,6 +253,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   nAnimals <- max(length(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
+  if(class(originSites)=="SpatialPolygonsDataFrame")
+    originSites <- sp::SpatialPolygons(originSites@polygons)
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
   if (is.null(targetAssignment))
