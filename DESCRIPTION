@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.2.0
-Date: 2017-07-18
+Version: 0.2.0.9000
+Date: 2017-07-23
 Author: Jeff Hostetler, Mike Hallworth, Clark Rushing, Emily Cohen
 Maintainer: Jeff Hostetler <jeffrey.hostetler@myfwc.com>
 Description: Calculates the strength of migratory connectivity (MC), a standardized metric to quantify the extent to which populations co-occur between two phases of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. MC is equally applicable between any two phases of the annual cycle that are temporally distinct, including migratory phases. MC can be defined for entire seasonal ranges or for subsets of those ranges, as long as those subsets of ranges can be further divided into regional populations. The package includes functions to calculate MC and incorporate uncertainty from multiple sources of sampling and process errors. Description of the metric can be found in Cohen et al. in review.
