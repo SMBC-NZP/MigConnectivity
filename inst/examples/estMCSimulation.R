@@ -31,13 +31,13 @@ breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
 winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
                          rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
 
-capLocs<-SpatialPoints(breedingPos, CRS(WGS84))
-targLocs<-SpatialPoints(winteringPos, CRS(WGS84))
+capLocs<-sp::SpatialPoints(breedingPos, sp::CRS(WGS84))
+targLocs<-sp::SpatialPoints(winteringPos, sp::CRS(WGS84))
 #capLocsM<-spTransform(capLocs, CRS(Lambert))
 #targLocsM<-spTransform(targLocs, CRS(Lambert))
 
-breedDist <- distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
-nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
+breedDist <- MigConnectivity::distFromPos(breedingPos, 'ellipsoid') # calculate distance between populations
+nonbreedDist <- MigConnectivity::distFromPos(winteringPos, 'ellipsoid') # calculate distance between populations
 
 
 scenarios14 <- c("Base",
@@ -158,6 +158,7 @@ nWintering14 <- c(100, 100, 10, 10, 100, 4, 10, 4, 4, 100, 10, 4, 100, 10, 4)
 breedingN14base <- rep(25, nBreeding14[1])
 breedingN14 <- lapply(breedingSiteTrans14, rowsum, x=breedingN14base)
 breedingRelN14 <- lapply(breedingN14, "/", sum(breedingN14base))
+
 
 MC <- 0.25
 o <- optimize(mlogitMC, MC.in = MC, origin.dist = breedDist,
@@ -332,8 +333,45 @@ save.image('estMCsims.c.RData')
 ###############################################################################
 # Try with location uncertainty (GL data)
 ###############################################################################
+
+# Assign geolocator bias / variance co-variance matrix
 geoBias <- OVENdata$geo.bias
 geoVCov <- OVENdata$geo.vcov
+
+# Helper function to convert a string of XY coordinates of centroids to polygons #
+toPoly <- function(siteCentroids,
+                   projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
+                   projection.out = NA,
+                   resolution = NA){
+            # This automatically sets the resolution so that all polygons touch and cover the entire surface #
+            # Alternatively the user can supply the resolution of the raster cells in the units of the
+            # the input projection (projection.in) #
+                   if(is.na(resolution)){
+                     long <- unique(siteCentroids[,1])
+                     lat <- unique(siteCentroids[,2])
+                     long.res <- long[2]-long[1]
+                     lat.res <- lat[2]-lat[1]
+                     resolution <- c(long.res,long.res)
+                   }
+                             rast <- raster::rasterFromXYZ(cbind(cbind(siteCentroids),rep(1,nrow(siteCentroids))),
+                             res = resolution,
+                             crs = projection)
+                      polys <- raster::rasterToPolygons(rast)
+                      raster::crs(polys)<-projection.in
+
+                      if(!is.na(projection.out)){
+                      polys <- sp::spTransform(polys,sp::CRS(projection.out))
+                      }
+
+                      return(polys)}
+
+# Define projections
+WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+
+# convert wintering locations to ploygons using the helper function
+polys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = NA)
+
 
 simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov) {
   nAnimals <- length(targetPoints)
@@ -358,3 +396,5 @@ simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov) {
   }
   return(targetSample = target.sample, targetPointSample = target.point.sample)
 }
+
+
