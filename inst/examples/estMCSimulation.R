@@ -330,6 +330,58 @@ format(qualities14, digits = 2, scientific = F)
 
 save.image('estMCsims.c.RData')
 
+# Try with biased scenario (5)
+est14.array <- array(NA, c(nSims14, nScenarios14, 3), dimnames =
+                           list(1:nSims14, scenarios14,
+                                c("MC", "MCss", "Mantel")))
+var14.array <- array(NA, c(nSims14, nScenarios14, 3), dimnames =
+                           list(1:nSims14, scenarios14,
+                                c("MC", "MCss", "Mantel")))
+ci14.array <- array(NA, c(nSims14, nScenarios14, 3, 2), dimnames =
+                           list(1:nSims14, scenarios14,
+                                c("MC", "MCss", "Mantel"),
+                                c('lower', 'upper')))
+set.seed(567)
+sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, T)]
+for (sim in 1:nSims14) {
+  cat("Estimation", sim, "of", nSims14, '\n')
+  for (i in 5) {#:nScenarios14) {
+    animalLoc14[[sim]] <- changeLocations(sim14.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+                                        breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
+    results14[[sim]] <- estMC(breedDist14[[i]], nonbreedDist14[[i]],
+                            originRelAbund = breedingRelN14[[i]],
+#                            originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
+#                           targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
+                            originAssignment = animalLoc14[[sim]][, 1, 1, 1],
+                            targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
+                            nSamples = 1000, verbose = 0, calcCorr = F)
+    est14.array[sim, i, 'MCss'] <- results14[[sim]]$meanMC
+    var14.array[sim, i, 'MCss'] <- results14[[sim]]$seMC ^ 2
+    ci14.array[sim, i, 'MCss', ] <- results14[[sim]]$bcCI
+    save(results14, est14.array, var14.array, ci14.array, file = 'results14d.gzip')
+  }
+}
+
+rmse <- function(ests, truth) {
+  return(sqrt(mean((ests - truth) ^ 2)))
+}
+
+bias <- function(ests, truth) {
+  return(mean(ests - truth))
+}
+
+coverage <- function(ci, truth) {
+  return(mean(ci[1,] <= truth & ci[2,] >= truth))
+}
+
+rmse(sapply(results14, function(x) x$pointMC), 0.25)
+rmse(sapply(results14, function(x) x$meanMC), 0.25)
+bias(sapply(results14, function(x) x$pointMC), 0.25)
+bias(sapply(results14, function(x) x$meanMC), 0.25)
+mean(ci14.array[, 5, "MCss", 'lower'] <= MC & ci14.array[, 5, "MCss", 'upper'] >= MC)
+mean(ci14.array[, 5, "MCss", 'lower'] <= MC & ci14.array[, 5, "MCss", 'upper'] >= MC)
+coverage(sapply(results14, function(x) x$simpleCI), 0.25)
+
 ###############################################################################
 # Try with location uncertainty (GL data)
 ###############################################################################
