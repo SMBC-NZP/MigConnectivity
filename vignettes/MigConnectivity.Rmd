@@ -810,7 +810,7 @@ changeLocations <- function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
 
 # Number of scenarios and number of simulations to run
 nScenarios14 <- length(breedingSiteTrans14)
-nSims14 <- 100
+nSims14 <- 5
 
 # Connections between scenarios and sampling regimes
 scenarioToSampleMap14 <- c(rep(1, 9), rep(3, 3), rep(2, 3))
@@ -895,7 +895,7 @@ breedingSiteTrans15 <- list(1:100,
 
 nScenarios15 <- length(breedingSiteTrans15)
 
-nSims15 <- 100
+nSims15 <- 5
 
 # Basing positions of researcher defined breeding populations on above
 breedingPos15 <- list(breedingPos, 
@@ -1067,7 +1067,9 @@ breedingSiteTrans16 <- list(1:100, c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
 #lapply(breedingSiteTrans16, matrix, nrow=10, ncol=10)
 
 nScenarios16 <- length(breedingSiteTrans16)
-nSims16 <- 100
+
+nSims16 <- 5
+
 # Basing positions of researcher defined breeding populations on above
 breedingPos16 <- breedingPos15
 winteringPos16 <- winteringPos15
@@ -1206,6 +1208,8 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 `estMC` Estimate strength of migratory connectivity incorporating uncertainty from low sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  
 
 ```{r, eval = FALSE}
+WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+  
 set.seed(75)
 capLocs14 <- lapply(breedingPos14, SpatialPoints, proj4string = CRS(WGS84))
 targLocs14 <- lapply(winteringPos14, SpatialPoints, proj4string = CRS(WGS84))
@@ -1236,7 +1240,7 @@ sampleBreeding14.1 <- list(round(breedingRelN14[[1]]*nSample14.1),
 lapply(sampleBreeding14.1, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14 <- 100
+nSims14 <- 5
 nSimsLarge14 <- 2500
 nYears <- 1
 nMonths <- 1
@@ -1337,7 +1341,7 @@ g.est <- ggplot(est.df, aes(Estimate)) + geom_histogram(bins = 15) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
 png('sim.est.MC.rM4.png', width = 6, height = 4, units = 'in', res=600)
 g.est
-dev.off()
+#dev.off()
 
 qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
                        Quantity = rep(rep(c('Mean', 'Variance'), c(4, 2)), 3, 16),
@@ -1353,7 +1357,7 @@ qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
                                         ci14.array[, "Mantel", 'upper'] >= MC14)))
 format(qualities14, digits = 2, scientific = F)
 
-save.image('../estMCsims.c.RData')
+#save.image('../estMCsims.c.RData')
 
 ```
  
@@ -1369,7 +1373,8 @@ geoVCov <- OVENdata$geo.vcov / 1000000
 toPoly <- function(siteCentroids,
                    projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
                    projection.out = NA,
-                   resolution = NA)
+                   resolution = NA,
+                   order.by.input = TRUE)
 {
 # This automatically sets the resolution so that all polygons touch and cover the entire surface #
 # Alternatively the user can supply the resolution of the raster cells in the units of the
@@ -1387,9 +1392,17 @@ toPoly <- function(siteCentroids,
                                                 crs = projection.in))
   polys <- raster::rasterToPolygons(rast)
   # Give unique names to polygons #
-  sp::spChFIDs(polys,as.character(1:nrow(polys)))
   polys <- sp::SpatialPolygons(polys@polygons)
   raster::crs(polys)<-projection.in
+  
+  # Reorders the polygons to match that of the input #
+  centers <- SpatialPoints(siteCentroids,CRS(projection.in))
+  
+  if(order.by.input){
+  orders <- sp::over(centers,polys)
+  polys <- polys[orders] 
+  }
+  sp::spChFIDs(polys,as.character(1:length(polys)))
   
   if(!is.na(projection.out)){
     polys <- sp::spTransform(polys,sp::CRS(projection.out))
@@ -1404,13 +1417,16 @@ Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +el
 
 # convert breeding and wintering locations to polygons using the helper function
 BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = Lambert)
+BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = WGS84)
+
 WinteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = Lambert)
 winteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = WGS84)
 targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = CRS(Lambert))
 
-str(winteringPolys[[13]]@polygons[[1]])
 
-
+# Double check that the input center points and output polygons are ordered correctly 
+cbind(breedingPos14[[1]][,1:2],t(sapply(slot(BreedingPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
+  
 
 simulateLocs <- function(n,n.origin = FALSE,originSites,targetSites,projection){
                 if(n.origin){
@@ -1485,7 +1501,7 @@ sampleBreeding14.2 <- list(round(breedingRelN14[[1]]*nSample14.2),
 lapply(sampleBreeding14.2, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14.2 <- 10
+nSims14.2 <- 5
 nSimsLarge14.2 <- 250
 nYears <- 1
 nMonths <- 1
@@ -1636,7 +1652,7 @@ for(i in 1:length(Drates)){
 Disp.df$Year <- Disp.df$Year - 1 #just run once!
 data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
 
-write.csv(Disp.df, "../Disp.df.csv")
+#write.csv(Disp.df, "../Disp.df.csv")
 
 # Convert dispersal rates to probabilities of dispersing at least certain distance
 threshold <- 1000
@@ -1651,24 +1667,24 @@ summary(probFarDisp)
 
 
 #plot results
-\dontrun{
-require(ggplot2)
-require(ggthemes)
+#\dontrun{
+#require(ggplot2)
+#require(ggthemes)
 
-line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
-ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
-  geom_line()+
-  scale_size_manual(values=line_set)+
-  labs(size="Dispersal Rate")+
-  scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
-  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
-  theme_bw()+
-  theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
-        panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
-        legend.title=element_text(size=14), legend.text=element_text(size=14))
-dev.off()
-}
+#line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
+#png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
+#ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
+#  geom_line()+
+#  scale_size_manual(values=line_set)+
+#  labs(size="Dispersal Rate")+
+#  scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+#  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
+#  theme_bw()+
+#  theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
+#        panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
+#        legend.title=element_text(size=14), legend.text=element_text(size=14))
+#dev.off()
+#}
 ```
 
 
