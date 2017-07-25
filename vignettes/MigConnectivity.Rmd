@@ -1211,8 +1211,8 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
   
 set.seed(75)
-capLocs14 <- lapply(breedingPos14, SpatialPoints, proj4string = CRS(WGS84))
-targLocs14 <- lapply(winteringPos14, SpatialPoints, proj4string = CRS(WGS84))
+capLocs14 <- lapply(breedingPos14, sp::SpatialPoints, proj4string = sp::CRS(WGS84))
+targLocs14 <- lapply(winteringPos14, sp::SpatialPoints, proj4string = sp::CRS(WGS84))
 
 
 # Relative abundance by scenario and breeding population
@@ -1366,9 +1366,9 @@ format(qualities14, digits = 2, scientific = F)
 #### Simulation using error associated with light-level geolocators
 ```{r, eval = FALSE}
 # Assign geolocator bias / variance co-variance matrix
-geoBias <- OVENdata$geo.bias / 1000
-geoVCov <- OVENdata$geo.vcov / 1000000
-
+geoBias <- c(-500, 2500)
+geoVCov <- matrix(c(1.2e+9, 0, 0, 1.2e+10), 2, 2)
+sqrt(diag(geoVCov))
 # Helper function to convert a string of XY coordinates of centroids to polygons #
 toPoly <- function(siteCentroids,
                    projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
@@ -1396,7 +1396,7 @@ toPoly <- function(siteCentroids,
   raster::crs(polys)<-projection.in
   
   # Reorders the polygons to match that of the input #
-  centers <- SpatialPoints(siteCentroids,CRS(projection.in))
+  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
   
   if(order.by.input){
   orders <- sp::over(centers,polys)
@@ -1417,15 +1417,16 @@ Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +el
 
 # convert breeding and wintering locations to polygons using the helper function
 BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = Lambert)
-BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = WGS84)
+breedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = WGS84)
 
 WinteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = Lambert)
 winteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = WGS84)
-targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = CRS(Lambert))
+targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
 
 
 # Double check that the input center points and output polygons are ordered correctly 
-cbind(breedingPos14[[1]][,1:2],t(sapply(slot(BreedingPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
+cbind(breedingPos14[[1]][,1:2],t(sapply(slot(breedingPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
+cbind(winteringPos14[[1]][,1:2],t(sapply(slot(winteringPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
   
 
 simulateLocs <- function(n,n.origin = FALSE,originSites,targetSites,projection){
@@ -1515,6 +1516,10 @@ compare14.2.array <- array(NA, c(nSimsLarge14.2, 2), dimnames =
                                 c("MC", "Mantel")))
 
 results14 <- vector("list", nScenarios14)
+results14.2 <- vector("list", nSimsLarge14.2)
+originDist1 <- targetDist1 <- matrix(NA, nSample14.2, nSample14.2)
+targetDist1[lower.tri(targetDist1)] <- 1
+distIndices <- which(!is.na(targetDist1), arr.ind = T)
 
 # Run simulations
 set.seed(7)
@@ -1524,58 +1529,152 @@ system.time(for (sim in 1:nSimsLarge14.2) {
                   winteringDist=nonbreedDist14[[1]], psi=psi, nYears=nYears,
                   nMonths=nMonths)
   for (i in 13) {
-    animalLoc14[[i]] <- changeLocations(sim14.2[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+    animalLoc14.0 <- sim14.2[[sim]][[scenarioToSampleMap14[i]]]$animalLoc
+    animalLoc14[[i]] <- changeLocations(animalLoc14.0,
                                         breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
-    winteringTruePoints14 <- targLocs14.2[[i]][animalLoc14[[i]][,2,1,1], ]
-    results14.2 <- simLocationError(winteringTruePoints14, WinteringPolys[[i]], 
+    breedingTruePoints14 <- capLocs14[[i]][animalLoc14[[i]][,1,1,1], ]
+    winteringTruePoints14 <- targLocs14.2[[i]][animalLoc14.0[,2,1,1], ]
+    results14.2[[sim]] <- simLocationError(winteringTruePoints14, WinteringPolys[[i]], 
                                     geoBias, geoVCov, Lambert)
-    animalLoc14[[i]][,2,1,1]==results14.2$targetSample
-    results14.2$targetPointSample - winteringTruePoints14@coords 
+#    summary(animalLoc14[[i]][,2,1,1]==results14.2[[sim]]$targetSample)
+#    results14.2$targetPointSample - winteringTruePoints14@coords
+    animalLoc14.2 <- animalLoc14[[i]]
+    animalLoc14.2[ , 2, 1, 1] <- results14.2[[sim]]$targetSample
     results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
-                                animalLoc14[[i]],
+                                animalLoc14.2,
                                 originRelAbund = breedingRelN14[[i]],
                                 verbose = F)
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
-    compare14.2.array[sim, 'Mantel'] <- calcStrengthInd(breedDist14[[1]],
-                                                      nonbreedDist14[[1]],
-                                                      sim14[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
-                                                      resamp=0)$correlation
+    originDist0 <- geosphere::distVincentyEllipsoid(breedingTruePoints14[distIndices[,'row']],
+                                         breedingTruePoints14[distIndices[,'col']])
+    originDist1[lower.tri(originDist1)] <- originDist0
+    target.point.sample <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample,sp::CRS(Lambert))
+    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+    targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
+                                         target.point.sample2[distIndices[,'col']])
+    targetDist1[lower.tri(targetDist1)] <- targetDist0
+    compare14.2.array[sim, 'Mantel'] <- ncf::mantel.test(originDist1, targetDist1, 
+                                                         resamp=0, quiet = T)$correlation
   }
 })
 
-nSimInds <- 10
+means14.2 <- apply(compare14.2.array, 2, mean)
+vars14.2 <- apply(compare14.2.array, 2, var)
+rmse14.2 <- apply(compare14.2.array, 2, function(x) sqrt(mean((x - MC14)^2)))
 
-simLocs <- simulateLocs(n = nSimInds,n.origin = TRUE,originSites = BreedingPolys[[14]], targetSites = WinteringPolys[[14]],projection = Lambert)
+# Set up data structures for storing estimation results
+est14.2.array <- array(NA, c(nSims14.2, 2), dimnames =
+                           list(1:nSims14.2,
+                                c("MC", "Mantel")))
+var14.2.array <- array(NA, c(nSims14.2, 2), dimnames =
+                           list(1:nSims14.2,
+                                c("MC", "Mantel")))
+ci14.2.array <- array(NA, c(nSims14.2, 2, 2), dimnames =
+                           list(1:nSims14.2,
+                                c("MC", "Mantel"),
+                                c('lower', 'upper')))
+animalLoc14 <- vector("list", nSims14.2) #making an empty list to fill
+results14 <- vector("list", nSims14.2)
+
+# Run estimations
+set.seed(567)
+sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, T)]
+for (sim in 1:nSims14.2) {
+  cat("Estimation", sim, "of", nSims14.2, '\n')
+  for (i in 13) {
+    animalLoc14[[sim]] <- changeLocations(sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+                                        breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
+    results14[[sim]] <- estMC(breedDist14[[i]], nonbreedDist14[[i]],
+                            originRelAbund = breedingRelN14[[i]],
+                            originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
+                            targetPoints = sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
+                                                             sp::CRS(Lambert)),
+                            originAssignment = animalLoc14[[sim]][, 1, 1, 1],
+                            targetAssignment = results14.2[[sim]]$targetSample,
+                            nSamples = 1000, verbose = 1, calcCorr = T,
+                            geoBias = geoBias, geoVCov = geoVCov,
+                            targetSites = WinteringPolys[[i]])
+    est14.2.array[sim, 'MC'] <- results14[[sim]]$meanMC
+    est14.2.array[sim, 'Mantel'] <- results14[[sim]]$meanCorr
+    var14.2.array[sim, 'MC'] <- results14[[sim]]$seMC ^ 2
+    var14.2.array[sim, 'Mantel'] <- results14[[sim]]$seCorr ^ 2
+    ci14.2.array[sim, 'MC', ] <- results14[[sim]]$bcCI
+    ci14.2.array[sim, 'Mantel', ] <- results14[[sim]]$bcCICorr
+    save(results14, est14.array, var14.array, ci14.array, file = '../results14.2.gzip')
+  }
+}
+
+summary(var14.2.array)
+vars14.2
+summary(est14.2.array)
+means14.2
+summary(ci14.2.array[, "MC", 'lower'] <= MC14 & ci14.2.array[, "MC", 'upper'] >= MC14)
+summary(ci14.2.array[, "Mantel", 'lower'] <= MC14 & ci14.2.array[, "Mantel", 'upper'] >= MC14)
+
+est14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14.2),
+                     Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14.2),
+                     sim = rep(1:nSims14.2, 4), Estimate = c(est14.2.array, var14.2.array))
+trues14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2),
+                       Quantity = rep(c('Mean', 'Variance'), each = 2),
+                       Value = c(MC14, MC14, vars14.2))
+library(ggplot2)
+g.est <- ggplot(est14.2.df, aes(Estimate)) + geom_histogram(bins = 15) +
+  facet_grid(Parameter ~ Quantity, scales = 'free_x') +
+  geom_vline(aes(xintercept = Value), data = trues14.2.df) +
+  theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
+png('sim.est.MC.rM5.png', width = 6, height = 4, units = 'in', res=600)
+g.est
+#dev.off()
+
+qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
+                       Quantity = rep(rep(c('Mean', 'Variance'), c(4, 2)), 3, 16),
+                       Measure = rep(c('Bias', 'RMSE', "Coverage"), c(6, 6, 4)),
+                       Value = c(colMeans(est14.2.array - MC14),
+                                 colMeans(var14.2.array) - vars14.2,
+                                 sqrt(colMeans((est14.2.array - MC14)^2)),
+                                 sqrt(mean((var14.2.array[,1] - vars14[1])^2)),
+                                 sqrt(mean((var14.2.array[,2] - vars14[2])^2)),
+                                 mean(ci14.2.array[, "MC", 'lower'] <= MC14 & 
+                                        ci14.2.array[, "MC", 'upper'] >= MC14),
+                                 mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & 
+                                        ci14.2.array[, "Mantel", 'upper'] >= MC14)))
+format(qualities14.2, digits = 2, scientific = F)
+
+
+
+# nSimInds <- 10
+# 
+# simLocs <- simulateLocs(n = nSimInds,n.origin = TRUE,originSites = BreedingPolys[[14]], targetSites = WinteringPolys[[14]],projection = Lambert)
 
 # simulate relative abundance within each originSite 
-simRelAbun <- rep(1/length(BreedingPolys[[14]]),length(BreedingPolys[[14]]))
+# simRelAbun <- rep(1/length(BreedingPolys[[14]]),length(BreedingPolys[[14]]))
+# 
+# sim.isGL <- rep(TRUE,length(simLocs$originPoints))
+# 
+# plot(union(BreedingPolys[[14]],WinteringPolys[[14]]))
+# plot(simLocs$originPoints,pch = ".", col = "red", add = TRUE)
+# plot(simLocs$targetPoints,pch = ".", col = "blue", add = TRUE)
+# 
+# OVENdata$originDist
+# 
+# originDist <- as.matrix(dist(getSpPPolygonsLabptSlots(BreedingPolys[[14]])))
+# 
+# targetDist <- as.matrix(dist(getSpPPolygonsLabptSlots(WinteringPolys[[14]])))
 
-sim.isGL <- rep(TRUE,length(simLocs$originPoints))
 
-plot(union(BreedingPolys[[14]],WinteringPolys[[14]]))
-plot(simLocs$originPoints,pch = ".", col = "red", add = TRUE)
-plot(simLocs$targetPoints,pch = ".", col = "blue", add = TRUE)
-
-OVENdata$originDist
-
-originDist <- as.matrix(dist(getSpPPolygonsLabptSlots(BreedingPolys[[14]])))
-
-targetDist <- as.matrix(dist(getSpPPolygonsLabptSlots(WinteringPolys[[14]])))
-
-
-simGL<-estMC(isGL=sim.isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
-             geoBias = geoBias, # Light-level geolocator location bias
-             geoVCov = geoVCov, # Light-level geolocator co-variance matrix
-             targetDist = targetDist, # Non-breeding target distribution distance matrix
-             originDist = originDist, # Breeding / origin distribution distance matrix
-             targetSites = WinteringPolys[[14]], # Non-breeding target sites
-             originSites = BreedingPolys[[14]], # Breeding origin sites 
-             originPoints = simLocs$originPoints, # Capture Locations 
-             targetPoints = simLocs$targetPoints, # Non-breeding Locations derived from devices
-             originRelAbund = simRelAbun, # Relative abundance within OriginSites
-             verbose = 0,   # output options - see help ??estMC
-             nSim = 10,     # This is set low for example
-             nSamples = 10) # This is set low for example 
+#simGL<-estMC(isGL=sim.isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+#             geoBias = geoBias, # Light-level geolocator location bias
+#             geoVCov = geoVCov, # Light-level geolocator co-variance matrix
+#             targetDist = targetDist, # Non-breeding target distribution distance matrix
+#             originDist = originDist, # Breeding / origin distribution distance matrix
+#             targetSites = WinteringPolys[[14]], # Non-breeding target sites
+#             originSites = BreedingPolys[[14]], # Breeding origin sites 
+#             originPoints = simLocs$originPoints, # Capture Locations 
+#             targetPoints = simLocs$targetPoints, # Non-breeding Locations derived from devices
+#             originRelAbund = simRelAbun, # Relative abundance within OriginSites
+#             verbose = 0,   # output options - see help ??estMC
+#             nSim = 10,     # This is set low for example
+#             nSamples = 10) # This is set low for example 
 ```
  
 #### EXAMPLE 9
