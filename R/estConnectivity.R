@@ -295,12 +295,12 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 
   MC <- corr <- rep(NA, nBoot)
 
-  if (any(isGL) || calcCorr)
+#   if (any(isGL) || calcCorr)
+#
+#     geoBias2 <- array(rep(geoBias, nAnimals, each = nSim), c(nSim, 2, nAnimals))
 
-    geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
-
-    # determine the number of animals from the input data
-    nAnimals <- length(originAssignment)
+  # determine the number of animals from the input data
+  nAnimals <- length(originAssignment)
 
   # Point estimate of MC
   pointSites <- array(0, c(nOriginSites, nTargetSites),
@@ -357,35 +357,55 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     }
     target.sample <- rep(NA, nAnimals)
     target.point.sample <- matrix(NA, nAnimals, 2)
-    for(i in 1:nAnimals){
-      if (verbose > 2)
-        cat('\tAnimal', i, 'of', nAnimals)
-      draws <- 0
-      if (isGL[animal.sample[i]]) {
-        while (is.na(target.sample[i])) {
-          draws <- draws + 1
-          # Sample random point for each bird from parametric distribution of NB error
-          point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
-            targetPoints@coords[animal.sample[i],1],
-            targetPoints@coords[animal.sample[i],2]), Sigma=geoVCov)+
-              geoBias2, sp::CRS(projection.dist.calc))
-          # filtered to stay in NB areas (land)
-          target.sample0 <- sp::over(point.sample, targetSites)
-          target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
-        }
-        target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
-      }
-      else { # Assume no location error for GPS
-        target.sample[i] <- targetAssignment[animal.sample[i]]
-        if (calcCorr)
-          target.point.sample[i, ] <- targetPoints[animal.sample[i],]@coords
-      }
-      if (verbose > 2)
-        cat(' ', draws, 'draws\n')
-      # Now that we have breeding and non-breeding site for point, add to transition count matrix
-      sites.array[boot, origin.sample[i], target.sample[i]] <-
-          sites.array[boot, origin.sample[i], target.sample[i]] + 1
+    toSample <- which(isGL[animal.sample])
+    draws <- 0
+    while (length(toSample) > 0) {
+      draws <- draws + 1
+      geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
+      point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
+                            MASS::mvrnorm, n=nSim, Sigma=geoVCov),
+                            c(nSim, 2, length(toSample))) + geoBias2
+      point.sample <- apply(point.sample, 3, sp::SpatialPoints,
+                            proj4string = sp::CRS(projection.dist.calc))
+      target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
+      good.sample <- apply(target.sample0, 2, function(x) which(!is.na(x))[1])
+      target.sample[toSample] <- apply(target.sample0, 2, function(x) x[!is.na(x)][1])
+      if (any(!is.na(good.sample)))
+        target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(function(x, y) y[x]@coords,
+                                               good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
+      toSample <- which(isGL[animal.sample] & is.na(target.sample))
     }
+    target.sample[which(!isGL[animal.sample])] <- targetAssignment[animal.sample[which(!isGL[animal.sample])]]
+    if (calcCorr)
+      target.point.sample[which(!isGL[animal.sample]), ] <- targetPoints[animal.sample[which(!isGL[animal.sample])],]@coords
+#     for(i in 1:nAnimals){
+#       if (verbose > 2)
+#         cat('\tAnimal', i, 'of', nAnimals)
+#       draws <- 0
+#       if (isGL[animal.sample[i]]) {
+#         while (is.na(target.sample[i])) {
+#           draws <- draws + 1
+#           # Sample random point for each bird from parametric distribution of NB error
+#           point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
+#             targetPoints@coords[animal.sample[i],1],
+#             targetPoints@coords[animal.sample[i],2]), Sigma=geoVCov)+
+#               geoBias2, sp::CRS(projection.dist.calc))
+#           # filtered to stay in NB areas (land)
+#           target.sample0 <- sp::over(point.sample, targetSites)
+#           target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
+#         }
+#         target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+#       }
+#       else { # Assume no location error for GPS
+#         target.sample[i] <- targetAssignment[animal.sample[i]]
+#         if (calcCorr)
+#           target.point.sample[i, ] <- targetPoints[animal.sample[i],]@coords
+#       }
+#       if (verbose > 2)
+#         cat(' ', draws, 'draws\n')
+      # Now that we have breeding and non-breeding site for point, add to transition count matrix
+    sites <- table(origin.sample, target.sample)
+    sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
     # Create psi matrix as proportion of those from each breeding site that went to each NB site
     psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
     # Calculate MC from that psi matrix

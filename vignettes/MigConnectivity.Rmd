@@ -389,6 +389,81 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 
 
 ```{r}
+simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov, 
+                             projection, verbose = 0, nSim = 1000) {
+  nAnimals <- length(targetPoints)
+  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+  target.sample <- rep(NA, nAnimals)
+  target.point.sample <- matrix(NA, nAnimals, 2)
+  for(i in 1:nAnimals){
+    if (verbose > 0)
+      cat('Animal', i, 'of', nAnimals)
+    draws <- 0
+    while (is.na(target.sample[i])) {
+      draws <- draws + 1
+      # Sample random point for each bird from parametric distribution of NB error
+      point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
+        targetPoints@coords[i,1],
+        targetPoints@coords[i,2]), Sigma=geoVCov)+
+          geoBias2, sp::CRS(projection))
+      # filtered to stay in NB areas (land)
+      target.sample0 <- sp::over(point.sample, targetSites)
+      target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
+    }
+    target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+    if (verbose > 0)
+      cat(' ', draws, 'draws\n')
+  }
+  return(list(targetSample = target.sample, targetPointSample = target.point.sample))
+}
+```
+
+Helper function to convert a string of XY coordinates of centroids to polygons #
+```{r}
+toPoly <- function(siteCentroids,
+                   projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
+                   projection.out = NA,
+                   resolution = NA,
+                   order.by.input = TRUE)
+{
+# This automatically sets the resolution so that all polygons touch and cover the entire surface #
+# Alternatively the user can supply the resolution of the raster cells in the units of the
+# the input projection (projection.in) #
+  if(is.na(resolution)){
+     long <- unique(siteCentroids[,1])
+     lat <- unique(siteCentroids[,2])
+     long.res <- long[2]-long[1]
+     lat.res <- lat[2]-lat[1]
+     resolution <- c(long.res,long.res)
+  }
+  rast <- suppressWarnings(raster::rasterFromXYZ(cbind(cbind(siteCentroids),
+                                                      (1:nrow(siteCentroids))),
+                                                res = resolution,
+                                                crs = projection.in))
+  polys <- raster::rasterToPolygons(rast)
+  # Give unique names to polygons #
+  polys <- sp::SpatialPolygons(polys@polygons)
+  raster::crs(polys)<-projection.in
+  
+  # Reorders the polygons to match that of the input #
+  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
+  
+  if(order.by.input){
+  orders <- sp::over(centers,polys)
+  polys <- polys[orders] 
+  }
+  sp::spChFIDs(polys,as.character(1:length(polys)))
+  
+  if(!is.na(projection.out)){
+    polys <- sp::spTransform(polys,sp::CRS(projection.out))
+  }
+  
+  return(polys)
+}
+```   
+
+
+```{r}
 set.seed(75)
 
 # Parameters for simulations
@@ -1366,54 +1441,14 @@ format(qualities14, digits = 2, scientific = F)
 #### Simulation using error associated with light-level geolocators
 ```{r, eval = FALSE}
 # Assign geolocator bias / variance co-variance matrix
-geoBias <- c(-500, 2500)
-geoVCov <- matrix(c(1.2e+9, 0, 0, 1.2e+10), 2, 2)
+geoBias <- c(-5000, 25000)
+geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
-# Helper function to convert a string of XY coordinates of centroids to polygons #
-toPoly <- function(siteCentroids,
-                   projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
-                   projection.out = NA,
-                   resolution = NA,
-                   order.by.input = TRUE)
-{
-# This automatically sets the resolution so that all polygons touch and cover the entire surface #
-# Alternatively the user can supply the resolution of the raster cells in the units of the
-# the input projection (projection.in) #
-  if(is.na(resolution)){
-     long <- unique(siteCentroids[,1])
-     lat <- unique(siteCentroids[,2])
-     long.res <- long[2]-long[1]
-     lat.res <- lat[2]-lat[1]
-     resolution <- c(long.res,long.res)
-  }
-  rast <- suppressWarnings(raster::rasterFromXYZ(cbind(cbind(siteCentroids),
-                                                      (1:nrow(siteCentroids))),
-                                                res = resolution,
-                                                crs = projection.in))
-  polys <- raster::rasterToPolygons(rast)
-  # Give unique names to polygons #
-  polys <- sp::SpatialPolygons(polys@polygons)
-  raster::crs(polys)<-projection.in
-  
-  # Reorders the polygons to match that of the input #
-  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
-  
-  if(order.by.input){
-  orders <- sp::over(centers,polys)
-  polys <- polys[orders] 
-  }
-  sp::spChFIDs(polys,as.character(1:length(polys)))
-  
-  if(!is.na(projection.out)){
-    polys <- sp::spTransform(polys,sp::CRS(projection.out))
-  }
-  
-  return(polys)
-}
 
 # Define projections
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+projection.dist.calc <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 
 # convert breeding and wintering locations to polygons using the helper function
 BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = Lambert)
@@ -1421,6 +1456,7 @@ breedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection
 
 WinteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = Lambert)
 winteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = WGS84)
+winteringPolys2 <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = projection.dist.calc)
 targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
 
 
@@ -1429,60 +1465,33 @@ cbind(breedingPos14[[1]][,1:2],t(sapply(slot(breedingPolys[[1]], "polygons"), fu
 cbind(winteringPos14[[1]][,1:2],t(sapply(slot(winteringPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
   
 
-simulateLocs <- function(n,n.origin = FALSE,originSites,targetSites,projection){
-                if(n.origin){
-                n.polys <- length(originSites)
-                originPoints <- vector('list',n.polys)
-                targetPoints <- vector('list',n.polys)
-                
-                for(i in 1:n.polys){
-                  originPoints[[i]]<-sp::spsample(originSites[i,],n,type = "random")@coords
-                  targetPoints[[i]]<-sp::spsample(targetSites,n,type = "random")@coords
-                }
-                
-                originPts <- do.call('rbind',originPoints)
-                targetPts <- do.call('rbind',targetPoints)
-                
-                return(list(originPoints = sp::SpatialPoints(originPts,proj4string = sp::CRS(projection)),
-                            targetPoints = sp::SpatialPoints(targetPts,proj4string = sp::CRS(projection))))
-                
-                }
-               else{
-                originPoints <- sp::spsample(originSites,n,type = "random")
-                targetPoints <- sp::spsample(targetSites,n,type = "random")
-                
-                return(list(originPoints = originPoints,
-                            targetPoints = targetPoints))
-               }
-}
+# simulateLocs <- function(n,n.origin = FALSE,originSites,targetSites,projection){
+#                 if(n.origin){
+#                 n.polys <- length(originSites)
+#                 originPoints <- vector('list',n.polys)
+#                 targetPoints <- vector('list',n.polys)
+#                 
+#                 for(i in 1:n.polys){
+#                   originPoints[[i]]<-sp::spsample(originSites[i,],n,type = "random")@coords
+#                   targetPoints[[i]]<-sp::spsample(targetSites,n,type = "random")@coords
+#                 }
+#                 
+#                 originPts <- do.call('rbind',originPoints)
+#                 targetPts <- do.call('rbind',targetPoints)
+#                 
+#                 return(list(originPoints = sp::SpatialPoints(originPts,proj4string = sp::CRS(projection)),
+#                             targetPoints = sp::SpatialPoints(targetPts,proj4string = sp::CRS(projection))))
+#                 
+#                 }
+#                else{
+#                 originPoints <- sp::spsample(originSites,n,type = "random")
+#                 targetPoints <- sp::spsample(targetSites,n,type = "random")
+#                 
+#                 return(list(originPoints = originPoints,
+#                             targetPoints = targetPoints))
+#                }
+# }
 
-simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov, 
-                             projection, verbose = 0, nSim = 1000) {
-  nAnimals <- length(targetPoints)
-  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
-  target.sample <- rep(NA, nAnimals)
-  target.point.sample <- matrix(NA, nAnimals, 2)
-  for(i in 1:nAnimals){
-    if (verbose > 0)
-      cat('Animal', i, 'of', nAnimals)
-    draws <- 0
-    while (is.na(target.sample[i])) {
-      draws <- draws + 1
-      # Sample random point for each bird from parametric distribution of NB error
-      point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
-        targetPoints@coords[i,1],
-        targetPoints@coords[i,2]), Sigma=geoVCov)+
-          geoBias2, sp::CRS(projection))
-      # filtered to stay in NB areas (land)
-      target.sample0 <- sp::over(point.sample, targetSites)
-      target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
-    }
-    target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
-    if (verbose > 0)
-      cat(' ', draws, 'draws\n')
-  }
-  return(list(targetSample = target.sample, targetPointSample = target.point.sample))
-}
 
 # Simulate capture and non-breeding locations of 100 individuals #
 nSample14.2 <- 100 # Total number sampled per simulation
@@ -1582,18 +1591,19 @@ sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, T)]
 for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
   for (i in 13) {
+    points0 <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample, sp::CRS(Lambert))
+    points1 <- sp::spTransform(points0, sp::CRS(projection.dist.calc))
     animalLoc14[[sim]] <- changeLocations(sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
-    results14[[sim]] <- estMC(breedDist14[[i]], nonbreedDist14[[i]],
+    results14[[sim]] <- estMC(originDist = breedDist14[[i]], targetDist = nonbreedDist14[[i]],
                             originRelAbund = breedingRelN14[[i]],
                             originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
-                            targetPoints = sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
-                                                             sp::CRS(Lambert)),
+                            targetPoints = points1,
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = results14.2[[sim]]$targetSample,
                             nSamples = 1000, verbose = 1, calcCorr = T,
-                            geoBias = geoBias, geoVCov = geoVCov,
-                            targetSites = WinteringPolys[[i]])
+                            geoBias = geoBias, geoVCov = geoVCov, isGL = T,
+                            targetSites = winteringPolys2[[i]])
     est14.2.array[sim, 'MC'] <- results14[[sim]]$meanMC
     est14.2.array[sim, 'Mantel'] <- results14[[sim]]$meanCorr
     var14.2.array[sim, 'MC'] <- results14[[sim]]$seMC ^ 2
