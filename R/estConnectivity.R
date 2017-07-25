@@ -235,6 +235,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=T, alpha = 0.05,
                        approxSigTest = F, sigConst = 0) {
+
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
@@ -253,8 +254,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   nAnimals <- max(length(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if(class(originSites)=="SpatialPolygonsDataFrame")
-    originSites <- sp::SpatialPolygons(originSites@polygons)
+  if(class(originSites)=="SpatialPolygonsDataFrame"){
+    originSites <- sp::SpatialPolygons(originSites@polygons)}
+  if(class(targetSites)=="SpatialPolygonsDataFrame"){
+    targetSites <- sp::SpatialPolygons(targetSites@polygons)}
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
   if (is.null(targetAssignment))
