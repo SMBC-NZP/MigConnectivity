@@ -234,7 +234,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        originAssignment=NULL, originNames=NULL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=T, alpha = 0.05,
-                       approxSigTest = F, sigConst = 0) {
+                       approxSigTest = F, sigConst = 0,
+                       projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -271,6 +272,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     stop("NAs in origin sites (make sure all points fall within polygons)")
   if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
+  if(!is.null(originPoints) && is.na(originPoints@proj4string)){
+    stop('Coordinate system definition needed for originSites')
+  }
+  if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
+    stop('Coordinate system definition needed for targetSites & targetPoints')
+  }
+
   if (is.null(sampleSize))
     sampleSize <- nAnimals
   if (dim(originDist)!=rep(nOriginSites,2) ||
@@ -280,41 +288,59 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
 
-  WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-  Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+
+  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+  Dist.proj <- projection.dist.calc
 
   MC <- corr <- rep(NA, nBoot)
+
   if (any(isGL) || calcCorr)
+
     geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
-  nAnimals <- length(originAssignment)
+
+    # determine the number of animals from the input data
+    nAnimals <- length(originAssignment)
 
   # Point estimate of MC
   pointSites <- array(0, c(nOriginSites, nTargetSites),
                        dimnames = list(originNames, targetNames))
+
   for(i in 1:nAnimals)
-    pointSites[originAssignment[i], targetAssignment[i]] <-
+      pointSites[originAssignment[i], targetAssignment[i]] <-
       pointSites[originAssignment[i], targetAssignment[i]] + 1
+
   pointPsi <- prop.table(pointSites, 1)
+
   pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
                     sampleSize = sampleSize)
+
   if (calcCorr) {
     targetDist1 <- matrix(NA, nAnimals, nAnimals)
+
     targetDist1[lower.tri(targetDist1)] <- 1
+
     distIndices <- which(!is.na(targetDist1), arr.ind = T)
+
+    # project target points to WGS #
     targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
-    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
-                                         targetPoints2[distIndices[,'col'],])
+
+    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
+
     targetDist1[lower.tri(targetDist1)] <- targetDist0
+
     originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
-    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[
-      rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,
-                                                     each=nAnimals)]),
-      nAnimals, nAnimals)
+
+    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
+                                    nAnimals, nAnimals)
+
     originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
+
     pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = T)$correlation
     #ade4::mantel.rtest(as.dist(originDist1), as.dist(targetDist1),
                  #              nrepet=0)
   }
+
   for (boot in 1:nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
@@ -342,7 +368,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
             targetPoints@coords[animal.sample[i],1],
             targetPoints@coords[animal.sample[i],2]), Sigma=geoVCov)+
-              geoBias2, sp::CRS(Lambert))
+              geoBias2, sp::CRS(projection.dist.calc))
           # filtered to stay in NB areas (land)
           target.sample0 <- sp::over(point.sample, targetSites)
           target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
@@ -371,7 +397,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=T), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(Lambert))
+      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(projection.dist.calc))
       target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
