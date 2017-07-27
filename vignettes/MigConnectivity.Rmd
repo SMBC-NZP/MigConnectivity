@@ -178,7 +178,91 @@ To estimate MC and include location uncertainty the following data are needed:
 1. A shapefile of both breeding and non-breeding regions    
 1. The deployment locations and the 'unknown' locations derived from the tracking devices    
 1. The relative (or absolute) abundance within each region where the birds originate from (deployment regions)     
+    
+Below is a repeatable example for how to calculate location bias and location error using coordinates derived from light-level geolocators. 
+    
+```{r, eval = FALSE}
+# Define projections # 
 
+WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+
+# Define deployment locations (winter) # 
+
+captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
+                           -80.94,25.13,   # Florida
+                           -66.86,17.97),  # Puerto Rico
+                            nrow=3, ncol=2, byrow = TRUE)
+
+# Convert capture locations into SpatialPoints #
+
+CapLocs<-sp::SpatialPoints(captureLocations,sp::CRS(WGS84))
+
+# Project Capture locations # 
+
+CapLocsM<-sp::spTransform(CapLocs, sp::CRS(Lambert))
+
+# Retrieve raw non-breeding locations from github #
+# First grab the identity of the bird so we can loop through the files #
+# For this example we are only interested in the error around non-breeding locations #
+# here we grab only the birds captured during the non-breeding season #
+
+winterBirds <- dget("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/GL_NonBreedingFiles/winterBirds.txt")
+
+# create empty list to store the location data #
+Non_breeding_files <- vector('list',length(winterBirds))
+
+# Get raw location data from Github #
+for(i in 1:length(winterBirds)){
+Non_breeding_files[[i]] <- dget(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/GL_NonBreedingFiles/NonBreeding_",winterBirds[i],".txt"))
+}
+
+# Remove locations around spring Equinox and potential migration points - same NB time frame as Hallworth et al. 2015 # 
+# two steps because subset on shapefile doesn't like it in a single step
+
+Non_breeding_files <- lapply(Non_breeding_files,FUN = function(x){month <- as.numeric(format(x$Date,format = "%m"))
+                                                                  x[which(month != 3 & month != 4),]})
+
+   
+Jam <- c(1:9)   # locations within the list of winterBirds captured in Jamaica
+Fla <- c(10:12) # locations within the list of winterBirds in Florida
+PR <- c(13:16)  # locations within the list of winterBirds in Puerto Rico
+
+# Turn the locations into shapefiles #
+
+NB_GL <- lapply(Non_breeding_files, FUN = function(x){sp::SpatialPoints(cbind(x$Longitude,x$Latitude),sp::CRS(WGS84))})
+
+# Project into UTM projection #
+
+NB_GLmeters <- lapply(NB_GL, FUN = function(x){sp::spTransform(x,sp::CRS(Lambert))})
+
+# Process to determine geolocator bias and variance-covariance in meters #
+
+# generate empty vector to store data #
+LongError<-rep(NA,length(winterBirds)) # 16 birds were recovered during the non-breeding season
+LatError<-rep(NA,length(winterBirds))  
+
+# Calculate the error in longitude derived from geolocators from the true capture location #
+LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[1,1])}))
+LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[2,1])}))
+LongError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[3,1])}))
+
+# Calculate the error in latitude derived from geolocators from the true capture location #
+LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[1,2])}))
+LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[2,2])}))
+LatError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[3,2])}))
+
+
+# Get co-variance matrix for error of known non-breeding deployment sites #
+
+# lm does multivariate normal models if you give it a matrix dependent variable!
+geo.error.model <- lm(cbind(LongError,LatError) ~ 1) 
+
+geo.bias <- coef(geo.error.model)
+geo.vcov <- vcov(geo.error.model)
+``` 
+  
 We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
 
 Load location data that accompanies the `MigConnectivity` package. The location data are data from breeding Ovenbirds that were fit with Light-level geolocators or PinPoint-10 GPS tags. 
@@ -218,18 +302,19 @@ The following code demonstrates how to estimate MC using location data from ligh
 
 ```{r message=FALSE, warning = FALSE, error=FALSE}
 M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
-      geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-      geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-      targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-      originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
-      targetSites = OVENdata$targetSites, # Non-breeding target sites
-      originSites = OVENdata$originSites, # Breeding origin sites 
-      originPoints = OVENdata$originPoints, # Capture Locations 
-      targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-      originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
-      verbose = 0,   # output options - see help ??estMC
-      nSim = 10,     # This is set low for example
-      nSamples = 10) # This is set low for example 
+         geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+         geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+         targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
+         originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+         targetSites = OVENdata$targetSites, # Non-breeding target sites
+         originSites = OVENdata$originSites, # Breeding origin sites 
+         originPoints = OVENdata$originPoints, # Capture Locations 
+         targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+         originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+         projection.dist.calc = raster::projection(OVENdata$targetPoints), #Lambert projection
+         verbose = 0,   # output options - see help ??estMC
+         nSim = 10,     # This is set low for example
+         nSamples = 10) # This is set low for example 
 ```
 
 ```{r echo = FALSE, warning = FALSE, error = FALSE}
