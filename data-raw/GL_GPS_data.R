@@ -28,7 +28,7 @@ library(ade4)
 
 WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
-
+EquidistConic <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 
 # Define capture locations in the winter #
 
@@ -36,85 +36,70 @@ captureLocations<-matrix(c(-77.93,18.04,  # Jamaica
                            -80.94,25.13,  # Florida
                            -66.86,17.97,  # Puerto Rico
                            -71.72,43.95), # New Hampshire
-                            nrow=4,ncol=2,byrow=TRUE)
+                          nrow=4,ncol=2,byrow=TRUE)
+
+# Convert capture locations into SpatialPoints #
 
 CapLocs<-SpatialPoints(captureLocations,CRS(WGS84))
 
 # Project Capture locations #
 
-CapLocsM<-spTransform(CapLocs, CRS(Lambert))
+CapLocsM<-spTransform(CapLocs, CRS(EquidistConic))
 
-#  Non-breeding GL location data
-#  Locations derived during the non-breeding season - ALL birds
+# Retrieve raw non-breeding locations from github #
+# First grab the identity of the bird so we can loop through the files #
+# For this example we are only interested in the error around non-breeding locations #
+# here we grab only the birds captured during the non-breeding season #
 
-# non-breeding file names #
+winterBirds <- dget("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/GL_NonBreedingFiles/winterBirds.txt")
 
-NB_shapefile_names<-list.files("data-raw/GL_NonBreedingFiles", pattern="*.shp",full.names=TRUE)
+# create empty list to store the location data #
+Non_breeding_files <- vector('list',length(winterBirds))
 
-# Convert into shapefile #
+# Get raw location data from Github #
+for(i in 1:length(winterBirds)){
+  Non_breeding_files[[i]] <- dget(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/GL_NonBreedingFiles/NonBreeding_",winterBirds[i],".txt"))
+}
 
-NB_GL<-lapply(NB_shapefile_names, shapefile)
-
-# Better to use variables for frequently used numbers - clearer, more portable code
-nGL <- length(NB_GL)
-
-# Remove locations around spring Equinox and potential migration points - same NB time frame as Hallworth et al. 2014 #
+# Remove locations around spring Equinox and potential migration points - same NB time frame as Hallworth et al. 2015 #
 # two steps because subset on shapefile doesn't like it in a single step
 
-for(i in 1:nGL){
-  NB_GL[[i]]<-subset(NB_GL[[i]],subset=(Month!=3))
-}
-for(i in 1:nGL){
-  NB_GL[[i]]<-subset(NB_GL[[i]],subset=(Month!=4))
-}
+Non_breeding_files <- lapply(Non_breeding_files,FUN = function(x){month <- as.numeric(format(x$Date,format = "%m"))
+x[which(month != 3 & month != 4),]})
 
-# Project data from WGS84 into equal area conic to get true error in m/km #
 
-NB_GLm<-vector('list',nGL)
-for(i in 1:nGL){
-NB_GLm[[i]]<-spTransform(NB_GL[[i]],CRS(Lambert))
-}
+Jam <- c(1:9)   # locations within the list of winterBirds captured in Jamaica
+Fla <- c(10:12) # locations within the list of winterBirds in Florida
+PR <- c(13:16)  # locations within the list of winterBirds in Puerto Rico
 
-# Calc known location error in winter #
+# Turn the locations into shapefiles #
 
-# Geolocators deployed during non-breeding season - using Raw Location Points #
+NB_GL <- lapply(Non_breeding_files, FUN = function(x){sp::SpatialPoints(cbind(x$Longitude,x$Latitude),CRS(WGS84))})
 
-Jam<-c(30,1,15,16,19,23,25,2,18) # these are the locations within the list of birds captured in Jam
-Fla<-c(11,12,17)                 # these are the locations within the list of birds captured in Fla
-PR<-c(26,27,28,29)               # these are the locations within the list of birds captured in PR
+# Project into UTM projection #
 
-# Better to use variables for frequently used numbers - clearer, more portable code
-nJam <- length(Jam)
-nFla <- length(Fla)
-nPR <- length(PR)
-nNB_GL <- nJam + nFla + nPR
+NB_GLmeters <- lapply(NB_GL, FUN = function(x){sp::spTransform(x,CRS(EquidistConic))})
 
-#####################################################################
-# Determine the error associated with Geolocators captured at known #
-# Non-breeding locations in the Caribbean                           #
-#####################################################################
+# Process to determine geolocator bias and variance-covariance in meters #
 
-LongError<-rep(NA,nNB_GL) # 16 birds were recovered during the non-breeding season
-LatError<-rep(NA,nNB_GL)  # 16 birds were recovered during the non-breeding season
+# generate empty vector to store data #
+LongError<-rep(NA,length(winterBirds)) # 16 birds were recovered during the non-breeding season
+LatError<-rep(NA,length(winterBirds))
 
-for(i in 1:nJam){   # loop through the 9 Jam birds
-#error in
-LongError[i]<-mean(NB_GLm[[Jam[i]]]@coords[,1]-CapLocsM@coords[1,1])
-LatError[i]<-mean(NB_GLm[[Jam[i]]]@coords[,2]-CapLocsM@coords[1,2])
-}
-for(i in 1:nFla){   # loop through the 3 Fla birds
-LongError[nJam+i]<-mean(NB_GLm[[Fla[i]]]@coords[,1]-CapLocsM@coords[2,1])
-LatError[nJam+i]<-mean(NB_GLm[[Fla[i]]]@coords[,2]-CapLocsM@coords[2,2])
-}
-for(i in 1:nPR){   # loop through the 4 PR birds
-LongError[nJam+nFla+i]<-mean(NB_GLm[[PR[i]]]@coords[,1]-CapLocsM@coords[3,1])
-LatError[nJam+nFla+i]<-mean(NB_GLm[[PR[i]]]@coords[,2]-CapLocsM@coords[3,2])
-}
+# Calculate the error in longitude derived from geolocators from the true capture location #
+LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[1,1])}))
+LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[2,1])}))
+LongError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[3,1])}))
+
+# Calculate the error in latitude derived from geolocators from the true capture location #
+LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[1,2])}))
+LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[2,2])}))
+LatError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[3,2])}))
+
 
 # Get co-variance matrix for error of known non-breeding deployment sites #
 
 geo.error.model <- lm(cbind(LongError,LatError) ~ 1) # lm does multivariate normal models if you give it a matrix dependent variable!
-summary(geo.error.model)
 
 geo.bias <- coef(geo.error.model)
 geo.vcov <- vcov(geo.error.model)
@@ -134,8 +119,10 @@ geo.vcov <- vcov(geo.error.model)
 # Non-breeding #
 
 NB_KDE_names<-list.files("data-raw/NonBreeding_Clipped_KDE", pattern="*_clip.txt",full.names=TRUE)
-NB_KDE_names<-NB_KDE_names[c(1:28,30:37)]
+
 NB_KDE<-lapply(NB_KDE_names,raster)
+
+nGL <- length(NB_KDE_names)
 
 # Get weighted means from KDE #
 kdelist<-vector('list',nGL)
@@ -159,7 +146,7 @@ NB_kde_lat[c(32,33,34,35)]<-17.97 # PR
 
 weightedNB<-SpatialPoints(as.matrix(cbind(NB_kde_long,NB_kde_lat)))
 crs(weightedNB)<-WGS84
-weightedNBm<-spTransform(weightedNB,CRS(Lambert))
+weightedNBm<-spTransform(weightedNB,CRS(EquidistConic))
 
 # USE ONLY BIRDS CAPTURED DURING BREEDING SEASON - GEOLOCATORS #
 summerDeploy<-c(2,3,4,5,6,7,8,10,11,12,13,14,15,16,19,20,26,27,28,30)
@@ -173,7 +160,7 @@ nB_GL <- length(summerDeploy)
 GPSdata<-read.csv("data-raw/Ovenbird_GPS_HallworthMT_FirstLast.csv")
 nGPS <- nrow(GPSdata)/2
 GPSpts<-SpatialPoints(as.matrix(cbind(GPSdata[,2],GPSdata[,1]),nrow=nGPS,ncol=2,byrow=TRUE),CRS(WGS84))
-GPSptsm<-spTransform(GPSpts,CRS(Lambert))
+GPSptsm<-spTransform(GPSpts,CRS(EquidistConic))
 
 # First add GPS locations to both breeding and non-breeding data sets #
 cap<-seq(1,2*nGPS,2)
@@ -183,7 +170,7 @@ wint<-seq(2,2*nGPS,2)
 
 weightedNB_breeDeployOnly<-SpatialPoints(as.matrix(cbind(c(NB_kde_long[summerDeploy],GPSdata[wint,2]),c(NB_kde_lat[summerDeploy],GPSdata[wint,1]))))
 crs(weightedNB_breeDeployOnly)<-WGS84
-NB_breedDeploy<-spTransform(weightedNB_breeDeployOnly,CRS(Lambert))
+NB_breedDeploy<-spTransform(weightedNB_breeDeployOnly,CRS(EquidistConic))
 
 isGL<-c(rep(TRUE,20),rep(FALSE,19))
 targetPoints<-NB_breedDeploy
@@ -196,11 +183,11 @@ targetPoints<-NB_breedDeploy
 #
 ###################################################################
 
+
 Origin<-SpatialPoints(cbind(c(rep(captureLocations[4,1],20),GPSdata[cap,2]),c(rep(captureLocations[4,2],20),GPSdata[cap,1])))
 crs(Origin)<-WGS84
 
-originPoints<-spTransform(Origin,CRS(Lambert))
-
+originPoints<-spTransform(Origin,CRS(EquidistConic))
 
 ###################################################################
 #
@@ -208,9 +195,9 @@ originPoints<-spTransform(Origin,CRS(Lambert))
 #
 ###################################################################
 World<-shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
-World<-spTransform(World,CRS(Lambert))
+World<-spTransform(World,CRS(EquidistConic))
 States<-shapefile("data-raw/Spatial_Layers/st99_d00.shp")
-States<-spTransform(States,CRS(Lambert))
+States<-spTransform(States,CRS(EquidistConic))
 
 # Non-breeding - Target sites #
 Florida<-subset(States,subset=NAME=="Florida")
@@ -247,8 +234,12 @@ NHbreedPoly<-SpatialPolygons(list(Polygons(list(nhbp),ID=1)))
 NHbreedPoly<-spChFIDs(NHbreedPoly,"NH")
 MDbreedPoly<-spChFIDs(MDbreedPoly,"MD")
 
+crs(NHbreedPoly) <- crs(MDbreedPoly) <- Lambert
+
 originSites<-spRbind(NHbreedPoly,MDbreedPoly)
 crs(originSites)<-Lambert
+
+originSites <- spTransform(originSites,CRS(EquidistConic))
 
 ###################################################################
 #
@@ -259,8 +250,10 @@ crs(originSites)<-Lambert
 # Breeding Bird Survey Abundance Data #
 BBSoven<-raster("data-raw/Spatial_Layers/bbsoven.txt")
 crs(BBSoven)<-WGS84
-BBSovenMeters<-projectRaster(BBSoven,crs=Lambert)
+BBSovenMeters<-projectRaster(BBSoven,crs=EquidistConic)
 
+NHbreedPoly <- spTransform(NHbreedPoly,CRS(EquidistConic))
+MDbreedPoly <- spTransform(MDbreedPoly,CRS(EquidistConic))
 
 NHabund<-extract(BBSovenMeters,NHbreedPoly)
 MDabund<-extract(BBSovenMeters,MDbreedPoly)
@@ -280,8 +273,6 @@ originRelAbund<-BreedRelAbund
 ###################################################################
 # First need to project from meters to Lat/Long -WGS84
 # define current projection #
-
-crs(NHbreedPoly)<-crs(MDbreedPoly)<-Lambert
 
 # project to WGS84
 NHbreedPolyWGS<-spTransform(NHbreedPoly,CRS(WGS84))
