@@ -885,7 +885,7 @@ changeLocations <- function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
 
 # Number of scenarios and number of simulations to run
 nScenarios14 <- length(breedingSiteTrans14)
-nSims14 <- 5
+nSims14 <- 100
 
 # Connections between scenarios and sampling regimes
 scenarioToSampleMap14 <- c(rep(1, 9), rep(3, 3), rep(2, 3))
@@ -970,7 +970,7 @@ breedingSiteTrans15 <- list(1:100,
 
 nScenarios15 <- length(breedingSiteTrans15)
 
-nSims15 <- 5
+nSims15 <- 100
 
 # Basing positions of researcher defined breeding populations on above
 breedingPos15 <- list(breedingPos, 
@@ -1143,7 +1143,7 @@ breedingSiteTrans16 <- list(1:100, c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
 
 nScenarios16 <- length(breedingSiteTrans16)
 
-nSims16 <- 5
+nSims16 <- 100
 
 # Basing positions of researcher defined breeding populations on above
 breedingPos16 <- breedingPos15
@@ -1441,7 +1441,7 @@ format(qualities14, digits = 2, scientific = F)
 #### Simulation using error associated with light-level geolocators
 ```{r, eval = FALSE}
 # Assign geolocator bias / variance co-variance matrix
-geoBias <- c(-5000, 25000)
+geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
 
@@ -1511,8 +1511,8 @@ sampleBreeding14.2 <- list(round(breedingRelN14[[1]]*nSample14.2),
 lapply(sampleBreeding14.2, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14.2 <- 5
-nSimsLarge14.2 <- 250
+nSims14.2 <- 100
+nSimsLarge14.2 <- 2500
 nYears <- 1
 nMonths <- 1
 
@@ -1601,7 +1601,7 @@ for (sim in 1:nSims14.2) {
                             targetPoints = points1,
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = results14.2[[sim]]$targetSample,
-                            nSamples = 1000, verbose = 1, calcCorr = T,
+                            nSamples = 1000, verbose = 0, calcCorr = T,
                             geoBias = geoBias, geoVCov = geoVCov, isGL = T,
                             targetSites = winteringPolys2[[i]])
     est14.2.array[sim, 'MC'] <- results14[[sim]]$meanMC
@@ -1613,6 +1613,8 @@ for (sim in 1:nSims14.2) {
     save(results14, est14.array, var14.array, ci14.array, file = '../results14.2.gzip')
   }
 }
+
+save(results14, est14.2.array, var14.2.array, ci14.2.array, file = '../results14.2.gzip')
 
 summary(var14.2.array)
 vars14.2
