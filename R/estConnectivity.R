@@ -190,6 +190,8 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
 # @param calcCorr In addition to MC, should function also estimate continuous
 #    correlation between release and non-release locations?  Default is TRUE.
 # @param alpha Level for confidence intervals provided.
+# @param projection.dist.calc Projection when sampling from geolocator bias/error.
+#       Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 #
 # @return A list with elements:
 # \describe{
@@ -545,6 +547,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    FALSE.
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
+#' @param projection.dist.calc Projection when sampling from geolocator bias/error.
+#'    Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs" 
 #'
 #' @return \code{estMC} returns a list with elements:
 #' \describe{
@@ -608,7 +612,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   nSamples = 1000, nSim = 1000, isGL = FALSE,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
-                  approxSigTest = FALSE, sigConst = 0) {
+                  approxSigTest = FALSE, sigConst = 0,
+                  projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -621,7 +626,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       originNames=originNames, targetNames=targetNames,
                       nBoot = nSamples, verbose=verbose,
                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
-                      approxSigTest = approxSigTest, sigConst = sigConst))
+                      approxSigTest = approxSigTest, sigConst = sigConst,
+                      projection.dist.calc = projection.dist.calc))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
