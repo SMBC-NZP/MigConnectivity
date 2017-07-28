@@ -381,7 +381,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
 #' @param projection.dist.calc Projection when sampling from geolocator bias/error.
-#'    Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+#'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 #'
 #' @return \code{estMC} returns a list with elements:
 #' \describe{
