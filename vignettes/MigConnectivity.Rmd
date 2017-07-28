@@ -1,6 +1,6 @@
 ---
 title: "'MigConnectivity' package"
-author: "Jeff Hostetler, Mike Hallworth, Clark Rushing, Emily Cohen"
+author: "Jeff Hostetler, Mike Hallworth"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -1695,11 +1695,9 @@ for (sim in 1:nSims14.2) {
     var14.2.array[sim, 'Mantel'] <- results14[[sim]]$seCorr ^ 2
     ci14.2.array[sim, 'MC', ] <- results14[[sim]]$bcCI
     ci14.2.array[sim, 'Mantel', ] <- results14[[sim]]$bcCICorr
-    save(results14, est14.array, var14.array, ci14.array, file = '../results14.2.gzip')
+    save(results14, est14.2.array, var14.2.array, ci14.2.array, file = '../results14.2.gzip')
   }
 }
-
-save(results14, est14.2.array, var14.2.array, ci14.2.array, file = '../results14.2.gzip')
 
 summary(var14.2.array)
 vars14.2
@@ -1719,7 +1717,7 @@ g.est <- ggplot(est14.2.df, aes(Estimate)) + geom_histogram(bins = 15) +
   facet_grid(Parameter ~ Quantity, scales = 'free_x') +
   geom_vline(aes(xintercept = Value), data = trues14.2.df) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
-png('sim.est.MC.rM5.png', width = 6, height = 4, units = 'in', res=600)
+png('sim.est.MC.rM6.png', width = 6, height = 4, units = 'in', res=600)
 g.est
 #dev.off()
 

@@ -125,7 +125,9 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
              originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
              verbose = 1,   # output options
              nSamples = nSamplesGLGPS,# This is set low for example
-             projection.dist.calc = raster::projection(OVENdata$targetSites))# This is set low for example)
+             projection.dist.calc = raster::projection(OVENdata$targetSites))
+
+str(GL_mc)
 
 # Estimate MC and rM, treat all data as is
 Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)

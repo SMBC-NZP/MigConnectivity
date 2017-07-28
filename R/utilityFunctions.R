@@ -44,6 +44,72 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   return((MC.in - MC)^2)
 }
 
+# Called by estMantel and estMCGlGps
+targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
+                         nSim = 1000, targetSites = NULL, targetAssignment = NULL,
+                      projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+  nAnimals <- length(targetPoints)
+
+  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+  targetDist1 <- matrix(NA, nAnimals, nAnimals)
+
+  targetDist1[lower.tri(targetDist1)] <- 1
+
+  distIndices <- which(!is.na(targetDist1), arr.ind = T)
+
+  # project target points to WGS #
+  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+
+  targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
+
+  targetDist1[lower.tri(targetDist1)] <- targetDist0
+
+  if (is.null(targetAssignment)) {
+    if (!is.null(targetSites))
+      targetAssignment <- sapply(point.sample, sp::over, y = targetSites)
+    else
+      targetAssignment <- rep(0, nAnimals)
+  }
+
+  target.sample <- rep(NA, nAnimals)
+  target.point.sample <- matrix(NA, nAnimals, 2)
+  target.sample[which(!isGL[animal.sample])] <- targetAssignment[animal.sample[which(!isGL[animal.sample])]]
+  target.point.sample[which(!isGL[animal.sample]), ] <- targetPoints[animal.sample[which(!isGL[animal.sample])],]@coords
+  toSample <- which(isGL[animal.sample])
+  if (is.null(targetSites) && any(isGL[animal.sample])) {
+    draws <- 1
+    geoBias2 <- array(rep(geoBias, length(toSample)), c(2, length(toSample)))
+    point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
+                                MASS::mvrnorm, n=1, Sigma=geoVCov),
+                          c(2, length(toSample))) - geoBias2
+    point.sample <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(projection.dist.calc))
+    target.point.sample[toSample, ]<- t(point.sample@coords)
+  }
+  else {
+    draws <- 0
+    while (length(toSample) > 0) {
+      draws <- draws + 1
+      geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
+      point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
+                                  MASS::mvrnorm, n=nSim, Sigma=geoVCov),
+                            c(nSim, 2, length(toSample))) - geoBias2
+      point.sample <- apply(point.sample, 3, sp::SpatialPoints,
+                            proj4string = sp::CRS(projection.dist.calc))
+      target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
+      good.sample <- apply(target.sample0, 2, function(x) which(!is.na(x))[1])
+      target.sample[toSample] <- apply(target.sample0, 2, function(x) x[!is.na(x)][1])
+      if (any(!is.na(good.sample)))
+        target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(function(x, y) y[x]@coords,
+                                                                        good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
+      toSample <- which(is.na(target.sample))
+    }
+  }
+  return(list(target.sample = target.sample, target.point.sample = target.point.sample,
+              draws = draws))
+}
+
+
 #' Distance matrix from position matrix
 #'
 #' @param pos Number of sites by 2 matrix with postions of each site.  If

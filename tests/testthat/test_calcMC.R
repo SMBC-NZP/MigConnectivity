@@ -21,30 +21,71 @@ test_that('psi examples generate right MC values', {
   nScenarios <- length(psiMats)
 
   # Relative abundances
-  breedingRelN <- vector("list", nScenarios)
+  breedingRelN <- breedingN <- vector("list", nScenarios)
   # Distances
   genericD <- matrix(c(0:3, 1, 0, 1, 2, 2, 1, 0, 1, 3:0), 4, 4)
   breedingD <- winteringD <- vector("list", nScenarios)
   for (i in 1:nScenarios) {
-    breedingRelN[[i]] <- rep(1/nBreeding[i], nBreeding[i])
+    breedingN[[i]] <- rep(10000, nBreeding[i])
+    breedingRelN[[i]] <- breedingN[[i]] / sum(breedingN[[i]])
     breedingD[[i]] <- genericD[1:nBreeding[i], 1:nBreeding[i]]
     winteringD[[i]] <- genericD[1:nWintering[i], 1:nWintering[i]]
   }
 
-  expect_equal(calcMC(breedingD[[1]], winteringD[[1]], psiMats[[1]],
-                      breedingRelN[[1]]), 0)
-  expect_equal(calcMC(breedingD[[2]], winteringD[[2]], psiMats[[2]],
-                      breedingRelN[[2]]), 0)
-  expect_equal(calcMC(breedingD[[3]], winteringD[[3]], psiMats[[3]],
-                      breedingRelN[[3]]), 1)
-  expect_equal(calcMC(breedingD[[4]], winteringD[[4]], psiMats[[4]],
-                      breedingRelN[[4]]), 0.6)
-  expect_equal(calcMC(breedingD[[5]], winteringD[[5]], psiMats[[5]],
-                      breedingRelN[[5]]), 0.196)
-  expect_equal(calcMC(breedingD[[6]], winteringD[[6]], psiMats[[6]],
-                      breedingRelN[[6]]), 0.504)
-  expect_equal(calcMC(breedingD[[7]], winteringD[[7]], psiMats[[7]],
-                      breedingRelN[[7]]), 0.164144856)
-  expect_equal(calcMC(breedingD[[8]], winteringD[[8]], psiMats[[8]],
-                      breedingRelN[[8]]), -6.656e-02)
+  expect_equal(calcMC(originDist = breedingD[[1]], targetDist = winteringD[[1]],
+                      originRelAbund = breedingRelN[[1]], psi = psiMats[[1]]),
+               0)
+  expect_equal(calcMC(originDist = breedingD[[2]], targetDist = winteringD[[2]],
+                      originRelAbund = breedingRelN[[2]], psi = psiMats[[2]]),
+               0)
+  expect_equal(calcMC(originDist = breedingD[[3]], targetDist = winteringD[[3]],
+                      originRelAbund = breedingRelN[[3]], psi = psiMats[[3]]),
+               1)
+  expect_equal(calcMC(originDist = breedingD[[4]], targetDist = winteringD[[4]],
+                      originRelAbund = breedingRelN[[4]], psi = psiMats[[4]]),
+               0.6)
+  expect_equal(calcMC(originDist = breedingD[[5]], targetDist = winteringD[[5]],
+                      originRelAbund = breedingRelN[[5]], psi = psiMats[[5]]),
+               0.196)
+  expect_equal(calcMC(originDist = breedingD[[6]], targetDist = winteringD[[6]],
+                      originRelAbund = breedingRelN[[6]], psi = psiMats[[6]]),
+               0.504)
+  expect_equal(calcMC(originDist = breedingD[[7]], targetDist = winteringD[[7]],
+                      originRelAbund = breedingRelN[[7]], psi = psiMats[[7]]),
+               0.164144856)
+  expect_equal(calcMC(originDist = breedingD[[8]], targetDist = winteringD[[8]],
+                      originRelAbund = breedingRelN[[8]], psi = psiMats[[8]]),
+               -6.656e-02)
+  expect_equal(calcMC(originDist = breedingD[[1]], targetDist = winteringD[[1]],
+                      originRelAbund = breedingRelN[[1]], psi = psiMats[[1]],
+                      sampleSize = sum(breedingN[[1]])),
+               -0.000041669)
+  expect_equal(calcMC(originDist = breedingD[[2]], targetDist = winteringD[[2]],
+                      originRelAbund = breedingRelN[[2]], psi = psiMats[[2]],
+                      sampleSize = sum(breedingN[[2]])),
+               -0.000039222)
+  expect_equal(calcMC(originDist = breedingD[[3]], targetDist = winteringD[[3]],
+                      originRelAbund = breedingRelN[[3]], psi = psiMats[[3]],
+                      sampleSize = sum(breedingN[[1]])),
+               1)
+  expect_equal(calcMC(originDist = breedingD[[4]], targetDist = winteringD[[4]],
+                      originRelAbund = breedingRelN[[4]], psi = psiMats[[4]],
+                      sampleSize = sum(breedingN[[1]])),
+               0.599983332)
+  expect_equal(calcMC(originDist = breedingD[[5]], targetDist = winteringD[[5]],
+                      originRelAbund = breedingRelN[[5]], psi = psiMats[[5]],
+                      sampleSize = sum(breedingN[[1]])),
+               0.195966498)
+  expect_equal(calcMC(originDist = breedingD[[6]], targetDist = winteringD[[6]],
+                      originRelAbund = breedingRelN[[6]], psi = psiMats[[6]],
+                      sampleSize = sum(breedingN[[1]])),
+               0.503979332)
+  expect_equal(calcMC(originDist = breedingD[[7]], targetDist = winteringD[[7]],
+                      originRelAbund = breedingRelN[[7]], psi = psiMats[[7]],
+                      sampleSize = sum(breedingN[[1]])),
+               0.164112566)
+  expect_equal(calcMC(originDist = breedingD[[8]], targetDist = winteringD[[8]],
+                      originRelAbund = breedingRelN[[8]], psi = psiMats[[8]],
+                      sampleSize = sum(breedingN[[1]])),
+               -0.066604443)
 })
