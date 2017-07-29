@@ -150,8 +150,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
   if(!is.null(originPoints))
-    if(is.na(originPoints@proj4string)) {
-      stop('Coordinate system definition needed for originSites')
+    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+      stop('Coordinate system definition needed for originSites & originPoints')
     }
   if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
     stop('Coordinate system definition needed for targetSites & targetPoints')
@@ -380,8 +380,27 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    FALSE.
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
-#' @param resampleProjection Projection when sampling from geolocator bias/error.
-#'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+#' @param resampleProjection Projection when sampling from geolocator bias/error. This projection needs units = m.
+#'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs".
+#'    The default setting preserves distances around latitude = 0 and longitude = 0. Below is a list of potentially useful projections
+#'    based on the location of \code{targetSites}.
+#'
+#'    NorthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    SouthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=-5 +lat_2=-42 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    Europe <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=43 +lat_2=62 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    AsiaNorth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=15 +lat_2=65 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    AsiaSouth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=7 +lat_2=-32 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    Africa <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=-23 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    Arctic <- "+proj=aeqd +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
+#'    Antarctic <- "+proj=aeqd +lat_0=-90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#'
 #'
 #' @return \code{estMC} returns a list with elements:
 #' \describe{
