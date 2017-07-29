@@ -1,12 +1,12 @@
 ---
-title: "'MigConnectivity' package"
+title: '''MigConnectivity'' package'
 author: "Jeff Hostetler, Mike Hallworth"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{MigConnectivity package}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_vignette: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package} %\VignetteEngine{knitr::rmarkdown} \usepackage[utf8]{inputenc}
 ---
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
