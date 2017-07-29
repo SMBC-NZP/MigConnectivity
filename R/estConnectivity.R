@@ -112,15 +112,15 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-                       projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                       resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")
   if (length(geoBias)!=2 && (any(isGL) || calcCorr))
-    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in projection.dist.calc units, default meters)")
+    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && (any(isGL) || calcCorr))
-    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in projection.dist.calc units, default meters)")
+    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
     stop("Need to define either originAssignment or originSites and originPoints")
@@ -156,8 +156,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
     stop('Coordinate system definition needed for targetSites & targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(projection.dist.calc))
-  targetSites <- sp::spTransform(targetSites, sp::CRS(projection.dist.calc))
+  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
+  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
   if (is.null(targetNames))
     targetNames <- names(targetSites)
   if (is.null(originNames))
@@ -233,7 +233,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites, targetAssignment = targetAssignment,
-                          projection.dist.calc = projection.dist.calc)
+                          resampleProjection = resampleProjection)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
@@ -252,7 +252,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(projection.dist.calc))
+      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
       target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
@@ -361,10 +361,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
 #' @param geoBias For GL data, vector of length 2 indicating expected bias
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{projection.dist.calc} units (default meters).
+#'    \code{resampleProjection} units (default meters).
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{projection.dist.calc} units (default meters).
+#'    \code{resampleProjection} units (default meters).
 #' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
 #'  to 0 (default) or any greater integer to specify where to stop ignoring
 #'  samples ("burn-in").
@@ -380,7 +380,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    FALSE.
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
-#' @param projection.dist.calc Projection when sampling from geolocator bias/error.
+#' @param resampleProjection Projection when sampling from geolocator bias/error.
 #'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 #'
 #' @return \code{estMC} returns a list with elements:
@@ -447,7 +447,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -461,7 +461,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       nBoot = nSamples, verbose=verbose,
                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                       approxSigTest = approxSigTest, sigConst = sigConst,
-                      projection.dist.calc = projection.dist.calc))
+                      resampleProjection = resampleProjection))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
@@ -490,10 +490,10 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
 #' @param geoBias For GL data, vector of length 2 indicating expected bias
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{projection.dist.calc} units (default meters).
+#'    \code{resampleProjection} units (default meters).
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{projection.dist.calc} units (default meters).
+#'    \code{resampleProjection} units (default meters).
 #' @param targetSites A \code{SpatialPolygons} or \code{SpatialPolygonsDataFrame}
 #'    object indicating valid target location(s).  Not needed unless you want
 #'    to mask out certain areas (e.g. water).
@@ -505,7 +505,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    a line every 100 bootstraps.  2 prints a line every bootstrap.
 #'    3 also prints the number of draws (for tuning nSim for GL data only).
 #' @param alpha Level for confidence/credible intervals provided.
-#' @param projection.dist.calc Projection when sampling from geolocator bias/error.
+#' @param resampleProjection Projection when sampling from geolocator bias/error.
 #'    Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 #'
 #' @return \code{estMantel} returns a list with elements:
@@ -529,13 +529,13 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'                  targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
-#'                  projection.dist.calc = raster::projection(OVENdata$targetSites))
+#'                  resampleProjection = raster::projection(OVENdata$targetSites))
 #' str(rM1)
 #' @seealso \code{\link{estMC}}
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                       projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                       resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -553,14 +553,14 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   if(is.na(raster::projection(targetPoints))){
     stop('Coordinate system definition needed for targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(projection.dist.calc))
+  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
   if(!is.null(targetSites)){
     if(class(targetSites)=="SpatialPolygonsDataFrame"){
       targetSites <- sp::SpatialPolygons(targetSites@polygons)}
     if(is.na(raster::projection(targetSites))){
       stop('Coordinate system definition needed for targetSites')
     }
-    targetSites <- sp::spTransform(targetSites, sp::CRS(projection.dist.calc))
+    targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
   }
   WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
@@ -597,14 +597,14 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites,
-                          projection.dist.calc = projection.dist.calc)
+                          resampleProjection = resampleProjection)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
       cat(' ', tSamp$draws, 'draws\n')
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
-    target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(projection.dist.calc))
+    target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
     target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
     targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                                     target.point.sample2[distIndices[,'col']])
