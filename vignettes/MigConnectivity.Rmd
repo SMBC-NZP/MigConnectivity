@@ -311,7 +311,7 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator 
          originPoints = OVENdata$originPoints, # Capture Locations 
          targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
          originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
-         projection.dist.calc = raster::projection(OVENdata$targetPoints), #Lambert projection
+         resampleProjection = raster::projection(OVENdata$targetPoints), #Lambert projection
          verbose = 0,   # output options - see help ??estMC
          nSim = 10,     # This is set low for example
          nSamples = 10) # This is set low for example 
@@ -1533,7 +1533,7 @@ sqrt(diag(geoVCov))
 # Define projections
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
-projection.dist.calc <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+resampleProjection <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 
 # convert breeding and wintering locations to polygons using the helper function
 BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = Lambert)
@@ -1541,7 +1541,7 @@ breedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection
 
 WinteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = Lambert)
 winteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = WGS84)
-winteringPolys2 <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = projection.dist.calc)
+winteringPolys2 <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = resampleProjection)
 targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
 
 
@@ -1677,7 +1677,7 @@ for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
   for (i in 13) {
     points0 <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample, sp::CRS(Lambert))
-    points1 <- sp::spTransform(points0, sp::CRS(projection.dist.calc))
+    points1 <- sp::spTransform(points0, sp::CRS(resampleProjection))
     animalLoc14[[sim]] <- changeLocations(sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
     results14[[sim]] <- estMC(originDist = breedDist14[[i]], targetDist = nonbreedDist14[[i]],
