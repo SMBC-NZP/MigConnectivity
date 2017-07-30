@@ -82,11 +82,11 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
     simpleP <- bcP <- NULL
   else {
     if (pointMC > sigConst)
-      simpleP <- sum(sampleMC < sigConst) / nBoot
+      simpleP <- sum(sampleMC < sigConst) / nSamples
     else
-      simpleP <- sum(sampleMC > sigConst) / nBoot
+      simpleP <- sum(sampleMC > sigConst) / nSamples
     if (simpleP == 0)
-      simpleP <- 0.5 / nBoot
+      simpleP <- 0.5 / nSamples
     bcP <- pnorm(qnorm(simpleP) - 2 * z0)
     if (pointMC < sigConst)
       bcP <- 1 - bcP
@@ -200,7 +200,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
     # project target points to WGS #
-    targetPoints2 <- sp::spTransform(OVENdata$targetPoints, sp::CRS(WGS84))
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
 
     targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 

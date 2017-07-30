@@ -1503,9 +1503,9 @@ png('sim.est.MC.rM4.png', width = 6, height = 4, units = 'in', res=600)
 g.est
 #dev.off()
 
-qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
-                       Quantity = rep(rep(c('Mean', 'Variance'), c(4, 2)), 3, 16),
-                       Measure = rep(c('Bias', 'RMSE', "Coverage"), c(6, 6, 4)),
+qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
+                       Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
+                       Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
                        Value = c(colMeans(est14.array - MC14),
                                  colMeans(var14.array) - vars14,
                                  sqrt(colMeans((est14.array - MC14)^2)),
@@ -1549,33 +1549,6 @@ targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
 cbind(breedingPos14[[1]][,1:2],t(sapply(slot(breedingPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
 cbind(winteringPos14[[1]][,1:2],t(sapply(slot(winteringPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
   
-
-# simulateLocs <- function(n,n.origin = FALSE,originSites,targetSites,projection){
-#                 if(n.origin){
-#                 n.polys <- length(originSites)
-#                 originPoints <- vector('list',n.polys)
-#                 targetPoints <- vector('list',n.polys)
-#                 
-#                 for(i in 1:n.polys){
-#                   originPoints[[i]]<-sp::spsample(originSites[i,],n,type = "random")@coords
-#                   targetPoints[[i]]<-sp::spsample(targetSites,n,type = "random")@coords
-#                 }
-#                 
-#                 originPts <- do.call('rbind',originPoints)
-#                 targetPts <- do.call('rbind',targetPoints)
-#                 
-#                 return(list(originPoints = sp::SpatialPoints(originPts,proj4string = sp::CRS(projection)),
-#                             targetPoints = sp::SpatialPoints(targetPts,proj4string = sp::CRS(projection))))
-#                 
-#                 }
-#                else{
-#                 originPoints <- sp::spsample(originSites,n,type = "random")
-#                 targetPoints <- sp::spsample(targetSites,n,type = "random")
-#                 
-#                 return(list(originPoints = originPoints,
-#                             targetPoints = targetPoints))
-#                }
-# }
 
 
 # Simulate capture and non-breeding locations of 100 individuals #
@@ -1695,7 +1668,7 @@ for (sim in 1:nSims14.2) {
     var14.2.array[sim, 'Mantel'] <- results14[[sim]]$seCorr ^ 2
     ci14.2.array[sim, 'MC', ] <- results14[[sim]]$bcCI
     ci14.2.array[sim, 'Mantel', ] <- results14[[sim]]$bcCICorr
-    save(results14, est14.2.array, var14.2.array, ci14.2.array, file = '../results14.2.gzip')
+    save(results14, est14.2.array, var14.2.array, ci14.2.array, file = '../results14.2b.gzip')
   }
 }
 
@@ -1703,8 +1676,10 @@ summary(var14.2.array)
 vars14.2
 summary(est14.2.array)
 means14.2
-summary(ci14.2.array[, "MC", 'lower'] <= MC14 & ci14.2.array[, "MC", 'upper'] >= MC14)
-summary(ci14.2.array[, "Mantel", 'lower'] <= MC14 & ci14.2.array[, "Mantel", 'upper'] >= MC14)
+mean(ci14.2.array[, "MC", 'lower'] <= MC14 & ci14.2.array[, "MC", 'upper'] >= MC14)
+mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & ci14.2.array[, "Mantel", 'upper'] >= MC14)
+sqrt(vars14.2) / MC14
+summary(sqrt(var14.2.array)/est14.2.array)
 
 est14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14.2),
                      Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14.2),
@@ -1719,11 +1694,11 @@ g.est <- ggplot(est14.2.df, aes(Estimate)) + geom_histogram(bins = 15) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
 png('sim.est.MC.rM6.png', width = 6, height = 4, units = 'in', res=600)
 g.est
-#dev.off()
+dev.off()
 
-qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
-                       Quantity = rep(rep(c('Mean', 'Variance'), c(4, 2)), 3, 16),
-                       Measure = rep(c('Bias', 'RMSE', "Coverage"), c(6, 6, 4)),
+qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
+                       Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
+                       Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
                        Value = c(colMeans(est14.2.array - MC14),
                                  colMeans(var14.2.array) - vars14.2,
                                  sqrt(colMeans((est14.2.array - MC14)^2)),
@@ -1735,7 +1710,26 @@ qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
                                         ci14.2.array[, "Mantel", 'upper'] >= MC14)))
 format(qualities14.2, digits = 2, scientific = F)
 
+save.image('../estMCsims.14.2.RData')
 
+load('../estMCsims.c.RData')
+load('../estMCsims.14.2.RData')
+
+qualities.all <- rbind(data.frame(DataType = 'GPS', qualities14),
+                       data.frame(DataType = 'GL', qualities14.2))
+est14.all.df <- rbind(data.frame(DataType = 'GPS', est.df),
+                       data.frame(DataType = 'GL', est14.2.df))
+trues14.all.df <- data.frame(DataType = rep(c("GPS", "GL"), 2, each = 2),
+                             Parameter = rep(c("MC", 'rM'), 4),
+                       Quantity = rep(c('Mean', 'Variance'), each = 4),
+                       Value = c(rep(MC14, 4), vars14, vars14.2))
+g.est <- ggplot(est14.all.df, aes(Estimate)) + geom_histogram(bins = 12) +
+  facet_grid(DataType + Parameter ~ Quantity, scales = 'free_x') +
+  geom_vline(aes(xintercept = Value), data = trues14.all.df) +
+  theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
+png('../sim.est.MC.rM7.png', width = 6, height = 8, units = 'in', res=600)
+g.est
+dev.off()
 
 # nSimInds <- 10
 # 
