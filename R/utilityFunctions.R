@@ -47,7 +47,7 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
 # Called by estMantel and estMCGlGps
 targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                          nSim = 1000, targetSites = NULL, targetAssignment = NULL,
-                      projection.dist.calc = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                         resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
   nAnimals <- length(targetPoints)
 
   WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -83,7 +83,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
     point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
                                 MASS::mvrnorm, n=1, Sigma=geoVCov),
                           c(2, length(toSample))) - geoBias2
-    point.sample <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(projection.dist.calc))
+    point.sample <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(resampleProjection))
     target.point.sample[toSample, ]<- t(point.sample@coords)
   }
   else {
@@ -95,7 +95,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                                   MASS::mvrnorm, n=nSim, Sigma=geoVCov),
                             c(nSim, 2, length(toSample))) - geoBias2
       point.sample <- apply(point.sample, 3, sp::SpatialPoints,
-                            proj4string = sp::CRS(projection.dist.calc))
+                            proj4string = sp::CRS(resampleProjection))
       target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
       good.sample <- apply(target.sample0, 2, function(x) which(!is.na(x))[1])
       target.sample[toSample] <- apply(target.sample0, 2, function(x) x[!is.na(x)][1])
