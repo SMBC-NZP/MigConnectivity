@@ -125,7 +125,7 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
              originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
              verbose = 1,   # output options
              nSamples = nSamplesGLGPS,# This is set low for example
-             projection.dist.calc = raster::projection(OVENdata$targetSites))
+             resampleProjection = raster::projection(OVENdata$targetSites))
 
 str(GL_mc)
 
@@ -143,8 +143,8 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator 
                 verbose = 1,   # output options
                 calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS, # This is set low for example
-                approxSigTest = T,
-                projection.dist.calc = raster::projection(OVENdata$targetSites))
+                approxSigTest = TRUE,
+                resampleProjection = raster::projection(OVENdata$targetSites))
 
 # For treating all data as GPS,
 # Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #

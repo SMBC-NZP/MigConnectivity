@@ -59,33 +59,5 @@ test_that('psi examples generate right MC values', {
   expect_equal(calcMC(originDist = breedingD[[1]], targetDist = winteringD[[1]],
                       originRelAbund = breedingRelN[[1]], psi = psiMats[[1]],
                       sampleSize = sum(breedingN[[1]])),
-               -0.000041669)
-  expect_equal(calcMC(originDist = breedingD[[2]], targetDist = winteringD[[2]],
-                      originRelAbund = breedingRelN[[2]], psi = psiMats[[2]],
-                      sampleSize = sum(breedingN[[2]])),
-               -0.000039222)
-  expect_equal(calcMC(originDist = breedingD[[3]], targetDist = winteringD[[3]],
-                      originRelAbund = breedingRelN[[3]], psi = psiMats[[3]],
-                      sampleSize = sum(breedingN[[1]])),
-               1)
-  expect_equal(calcMC(originDist = breedingD[[4]], targetDist = winteringD[[4]],
-                      originRelAbund = breedingRelN[[4]], psi = psiMats[[4]],
-                      sampleSize = sum(breedingN[[1]])),
-               0.599983332)
-  expect_equal(calcMC(originDist = breedingD[[5]], targetDist = winteringD[[5]],
-                      originRelAbund = breedingRelN[[5]], psi = psiMats[[5]],
-                      sampleSize = sum(breedingN[[1]])),
-               0.195966498)
-  expect_equal(calcMC(originDist = breedingD[[6]], targetDist = winteringD[[6]],
-                      originRelAbund = breedingRelN[[6]], psi = psiMats[[6]],
-                      sampleSize = sum(breedingN[[1]])),
-               0.503979332)
-  expect_equal(calcMC(originDist = breedingD[[7]], targetDist = winteringD[[7]],
-                      originRelAbund = breedingRelN[[7]], psi = psiMats[[7]],
-                      sampleSize = sum(breedingN[[1]])),
-               0.164112566)
-  expect_equal(calcMC(originDist = breedingD[[8]], targetDist = winteringD[[8]],
-                      originRelAbund = breedingRelN[[8]], psi = psiMats[[8]],
-                      sampleSize = sum(breedingN[[1]])),
-               -0.066604443)
+               -0.00004166944463)
 })

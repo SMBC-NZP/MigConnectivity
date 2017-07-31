@@ -61,13 +61,14 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
   # project target points to WGS #
   targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
 
-  targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
+  targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
+                                                  targetPoints2[distIndices[,'col'],])
 
   targetDist1[lower.tri(targetDist1)] <- targetDist0
 
   if (is.null(targetAssignment)) {
     if (!is.null(targetSites))
-      targetAssignment <- sapply(point.sample, sp::over, y = targetSites)
+      targetAssignment <- sp::over(targetPoints, y = targetSites)
     else
       targetAssignment <- rep(0, nAnimals)
   }

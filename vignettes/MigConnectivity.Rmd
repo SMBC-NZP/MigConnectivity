@@ -472,6 +472,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 }
 ```   
 
+`simLocationError`: Simulates location error with defined bias and variance / covariance matrix
 
 ```{r}
 simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov, 
@@ -503,7 +504,8 @@ simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov,
 }
 ```
 
-Helper function to convert a string of XY coordinates of centroids to polygons #
+`toPoly`: Helper function to convert a string of XY coordinates of centroids to polygons
+
 ```{r}
 toPoly <- function(siteCentroids,
                    projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
@@ -1365,7 +1367,7 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 
 
 #### EXAMPLE 7
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from low sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from low sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  We changed the total sample size from 1000 to 100 animals.  
 
 ```{r, eval = FALSE}
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -1400,7 +1402,7 @@ sampleBreeding14.1 <- list(round(breedingRelN14[[1]]*nSample14.1),
 lapply(sampleBreeding14.1, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14 <- 5
+nSims14 <- 100
 nSimsLarge14 <- 2500
 nYears <- 1
 nMonths <- 1
