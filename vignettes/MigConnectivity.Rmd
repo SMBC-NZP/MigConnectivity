@@ -1367,7 +1367,7 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 
 
 #### EXAMPLE 7
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from low sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  We changed the total sample size from 1000 to 100 animals.  
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
 
 ```{r, eval = FALSE}
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -1483,13 +1483,21 @@ for (sim in 1:nSims14) {
   }
 }
 
+# Crude point estimates (bootstrap means are better)
+pointEsts14.1 <- t(sapply(results14, function(x) c(x$pointMC, x$pointCorr)))
+
+# Summarize results
 summary(var14.array)
 vars14
 summary(est14.array)
+summary(pointEsts14.1)
 means14
+colMeans(pointEsts14.1) - MC14
+sqrt(colMeans((pointEsts14.1 - MC14)^2))
 summary(ci14.array[, "MC", 'lower'] <= MC14 & ci14.array[, "MC", 'upper'] >= MC14)
 summary(ci14.array[, "Mantel", 'lower'] <= MC14 & ci14.array[, "Mantel", 'upper'] >= MC14)
 
+# Plot histograms of bootstrap estimation results
 est.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14),
                      Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14),
                      sim = rep(1:nSims14, 4), Estimate = c(est14.array, var14.array))
@@ -1503,8 +1511,9 @@ g.est <- ggplot(est.df, aes(Estimate)) + geom_histogram(bins = 15) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
 png('sim.est.MC.rM4.png', width = 6, height = 4, units = 'in', res=600)
 g.est
-#dev.off()
+dev.off()
 
+# Summary table of bootstrap estimation results
 qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
                        Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
                        Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
@@ -1519,12 +1528,12 @@ qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
                                         ci14.array[, "Mantel", 'upper'] >= MC14)))
 format(qualities14, digits = 2, scientific = F)
 
-#save.image('../estMCsims.c.RData')
+save.image('../estMCsims.c.RData')
 
 ```
  
 #### EXAMPLE 8
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators.  Again, we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators.  Again, we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run examples 4 and 7 code before running this section).  
 #### Simulation using error associated with light-level geolocators
 ```{r, eval = FALSE}
 # Assign geolocator bias / variance co-variance matrix
@@ -1537,22 +1546,17 @@ WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 resampleProjection <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
 
-# convert breeding and wintering locations to polygons using the helper function
-BreedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = Lambert)
-breedingPolys <- lapply(breedingPos14, toPoly, projection.in = WGS84, projection.out = WGS84)
+targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
 
+# convert wintering locations to polygons using the helper function
 WinteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = Lambert)
 winteringPolys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = WGS84)
 winteringPolys2 <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = resampleProjection)
-targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
-
 
 # Double check that the input center points and output polygons are ordered correctly 
 cbind(breedingPos14[[1]][,1:2],t(sapply(slot(breedingPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
 cbind(winteringPos14[[1]][,1:2],t(sapply(slot(winteringPolys[[1]], "polygons"), function(x){ slot(x,"labpt")})))
   
-
-
 # Simulate capture and non-breeding locations of 100 individuals #
 nSample14.2 <- 100 # Total number sampled per simulation
 
@@ -1597,7 +1601,7 @@ system.time(for (sim in 1:nSimsLarge14.2) {
   sim14.2[[sim]] <- lapply(sampleBreeding14.2, simMove, breedingDist = breedDist14[[1]],
                   winteringDist=nonbreedDist14[[1]], psi=psi, nYears=nYears,
                   nMonths=nMonths)
-  for (i in 13) {
+  for (i in 13) { # only run one scenario
     animalLoc14.0 <- sim14.2[[sim]][[scenarioToSampleMap14[i]]]$animalLoc
     animalLoc14[[i]] <- changeLocations(animalLoc14.0,
                                         breedingSiteTrans14[[i]], winteringSiteTrans14[[i]])
@@ -1605,8 +1609,6 @@ system.time(for (sim in 1:nSimsLarge14.2) {
     winteringTruePoints14 <- targLocs14.2[[i]][animalLoc14.0[,2,1,1], ]
     results14.2[[sim]] <- simLocationError(winteringTruePoints14, WinteringPolys[[i]], 
                                     geoBias, geoVCov, Lambert)
-#    summary(animalLoc14[[i]][,2,1,1]==results14.2[[sim]]$targetSample)
-#    results14.2$targetPointSample - winteringTruePoints14@coords
     animalLoc14.2 <- animalLoc14[[i]]
     animalLoc14.2[ , 2, 1, 1] <- results14.2[[sim]]$targetSample
     results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
@@ -1674,15 +1676,22 @@ for (sim in 1:nSims14.2) {
   }
 }
 
+pointEsts14.2 <- t(sapply(results14, function(x) c(x$pointMC, x$pointCorr)))
+
+# Summarize estimation results
 summary(var14.2.array)
 vars14.2
 summary(est14.2.array)
+summary(pointEsts14.2)
+colMeans(pointEsts14.2) - MC14
+sqrt(colMeans((pointEsts14.2 - MC14)^2))
 means14.2
 mean(ci14.2.array[, "MC", 'lower'] <= MC14 & ci14.2.array[, "MC", 'upper'] >= MC14)
 mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & ci14.2.array[, "Mantel", 'upper'] >= MC14)
 sqrt(vars14.2) / MC14
 summary(sqrt(var14.2.array)/est14.2.array)
 
+# Plot histograms of bootstrap estimation results
 est14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14.2),
                      Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14.2),
                      sim = rep(1:nSims14.2, 4), Estimate = c(est14.2.array, var14.2.array))
@@ -1698,6 +1707,7 @@ png('sim.est.MC.rM6.png', width = 6, height = 4, units = 'in', res=600)
 g.est
 dev.off()
 
+# Summary table of bootstrap estimation results
 qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
                        Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
                        Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
@@ -1714,11 +1724,15 @@ format(qualities14.2, digits = 2, scientific = F)
 
 save.image('../estMCsims.14.2.RData')
 
+
+# Make summary table and figures of results with (Example 8) and without 
+# (Example 7) location error
 load('../estMCsims.c.RData')
 load('../estMCsims.14.2.RData')
 
 qualities.all <- rbind(data.frame(DataType = 'GPS', qualities14),
                        data.frame(DataType = 'GL', qualities14.2))
+write.csv(qualities.all, file = '../qualities.all.csv', row.names = F)
 est14.all.df <- rbind(data.frame(DataType = 'GPS', est.df),
                        data.frame(DataType = 'GL', est14.2.df))
 trues14.all.df <- data.frame(DataType = rep(c("GPS", "GL"), 2, each = 2),
@@ -1733,39 +1747,6 @@ png('../sim.est.MC.rM7.png', width = 6, height = 8, units = 'in', res=600)
 g.est
 dev.off()
 
-# nSimInds <- 10
-# 
-# simLocs <- simulateLocs(n = nSimInds,n.origin = TRUE,originSites = BreedingPolys[[14]], targetSites = WinteringPolys[[14]],projection = Lambert)
-
-# simulate relative abundance within each originSite 
-# simRelAbun <- rep(1/length(BreedingPolys[[14]]),length(BreedingPolys[[14]]))
-# 
-# sim.isGL <- rep(TRUE,length(simLocs$originPoints))
-# 
-# plot(union(BreedingPolys[[14]],WinteringPolys[[14]]))
-# plot(simLocs$originPoints,pch = ".", col = "red", add = TRUE)
-# plot(simLocs$targetPoints,pch = ".", col = "blue", add = TRUE)
-# 
-# OVENdata$originDist
-# 
-# originDist <- as.matrix(dist(getSpPPolygonsLabptSlots(BreedingPolys[[14]])))
-# 
-# targetDist <- as.matrix(dist(getSpPPolygonsLabptSlots(WinteringPolys[[14]])))
-
-
-#simGL<-estMC(isGL=sim.isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
-#             geoBias = geoBias, # Light-level geolocator location bias
-#             geoVCov = geoVCov, # Light-level geolocator co-variance matrix
-#             targetDist = targetDist, # Non-breeding target distribution distance matrix
-#             originDist = originDist, # Breeding / origin distribution distance matrix
-#             targetSites = WinteringPolys[[14]], # Non-breeding target sites
-#             originSites = BreedingPolys[[14]], # Breeding origin sites 
-#             originPoints = simLocs$originPoints, # Capture Locations 
-#             targetPoints = simLocs$targetPoints, # Non-breeding Locations derived from devices
-#             originRelAbund = simRelAbun, # Relative abundance within OriginSites
-#             verbose = 0,   # output options - see help ??estMC
-#             nSim = 10,     # This is set low for example
-#             nSamples = 10) # This is set low for example 
 ```
  
 #### EXAMPLE 9
@@ -1857,24 +1838,24 @@ summary(probFarDisp)
 
 
 #plot results
-#\dontrun{
-#require(ggplot2)
-#require(ggthemes)
+\dontrun{
+require(ggplot2)
+require(ggthemes)
 
-#line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-#png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
-#ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
-#  geom_line()+
-#  scale_size_manual(values=line_set)+
-#  labs(size="Dispersal Rate")+
-#  scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
-#  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
-#  theme_bw()+
-#  theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
-#        panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
-#        legend.title=element_text(size=14), legend.text=element_text(size=14))
-#dev.off()
-#}
+line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
+png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
+ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
+ geom_line()+
+ scale_size_manual(values=line_set)+
+ labs(size="Dispersal Rate")+
+ scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+ scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
+ theme_bw()+
+ theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
+       panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
+       legend.title=element_text(size=14), legend.text=element_text(size=14))
+dev.off()
+}
 ```
 
 
