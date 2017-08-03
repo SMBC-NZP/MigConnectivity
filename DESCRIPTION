@@ -4,8 +4,8 @@ Title: Estimate Strength of Migratory Connectivity for Migratory Animals
 Version: 0.2.1
 Date: 2017-07-28
 Authors@R: c(
-    person("Jeff", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
-    person("Mike", "Hallworth", role = "aut"),
+    person("Jeffrey", "Hostetler", "A.", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
+    person("Michael", "Hallworth", "T.", role = "aut"),
     person("Clark", "Rushing", role = "ctb"),
     person("Emily", "Cohen", role = "ctb"))
 Description: Calculates and estimates the strength of migratory connectivity

@@ -1,10 +1,10 @@
 ---
 title: '''MigConnectivity'' package'
-author: "Jeff Hostetler, Mike Hallworth"
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette: default
-  rmarkdown::pdf_vignette: default
+  rmarkdown::pdf_document: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package} %\VignetteEngine{knitr::rmarkdown} \usepackage[utf8]{inputenc}
 ---
@@ -66,9 +66,178 @@ library(MigConnectivity)
 
 `calcMC`  Calculate strength of migratory connectivity (MC)  
 `estMC` Estimate the strength of migratory connectivity (MC) while incorporating sampling uncertainty   
-  
+`simMove` Simulates annual and seasonal movement of animals between regions  
 
 ## Examples 
+
+### Utility functions for use in vignette    
+
+`mlogitMat`: Calculates probability matrix based on exponential decline with distance
+
+```{r}
+mlogitMat <- function(slope, dist) {
+       preMat <- exp(-slope/mean(dist)*dist)
+       diag(preMat) <- 0
+       nr <- nrow(dist)
+       nc <- ncol(dist)
+       outMat <- matrix(0, nr, nc)
+  for (b in 1:nr) {
+      outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
+      outMat[b,b] <- 1 - sum(outMat[b, ])
+  }
+  return(outMat)
+}
+```
+
+`mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
+
+```{r}
+mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
+    nBreeding <- nrow(origin.dist)
+    nWintering <- nrow(target.dist)
+    psi <- mlogitMat(slope, origin.dist)
+  if (any(psi<0))
+    return(5*slope^2)
+  MC <- calcMC(origin.dist, target.dist, originRelAbund = origin.abund, psi, 
+               sampleSize = sample.size)
+  return((MC.in - MC)^2)
+}
+```
+
+`calcStrengthInd`:  rM function for individuals
+
+```{r}
+calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verbose = 0) {
+  nInd <- dim(locations)[1]
+  originDist2 <- targetDist2 <- matrix(0, nInd, nInd)
+  for (i in 1:(nInd-1)) {
+    for (j in (i+1):nInd) {
+      originDist2[i,j] <- originDist2[j,i] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
+      targetDist2[i,j] <- targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
+    }
+  }
+  return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, quiet = !verbose))
+} 
+```
+
+`calcPsiMC`: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data (does not incorporate sampling uncertainty)
+
+```{r}
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, 
+                      years = 1, months = 1, verbose=F) {
+  nOrigin <- nrow(originDist)
+  nTarget <- nrow(targetDist)
+  psiMat <- matrix(0, nOrigin, nTarget)
+  nInd <- dim(locations)[1]
+  nYears <- dim(locations)[3]
+  nMonths <- dim(locations)[4]
+  for (i in 1:nInd) {
+    if (i %% 1000 == 0 && verbose) #
+      cat("Individual", i, "of", nInd, "\n")
+    originMat <- locations[i, 1, years, months]
+    targetMat <- locations[i, 2, years, months]
+    bIndices <- which(!is.na(originMat))
+    wIndices <- which(!is.na(targetMat))
+    if (length(bIndices) && length(wIndices))
+      for (bi in bIndices)
+        for (wi in wIndices)
+          psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
+  }
+  psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
+  MC <- calcMC(originDist, targetDist, psi = psiMat,
+               originRelAbund = originRelAbund, sampleSize = nInd)
+  return(list(psi=psiMat, MC=MC))
+}
+```   
+
+`changeLocations`: transfers the simulated bird locations from the true populations to the researcher defined regions
+```{r}
+changeLocations <- function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
+  animalLoc[,1,,] <- breedingSiteTrans[animalLoc[,1,,]]
+  animalLoc[,2,,] <- winteringSiteTrans[animalLoc[,2,,]]
+  return(animalLoc)
+}
+```   
+
+
+`simLocationError`: Simulates location error with defined bias and variance / covariance matrix
+
+```{r}
+simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov, 
+                             projection, verbose = 0, nSim = 1000) {
+  nAnimals <- length(targetPoints)
+  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+  target.sample <- rep(NA, nAnimals)
+  target.point.sample <- matrix(NA, nAnimals, 2)
+  for(i in 1:nAnimals){
+    if (verbose > 0)
+      cat('Animal', i, 'of', nAnimals)
+    draws <- 0
+    while (is.na(target.sample[i])) {
+      draws <- draws + 1
+      # Sample random point for each bird from parametric distribution of NB error
+      point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
+        targetPoints@coords[i,1],
+        targetPoints@coords[i,2]), Sigma=geoVCov)+
+          geoBias2, sp::CRS(projection))
+      # filtered to stay in NB areas (land)
+      target.sample0 <- sp::over(point.sample, targetSites)
+      target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
+    }
+    target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+    if (verbose > 0)
+      cat(' ', draws, 'draws\n')
+  }
+  return(list(targetSample = target.sample, targetPointSample = target.point.sample))
+}
+```
+
+`toPoly`: Helper function to convert a string of XY coordinates of centroids to polygons
+
+```{r}
+toPoly <- function(siteCentroids,
+                   projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
+                   projection.out = NA,
+                   resolution = NA,
+                   order.by.input = TRUE)
+{
+# This automatically sets the resolution so that all polygons touch and cover the entire surface #
+# Alternatively the user can supply the resolution of the raster cells in the units of the
+# the input projection (projection.in) #
+  if(is.na(resolution)){
+     long <- unique(siteCentroids[,1])
+     lat <- unique(siteCentroids[,2])
+     long.res <- long[2]-long[1]
+     lat.res <- lat[2]-lat[1]
+     resolution <- c(long.res,long.res)
+  }
+  rast <- suppressWarnings(raster::rasterFromXYZ(cbind(cbind(siteCentroids),
+                                                      (1:nrow(siteCentroids))),
+                                                res = resolution,
+                                                crs = projection.in))
+  polys <- raster::rasterToPolygons(rast)
+  # Give unique names to polygons #
+  polys <- sp::SpatialPolygons(polys@polygons)
+  raster::crs(polys)<-projection.in
+  
+  # Reorders the polygons to match that of the input #
+  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
+  
+  if(order.by.input){
+  orders <- sp::over(centers,polys)
+  polys <- polys[orders] 
+  }
+  sp::spChFIDs(polys,as.character(1:length(polys)))
+  
+  if(!is.na(projection.out)){
+    polys <- sp::spTransform(polys,sp::CRS(projection.out))
+  }
+  
+  return(polys)
+}
+```   
+
+### EXAMPLE 1
 
 ### `calcMC` - Calculate strength of migratory connectivity 
 
@@ -79,7 +248,9 @@ To calculate the strength of MC, you will need:
 1. to define the number of breeding and non-breeding regions  
 1. the distance between the breeding regions and the distance between the non-breeding regions  
 1. the transition probabilities between each breeding and non-breeding region (`psi`)  
-1. the relative or the absolute abundance within each of the regions where individuals originate from (here the breeding regions). 
+1. the relative abundance within each of the regions where individuals originate from (here the breeding regions)
+1. (optional) the total sample size of animals used to estimate the transition probabilities.
+
 
 ### Calculate MC between breeding and non-breeding regions
 
@@ -146,7 +317,7 @@ relN
 n <- 500
 
 ```
-Calculate the strength of migratory connectivity using the simulated data above
+Calculate the strength of migratory connectivity using the inputs above
 ```{r}
 # Calculate the strength of migratory connectivity 
 MC <- calcMC(originDist = breedDist,
@@ -164,6 +335,8 @@ MC <- calcMC(originDist = breedDist,
 
 round(MC, 2)
 ```
+
+### EXAMPLE 2
 
 ### `estMC` - Estimate strength of migratory connectivity incorporating location and other sampling uncertainty
 
@@ -383,171 +556,13 @@ box(which="plot")
 str(M)
 ```
 
-### Function
+### EXAMPLE 3
 
-`simMove` Simulates position of animals by individual, season, year, and month  
+### `simMove` Simulates position of animals by individual, season, year, and month  
 
-### Advanced example - 
-Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. These simulations use utility functions included in the package. See below for details regarding the utility functions to help simulate data. 
+Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. See above for details regarding the utility functions. 
 
 Simulate data to demonstrate the use of `calcMC`   
-
-#### Utility Functions for use in simulations    
-
-`mlogitMat`: Calculates probability matrix based on exponential decline with distance
-
-```{r}
-mlogitMat <- function(slope, dist) {
-       preMat <- exp(-slope/mean(dist)*dist)
-       diag(preMat) <- 0
-       nr <- nrow(dist)
-       nc <- ncol(dist)
-       outMat <- matrix(0, nr, nc)
-  for (b in 1:nr) {
-      outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
-      outMat[b,b] <- 1 - sum(outMat[b, ])
-  }
-  return(outMat)
-}
-```
-
-`mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
-
-```{r}
-mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
-    nBreeding <- nrow(origin.dist)
-    nWintering <- nrow(target.dist)
-    psi <- mlogitMat(slope, origin.dist)
-  if (any(psi<0))
-    return(5*slope^2)
-  MC <- calcMC(origin.dist, target.dist, originRelAbund = origin.abund, psi, 
-               sampleSize = sample.size)
-  return((MC.in - MC)^2)
-}
-```
-
-`calcStrengthInd`:  rM function for individuals
-
-```{r}
-calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verbose = 0) {
-  nInd <- dim(locations)[1]
-  originDist2 <- targetDist2 <- matrix(0, nInd, nInd)
-  for (i in 1:(nInd-1)) {
-    for (j in (i+1):nInd) {
-      originDist2[i,j] <- originDist2[j,i] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
-      targetDist2[i,j] <- targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
-    }
-  }
-  return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, quiet = !verbose))
-} 
-```
-
-`calcPsiMC`: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data (does not incorporate sampling uncertainty)
-
-```{r}
-calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, 
-                      years = 1, months = 1, verbose=F) {
-  nOrigin <- nrow(originDist)
-  nTarget <- nrow(targetDist)
-  psiMat <- matrix(0, nOrigin, nTarget)
-  nInd <- dim(locations)[1]
-  nYears <- dim(locations)[3]
-  nMonths <- dim(locations)[4]
-  for (i in 1:nInd) {
-    if (i %% 1000 == 0 && verbose) #
-      cat("Individual", i, "of", nInd, "\n")
-    originMat <- locations[i, 1, years, months]
-    targetMat <- locations[i, 2, years, months]
-    bIndices <- which(!is.na(originMat))
-    wIndices <- which(!is.na(targetMat))
-    if (length(bIndices) && length(wIndices))
-      for (bi in bIndices)
-        for (wi in wIndices)
-          psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
-  }
-  psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
-  MC <- calcMC(originDist, targetDist, psi = psiMat,
-               originRelAbund = originRelAbund, sampleSize = nInd)
-  return(list(psi=psiMat, MC=MC))
-}
-```   
-
-`simLocationError`: Simulates location error with defined bias and variance / covariance matrix
-
-```{r}
-simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov, 
-                             projection, verbose = 0, nSim = 1000) {
-  nAnimals <- length(targetPoints)
-  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
-  target.sample <- rep(NA, nAnimals)
-  target.point.sample <- matrix(NA, nAnimals, 2)
-  for(i in 1:nAnimals){
-    if (verbose > 0)
-      cat('Animal', i, 'of', nAnimals)
-    draws <- 0
-    while (is.na(target.sample[i])) {
-      draws <- draws + 1
-      # Sample random point for each bird from parametric distribution of NB error
-      point.sample <- sp::SpatialPoints(MASS::mvrnorm(n=nSim, mu=cbind(
-        targetPoints@coords[i,1],
-        targetPoints@coords[i,2]), Sigma=geoVCov)+
-          geoBias2, sp::CRS(projection))
-      # filtered to stay in NB areas (land)
-      target.sample0 <- sp::over(point.sample, targetSites)
-      target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
-    }
-    target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
-    if (verbose > 0)
-      cat(' ', draws, 'draws\n')
-  }
-  return(list(targetSample = target.sample, targetPointSample = target.point.sample))
-}
-```
-
-`toPoly`: Helper function to convert a string of XY coordinates of centroids to polygons
-
-```{r}
-toPoly <- function(siteCentroids,
-                   projection.in = "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0",
-                   projection.out = NA,
-                   resolution = NA,
-                   order.by.input = TRUE)
-{
-# This automatically sets the resolution so that all polygons touch and cover the entire surface #
-# Alternatively the user can supply the resolution of the raster cells in the units of the
-# the input projection (projection.in) #
-  if(is.na(resolution)){
-     long <- unique(siteCentroids[,1])
-     lat <- unique(siteCentroids[,2])
-     long.res <- long[2]-long[1]
-     lat.res <- lat[2]-lat[1]
-     resolution <- c(long.res,long.res)
-  }
-  rast <- suppressWarnings(raster::rasterFromXYZ(cbind(cbind(siteCentroids),
-                                                      (1:nrow(siteCentroids))),
-                                                res = resolution,
-                                                crs = projection.in))
-  polys <- raster::rasterToPolygons(rast)
-  # Give unique names to polygons #
-  polys <- sp::SpatialPolygons(polys@polygons)
-  raster::crs(polys)<-projection.in
-  
-  # Reorders the polygons to match that of the input #
-  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
-  
-  if(order.by.input){
-  orders <- sp::over(centers,polys)
-  polys <- polys[orders] 
-  }
-  sp::spChFIDs(polys,as.character(1:length(polys)))
-  
-  if(!is.na(projection.out)){
-    polys <- sp::spTransform(polys,sp::CRS(projection.out))
-  }
-  
-  return(polys)
-}
-```   
 
 
 ```{r}
@@ -610,7 +625,7 @@ MC
 
 ### `simMove` Simulation of movement between breeding and non-breeding
 
-Recycle data generated within the calcMC function - see above 
+Recycle data generated for the calcMC function - see above 
 ```{r}
 sims <- simMove(breedingAbund = breedingN, # Breeding relative abundance
                breedingDist = breedDist,  # Breeding distance
@@ -632,7 +647,8 @@ str(sims)
 
 ## Additional Examples / Scenarios 
 
-### Calculate migratory connectivity for a range of input values 
+### EXAMPLE 4
+Calculate migratory connectivity for a range of input values 
 
 Cohen et al. (*in revision*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
   
@@ -642,35 +658,42 @@ Cohen et al. (*in revision*) used simulation to assess the influence of the thre
 
 Input value simulations included transition probabilities from four breeding to four non-breeding regions and relative abundance measured among breeding regions.
 
-Below are eight transition probability scenarios.
-#Eight transition probability scenarios
+There were eight transition probability scenarios:
 
-#### Twelve spatial arrangements that result in different distances between regions
-#### Distance scenarios  
+1. Full Mix 
+1. Avoid One Site 
+1. Full Connectivity 
+1. Half Mix 
+1. Low 
+1. Medium 
+1. One Site Preference 
+1. Negative 
 
-  A) Base distances, linear/ linear    1  
-  B) Distance between breeding sites 2 and 3 doubled  
-  C) Distance between breeding sites 2 and 3 halved  
-  D) Distance between breeding sites 3 and 4 doubled  
-  E) Distance between breeding sites 3 and 4 halved  
-  F) Breeding sites on square grid/ winter linear   6  
-  G) Distance between wintering sites 2 and 3 doubled  
-  H) Distance between wintering sites 2 and 3 halved  
-  I) Distance between wintering sites 3 and 4 doubled  
-  J) Distance between wintering sites 3 and 4 halved  
-  K) Breeding linear, Wintering sites on square grid  
-  L) Wintering and breeding on square grid  12
 
-#### Five relative breeding abundance scenarios
-####  Changes to relative breeding abundance:  
+There were twelve spatial arrangement / distance scenarios:
 
-1. Base  
+1. Base distances, linear/ linear
+1. Distance between breeding sites 2 and 3 doubled  
+1. Distance between breeding sites 2 and 3 halved  
+1. Distance between breeding sites 3 and 4 doubled  
+1. Distance between breeding sites 3 and 4 halved  
+1. Breeding sites on square grid/ winter linear
+1. Distance between wintering sites 2 and 3 doubled  
+1. Distance between wintering sites 2 and 3 halved  
+1. Distance between wintering sites 3 and 4 doubled  
+1. Distance between wintering sites 3 and 4 halved  
+1. Breeding linear, Wintering sites on square grid  
+1. Wintering and breeding on square grid
+
+There were five relative breeding abundance scenarios:
+
+1. Base, all equal  
 1. Abundance at site B doubled  
 1. Abundance at site B halved  
 1. Abundance at site D doubled  
 1. Abundance at site D halved  
 
-For all eight transition probability matrices and three distance scenarios
+First we calculate MC for the eight transition probability scenarios (with base spatial arrangement and relative abundance):
 ```{r}
 nScenarios1 <- length(samplePsis) # samplePsis - comes with MigConnectivity pacakge
 
@@ -692,7 +715,7 @@ names(MC1) <- names(samplePsis)
 round(MC1, 6)
 ```
 
-Add the scenarios for the spatial arrangements that result in different distances between regions
+Add the scenarios for the spatial arrangements that result in different distances between regions:
 
 ```{r}
 nScenarios2 <- length(sampleOriginPos)
@@ -716,7 +739,7 @@ for (i in 1:nScenarios1) {
 t(round(MC2, 4))
 ```
 
-Another way of comparing results
+Another way of comparing results:
 ```{r}
 
 MC.diff2 <- apply(MC2, 2, "-", MC2[ , 1])
@@ -726,7 +749,7 @@ t(round(MC.diff2, 4))
 
 ### Add the relative abundance breeding scenarios
 
-#### Calculate MC for breeding linear / winter linear arrangment 
+Calculate MC across abundance and transition probability scenarios for breeding linear / winter linear arrangment: 
 ```{r}
 nScenarios3 <- length(sampleOriginRelN)
 
@@ -749,7 +772,7 @@ MC3[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC3, 4)) # linear arrangement
 ```
 
-#### Calculate MC for breeding grid/ winter grid arrangement
+Calculate MC across abundance and transition probability scenarios for breeding grid/ winter grid arrangement:
 ```{r}
 MC4 <- matrix(NA, nScenarios1, nScenarios3)
 
@@ -770,7 +793,7 @@ MC4[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC4, 4)) # grid arrangement
 ```
 
-#### Calculate MC for breeding grid, winter linear arrangement
+Calculate MC across abundance and transition probability scenarios for for breeding grid, winter linear arrangement
 ```{r}
 MC5 <- matrix(NA, nScenarios1, nScenarios3)
 
@@ -791,38 +814,38 @@ MC5[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC5, 4)) # breeding grid, winter linear arrangement
 ```
 
-### EXAMPLES 4-11 (from sampling regime simulations in Cohen et al. in revision)
+###EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in revision)
 
 Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:  
 
-1. Incorrect grouping of seasonal ranges into regions   
-1. Sampling not proportional to abundance   
-1. Migratory connectivity strength varies across a range    
+1. Incorrect grouping of seasonal ranges into regions
+1. Sampling not proportional to abundance
+1. Migratory connectivity strength varies across a range
 1. Low sample size
 1. Uncertainty in assignments to regions from tracking data
-1. Uncertainty in estimates of abundance   
-1. Heterogeneity in detection among regions from mark re-encounter data   
+1. Uncertainty in estimates of abundance
+1. Heterogeneity in detection among regions from mark re-encounter data
 
 We also demonstrate how to propagate sampling uncertainty into measurement of MC using a combination of parametric and non-parametric bootstrapping. For most simulations, we compare MC to the results of a distance-based correlation coefficient (Mantel correlation; rM) that does not incorporate relative abundance but has been used as a measure of migratory connectivity.
 
 
 
-###EXAMPLE 4
+###EXAMPLE 5
 
 Sampling regime 1 of 3
 
 Researchers divide populations differently than reality
 Delineation of seasonal ranges into regions
 
-   I) Breeding range divided along equal longitudinal breaks into ten regions    
-   II) Non-breeding range divided along equal longitudinal breaks into ten regions    
-   III) Breeding and non-breeding ranges divided along equal longitudinal breaks into ten regions    
-   IV) Breeding range divided along the longitudinal and latitudinal midpoint into four regions    
-   V) Non-breeding range divided along the longitudinal and latitudinal midpoint into four regions    
-   VI) Breeding range divided along the longitudinal and latitudinal midpoint into four regions and    
-      non-breeding range divided along equal longitudinal breaks into ten regions    
-   VII) Breeding range divided along equal longitudinal breaks into ten regions and    
-      non-breeding range divided along the longitudinal and latitudinal midpoint into four regions    
+   I) Breeding range divided along equal longitudinal breaks into ten regions
+   II) Non-breeding range divided along equal longitudinal breaks into ten regions
+   III) Breeding and non-breeding ranges divided along equal longitudinal breaks into ten regions
+   IV) Breeding range divided along the longitudinal and latitudinal midpoint into four regions
+   V) Non-breeding range divided along the longitudinal and latitudinal midpoint into four regions
+   VI) Breeding range divided along the longitudinal and latitudinal midpoint into four regions and
+      non-breeding range divided along equal longitudinal breaks into ten regions
+   VII) Breeding range divided along equal longitudinal breaks into ten regions and
+      non-breeding range divided along the longitudinal and latitudinal midpoint into four regions
 
 ```{r, eval=FALSE}
 #Run functions and parameters above first
@@ -963,12 +986,6 @@ sampleBreeding14 <- list(round(breedingRelN14[[1]]*nSample14),
 # for the baseline use the simulation from above, sims
 animalLoc14base <- sims$animalLoc
 
-#transferring the simulated bird locations from the true populations to the researcher defined populations
-changeLocations <- function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
-  animalLoc[,1,,] <- breedingSiteTrans[animalLoc[,1,,]]
-  animalLoc[,2,,] <- winteringSiteTrans[animalLoc[,2,,]]
-  return(animalLoc)
-}
 
 # Number of scenarios and number of simulations to run
 nScenarios14 <- length(breedingSiteTrans14)
@@ -1021,7 +1038,7 @@ compare14 <- transform(compare14, MC.diff=MC - MC[1], Mantel.diff=Mantel - Mante
 compare14
 
 ```
-#### EXAMPLE 5
+###EXAMPLE 6
 
 Sampling regime 2 of 3
 
@@ -1030,16 +1047,11 @@ Different distributions of sampling animals across breeding range  PLUS
 Sample sizes don't always match relative abundances PLUS  
 Compare our approach and simple Mantel approach   
 
-1.  Base (10 years, uneven abundances but matches sampling)   
-
-1.  Breeding pops divided into 4 squares, sample across breeding range   
-
-1.  Breeding pops divided into 4 squares, sample at centroid of each square   
-
-1.  Sampling high in low abundance populations plus base   
-
-1.  Scenarios 2 plus 4   
-
+1.  Base (10 years, uneven abundances but matches sampling)
+1.  Breeding pops divided into 4 squares, sample across breeding range 
+1.  Breeding pops divided into 4 squares, sample at centroid of each square
+1.  Sampling high in low abundance populations plus base
+1.  Scenarios 2 plus 4
 1.  Scenarios 3 plus 4  
 
 ```{r eval = FALSE}
@@ -1194,7 +1206,7 @@ compare15a <- as.matrix(compare15[1 + 1:nScenarios15,
 rownames(compare15a) <- compare15$Scenario[1 + 1:nScenarios15]
 ```
 
-#### EXAMPLE 6
+###EXAMPLE 7
 Sampling regime 3 of 3
 Researchers divide populations differently than reality (simulations) PLUS
 Different distributions of sampled animals across breeding range PLUS
@@ -1202,18 +1214,11 @@ Sample sizes don't always match relative abundances PLUS
 Compare our approach and simple Mantel approach PLUS
 MC not same across subsections of range   
 
-1.  Base (uneven MC (0.15 for NW breeding, 0.3 for SW, 0.45 for NE, and 0.6  
-    for SE), uneven abundances (lowest in NW, highest in SE), sampling  
-   proportional to abundance   
-
-1.  Breeding pops divided into 4 squares, sample across breeding range   
-
-1.  Breeding pops divided into 4 squares, sample at centroid of each square   
-
-1.  Sampling high in low abundance populations   
-
-1.  Scenarios 2 plus 4   
-
+1.  Base (uneven MC (0.15 for NW breeding, 0.3 for SW, 0.45 for NE, and 0.6 for SE), uneven abundances (lowest in NW, highest in SE), sampling proportional to abundance
+1.  Breeding pops divided into 4 squares, sample across breeding range
+1.  Breeding pops divided into 4 squares, sample at centroid of each square
+1.  Sampling high in low abundance populations
+1.  Scenarios 2 plus 4
 1.  Scenarios 3 plus 4  
 
 ```{r eval = FALSE}
@@ -1366,8 +1371,8 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 ```
 
 
-#### EXAMPLE 7
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run example 4 code before running this section).  We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
+###EXAMPLE 8
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 5 above ("CentroidSampleBreeding4"; make sure you run example 5 code before running this section).  We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
 
 ```{r, eval = FALSE}
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -1532,10 +1537,10 @@ save.image('../estMCsims.c.RData')
 
 ```
  
-#### EXAMPLE 8
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators.  Again, we simulated data using the 13th scenario from example 4 above ("CentroidSampleBreeding4"; make sure you run examples 4 and 7 code before running this section).  
-#### Simulation using error associated with light-level geolocators
+###EXAMPLE 9
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators.  Again, we simulated data using the 13th scenario from example 5 above ("CentroidSampleBreeding4"; make sure you run examples 5 and 8 code before running this section).  
 ```{r, eval = FALSE}
+#### Simulation using error associated with light-level geolocators
 # Assign geolocator bias / variance co-variance matrix
 geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
@@ -1725,8 +1730,8 @@ format(qualities14.2, digits = 2, scientific = F)
 save.image('../estMCsims.14.2.RData')
 
 
-# Make summary table and figures of results with (Example 8) and without 
-# (Example 7) location error
+# Make summary table and figures of results with (Example 9) and without 
+# (Example 8) location error
 load('../estMCsims.c.RData')
 load('../estMCsims.14.2.RData')
 
@@ -1749,17 +1754,18 @@ dev.off()
 
 ```
  
-#### EXAMPLE 9
+###EXAMPLE 10
 `estMC` Estimate strength of migratory connectivity incorporating uncertainty in estimates of breeding abundance (see estMC help file)
  
-#### EXAMPLE 10
+###EXAMPLE 11
 `estMC` Estimate strength of migratory connectivity incorporating detection heterogeneity (see estMC help file)
 
-#### EXAMPLE 11
-`estMC` Estimate strength of migratory connectivity incorporating location uncertainty (***Examples*** see above)
-Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.
+###EXAMPLE 12
+`estMC` Estimate strength of migratory connectivity incorporating location uncertainty 
 
-#### EXAMPLE 12 (from process error simulation in Cohen et al. in revision)
+Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.  See Example 2 above and estMC help file.
+
+###EXAMPLE 13 (from process error simulation in Cohen et al. in revision)
 
 `simMove` for measuring the influence of dispersal rates on MC
 

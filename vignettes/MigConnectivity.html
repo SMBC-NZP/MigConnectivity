@@ -8,9 +8,9 @@
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 
-<meta name="author" content="Jeff Hostetler, Mike Hallworth" />
+<meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2017-08-02" />
+<meta name="date" content="2017-08-03" />
 
 <title>MigConnectivity package</title>
 
@@ -53,8 +53,8 @@ code > span.er { color: #ff0000; font-weight: bold; }
 
 <div id="header">
 <h1 class="title">‘MigConnectivity’ package</h1>
-<h4 class="author"><em>Jeff Hostetler, Mike Hallworth</em></h4>
-<h4 class="date"><em>2017-08-02</em></h4>
+<h4 class="author"><em>Jeffrey A. Hostetler, Michael T. Hallworth</em></h4>
+<h4 class="date"><em>2017-08-03</em></h4>
 </div>
 
 
@@ -91,11 +91,154 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP
 </div>
 <div id="functions" class="section level3">
 <h3>Functions</h3>
-<p><code>calcMC</code> Calculate strength of migratory connectivity (MC)<br /><code>estMC</code> Estimate the strength of migratory connectivity (MC) while incorporating sampling uncertainty</p>
+<p><code>calcMC</code> Calculate strength of migratory connectivity (MC)<br /><code>estMC</code> Estimate the strength of migratory connectivity (MC) while incorporating sampling uncertainty<br /><code>simMove</code> Simulates annual and seasonal movement of animals between regions</p>
 </div>
 </div>
 <div id="examples" class="section level2">
 <h2>Examples</h2>
+<div id="utility-functions-for-use-in-vignette" class="section level3">
+<h3>Utility functions for use in vignette</h3>
+<p><code>mlogitMat</code>: Calculates probability matrix based on exponential decline with distance</p>
+<pre class="sourceCode r"><code class="sourceCode r">mlogitMat &lt;-<span class="st"> </span>function(slope, dist) {
+       preMat &lt;-<span class="st"> </span><span class="kw">exp</span>(-slope/<span class="kw">mean</span>(dist)*dist)
+       <span class="kw">diag</span>(preMat) &lt;-<span class="st"> </span><span class="dv">0</span>
+       nr &lt;-<span class="st"> </span><span class="kw">nrow</span>(dist)
+       nc &lt;-<span class="st"> </span><span class="kw">ncol</span>(dist)
+       outMat &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nr, nc)
+  for (b in <span class="dv">1</span>:nr) {
+      outMat[b,] &lt;-<span class="st"> </span>preMat[b,]/(<span class="dv">1</span>+<span class="kw">sum</span>(preMat[b, ]))
+      outMat[b,b] &lt;-<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sum</span>(outMat[b, ])
+  }
+  <span class="kw">return</span>(outMat)
+}</code></pre>
+<p><code>mlogitMC</code>: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength. Uses same argument (origin.abund) for relative or absolute abundance.</p>
+<pre class="sourceCode r"><code class="sourceCode r">mlogitMC &lt;-<span class="st"> </span>function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
+    nBreeding &lt;-<span class="st"> </span><span class="kw">nrow</span>(origin.dist)
+    nWintering &lt;-<span class="st"> </span><span class="kw">nrow</span>(target.dist)
+    psi &lt;-<span class="st"> </span><span class="kw">mlogitMat</span>(slope, origin.dist)
+  if (<span class="kw">any</span>(psi&lt;<span class="dv">0</span>))
+    <span class="kw">return</span>(<span class="dv">5</span>*slope^<span class="dv">2</span>)
+  MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(origin.dist, target.dist, <span class="dt">originRelAbund =</span> origin.abund, psi, 
+               <span class="dt">sampleSize =</span> sample.size)
+  <span class="kw">return</span>((MC.in -<span class="st"> </span>MC)^<span class="dv">2</span>)
+}</code></pre>
+<p><code>calcStrengthInd</code>: rM function for individuals</p>
+<pre class="sourceCode r"><code class="sourceCode r">calcStrengthInd &lt;-<span class="st"> </span>function(originDist, targetDist, locations, <span class="dt">resamp=</span><span class="dv">1000</span>, <span class="dt">verbose =</span> <span class="dv">0</span>) {
+  nInd &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">1</span>]
+  originDist2 &lt;-<span class="st"> </span>targetDist2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nInd, nInd)
+  for (i in <span class="dv">1</span>:(nInd<span class="dv">-1</span>)) {
+    for (j in (i<span class="dv">+1</span>):nInd) {
+      originDist2[i,j] &lt;-<span class="st"> </span>originDist2[j,i] &lt;-<span class="st"> </span>originDist[locations[i,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+      targetDist2[i,j] &lt;-<span class="st"> </span>targetDist2[j,i] &lt;-<span class="st"> </span>targetDist[locations[i,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+    }
+  }
+  <span class="kw">return</span>(ncf::<span class="kw">mantel.test</span>(originDist2, targetDist2, <span class="dt">resamp=</span>resamp, <span class="dt">quiet =</span> !verbose))
+} </code></pre>
+<p><code>calcPsiMC</code>: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data (does not incorporate sampling uncertainty)</p>
+<pre class="sourceCode r"><code class="sourceCode r">calcPsiMC &lt;-<span class="st"> </span>function(originDist, targetDist, originRelAbund, locations, 
+                      <span class="dt">years =</span> <span class="dv">1</span>, <span class="dt">months =</span> <span class="dv">1</span>, <span class="dt">verbose=</span>F) {
+  nOrigin &lt;-<span class="st"> </span><span class="kw">nrow</span>(originDist)
+  nTarget &lt;-<span class="st"> </span><span class="kw">nrow</span>(targetDist)
+  psiMat &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nOrigin, nTarget)
+  nInd &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">1</span>]
+  nYears &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">3</span>]
+  nMonths &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">4</span>]
+  for (i in <span class="dv">1</span>:nInd) {
+    if (i %%<span class="st"> </span><span class="dv">1000</span> ==<span class="st"> </span><span class="dv">0</span> &amp;&amp;<span class="st"> </span>verbose) <span class="co">#</span>
+      <span class="kw">cat</span>(<span class="st">&quot;Individual&quot;</span>, i, <span class="st">&quot;of&quot;</span>, nInd, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
+    originMat &lt;-<span class="st"> </span>locations[i, <span class="dv">1</span>, years, months]
+    targetMat &lt;-<span class="st"> </span>locations[i, <span class="dv">2</span>, years, months]
+    bIndices &lt;-<span class="st"> </span><span class="kw">which</span>(!<span class="kw">is.na</span>(originMat))
+    wIndices &lt;-<span class="st"> </span><span class="kw">which</span>(!<span class="kw">is.na</span>(targetMat))
+    if (<span class="kw">length</span>(bIndices) &amp;&amp;<span class="st"> </span><span class="kw">length</span>(wIndices))
+      for (bi in bIndices)
+        for (wi in wIndices)
+          psiMat[originMat[bi], targetMat[wi]] &lt;-<span class="st"> </span>psiMat[originMat[bi], targetMat[wi]] +<span class="st"> </span><span class="dv">1</span>
+  }
+  psiMat &lt;-<span class="st"> </span><span class="kw">apply</span>(psiMat, <span class="dv">2</span>, <span class="st">&quot;/&quot;</span>, <span class="kw">rowSums</span>(psiMat))
+  MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(originDist, targetDist, <span class="dt">psi =</span> psiMat,
+               <span class="dt">originRelAbund =</span> originRelAbund, <span class="dt">sampleSize =</span> nInd)
+  <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">psi=</span>psiMat, <span class="dt">MC=</span>MC))
+}</code></pre>
+<p><code>changeLocations</code>: transfers the simulated bird locations from the true populations to the researcher defined regions</p>
+<pre class="sourceCode r"><code class="sourceCode r">changeLocations &lt;-<span class="st"> </span>function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
+  animalLoc[,<span class="dv">1</span>,,] &lt;-<span class="st"> </span>breedingSiteTrans[animalLoc[,<span class="dv">1</span>,,]]
+  animalLoc[,<span class="dv">2</span>,,] &lt;-<span class="st"> </span>winteringSiteTrans[animalLoc[,<span class="dv">2</span>,,]]
+  <span class="kw">return</span>(animalLoc)
+}</code></pre>
+<p><code>simLocationError</code>: Simulates location error with defined bias and variance / covariance matrix</p>
+<pre class="sourceCode r"><code class="sourceCode r">simLocationError &lt;-<span class="st"> </span>function(targetPoints, targetSites, geoBias, geoVCov, 
+                             projection, <span class="dt">verbose =</span> <span class="dv">0</span>, <span class="dt">nSim =</span> <span class="dv">1000</span>) {
+  nAnimals &lt;-<span class="st"> </span><span class="kw">length</span>(targetPoints)
+  geoBias2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rep</span>(geoBias, nSim), <span class="dt">nrow=</span>nSim, <span class="dt">byrow=</span>T)
+  target.sample &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, nAnimals)
+  target.point.sample &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nAnimals, <span class="dv">2</span>)
+  for(i in <span class="dv">1</span>:nAnimals){
+    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
+      <span class="kw">cat</span>(<span class="st">'Animal'</span>, i, <span class="st">'of'</span>, nAnimals)
+    draws &lt;-<span class="st"> </span><span class="dv">0</span>
+    while (<span class="kw">is.na</span>(target.sample[i])) {
+      draws &lt;-<span class="st"> </span>draws +<span class="st"> </span><span class="dv">1</span>
+      <span class="co"># Sample random point for each bird from parametric distribution of NB error</span>
+      point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(MASS::<span class="kw">mvrnorm</span>(<span class="dt">n=</span>nSim, <span class="dt">mu=</span><span class="kw">cbind</span>(
+        targetPoints@coords[i,<span class="dv">1</span>],
+        targetPoints@coords[i,<span class="dv">2</span>]), <span class="dt">Sigma=</span>geoVCov)+
+<span class="st">          </span>geoBias2, sp::<span class="kw">CRS</span>(projection))
+      <span class="co"># filtered to stay in NB areas (land)</span>
+      target.sample0 &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(point.sample, targetSites)
+      target.sample[i]&lt;-target.sample0[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]
+    }
+    target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]@coords
+    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
+      <span class="kw">cat</span>(<span class="st">' '</span>, draws, <span class="st">'draws</span><span class="ch">\n</span><span class="st">'</span>)
+  }
+  <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">targetSample =</span> target.sample, <span class="dt">targetPointSample =</span> target.point.sample))
+}</code></pre>
+<p><code>toPoly</code>: Helper function to convert a string of XY coordinates of centroids to polygons</p>
+<pre class="sourceCode r"><code class="sourceCode r">toPoly &lt;-<span class="st"> </span>function(siteCentroids,
+                   <span class="dt">projection.in =</span> <span class="st">&quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>,
+                   <span class="dt">projection.out =</span> <span class="ot">NA</span>,
+                   <span class="dt">resolution =</span> <span class="ot">NA</span>,
+                   <span class="dt">order.by.input =</span> <span class="ot">TRUE</span>)
+{
+<span class="co"># This automatically sets the resolution so that all polygons touch and cover the entire surface #</span>
+<span class="co"># Alternatively the user can supply the resolution of the raster cells in the units of the</span>
+<span class="co"># the input projection (projection.in) #</span>
+  if(<span class="kw">is.na</span>(resolution)){
+     long &lt;-<span class="st"> </span><span class="kw">unique</span>(siteCentroids[,<span class="dv">1</span>])
+     lat &lt;-<span class="st"> </span><span class="kw">unique</span>(siteCentroids[,<span class="dv">2</span>])
+     long.res &lt;-<span class="st"> </span>long[<span class="dv">2</span>]-long[<span class="dv">1</span>]
+     lat.res &lt;-<span class="st"> </span>lat[<span class="dv">2</span>]-lat[<span class="dv">1</span>]
+     resolution &lt;-<span class="st"> </span><span class="kw">c</span>(long.res,long.res)
+  }
+  rast &lt;-<span class="st"> </span><span class="kw">suppressWarnings</span>(raster::<span class="kw">rasterFromXYZ</span>(<span class="kw">cbind</span>(<span class="kw">cbind</span>(siteCentroids),
+                                                      (<span class="dv">1</span>:<span class="kw">nrow</span>(siteCentroids))),
+                                                <span class="dt">res =</span> resolution,
+                                                <span class="dt">crs =</span> projection.in))
+  polys &lt;-<span class="st"> </span>raster::<span class="kw">rasterToPolygons</span>(rast)
+  <span class="co"># Give unique names to polygons #</span>
+  polys &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPolygons</span>(polys@polygons)
+  raster::<span class="kw">crs</span>(polys)&lt;-projection.in
+  
+  <span class="co"># Reorders the polygons to match that of the input #</span>
+  centers &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(siteCentroids, sp::<span class="kw">CRS</span>(projection.in))
+  
+  if(order.by.input){
+  orders &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(centers,polys)
+  polys &lt;-<span class="st"> </span>polys[orders] 
+  }
+  sp::<span class="kw">spChFIDs</span>(polys,<span class="kw">as.character</span>(<span class="dv">1</span>:<span class="kw">length</span>(polys)))
+  
+  if(!<span class="kw">is.na</span>(projection.out)){
+    polys &lt;-<span class="st"> </span>sp::<span class="kw">spTransform</span>(polys,sp::<span class="kw">CRS</span>(projection.out))
+  }
+  
+  <span class="kw">return</span>(polys)
+}</code></pre>
+</div>
+<div id="example-1" class="section level3">
+<h3>EXAMPLE 1</h3>
+</div>
 <div id="calcmc---calculate-strength-of-migratory-connectivity" class="section level3">
 <h3><code>calcMC</code> - Calculate strength of migratory connectivity</h3>
 <p>This function calculates the strength of migratory connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to calculate the strength of MC between three breeding and non-breeding regions.</p>
@@ -104,7 +247,8 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP
 <li>to define the number of breeding and non-breeding regions<br /></li>
 <li>the distance between the breeding regions and the distance between the non-breeding regions<br /></li>
 <li>the transition probabilities between each breeding and non-breeding region (<code>psi</code>)<br /></li>
-<li>the relative or the absolute abundance within each of the regions where individuals originate from (here the breeding regions).</li>
+<li>the relative abundance within each of the regions where individuals originate from (here the breeding regions)</li>
+<li>(optional) the total sample size of animals used to estimate the transition probabilities.</li>
 </ol>
 </div>
 <div id="calculate-mc-between-breeding-and-non-breeding-regions" class="section level3">
@@ -138,7 +282,7 @@ relN
 <span class="co">#&gt; [1] 0.3333333 0.3333333 0.3333333</span>
 <span class="co"># Define total sample size for psi data for small sample corrected version of MC </span>
 n &lt;-<span class="st"> </span><span class="dv">500</span></code></pre>
-<p>Calculate the strength of migratory connectivity using the simulated data above</p>
+<p>Calculate the strength of migratory connectivity using the inputs above</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Calculate the strength of migratory connectivity </span>
 MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt">originDist =</span> breedDist,
              <span class="dt">targetDist =</span> nonBreedDist,
@@ -156,6 +300,9 @@ MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt"
 
 <span class="kw">round</span>(MC, <span class="dv">2</span>)
 <span class="co">#&gt; [1] 0.05</span></code></pre>
+</div>
+<div id="example-2" class="section level3">
+<h3>EXAMPLE 2</h3>
 </div>
 <div id="estmc---estimate-strength-of-migratory-connectivity-incorporating-location-and-other-sampling-uncertainty" class="section level3">
 <h3><code>estMC</code> - Estimate strength of migratory connectivity incorporating location and other sampling uncertainty</h3>
@@ -297,7 +444,7 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <p><img src="data:image/png;base64,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" /></p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">str</span>(M)
 <span class="co">#&gt; List of 20</span>
-<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.638 0.629 0.604 0.521 0.63 ...</span>
+<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.645 0.613 0.658 0.646 0.518 ...</span>
 <span class="co">#&gt;  $ samplePsi      : num [1:10, 1:2, 1:3] 0 0 0 0 0 0 0 0 0 0 ...</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 3</span>
 <span class="co">#&gt;   .. ..$ : chr [1:10] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...</span>
@@ -308,14 +455,14 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;NH&quot; &quot;MD&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:3] &quot;Florida&quot; &quot;Cuba&quot; &quot;Hisp&quot;</span>
 <span class="co">#&gt;  $ pointMC        : num 0.621</span>
-<span class="co">#&gt;  $ meanMC         : num 0.592</span>
-<span class="co">#&gt;  $ medianMC       : num 0.617</span>
-<span class="co">#&gt;  $ seMC           : num 0.0948</span>
-<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.408 0.761</span>
+<span class="co">#&gt;  $ meanMC         : num 0.625</span>
+<span class="co">#&gt;  $ medianMC       : num 0.634</span>
+<span class="co">#&gt;  $ seMC           : num 0.0834</span>
+<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.491 0.795</span>
 <span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
-<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.408 0.75</span>
-<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;0.6819024%&quot; &quot;92.69256%&quot;</span>
-<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.408 0.761</span>
+<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.491 0.795</span>
+<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
+<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.491 0.795</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 2</span>
 <span class="co">#&gt;   .. ..$ : chr &quot;var1&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;lower&quot; &quot;upper&quot;</span>
@@ -331,147 +478,13 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <span class="co">#&gt;  $ bcCICorr       : NULL</span>
 <span class="co">#&gt;  $ inputSampleSize: int 39</span></code></pre>
 </div>
-<div id="function" class="section level3">
-<h3>Function</h3>
-<p><code>simMove</code> Simulates position of animals by individual, season, year, and month</p>
+<div id="example-3" class="section level3">
+<h3>EXAMPLE 3</h3>
 </div>
-<div id="advanced-example--" class="section level3">
-<h3>Advanced example -</h3>
-<p>Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. These simulations use utility functions included in the package. See below for details regarding the utility functions to help simulate data.</p>
+<div id="simmove-simulates-position-of-animals-by-individual-season-year-and-month" class="section level3">
+<h3><code>simMove</code> Simulates position of animals by individual, season, year, and month</h3>
+<p>Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. See above for details regarding the utility functions.</p>
 <p>Simulate data to demonstrate the use of <code>calcMC</code></p>
-<div id="utility-functions-for-use-in-simulations" class="section level4">
-<h4>Utility Functions for use in simulations</h4>
-<p><code>mlogitMat</code>: Calculates probability matrix based on exponential decline with distance</p>
-<pre class="sourceCode r"><code class="sourceCode r">mlogitMat &lt;-<span class="st"> </span>function(slope, dist) {
-       preMat &lt;-<span class="st"> </span><span class="kw">exp</span>(-slope/<span class="kw">mean</span>(dist)*dist)
-       <span class="kw">diag</span>(preMat) &lt;-<span class="st"> </span><span class="dv">0</span>
-       nr &lt;-<span class="st"> </span><span class="kw">nrow</span>(dist)
-       nc &lt;-<span class="st"> </span><span class="kw">ncol</span>(dist)
-       outMat &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nr, nc)
-  for (b in <span class="dv">1</span>:nr) {
-      outMat[b,] &lt;-<span class="st"> </span>preMat[b,]/(<span class="dv">1</span>+<span class="kw">sum</span>(preMat[b, ]))
-      outMat[b,b] &lt;-<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sum</span>(outMat[b, ])
-  }
-  <span class="kw">return</span>(outMat)
-}</code></pre>
-<p><code>mlogitMC</code>: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength. Uses same argument (origin.abund) for relative or absolute abundance.</p>
-<pre class="sourceCode r"><code class="sourceCode r">mlogitMC &lt;-<span class="st"> </span>function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
-    nBreeding &lt;-<span class="st"> </span><span class="kw">nrow</span>(origin.dist)
-    nWintering &lt;-<span class="st"> </span><span class="kw">nrow</span>(target.dist)
-    psi &lt;-<span class="st"> </span><span class="kw">mlogitMat</span>(slope, origin.dist)
-  if (<span class="kw">any</span>(psi&lt;<span class="dv">0</span>))
-    <span class="kw">return</span>(<span class="dv">5</span>*slope^<span class="dv">2</span>)
-  MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(origin.dist, target.dist, <span class="dt">originRelAbund =</span> origin.abund, psi, 
-               <span class="dt">sampleSize =</span> sample.size)
-  <span class="kw">return</span>((MC.in -<span class="st"> </span>MC)^<span class="dv">2</span>)
-}</code></pre>
-<p><code>calcStrengthInd</code>: rM function for individuals</p>
-<pre class="sourceCode r"><code class="sourceCode r">calcStrengthInd &lt;-<span class="st"> </span>function(originDist, targetDist, locations, <span class="dt">resamp=</span><span class="dv">1000</span>, <span class="dt">verbose =</span> <span class="dv">0</span>) {
-  nInd &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">1</span>]
-  originDist2 &lt;-<span class="st"> </span>targetDist2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nInd, nInd)
-  for (i in <span class="dv">1</span>:(nInd<span class="dv">-1</span>)) {
-    for (j in (i<span class="dv">+1</span>):nInd) {
-      originDist2[i,j] &lt;-<span class="st"> </span>originDist2[j,i] &lt;-<span class="st"> </span>originDist[locations[i,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
-      targetDist2[i,j] &lt;-<span class="st"> </span>targetDist2[j,i] &lt;-<span class="st"> </span>targetDist[locations[i,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
-    }
-  }
-  <span class="kw">return</span>(ncf::<span class="kw">mantel.test</span>(originDist2, targetDist2, <span class="dt">resamp=</span>resamp, <span class="dt">quiet =</span> !verbose))
-} </code></pre>
-<p><code>calcPsiMC</code>: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data (does not incorporate sampling uncertainty)</p>
-<pre class="sourceCode r"><code class="sourceCode r">calcPsiMC &lt;-<span class="st"> </span>function(originDist, targetDist, originRelAbund, locations, 
-                      <span class="dt">years =</span> <span class="dv">1</span>, <span class="dt">months =</span> <span class="dv">1</span>, <span class="dt">verbose=</span>F) {
-  nOrigin &lt;-<span class="st"> </span><span class="kw">nrow</span>(originDist)
-  nTarget &lt;-<span class="st"> </span><span class="kw">nrow</span>(targetDist)
-  psiMat &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nOrigin, nTarget)
-  nInd &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">1</span>]
-  nYears &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">3</span>]
-  nMonths &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span class="dv">4</span>]
-  for (i in <span class="dv">1</span>:nInd) {
-    if (i %%<span class="st"> </span><span class="dv">1000</span> ==<span class="st"> </span><span class="dv">0</span> &amp;&amp;<span class="st"> </span>verbose) <span class="co">#</span>
-      <span class="kw">cat</span>(<span class="st">&quot;Individual&quot;</span>, i, <span class="st">&quot;of&quot;</span>, nInd, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
-    originMat &lt;-<span class="st"> </span>locations[i, <span class="dv">1</span>, years, months]
-    targetMat &lt;-<span class="st"> </span>locations[i, <span class="dv">2</span>, years, months]
-    bIndices &lt;-<span class="st"> </span><span class="kw">which</span>(!<span class="kw">is.na</span>(originMat))
-    wIndices &lt;-<span class="st"> </span><span class="kw">which</span>(!<span class="kw">is.na</span>(targetMat))
-    if (<span class="kw">length</span>(bIndices) &amp;&amp;<span class="st"> </span><span class="kw">length</span>(wIndices))
-      for (bi in bIndices)
-        for (wi in wIndices)
-          psiMat[originMat[bi], targetMat[wi]] &lt;-<span class="st"> </span>psiMat[originMat[bi], targetMat[wi]] +<span class="st"> </span><span class="dv">1</span>
-  }
-  psiMat &lt;-<span class="st"> </span><span class="kw">apply</span>(psiMat, <span class="dv">2</span>, <span class="st">&quot;/&quot;</span>, <span class="kw">rowSums</span>(psiMat))
-  MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(originDist, targetDist, <span class="dt">psi =</span> psiMat,
-               <span class="dt">originRelAbund =</span> originRelAbund, <span class="dt">sampleSize =</span> nInd)
-  <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">psi=</span>psiMat, <span class="dt">MC=</span>MC))
-}</code></pre>
-<p><code>simLocationError</code>: Simulates location error with defined bias and variance / covariance matrix</p>
-<pre class="sourceCode r"><code class="sourceCode r">simLocationError &lt;-<span class="st"> </span>function(targetPoints, targetSites, geoBias, geoVCov, 
-                             projection, <span class="dt">verbose =</span> <span class="dv">0</span>, <span class="dt">nSim =</span> <span class="dv">1000</span>) {
-  nAnimals &lt;-<span class="st"> </span><span class="kw">length</span>(targetPoints)
-  geoBias2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rep</span>(geoBias, nSim), <span class="dt">nrow=</span>nSim, <span class="dt">byrow=</span>T)
-  target.sample &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, nAnimals)
-  target.point.sample &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nAnimals, <span class="dv">2</span>)
-  for(i in <span class="dv">1</span>:nAnimals){
-    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
-      <span class="kw">cat</span>(<span class="st">'Animal'</span>, i, <span class="st">'of'</span>, nAnimals)
-    draws &lt;-<span class="st"> </span><span class="dv">0</span>
-    while (<span class="kw">is.na</span>(target.sample[i])) {
-      draws &lt;-<span class="st"> </span>draws +<span class="st"> </span><span class="dv">1</span>
-      <span class="co"># Sample random point for each bird from parametric distribution of NB error</span>
-      point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(MASS::<span class="kw">mvrnorm</span>(<span class="dt">n=</span>nSim, <span class="dt">mu=</span><span class="kw">cbind</span>(
-        targetPoints@coords[i,<span class="dv">1</span>],
-        targetPoints@coords[i,<span class="dv">2</span>]), <span class="dt">Sigma=</span>geoVCov)+
-<span class="st">          </span>geoBias2, sp::<span class="kw">CRS</span>(projection))
-      <span class="co"># filtered to stay in NB areas (land)</span>
-      target.sample0 &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(point.sample, targetSites)
-      target.sample[i]&lt;-target.sample0[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]
-    }
-    target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]@coords
-    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
-      <span class="kw">cat</span>(<span class="st">' '</span>, draws, <span class="st">'draws</span><span class="ch">\n</span><span class="st">'</span>)
-  }
-  <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">targetSample =</span> target.sample, <span class="dt">targetPointSample =</span> target.point.sample))
-}</code></pre>
-<p><code>toPoly</code>: Helper function to convert a string of XY coordinates of centroids to polygons</p>
-<pre class="sourceCode r"><code class="sourceCode r">toPoly &lt;-<span class="st"> </span>function(siteCentroids,
-                   <span class="dt">projection.in =</span> <span class="st">&quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>,
-                   <span class="dt">projection.out =</span> <span class="ot">NA</span>,
-                   <span class="dt">resolution =</span> <span class="ot">NA</span>,
-                   <span class="dt">order.by.input =</span> <span class="ot">TRUE</span>)
-{
-<span class="co"># This automatically sets the resolution so that all polygons touch and cover the entire surface #</span>
-<span class="co"># Alternatively the user can supply the resolution of the raster cells in the units of the</span>
-<span class="co"># the input projection (projection.in) #</span>
-  if(<span class="kw">is.na</span>(resolution)){
-     long &lt;-<span class="st"> </span><span class="kw">unique</span>(siteCentroids[,<span class="dv">1</span>])
-     lat &lt;-<span class="st"> </span><span class="kw">unique</span>(siteCentroids[,<span class="dv">2</span>])
-     long.res &lt;-<span class="st"> </span>long[<span class="dv">2</span>]-long[<span class="dv">1</span>]
-     lat.res &lt;-<span class="st"> </span>lat[<span class="dv">2</span>]-lat[<span class="dv">1</span>]
-     resolution &lt;-<span class="st"> </span><span class="kw">c</span>(long.res,long.res)
-  }
-  rast &lt;-<span class="st"> </span><span class="kw">suppressWarnings</span>(raster::<span class="kw">rasterFromXYZ</span>(<span class="kw">cbind</span>(<span class="kw">cbind</span>(siteCentroids),
-                                                      (<span class="dv">1</span>:<span class="kw">nrow</span>(siteCentroids))),
-                                                <span class="dt">res =</span> resolution,
-                                                <span class="dt">crs =</span> projection.in))
-  polys &lt;-<span class="st"> </span>raster::<span class="kw">rasterToPolygons</span>(rast)
-  <span class="co"># Give unique names to polygons #</span>
-  polys &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPolygons</span>(polys@polygons)
-  raster::<span class="kw">crs</span>(polys)&lt;-projection.in
-  
-  <span class="co"># Reorders the polygons to match that of the input #</span>
-  centers &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(siteCentroids, sp::<span class="kw">CRS</span>(projection.in))
-  
-  if(order.by.input){
-  orders &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(centers,polys)
-  polys &lt;-<span class="st"> </span>polys[orders] 
-  }
-  sp::<span class="kw">spChFIDs</span>(polys,<span class="kw">as.character</span>(<span class="dv">1</span>:<span class="kw">length</span>(polys)))
-  
-  if(!<span class="kw">is.na</span>(projection.out)){
-    polys &lt;-<span class="st"> </span>sp::<span class="kw">spTransform</span>(polys,sp::<span class="kw">CRS</span>(projection.out))
-  }
-  
-  <span class="kw">return</span>(polys)
-}</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
 <span class="co"># Parameters for simulations</span>
@@ -517,10 +530,9 @@ MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt"
 MC
 <span class="co">#&gt; [1] 0.25</span></code></pre>
 </div>
-</div>
 <div id="simmove-simulation-of-movement-between-breeding-and-non-breeding" class="section level3">
 <h3><code>simMove</code> Simulation of movement between breeding and non-breeding</h3>
-<p>Recycle data generated within the calcMC function - see above</p>
+<p>Recycle data generated for the calcMC function - see above</p>
 <pre class="sourceCode r"><code class="sourceCode r">sims &lt;-<span class="st"> </span><span class="kw">simMove</span>(<span class="dt">breedingAbund =</span> breedingN, <span class="co"># Breeding relative abundance</span>
                <span class="dt">breedingDist =</span> breedDist,  <span class="co"># Breeding distance</span>
                <span class="dt">winteringDist =</span> nonbreedDist, <span class="co"># Non-breeding distance</span>
@@ -548,8 +560,9 @@ MC
 </div>
 <div id="additional-examples-scenarios" class="section level2">
 <h2>Additional Examples / Scenarios</h2>
-<div id="calculate-migratory-connectivity-for-a-range-of-input-values" class="section level3">
-<h3>Calculate migratory connectivity for a range of input values</h3>
+<div id="example-4" class="section level3">
+<h3>EXAMPLE 4</h3>
+<p>Calculate migratory connectivity for a range of input values</p>
 <p>Cohen et al. (<em>in revision</em>) used simulation to assess the influence of the three data inputs needed to calculate MC, including:</p>
 <ol style="list-style-type: decimal">
 <li>matrix of transition probabilities from breeding regions to non-breeding regions<br /></li>
@@ -557,40 +570,41 @@ MC
 <li>relative abundance among breeding regions.</li>
 </ol>
 <p>Input value simulations included transition probabilities from four breeding to four non-breeding regions and relative abundance measured among breeding regions.</p>
-<p>Below are eight transition probability scenarios. #Eight transition probability scenarios</p>
-<div id="twelve-spatial-arrangements-that-result-in-different-distances-between-regions" class="section level4">
-<h4>Twelve spatial arrangements that result in different distances between regions</h4>
-</div>
-<div id="distance-scenarios" class="section level4">
-<h4>Distance scenarios</h4>
-<ol style="list-style-type: upper-alpha">
-<li>Base distances, linear/ linear 1<br /></li>
+<p>There were eight transition probability scenarios:</p>
+<ol style="list-style-type: decimal">
+<li>Full Mix</li>
+<li>Avoid One Site</li>
+<li>Full Connectivity</li>
+<li>Half Mix</li>
+<li>Low</li>
+<li>Medium</li>
+<li>One Site Preference</li>
+<li>Negative</li>
+</ol>
+<p>There were twelve spatial arrangement / distance scenarios:</p>
+<ol style="list-style-type: decimal">
+<li>Base distances, linear/ linear</li>
 <li>Distance between breeding sites 2 and 3 doubled<br /></li>
 <li>Distance between breeding sites 2 and 3 halved<br /></li>
 <li>Distance between breeding sites 3 and 4 doubled<br /></li>
 <li>Distance between breeding sites 3 and 4 halved<br /></li>
-<li>Breeding sites on square grid/ winter linear 6<br /></li>
+<li>Breeding sites on square grid/ winter linear</li>
 <li>Distance between wintering sites 2 and 3 doubled<br /></li>
 <li>Distance between wintering sites 2 and 3 halved<br /></li>
 <li>Distance between wintering sites 3 and 4 doubled<br /></li>
 <li>Distance between wintering sites 3 and 4 halved<br /></li>
 <li>Breeding linear, Wintering sites on square grid<br /></li>
-<li>Wintering and breeding on square grid 12</li>
+<li>Wintering and breeding on square grid</li>
 </ol>
-</div>
-<div id="five-relative-breeding-abundance-scenarios" class="section level4">
-<h4>Five relative breeding abundance scenarios</h4>
-</div>
-<div id="changes-to-relative-breeding-abundance" class="section level4">
-<h4>Changes to relative breeding abundance:</h4>
+<p>There were five relative breeding abundance scenarios:</p>
 <ol style="list-style-type: decimal">
-<li>Base<br /></li>
+<li>Base, all equal<br /></li>
 <li>Abundance at site B doubled<br /></li>
 <li>Abundance at site B halved<br /></li>
 <li>Abundance at site D doubled<br /></li>
 <li>Abundance at site D halved</li>
 </ol>
-<p>For all eight transition probability matrices and three distance scenarios</p>
+<p>First we calculate MC for the eight transition probability scenarios (with base spatial arrangement and relative abundance):</p>
 <pre class="sourceCode r"><code class="sourceCode r">nScenarios1 &lt;-<span class="st"> </span><span class="kw">length</span>(samplePsis) <span class="co"># samplePsis - comes with MigConnectivity pacakge</span>
 
 <span class="co"># Create vector of length nScenarios1</span>
@@ -615,7 +629,7 @@ for (i in <span class="dv">1</span>:nScenarios1) {
 <span class="co">#&gt;            0.600000            0.196000            0.504000 </span>
 <span class="co">#&gt; One Site Preference            Negative </span>
 <span class="co">#&gt;            0.164145           -0.066560</span></code></pre>
-<p>Add the scenarios for the spatial arrangements that result in different distances between regions</p>
+<p>Add the scenarios for the spatial arrangements that result in different distances between regions:</p>
 <pre class="sourceCode r"><code class="sourceCode r">nScenarios2 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginPos)
 
 MC2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios2)
@@ -661,7 +675,7 @@ for (i in <span class="dv">1</span>:nScenarios1) {
 <span class="co">#&gt; NB Dist 34/2 0.4856              0.1149  -0.0572</span>
 <span class="co">#&gt; NB Grid      0.3601              0.1263   0.0669</span>
 <span class="co">#&gt; B/NB Grid    0.4340              0.1603   0.0728</span></code></pre>
-<p>Another way of comparing results</p>
+<p>Another way of comparing results:</p>
 <pre class="sourceCode r"><code class="sourceCode r">
 MC.diff2 &lt;-<span class="st"> </span><span class="kw">apply</span>(MC2, <span class="dv">2</span>, <span class="st">&quot;-&quot;</span>, MC2[ , <span class="dv">1</span>])
 
@@ -693,11 +707,9 @@ MC.diff2 &lt;-<span class="st"> </span><span class="kw">apply</span>(MC2, <span 
 <span class="co">#&gt; NB Grid      -0.1439             -0.0378   0.1334</span>
 <span class="co">#&gt; B/NB Grid    -0.0700             -0.0038   0.1394</span></code></pre>
 </div>
-</div>
 <div id="add-the-relative-abundance-breeding-scenarios" class="section level3">
 <h3>Add the relative abundance breeding scenarios</h3>
-<div id="calculate-mc-for-breeding-linear-winter-linear-arrangment" class="section level4">
-<h4>Calculate MC for breeding linear / winter linear arrangment</h4>
+<p>Calculate MC across abundance and transition probability scenarios for breeding linear / winter linear arrangment:</p>
 <pre class="sourceCode r"><code class="sourceCode r">nScenarios3 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginRelN)
 
 MC3 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
@@ -729,9 +741,7 @@ MC3[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; B Half              0.1847  -0.0660</span>
 <span class="co">#&gt; D Doub              0.2992  -0.0219</span>
 <span class="co">#&gt; D Half              0.0886  -0.0399</span></code></pre>
-</div>
-<div id="calculate-mc-for-breeding-grid-winter-grid-arrangement" class="section level4">
-<h4>Calculate MC for breeding grid/ winter grid arrangement</h4>
+<p>Calculate MC across abundance and transition probability scenarios for breeding grid/ winter grid arrangement:</p>
 <pre class="sourceCode r"><code class="sourceCode r">MC4 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
 
 <span class="kw">rownames</span>(MC4) &lt;-<span class="st"> </span><span class="kw">names</span>(samplePsis)
@@ -761,9 +771,7 @@ MC4[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; B Half              0.1996   0.0778</span>
 <span class="co">#&gt; D Doub              0.3649   0.0822</span>
 <span class="co">#&gt; D Half              0.0519   0.0778</span></code></pre>
-</div>
-<div id="calculate-mc-for-breeding-grid-winter-linear-arrangement" class="section level4">
-<h4>Calculate MC for breeding grid, winter linear arrangement</h4>
+<p>Calculate MC across abundance and transition probability scenarios for for breeding grid, winter linear arrangement</p>
 <pre class="sourceCode r"><code class="sourceCode r">MC5 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
 
 <span class="kw">rownames</span>(MC5) &lt;-<span class="st"> </span><span class="kw">names</span>(samplePsis)
@@ -794,33 +802,32 @@ MC5[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; D Doub              0.3419   0.1334</span>
 <span class="co">#&gt; D Half              0.0737   0.0647</span></code></pre>
 </div>
-</div>
-<div id="examples-4-11-from-sampling-regime-simulations-in-cohen-et-al.-in-revision" class="section level3">
-<h3>EXAMPLES 4-11 (from sampling regime simulations in Cohen et al. in revision)</h3>
+<div id="examples-5-12-from-sampling-regime-simulations-in-cohen-et-al.-in-revision" class="section level3">
+<h3>EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in revision)</h3>
 <p>Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:</p>
 <ol style="list-style-type: decimal">
-<li>Incorrect grouping of seasonal ranges into regions<br /></li>
-<li>Sampling not proportional to abundance<br /></li>
-<li>Migratory connectivity strength varies across a range<br /></li>
+<li>Incorrect grouping of seasonal ranges into regions</li>
+<li>Sampling not proportional to abundance</li>
+<li>Migratory connectivity strength varies across a range</li>
 <li>Low sample size</li>
 <li>Uncertainty in assignments to regions from tracking data</li>
-<li>Uncertainty in estimates of abundance<br /></li>
+<li>Uncertainty in estimates of abundance</li>
 <li>Heterogeneity in detection among regions from mark re-encounter data</li>
 </ol>
 <p>We also demonstrate how to propagate sampling uncertainty into measurement of MC using a combination of parametric and non-parametric bootstrapping. For most simulations, we compare MC to the results of a distance-based correlation coefficient (Mantel correlation; rM) that does not incorporate relative abundance but has been used as a measure of migratory connectivity.</p>
 </div>
-<div id="example-4" class="section level3">
-<h3>EXAMPLE 4</h3>
+<div id="example-5" class="section level3">
+<h3>EXAMPLE 5</h3>
 <p>Sampling regime 1 of 3</p>
 <p>Researchers divide populations differently than reality Delineation of seasonal ranges into regions</p>
 <ol style="list-style-type: upper-roman">
-<li>Breeding range divided along equal longitudinal breaks into ten regions<br /></li>
-<li>Non-breeding range divided along equal longitudinal breaks into ten regions<br /></li>
-<li>Breeding and non-breeding ranges divided along equal longitudinal breaks into ten regions<br /></li>
-<li>Breeding range divided along the longitudinal and latitudinal midpoint into four regions<br /></li>
-<li>Non-breeding range divided along the longitudinal and latitudinal midpoint into four regions<br /></li>
-<li>Breeding range divided along the longitudinal and latitudinal midpoint into four regions and<br /> non-breeding range divided along equal longitudinal breaks into ten regions<br /></li>
-<li>Breeding range divided along equal longitudinal breaks into ten regions and<br /> non-breeding range divided along the longitudinal and latitudinal midpoint into four regions</li>
+<li>Breeding range divided along equal longitudinal breaks into ten regions</li>
+<li>Non-breeding range divided along equal longitudinal breaks into ten regions</li>
+<li>Breeding and non-breeding ranges divided along equal longitudinal breaks into ten regions</li>
+<li>Breeding range divided along the longitudinal and latitudinal midpoint into four regions</li>
+<li>Non-breeding range divided along the longitudinal and latitudinal midpoint into four regions</li>
+<li>Breeding range divided along the longitudinal and latitudinal midpoint into four regions and non-breeding range divided along equal longitudinal breaks into ten regions</li>
+<li>Breeding range divided along equal longitudinal breaks into ten regions and non-breeding range divided along the longitudinal and latitudinal midpoint into four regions</li>
 </ol>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Run functions and parameters above first</span>
 <span class="kw">set.seed</span>(<span class="dv">75</span>)
@@ -960,12 +967,6 @@ sampleBreeding14 &lt;-<span class="st"> </span><span class="kw">list</span>(<spa
 <span class="co"># for the baseline use the simulation from above, sims</span>
 animalLoc14base &lt;-<span class="st"> </span>sims$animalLoc
 
-<span class="co">#transferring the simulated bird locations from the true populations to the researcher defined populations</span>
-changeLocations &lt;-<span class="st"> </span>function(animalLoc, breedingSiteTrans, winteringSiteTrans) {
-  animalLoc[,<span class="dv">1</span>,,] &lt;-<span class="st"> </span>breedingSiteTrans[animalLoc[,<span class="dv">1</span>,,]]
-  animalLoc[,<span class="dv">2</span>,,] &lt;-<span class="st"> </span>winteringSiteTrans[animalLoc[,<span class="dv">2</span>,,]]
-  <span class="kw">return</span>(animalLoc)
-}
 
 <span class="co"># Number of scenarios and number of simulations to run</span>
 nScenarios14 &lt;-<span class="st"> </span><span class="kw">length</span>(breedingSiteTrans14)
@@ -1016,17 +1017,18 @@ compare14$Mantel[<span class="dv">1</span>:nScenarios14 +<span class="st"> </spa
 
 compare14 &lt;-<span class="st"> </span><span class="kw">transform</span>(compare14, <span class="dt">MC.diff=</span>MC -<span class="st"> </span>MC[<span class="dv">1</span>], <span class="dt">Mantel.diff=</span>Mantel -<span class="st"> </span>Mantel[<span class="dv">1</span>])
 compare14</code></pre>
-<div id="example-5" class="section level4">
-<h4>EXAMPLE 5</h4>
+</div>
+<div id="example-6" class="section level3">
+<h3>EXAMPLE 6</h3>
 <p>Sampling regime 2 of 3</p>
 <p>Researchers divide populations differently than reality PLUS<br />Different distributions of sampling animals across breeding range PLUS<br />Sample sizes don’t always match relative abundances PLUS<br />Compare our approach and simple Mantel approach</p>
 <ol style="list-style-type: decimal">
-<li><p>Base (10 years, uneven abundances but matches sampling)</p></li>
-<li><p>Breeding pops divided into 4 squares, sample across breeding range</p></li>
-<li><p>Breeding pops divided into 4 squares, sample at centroid of each square</p></li>
-<li><p>Sampling high in low abundance populations plus base</p></li>
-<li><p>Scenarios 2 plus 4</p></li>
-<li><p>Scenarios 3 plus 4</p></li>
+<li>Base (10 years, uneven abundances but matches sampling)</li>
+<li>Breeding pops divided into 4 squares, sample across breeding range</li>
+<li>Breeding pops divided into 4 squares, sample at centroid of each square</li>
+<li>Sampling high in low abundance populations plus base</li>
+<li>Scenarios 2 plus 4</li>
+<li>Scenarios 3 plus 4</li>
 </ol>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
@@ -1178,16 +1180,16 @@ compare15a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compa
 
 <span class="kw">rownames</span>(compare15a) &lt;-<span class="st"> </span>compare15$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios15]</code></pre>
 </div>
-<div id="example-6" class="section level4">
-<h4>EXAMPLE 6</h4>
+<div id="example-7" class="section level3">
+<h3>EXAMPLE 7</h3>
 <p>Sampling regime 3 of 3 Researchers divide populations differently than reality (simulations) PLUS Different distributions of sampled animals across breeding range PLUS Sample sizes don’t always match relative abundances PLUS Compare our approach and simple Mantel approach PLUS MC not same across subsections of range</p>
 <ol style="list-style-type: decimal">
-<li><p>Base (uneven MC (0.15 for NW breeding, 0.3 for SW, 0.45 for NE, and 0.6<br />for SE), uneven abundances (lowest in NW, highest in SE), sampling<br /> proportional to abundance</p></li>
-<li><p>Breeding pops divided into 4 squares, sample across breeding range</p></li>
-<li><p>Breeding pops divided into 4 squares, sample at centroid of each square</p></li>
-<li><p>Sampling high in low abundance populations</p></li>
-<li><p>Scenarios 2 plus 4</p></li>
-<li><p>Scenarios 3 plus 4</p></li>
+<li>Base (uneven MC (0.15 for NW breeding, 0.3 for SW, 0.45 for NE, and 0.6 for SE), uneven abundances (lowest in NW, highest in SE), sampling proportional to abundance</li>
+<li>Breeding pops divided into 4 squares, sample across breeding range</li>
+<li>Breeding pops divided into 4 squares, sample at centroid of each square</li>
+<li>Sampling high in low abundance populations</li>
+<li>Scenarios 2 plus 4</li>
+<li>Scenarios 3 plus 4</li>
 </ol>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
@@ -1336,9 +1338,9 @@ compare16 &lt;-<span class="st"> </span><span class="kw">transform</span>(compar
 compare16a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compare16[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16, <span class="kw">c</span>(<span class="st">'MC'</span>, <span class="st">'MC.diff'</span>, <span class="st">&quot;Mantel&quot;</span>, <span class="st">&quot;Mantel.diff&quot;</span>)])
 <span class="kw">rownames</span>(compare16a) &lt;-<span class="st"> </span>compare16$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16]</code></pre>
 </div>
-<div id="example-7" class="section level4">
-<h4>EXAMPLE 7</h4>
-<p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error). Here we simulated data using the 13th scenario from example 4 above (“CentroidSampleBreeding4”; make sure you run example 4 code before running this section). We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.</p>
+<div id="example-8" class="section level3">
+<h3>EXAMPLE 8</h3>
+<p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error). Here we simulated data using the 13th scenario from example 5 above (“CentroidSampleBreeding4”; make sure you run example 5 code before running this section). We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.</p>
 <pre class="sourceCode r"><code class="sourceCode r">WGS84 &lt;-<span class="st"> &quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>
   
 <span class="kw">set.seed</span>(<span class="dv">75</span>)
@@ -1499,10 +1501,11 @@ qualities14 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<sp
 
 <span class="kw">save.image</span>(<span class="st">'../estMCsims.c.RData'</span>)</code></pre>
 </div>
-<div id="example-8" class="section level4">
-<h4>EXAMPLE 8</h4>
-<p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators. Again, we simulated data using the 13th scenario from example 4 above (“CentroidSampleBreeding4”; make sure you run examples 4 and 7 code before running this section).<br />#### Simulation using error associated with light-level geolocators</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Assign geolocator bias / variance co-variance matrix</span>
+<div id="example-9" class="section level3">
+<h3>EXAMPLE 9</h3>
+<p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators. Again, we simulated data using the 13th scenario from example 5 above (“CentroidSampleBreeding4”; make sure you run examples 5 and 8 code before running this section).</p>
+<pre class="sourceCode r"><code class="sourceCode r">#### Simulation using error associated with light-level geolocators
+<span class="co"># Assign geolocator bias / variance co-variance matrix</span>
 geoBias &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">10000</span>, <span class="dv">50000</span>)
 geoVCov &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="fl">1.2e+8</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="fl">1.2e+9</span>), <span class="dv">2</span>, <span class="dv">2</span>)
 <span class="kw">sqrt</span>(<span class="kw">diag</span>(geoVCov))
@@ -1691,8 +1694,8 @@ qualities14<span class="fl">.2</span> &lt;-<span class="st"> </span><span class=
 <span class="kw">save.image</span>(<span class="st">'../estMCsims.14.2.RData'</span>)
 
 
-<span class="co"># Make summary table and figures of results with (Example 8) and without </span>
-<span class="co"># (Example 7) location error</span>
+<span class="co"># Make summary table and figures of results with (Example 9) and without </span>
+<span class="co"># (Example 8) location error</span>
 <span class="kw">load</span>(<span class="st">'../estMCsims.c.RData'</span>)
 <span class="kw">load</span>(<span class="st">'../estMCsims.14.2.RData'</span>)
 
@@ -1713,20 +1716,21 @@ g.est &lt;-<span class="st"> </span><span class="kw">ggplot</span>(est14.all.df,
 g.est
 <span class="kw">dev.off</span>()</code></pre>
 </div>
-<div id="example-9" class="section level4">
-<h4>EXAMPLE 9</h4>
+<div id="example-10" class="section level3">
+<h3>EXAMPLE 10</h3>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty in estimates of breeding abundance (see estMC help file)</p>
 </div>
-<div id="example-10" class="section level4">
-<h4>EXAMPLE 10</h4>
+<div id="example-11" class="section level3">
+<h3>EXAMPLE 11</h3>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating detection heterogeneity (see estMC help file)</p>
 </div>
-<div id="example-11" class="section level4">
-<h4>EXAMPLE 11</h4>
-<p><code>estMC</code> Estimate strength of migratory connectivity incorporating location uncertainty (<strong><em>Examples</em></strong> see above) Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.</p>
+<div id="example-12" class="section level3">
+<h3>EXAMPLE 12</h3>
+<p><code>estMC</code> Estimate strength of migratory connectivity incorporating location uncertainty</p>
+<p>Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals. See Example 2 above and estMC help file.</p>
 </div>
-<div id="example-12-from-process-error-simulation-in-cohen-et-al.-in-revision" class="section level4">
-<h4>EXAMPLE 12 (from process error simulation in Cohen et al. in revision)</h4>
+<div id="example-13-from-process-error-simulation-in-cohen-et-al.-in-revision" class="section level3">
+<h3>EXAMPLE 13 (from process error simulation in Cohen et al. in revision)</h3>
 <p><code>simMove</code> for measuring the influence of dispersal rates on MC</p>
 <p>Long-distance dispersal occurs when individuals that originate or breed in one population do not return to the same population to breed the next year. To quantify the sensitivity of MC to dispersal, we used simulations in which dispersal probability between breeding regions varied from low to high to measure the sensitivity of MC to dispersal.</p>
 <pre class="sourceCode r"><code class="sourceCode r">## Simulation ----
@@ -1819,7 +1823,6 @@ line_set=<span class="kw">c</span>(<span class="fl">0.5</span>, <span class="fl"
        <span class="dt">legend.title=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>), <span class="dt">legend.text=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>))
 <span class="kw">dev.off</span>()
 }</code></pre>
-</div>
 </div>
 </div>
 
