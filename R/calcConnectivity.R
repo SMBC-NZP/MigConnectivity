@@ -15,11 +15,12 @@
 #'    Should be the number of animals released in one of the origin sites and
 #'    observed in one of the target sites.  Optional, but recommended.
 #'
-#' @return real value between -1 and 1, inclusive (usually between 0 and 1)
-#'    indicating the degree of migratory connectivity.
+#' @return scalar real value, usually between 0 and 1 (can be negative),
+#' indicating the strength of migratory connectivity.
 #'
-#' If \code{sampleSize} is provided, this function uses the small-sample size
-#' corrected formula for MC.  If not, it uses the standard formula.
+#' If \code{sampleSize} is provided, this function uses the standard (relative
+#' abundance and small-sample size corrected) formula for MC.  If not, it uses
+#' the MC(R) formula, which only corrects for relative abundance.
 #'
 #' @example inst/examples/calcMCExamples.R
 #' @export
