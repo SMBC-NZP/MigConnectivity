@@ -566,7 +566,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   nAnimals <- length(targetPoints)
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if(is.na(originPoints@proj4string)){
+  if(is.na(raster::projection(originPoints))) {
     stop('Coordinate system definition needed for originPoints')
   }
   if(is.na(raster::projection(targetPoints))){

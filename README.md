@@ -1,5 +1,5 @@
 # MigConnectivity
-The MigConnectivity package estimates the Strength of Migratory Connectivity for Migratory Animals
+The MigConnectivity package estimates the strength of migratory connectivity for migratory animals
 
 Migratory Connectivity (MC) is a standardized metric to quantify migratory connectivity between two phases 
 of the annual cycle. MC is independent of data type and accounts for the relative abundance of 
