@@ -466,7 +466,9 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
+                                        +x_0=0 +y_0=0 +a=6371007 +b=6371007
+                                        +units=m +no_defs") {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -554,7 +556,9 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                      resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                      resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
+                                            +x_0=0 +y_0=0 +a=6371007 +b=6371007
+                                            +units=m +no_defs") {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))

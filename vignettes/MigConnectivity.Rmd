@@ -6,7 +6,9 @@ output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package} %\VignetteEngine{knitr::rmarkdown} \usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{MigConnectivity package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\usepackage[utf8]{inputenc}
 ---
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)

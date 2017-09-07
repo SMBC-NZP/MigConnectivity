@@ -11,7 +11,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs")
+  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0\\n                                        +x_0=0 +y_0=0 +a=6371007 +b=6371007\\n                                        +units=m +no_defs")
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
