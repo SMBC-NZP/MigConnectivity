@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.2.2
-Date: 2017-08-04
+Version: 0.2.3
+Date: 2017-09-07
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
@@ -32,7 +32,9 @@ Imports:
     ncf,
     R2jags,
     RMark (>= 2.1.14),
-    sp
+    sp,
+    stats,
+    utils
 Suggests:
     knitr,
     maptools,
@@ -44,4 +46,4 @@ Suggests:
     shape,
     testthat
 VignetteBuilder: knitr
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
