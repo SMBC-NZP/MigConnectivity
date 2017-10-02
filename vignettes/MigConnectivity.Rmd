@@ -3,8 +3,8 @@ title: '''MigConnectivity'' package'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
+  rmarkdown::html_vignette: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\VignetteEngine{knitr::rmarkdown}
@@ -1513,7 +1513,8 @@ compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]],
 
 compare16$MC[1:nScenarios16+1] <- apply(compare16.array[,,'MC'], 2, mean, na.rm = TRUE)
 
-compare16$Mantel[1:nScenarios16+1] <- apply(compare16.array[,,'Mantel'], 2, mean, na.rm = TRUE)
+compare16$Mantel[1:nScenarios16+1] <- apply(compare16.array[,,'Mantel'], 2, 
+                                            mean, na.rm = TRUE)
 
 compare16 <- transform(compare16, MC.diff=MC - MC[1], 
                        Mantel.diff=Mantel - Mantel[1])
