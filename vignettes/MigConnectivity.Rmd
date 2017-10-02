@@ -40,7 +40,7 @@ Three data inputs are needed to calculate MC, and one is optional:
 MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and approximates the correlation between individuals at those distances. Earlier methods (Mantel correlation; rM) used the correlation between two distance matrices of individual animals captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient approximation, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.  
 
 
-Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In revision. A quantitative definition for the strength of migratory connectivity.
+Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In press. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution.
 
 ### Overview of Functions  
 
@@ -135,8 +135,10 @@ nInd <- dim(locations)[1]
 originDist2 <- targetDist2 <- matrix(0, nInd, nInd)
 for (i in 1:(nInd-1)) {
  for (j in (i+1):nInd) {
-  originDist2[i,j] <- originDist2[j,i] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
-  targetDist2[i,j] <- targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
+      originDist2[i,j] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
+      targetDist2[i,j] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
+      originDist2[j,i] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
+      targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
     }
   }
 return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, quiet = !verbose))
@@ -170,7 +172,8 @@ for (i in 1:nInd) {
   if (length(bIndices) && length(wIndices))
     for (bi in bIndices)
       for (wi in wIndices)
-       psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], targetMat[wi]] + 1
+       psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], 
+                                                      targetMat[wi]] + 1
   }
   psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
   MC <- calcMC(originDist, targetDist, psi = psiMat,
@@ -196,44 +199,41 @@ changeLocations <- function(animalLoc,
 ```{r}
 simLocationError <- function(targetPoints, 
                              targetSites, 
-							 geoBias, 
-							 geoVCov, 
+              							 geoBias, 
+              							 geoVCov, 
                              projection, 
-							 verbose = 0, 
-							 nSim = 1000) {
-							 
+              							 verbose = 0, 
+              							 nSim = 1000) {
+
 nAnimals <- length(targetPoints)
 geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
 target.sample <- rep(NA, nAnimals)
 target.point.sample <- matrix(NA, nAnimals, 2)
 
 for(i in 1:nAnimals){
-    if (verbose > 0)
-      cat('Animal', i, 'of', nAnimals)
-    draws <- 0
-    while (is.na(target.sample[i])) {
-      draws <- draws + 1
+  if (verbose > 0)
+    cat('Animal', i, 'of', nAnimals)
+  draws <- 0
+  while (is.na(target.sample[i])) {
+    draws <- draws + 1
+    # Sample random point for each bird 
+    # from parametric distribution of NB error
+    point.sample <- sp::SpatialPoints(
+                  MASS::mvrnorm(n=nSim, 
+                  mu=cbind(targetPoints@coords[i,1],targetPoints@coords[i,2]),
+                  Sigma=geoVCov)+
+                  geoBias2,
+                  sp::CRS(projection))
 	  
-# Sample random point for each bird 
-# from parametric distribution of NB error
-
-      point.sample <- sp::SpatialPoints(
-                    MASS::mvrnorm(n=nSim, 
-                    mu=cbind(targetPoints@coords[i,1],targetPoints@coords[i,2]),
-                    Sigma=geoVCov)+
-                    geoBias2,
-                    sp::CRS(projection))
-		  
-      # filtered to stay in NB areas (land)
-	  
-      target.sample0 <- sp::over(point.sample, targetSites)
-      target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
-    }
-	
-target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
-    if (verbose > 0)
-      cat(' ', draws, 'draws\n')
+    # filtered to stay in NB areas (land)
+    target.sample0 <- sp::over(point.sample, targetSites)
+    target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
   }
+	
+  target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+  if (verbose > 0)
+    cat(' ', draws, 'draws\n')
+}
   return(list(targetSample = target.sample, 
               targetPointSample = target.point.sample))
 }
@@ -463,24 +463,18 @@ CapLocsM<-sp::spTransform(CapLocs, sp::CRS(Lambert))
 # around non-breeding locations 
 # here we grab only the birds captured during the non-breeding season 
 
-# note - the link should be a single continuous link without breaks. 
-# Breaks were added here so users could see the entire link 
-
-winterBirds <- dget("https://raw.githubusercontent.com/
-                    SMBC-NZP/MigConnectivity/master/
-                    data-raw/GL_NonBreedingFiles/winterBirds.txt")
+winterBirds <- dget(paste0("https://raw.githubusercontent.com/",
+                    "SMBC-NZP/MigConnectivity/master/",
+                    "data-raw/GL_NonBreedingFiles/winterBirds.txt"))
 
 # create empty list to store the location data #
 Non_breeding_files <- vector('list',length(winterBirds))
 
-# note - the link below should be a single continuous link without breaks. 
-# Breaks were added here so users could see the entire link 
-
 # Get raw location data from Github #
 for(i in 1:length(winterBirds)){
-Non_breeding_files[[i]] <- dget(paste0("https://raw.githubusercontent.com/
-                                        SMBC-NZP/MigConnectivity/master/data-raw/
-                                        GL_NonBreedingFiles/NonBreeding_",
+Non_breeding_files[[i]] <- dget(paste0("https://raw.githubusercontent.com/",
+                                        "SMBC-NZP/MigConnectivity/master/data-raw/",
+                                        "GL_NonBreedingFiles/NonBreeding_",
                                         winterBirds[i],".txt"))
 }
 
@@ -515,33 +509,38 @@ NB_GLmeters <- lapply(NB_GL,
 # Process to determine geolocator bias and variance-covariance in meters #
 
 # generate empty vector to store data #
-LongError<-rep(NA,length(winterBirds)) # 16 birds recovered in non-breeding season
+LongError<-rep(NA,length(winterBirds)) 
 LatError<-rep(NA,length(winterBirds))  
 
 # Calculate the error in longitude derived 
 # from geolocators from the true capture location 
 
 LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                         FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[1,1])}))
+                         FUN = function(x){mean(x@coords[,1]-
+                                                  CapLocsM@coords[1,1])}))
 
 LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                         FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[2,1])}))
+                         FUN = function(x){mean(x@coords[,1]-
+                                                  CapLocsM@coords[2,1])}))
 
 LongError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[3,1])}))
+                        FUN = function(x){mean(x@coords[,1]-
+                                                 CapLocsM@coords[3,1])}))
 
 # Calculate the error in latitude derived from
 # geolocators from the true capture location 
 
 LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                        FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[1,2])}))
+                        FUN = function(x){mean(x@coords[,2]-
+                                                 CapLocsM@coords[1,2])}))
 
 LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                        FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[2,2])}))
+                        FUN = function(x){mean(x@coords[,2]-
+                                                 CapLocsM@coords[2,2])}))
 
 LatError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[3,2])}))
-
+                        FUN = function(x){mean(x@coords[,2]-
+                                                 CapLocsM@coords[3,2])}))
 
 # Get co-variance matrix for error of 
 # known non-breeding deployment sites 
@@ -564,7 +563,7 @@ data(OVENdata) # Ovenbird
 names(OVENdata)
 ```
 
-The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (*in revision*) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
+The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (*in press*) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r eval = FALSE}
 install.packages(c('rgeos', 'shape', 'raster', 'maptools', 'rgdal'))
@@ -601,17 +600,17 @@ plot(wrld_simple,add=TRUE)
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
 
 ```{r message=FALSE, warning = FALSE, error=FALSE}
-M<-estMC(isGL=OVENdata$isGL, # Logical vector indicating light-level geolocator (T) GPS (F)
+M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
          geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-         geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-         targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-         originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
-         targetSites = OVENdata$targetSites, # Non-breeding target sites
-         originSites = OVENdata$originSites, # Breeding origin sites 
+         geoVCov = OVENdata$geo.vcov, #Light-level geolocator covariance matrix
+         targetDist = OVENdata$targetDist, # Target location distance matrix
+         originDist = OVENdata$originDist, # Origin location distance matrix
+         targetSites = OVENdata$targetSites, # Non-breeding / target sites
+         originSites = OVENdata$originSites, # Breeding / origin sites 
          originPoints = OVENdata$originPoints, # Capture Locations 
-         targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-         originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
-         resampleProjection = raster::projection(OVENdata$targetPoints), #Lambert projection
+         targetPoints = OVENdata$targetPoints, # Target locations from devices
+         originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
+         resampleProjection = raster::projection(OVENdata$targetPoints),#Lambert 
          verbose = 0,   # output options - see help ??estMC
          nSim = 10,     # This is set low for example
          nSamples = 10) # This is set low for example 
@@ -713,7 +712,6 @@ winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
                          rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
 
 # calculate distance between populations
-
 breedDist <- distFromPos(breedingPos, 'ellipsoid') 
 
 nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') 
@@ -779,7 +777,7 @@ str(sims)
 ### EXAMPLE 4
 Calculate migratory connectivity for a range of input values 
 
-Cohen et al. (*in revision*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
+Cohen et al. (*in press*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
   
 1. matrix of transition probabilities from breeding regions to non-breeding regions  
 1. matrices of distances between breeding regions and between non-breeding regions  
@@ -943,7 +941,7 @@ MC5[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC5, 4)) # breeding grid, winter linear arrangement
 ```
 
-###EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in revision)
+###EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in press)
 
 Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:  
 
@@ -1148,31 +1146,34 @@ for (sim in 1:nSims14) {
                   nYears=nYears,
                   nMonths=nMonths)
   
-for (i in 1:nScenarios14) {
-  cat("\tScenario", i, "\n")
-  animalLoc14[[i]] <- changeLocations(sim14[[scenarioToSampleMap14[i]]]$animalLoc,
-                                      breedingSiteTrans14[[i]], 
-                                      winteringSiteTrans14[[i]])
-    
-  results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
-                              animalLoc14[[i]], 
-                              originRelAbund = breedingRelN14[[i]], 
-                              verbose = F)
-    
-  compare14.array[sim, i, 'MC'] <- results14[[i]]$MC
-    
-  compare14.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist14[[1]],
-                                                       nonbreedDist14[[1]],
-                                                       sim14[[scenarioToSampleMap14[i]]]$animalLoc,
-                                                       resamp=0)$correlation
+  for (i in 1:nScenarios14) {
+   cat("\tScenario", i, "\n")
+   animalLoc14[[i]]<-changeLocations(
+     sim14[[scenarioToSampleMap14[i]]]$animalLoc,
+                                     breedingSiteTrans14[[i]], 
+                                     winteringSiteTrans14[[i]])
+      
+   results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
+                               animalLoc14[[i]], 
+                               originRelAbund = breedingRelN14[[i]], 
+                               verbose = F)
+      
+   compare14.array[sim, i, 'MC'] <- results14[[i]]$MC
+      
+   compare14.array[sim,i,'Mantel']<-calcStrengthInd(breedDist14[[1]],
+                                                    nonbreedDist14[[1]],
+                                   sim14[[scenarioToSampleMap14[i]]]$animalLoc,
+                                                    resamp=0)$correlation
   }
 }
 
 # Compute means for each scenario
 compare14$MC[1:nScenarios14 + 1] <- apply(compare14.array[,,'MC'], 2, mean)
-compare14$Mantel[1:nScenarios14 + 1] <- apply(compare14.array[,,'Mantel'], 2, mean)
+compare14$Mantel[1:nScenarios14 + 1] <- apply(compare14.array[,,'Mantel'], 2, 
+                                              mean)
 
-compare14 <- transform(compare14, MC.diff=MC - MC[1], Mantel.diff=Mantel - Mantel[1])
+compare14 <- transform(compare14, MC.diff=MC - MC[1], 
+                       Mantel.diff=Mantel - Mantel[1])
 compare14
 
 ```
@@ -1296,7 +1297,8 @@ compare15 <- data.frame(Scenario = c("True",
 
 compare15.array <- array(NA, c(nSims15, nScenarios15, 2),
                          dimnames = list(1:nSims15,
-                                    c("Base", "Breeding4", "CentroidSampleBreeding4",
+                                    c("Base", "Breeding4", 
+                                      "CentroidSampleBreeding4",
                                       "BiasedSample", "BiasedSampleBreeding4",
                                       "BiasedCentroidSampleBreeding4"),
                                     c("MC", "Mantel")))
@@ -1316,7 +1318,7 @@ for (sim in 1:nSims15) {
 for (i in 1:nScenarios15) {
   cat("\tScenario", i, "\n")
     animalLoc15[[i]] <- changeLocations(
-                        animalLoc = sim15[[scenarioToSampleMap15[i]]]$animalLoc,
+                        animalLoc=sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                         breedingSiteTrans = breedingSiteTrans15[[i]],
                         winteringSiteTrans = 1:nWintering15[i])
     
@@ -1330,15 +1332,16 @@ compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
 
 compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
                                                      nonbreedDist15[[1]],
-                                                     sim15[[scenarioToSampleMap15[i]]]$animalLoc,
+                                   sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                                     resamp=0)$correlation
   }
 }
 
-compare15$MC[1:nScenarios15+1] <- apply(compare15.array[,,'MC'], 2, mean, na.rm = TRUE)
+compare15$MC[1:nScenarios15+1] <- apply(compare15.array[,,'MC'], 2, mean, 
+                                        na.rm = TRUE)
 
-compare15$Mantel[1:nScenarios15+1] <- apply(compare15.array[,,'Mantel'], 2,mean, na.rm = TRUE)
-
+compare15$Mantel[1:nScenarios15+1] <- apply(compare15.array[,,'Mantel'], 2,
+                                            mean, na.rm = TRUE)
 compare15 <- transform(compare15, MC.diff=MC - MC[1], 
                        Mantel.diff=Mantel - Mantel[1],
                        MC.prop=MC/MC[1],  
@@ -1425,7 +1428,8 @@ for (i in 1:nLevels16) {
   psi16a <- mlogitMat(slope16a, breedDist16[[1]])
   
   # Then use the rows of that psi matrix only for the one breeding quadrant
-  rows <- 50*(i %/% 3) + rep(1:5, 5) + rep(seq(0, 40, 10), each=5) + ((i-1) %% 2) * 5
+  rows <- 50*(i %/% 3) + rep(1:5, 5) + rep(seq(0, 40, 10), each=5) + 
+    ((i-1) %% 2) * 5
   psi16[rows, ] <- psi16a[rows, ]
 }
 
@@ -1488,7 +1492,7 @@ for (sim in 1:nSims16) {
   
 for (i in 1:nScenarios16) {
   cat("\tScenario", i, "\n")
-  animalLoc16[[i]] <- changeLocations(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
+  animalLoc16[[i]]<-changeLocations(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                       breedingSiteTrans16[[i]], 
                                       1:nWintering16[i])
     
@@ -1502,7 +1506,7 @@ compare16.array[sim, i, 'MC'] <- results16[[i]]$MC
     
 compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]],
                                                          nonbreedDist16[[1]],
-                                                         sim16[[scenarioToSampleMap16[i]]]$animalLoc,
+                                   sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                                          resamp=0)$correlation
   }
 }
@@ -1514,7 +1518,9 @@ compare16$Mantel[1:nScenarios16+1] <- apply(compare16.array[,,'Mantel'], 2, mean
 compare16 <- transform(compare16, MC.diff=MC - MC[1], 
                        Mantel.diff=Mantel - Mantel[1])
 
-compare16a <- as.matrix(compare16[1 + 1:nScenarios16, c('MC','MC.diff',"Mantel","Mantel.diff")])
+compare16a <- as.matrix(compare16[1 + 1:nScenarios16, c('MC','MC.diff',
+                                                        "Mantel",
+                                                        "Mantel.diff")])
 
 rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 ```
@@ -1527,8 +1533,10 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
   
 set.seed(75)
-capLocs14 <- lapply(breedingPos14, sp::SpatialPoints, proj4string = sp::CRS(WGS84))
-targLocs14 <- lapply(winteringPos14, sp::SpatialPoints, proj4string = sp::CRS(WGS84))
+capLocs14 <- lapply(breedingPos14, sp::SpatialPoints, 
+                    proj4string = sp::CRS(WGS84))
+targLocs14 <- lapply(winteringPos14, sp::SpatialPoints, 
+                     proj4string = sp::CRS(WGS84))
 
 
 # Relative abundance by scenario and breeding population
@@ -1544,10 +1552,10 @@ nSample14.1 <- 100 # Total number sampled per simulation
 # How many sampled from each natural population (sampling scenarios separate
 # from definition scenarios)
 sampleBreeding14.1 <- list(round(breedingRelN14[[1]]*nSample14.1),
-                         c(rep(0, 22), round(breedingRelN14[[5]][1]*nSample14.1),
-                           rep(0, 4), round(breedingRelN14[[5]][2]*nSample14.1),
-                           rep(0, 44), round(breedingRelN14[[5]][3]*nSample14.1),
-                           rep(0, 4), round(breedingRelN14[[5]][4]*nSample14.1),
+                         c(rep(0,22),round(breedingRelN14[[5]][1]*nSample14.1),
+                           rep(0,4), round(breedingRelN14[[5]][2]*nSample14.1),
+                           rep(0,44),round(breedingRelN14[[5]][3]*nSample14.1),
+                           rep(0,4), round(breedingRelN14[[5]][4]*nSample14.1),
                            rep(0, 22)),
                            rep(c(rep(0, 4),
                            rep(round(breedingRelN14[[2]][1]*nSample14.1/2), 2),
@@ -1601,7 +1609,7 @@ for (i in 13) {
     
   compare14.1.array[sim,'Mantel'] <- calcStrengthInd(breedDist14[[1]],
                                                   nonbreedDist14[[1]],
-                                                  sim14[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+                            sim14[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                                   resamp=0)$correlation
   }
 })
@@ -1639,15 +1647,16 @@ for (sim in 1:nSims14) {
   cat("Estimation", sim, "of", nSims14, '\n')
   
  for (i in 13) {#:nScenarios14) {
-  animalLoc14[[sim]] <- changeLocations(sim14.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+  animalLoc14[[sim]] <- 
+    changeLocations(sim14.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]], 
                                         winteringSiteTrans14[[i]])
   
   results14[[sim]] <- estMC(breedDist14[[i]], 
                             nonbreedDist14[[i]],
                             originRelAbund = breedingRelN14[[i]],
-                            originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
-                            targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
+              originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
+              targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
                             nSamples = 1000,
@@ -1676,13 +1685,16 @@ summary(pointEsts14.1)
 means14
 colMeans(pointEsts14.1) - MC14
 sqrt(colMeans((pointEsts14.1 - MC14)^2))
-summary(ci14.array[, "MC", 'lower'] <= MC14 & ci14.array[, "MC", 'upper'] >= MC14)
-summary(ci14.array[, "Mantel", 'lower'] <= MC14 & ci14.array[, "Mantel", 'upper'] >= MC14)
+summary(ci14.array[, "MC", 'lower'] <= MC14 & 
+          ci14.array[, "MC", 'upper'] >= MC14)
+summary(ci14.array[, "Mantel", 'lower'] <= MC14 & 
+          ci14.array[, "Mantel", 'upper'] >= MC14)
 
 # Plot histograms of bootstrap estimation results
 est.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14),
                      Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14),
-                     sim = rep(1:nSims14, 4), Estimate = c(est14.array, var14.array))
+                     sim = rep(1:nSims14, 4), 
+                     Estimate = c(est14.array, var14.array))
 
 trues.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2),
                        Quantity = rep(c('Mean', 'Variance'), each = 2),
@@ -1699,17 +1711,19 @@ g.est
 
 # Summary table of bootstrap estimation results
 qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
-                          Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
-                          Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
+                          Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 
+                                         3, 10),
+                          Measure = rep(c('Bias', 'RMSE', "Coverage"), 
+                                        c(4, 4, 2)),
                           Value = c(colMeans(est14.array - MC14),
                                     colMeans(var14.array) - vars14,
                                     sqrt(colMeans((est14.array - MC14)^2)),
-                                    sqrt(mean((var14.array[,1] - vars14[1])^2)),
-                                    sqrt(mean((var14.array[,2] - vars14[2])^2)),
+                                    sqrt(mean((var14.array[,1]-vars14[1])^2)),
+                                    sqrt(mean((var14.array[,2]-vars14[2])^2)),
                                     mean(ci14.array[, "MC", 'lower'] <= MC14 & 
                                          ci14.array[, "MC", 'upper'] >= MC14),
-                                    mean(ci14.array[, "Mantel", 'lower'] <= MC14 & 
-                                         ci14.array[, "Mantel", 'upper'] >= MC14)))
+                                    mean(ci14.array[,"Mantel",'lower']<=MC14 &
+                                         ci14.array[,"Mantel",'upper']>=MC14)))
 
 format(qualities14, digits = 2, scientific = F)
 
@@ -1752,7 +1766,8 @@ winteringPolys2 <- lapply(winteringPos14,
                           projection.in = WGS84,
                           projection.out = resampleProjection)
 
-# Double check that the input center points and output polygons are ordered correctly 
+# Double check that the input center points and output polygons are ordered
+# correctly 
 cbind(breedingPos14[[1]][,1:2],
       t(sapply(slot(breedingPolys[[1]], "polygons"),
                function(x){ slot(x,"labpt")})))
@@ -1768,13 +1783,14 @@ nSample14.2 <- 100 # Total number sampled per simulation
 # How many sampled from each natural population (sampling scenarios separate
 # from definition scenarios)
 sampleBreeding14.2 <- list(round(breedingRelN14[[1]]*nSample14.2),
-                         c(rep(0, 22), round(breedingRelN14[[5]][1]*nSample14.2),
-                           rep(0, 4), round(breedingRelN14[[5]][2]*nSample14.2),
-                           rep(0, 44), round(breedingRelN14[[5]][3]*nSample14.2),
-                           rep(0, 4), round(breedingRelN14[[5]][4]*nSample14.2),
+                         c(rep(0,22),round(breedingRelN14[[5]][1]*nSample14.2),
+                           rep(0, 4),round(breedingRelN14[[5]][2]*nSample14.2),
+                           rep(0,44),round(breedingRelN14[[5]][3]*nSample14.2),
+                           rep(0, 4),round(breedingRelN14[[5]][4]*nSample14.2),
                            rep(0, 22)),
                          rep(c(rep(0, 4),
-                               rep(round(breedingRelN14[[2]][1]*nSample14.2/2), 2),
+                               rep(round(breedingRelN14[[2]][1]*nSample14.2/2),
+                                   2),
                                rep(0, 4)), 10))
 
 lapply(sampleBreeding14.2, matrix, nrow=10, ncol=10)
@@ -1843,24 +1859,27 @@ for (i in 13) { # only run one scenario
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
     
     originDist0 <- geosphere::distVincentyEllipsoid(
-                                         breedingTruePoints14[distIndices[,'row']],
-                                         breedingTruePoints14[distIndices[,'col']])
+                                     breedingTruePoints14[distIndices[,'row']],
+                                     breedingTruePoints14[distIndices[,'col']])
     
     originDist1[lower.tri(originDist1)] <- originDist0
     
-    target.point.sample <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
+    target.point.sample <- sp::SpatialPoints(
+      results14.2[[sim]]$targetPointSample,
                                              sp::CRS(Lambert))
     
     target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
     
     targetDist0 <- geosphere::distVincentyEllipsoid(
-                                         target.point.sample2[distIndices[,'row']],
-                                         target.point.sample2[distIndices[,'col']])
+                                     target.point.sample2[distIndices[,'row']],
+                                     target.point.sample2[distIndices[,'col']])
     
     targetDist1[lower.tri(targetDist1)] <- targetDist0
     
-    compare14.2.array[sim, 'Mantel'] <- ncf::mantel.test(originDist1, targetDist1, 
-                                                         resamp=0, quiet = T)$correlation
+    compare14.2.array[sim, 'Mantel'] <- ncf::mantel.test(originDist1, 
+                                                         targetDist1, 
+                                                         resamp=0, 
+                                                         quiet = T)$correlation
   }
 })
 
@@ -1899,14 +1918,15 @@ for (sim in 1:nSims14.2) {
   points1 <- sp::spTransform(points0, 
                               sp::CRS(resampleProjection))
     
-  animalLoc14[[sim]] <- changeLocations(sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+  animalLoc14[[sim]] <- changeLocations(
+    sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]],
                                         winteringSiteTrans14[[i]])
   
   results14[[sim]] <- estMC(originDist = breedDist14[[i]],
                             targetDist = nonbreedDist14[[i]],
                             originRelAbund = breedingRelN14[[i]],
-                            originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
+                originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
                             targetPoints = points1,
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = results14.2[[sim]]$targetSample,
@@ -1943,15 +1963,19 @@ summary(pointEsts14.2)
 colMeans(pointEsts14.2) - MC14
 sqrt(colMeans((pointEsts14.2 - MC14)^2))
 means14.2
-mean(ci14.2.array[, "MC", 'lower'] <= MC14 & ci14.2.array[, "MC", 'upper'] >= MC14)
-mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & ci14.2.array[, "Mantel", 'upper'] >= MC14)
+mean(ci14.2.array[, "MC", 'lower'] <= MC14 & 
+       ci14.2.array[, "MC", 'upper'] >= MC14)
+mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & 
+       ci14.2.array[, "Mantel", 'upper'] >= MC14)
 sqrt(vars14.2) / MC14
 summary(sqrt(var14.2.array)/est14.2.array)
 
 # Plot histograms of bootstrap estimation results
 est14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2, each = nSims14.2),
-                     Quantity = rep(c('Mean', 'Variance'), each = 2 * nSims14.2),
-                     sim = rep(1:nSims14.2, 4), Estimate = c(est14.2.array, var14.2.array))
+                     Quantity = rep(c('Mean', 'Variance'), 
+                                    each = 2 * nSims14.2),
+                     sim = rep(1:nSims14.2, 4), 
+                     Estimate = c(est14.2.array, var14.2.array))
 
 trues14.2.df <- data.frame(Parameter = rep(c("MC", 'rM'), 2),
                        Quantity = rep(c('Mean', 'Variance'), each = 2),
@@ -1967,17 +1991,21 @@ g.est
 
 # Summary table of bootstrap estimation results
 qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
-                            Quantity = rep(rep(c('Mean', 'Variance'), c(2, 2)), 3, 10),
-                            Measure = rep(c('Bias', 'RMSE', "Coverage"), c(4, 4, 2)),
+                            Quantity = rep(rep(c('Mean', 'Variance'), 
+                                               c(2, 2)), 3, 10),
+                            Measure = rep(c('Bias', 'RMSE', "Coverage"), 
+                                          c(4, 4, 2)),
                             Value = c(colMeans(est14.2.array - MC14),
                                       colMeans(var14.2.array) - vars14.2,
                                       sqrt(colMeans((est14.2.array - MC14)^2)),
-                                      sqrt(mean((var14.2.array[,1] - vars14[1])^2)),
-                                      sqrt(mean((var14.2.array[,2] - vars14[2])^2)),
-                                      mean(ci14.2.array[, "MC", 'lower'] <= MC14 & 
-                                           ci14.2.array[, "MC", 'upper'] >= MC14),
-                                      mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & 
-                                           ci14.2.array[, "Mantel", 'upper'] >= MC14)))
+                                      sqrt(mean((var14.2.array[,1] - 
+                                                   vars14[1])^2)),
+                                      sqrt(mean((var14.2.array[,2] - 
+                                                   vars14[2])^2)),
+                                      mean(ci14.2.array[,"MC",'lower']<=MC14 &
+                                           ci14.2.array[,"MC",'upper']>=MC14),
+                              mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & 
+                                   ci14.2.array[, "Mantel", 'upper'] >= MC14)))
 
 format(qualities14.2, digits = 2, scientific = F)
 
@@ -2019,7 +2047,7 @@ g.est
 
 Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.  See Example 2 above and estMC help file.
 
-###EXAMPLE 13 (from process error simulation in Cohen et al. in revision)
+###EXAMPLE 13 (from process error simulation in Cohen et al. in press)
 
 `simMove` for measuring the influence of dispersal rates on MC
 
@@ -2098,7 +2126,8 @@ for(i in 1:length(Drates)){
 
 Disp.df$Year <- Disp.df$Year - 1 #just run once!
 
-data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
+data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), 
+           nearZero = Disp.df$MC < 0.01)
 
 
 # Convert dispersal rates to probabilities of dispersing at least certain distance
@@ -2107,7 +2136,8 @@ probFarDisp <- matrix(NA, nBreeding, length(Drates), dimnames = list(NULL, Drate
 
 for (i in 1:length(Drates)) {
   for (k in 1:nBreeding) {
-    probFarDisp[k, i] <- sum(birdLocDisp[[i]]$natalDispMat[k, which(breedDist[k, ]>= threshold)])
+    probFarDisp[k, i] <- 
+      sum(birdLocDisp[[i]]$natalDispMat[k, which(breedDist[k, ]>= threshold)])
   }
 }
 
@@ -2123,12 +2153,16 @@ ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
  geom_line()+
  scale_size_manual(values=line_set)+
  labs(size="Dispersal Rate")+
- scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+ scale_y_continuous("MC", limits=c(-.005, 0.26), 
+                    breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
  scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
  theme_bw()+
- theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
-       panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
-       legend.title=element_text(size=14), legend.text=element_text(size=14))
+ theme(axis.title=element_text(size=16, face ="bold"),
+       axis.text=element_text(size=14),
+       panel.grid.major = element_line(color="grey90"),
+       panel.grid.major.x = element_blank(),
+       legend.title=element_text(size=14), 
+       legend.text=element_text(size=14))
 }
 ```
 
