@@ -1,25 +1,60 @@
 MigConnectivity Developers README file
 
 Steps for Making Future Updates
-1. In RStudio (or wherever), switch to a "develop" branch.  If that doesn't appear on your list of branches on the Git tab, choose More | Shell... then type "git checkout -b develop".
-2. Pull from the "develop" branch of our GitHub repository.  This push must be done through the shell: Git | More | Shell... then type "git pull origin develop".
+1. In RStudio (or wherever), switch to a "develop" branch.  If that doesn't
+appear on your list of branches on the Git tab, choose More | Shell... then
+type "git checkout -b develop".
+2. Pull from the "develop" branch of our GitHub repository.  This push must be
+done through the shell: Git | More | Shell... then type "git pull origin
+develop".
 3. Make your changes, documenting and performing your own tests along the way.
-4. Commit and push to the "develop" branch of our GitHub repository as things progress.  This push must be done through the shell: Git | More | Shell... then type "git push origin develop".
+4. Commit and push to the "develop" branch of our GitHub repository as things
+progress.  This push must be done through the shell: Git | More | Shell...
+then type "git push origin develop".
 5. Run formal tests too: Build | Check.  Fix any errors and examine any notes.
-6. [With maintainer approval only] Pull latest develop version, update version number and date in DESCRIPTION, and run Check one last time.  Push to develop branch on origin one last time.
-7. [With maintainer approval only] Merge branches locally: Git | More | Shell... then type "git checkout master", then "git merge --no-ff develop".
-8. [With maintainer approval only] Then push from master to origin (also master).
-9. [With maintainer approval only] Once a new version of MigConnectivity is on GitHub, go to website and create new release.  On SMBC-NZP / MigConnectivity choose releases then Draft a new release.  Fill in version number and relevant updates since last version.
+6. [With maintainer approval only] Pull latest develop version, update version
+number and date in DESCRIPTION, and run Check one last time.  Push to develop
+branch on origin one last time.
+7. [With maintainer approval only] Merge branches locally: Git | More |
+Shell... then type "git checkout master", then "git merge --no-ff develop".
+8. [With maintainer approval only] Then push from master to origin (also
+master).
+9. [With maintainer approval only] Once a new version of MigConnectivity is on
+GitHub, go to website and create new release.  On SMBC-NZP / MigConnectivity
+choose releases then Draft a new release.  Fill in version number and relevant
+updates since last version.
 
 Proposed Extensions
-1. Create variable(s) with projection strings, so users don't have to type them in or copy and paste them if they want to use one of our defaults.  It would also reduce the number of times these long strings would appear in the documentation, which could improve formatting.  They could either be individual string variables (e.g., "Lambert," "WGS84") or a list variable (i.e., "projections").  Status: Proposed
-2. Allow users to include relative abundance uncertainty with GL or GPS data as well as with CMR data or alone.  Status: Proposed
-3. Allow users to estimate MC (and rM?) from other data types, like isotopes and morphometrics.  Need to find out nature of these data.  It's possible they could be covered by the GL option, in which case we might just have to update help file.  Status: Proposed
-4. Allow users to resampling from transition matrix uncertainty from sources other than RMark.  Status: Proposed
+1. Create variable(s) with projection strings, so users don't have to type them
+in or copy and paste them if they want to use one of our defaults.  It would
+also reduce the number of times these long strings would appear in the
+documentation, which could improve formatting.  They could either be individual
+string variables (e.g., "Lambert," "WGS84") or a list variable (i.e.,
+"projections").  Status: Proposed
+2. Allow users to include relative abundance uncertainty with GL or GPS data as
+well as with CMR data or alone.  Status: Proposed
+3. Allow users to estimate MC (and rM?) from other data types, like isotopes
+and morphometrics.  Need to find out nature of these data.  It's possible they
+could be covered by the GL option, in which case we might just have to update
+help file.  Status: Proposed
+4. Allow users to resampling from transition matrix uncertainty from sources
+other than RMark.  Status: Proposed
+5. Line up estMC outputs and help file better (currently verbose works
+differently for CMR and GL data, documentation matches what CMR does).  Status:
+Done
+6. Add extra while loop to estMC to make sure at least two target sites are
+represented each time, thus making sure the number of bootstraps inference is
+based on is the same as the input number of samples.  Status: Proposed
 
 Proposed Updates
-1. When manuscript is accepted, update references to it throughout documentation.  Then again once in print. Status: All references currently are "in press."
+1. When manuscript is accepted, update references to it throughout
+documentation. Then again once in print. Status: All references currently are
+"in press."  Probably should add a few more references too.
 
 Proposed Bug Fixes
-1. in the estMC function if targetSites == SpatialPolygonDataFrame - you get an error crs(not identical). However, if the targetSites ==SpatialPolygons - you don't get the error. Status: Identified
-2. estMC and estMantel summary statistics don't come out if there are any NAs or NaNs in the sample.  Status: Fixed?
+1. in the estMC function if targetSites == SpatialPolygonDataFrame - you get an
+error crs(not identical). However, if the targetSites ==SpatialPolygons - you
+don't get the error. Status: Identified
+2. estMC and estMantel summary statistics don't come out if there are any NAs
+or NaNs in the sample.  Status: Fixed
+

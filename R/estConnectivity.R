@@ -46,7 +46,7 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   psi.array <- array(0, c(nSamples, nOrigin, nTarget))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
-      cat("\tSample",i,"of",nSamples,"\n")
+      cat("\tSample", i, "of", nSamples, "at", date(), "\n")
     # Generate random transition probability matrices
     # resampling from each files, 1000 samples from each of the 100 files
     # using the estimates of psi and uncertainty from the mark file to generate a new estimate of psi
@@ -67,6 +67,11 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                                  psi = psiNew, sampleSize = sampleSize),
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
                                  psi = psiNew))
+    if (verbose > 1 || verbose == 1 && i %% 10 == 0)
+      cat(" MC mean:", mean(sampleMC, na.rm=TRUE),
+          "SD:", sd(sampleMC, na.rm=TRUE),
+          "low quantile:", quantile(sampleMC, alpha/2, na.rm=TRUE),
+          "high quantile:", quantile(sampleMC, 1-alpha/2, na.rm=TRUE), "\n")
   }
   meanMC <- mean(sampleMC, na.rm=TRUE)
   medianMC <- median(sampleMC, na.rm=TRUE)
@@ -264,7 +269,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
             "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
     }
   }
-  MC.z0 <- qnorm(sum((MC)<mean(MC))/nBoot)
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
@@ -369,8 +374,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'  to 0 (default) or any greater integer to specify where to stop ignoring
 #'  samples ("burn-in").
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
-#'  a line every 100 samples or bootstraps.  2 prints a line every sample or
-#'  bootstrap. 3 also prints the number of draws (for tuning nSim for GL data only).
+#'  a line every 100 samples or bootstraps and a summary every 10.  2 prints a
+#'  line and summary every sample or bootstrap. 3 also prints the number of
+#'  draws (for tuning nSim for GL data only).
 #' @param calcCorr In addition to MC, should function also estimate Mantel
 #'    correlation between release and non-release locations (GPS or GL data
 #'    only)?  Default is FALSE.
