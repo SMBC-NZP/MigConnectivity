@@ -20,7 +20,7 @@ Description: Calculates and estimates the strength of migratory connectivity
     and the more traditional metric of migratory connectivity strength (Mantel
     correlation; rM) incorporating uncertainty from multiple sources of
     sampling error. Description of the metric can be found in Cohen et al.
-    (in review).
+    (in press).
 License: GPL (>=3)
 LazyData: true
 Depends:

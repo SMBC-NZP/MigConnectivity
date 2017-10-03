@@ -10,7 +10,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2017-10-02" />
+<meta name="date" content="2017-10-03" />
 
 <title>MigConnectivity package</title>
 
@@ -54,7 +54,7 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <div id="header">
 <h1 class="title">‘MigConnectivity’ package</h1>
 <h4 class="author"><em>Jeffrey A. Hostetler, Michael T. Hallworth</em></h4>
-<h4 class="date"><em>2017-10-02</em></h4>
+<h4 class="date"><em>2017-10-03</em></h4>
 </div>
 
 
@@ -380,6 +380,9 @@ WGS84&lt;-<span class="st">&quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS8
 Lambert&lt;-<span class="st">&quot;+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 </span>
 <span class="st">          +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs&quot;</span>
 
+EquidistConic&lt;-<span class="st">&quot;+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007</span>
+<span class="st">                +b=6371007 +units=m +no_defs&quot;</span>
+
 <span class="co"># Define deployment locations (winter) # </span>
 
 captureLocations&lt;-<span class="kw">matrix</span>(<span class="kw">c</span>(-<span class="fl">77.93</span>,<span class="fl">18.04</span>,   <span class="co"># Jamaica</span>
@@ -393,13 +396,14 @@ CapLocs&lt;-sp::<span class="kw">SpatialPoints</span>(captureLocations,sp::<span
 
 <span class="co"># Project Capture locations # </span>
 
-CapLocsM&lt;-sp::<span class="kw">spTransform</span>(CapLocs, sp::<span class="kw">CRS</span>(Lambert))
+CapLocsM&lt;-sp::<span class="kw">spTransform</span>(CapLocs, sp::<span class="kw">CRS</span>(EquidistConic))
 
 <span class="co"># Retrieve raw non-breeding locations from github </span>
 <span class="co"># First grab the identity of the bird so we can loop through the files </span>
 <span class="co"># For this example we are only interested in the error </span>
 <span class="co"># around non-breeding locations </span>
 <span class="co"># here we grab only the birds captured during the non-breeding season </span>
+<span class="co"># Using paste0 for vignette formatting purposes</span>
 
 winterBirds &lt;-<span class="st"> </span><span class="kw">dget</span>(<span class="kw">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,
                     <span class="st">&quot;SMBC-NZP/MigConnectivity/master/&quot;</span>,
@@ -442,7 +446,7 @@ NB_GL &lt;-<span class="st"> </span><span class="kw">lapply</span>(Non_breeding_
 
 NB_GLmeters &lt;-<span class="st"> </span><span class="kw">lapply</span>(NB_GL,
                       <span class="dt">FUN =</span> function(x){sp::<span class="kw">spTransform</span>(x,
-                                                        sp::<span class="kw">CRS</span>(Lambert))})
+                                                      sp::<span class="kw">CRS</span>(EquidistConic))})
 
 <span class="co"># Process to determine geolocator bias and variance-covariance in meters #</span>
 
@@ -538,14 +542,14 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
          <span class="dt">originPoints =</span> OVENdata$originPoints, <span class="co"># Capture Locations </span>
          <span class="dt">targetPoints =</span> OVENdata$targetPoints, <span class="co"># Target locations from devices</span>
          <span class="dt">originRelAbund =</span> OVENdata$originRelAbund, <span class="co"># Origin relative abundances</span>
-         <span class="dt">resampleProjection =</span> raster::<span class="kw">projection</span>(OVENdata$targetPoints),<span class="co">#Lambert </span>
+         <span class="dt">resampleProjection =</span> raster::<span class="kw">projection</span>(OVENdata$targetPoints), 
          <span class="dt">verbose =</span> <span class="dv">0</span>,   <span class="co"># output options - see help ??estMC</span>
          <span class="dt">nSim =</span> <span class="dv">10</span>,     <span class="co"># This is set low for example</span>
          <span class="dt">nSamples =</span> <span class="dv">10</span>) <span class="co"># This is set low for example </span></code></pre>
-<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAAAEgCAMAAAAjXV6yAAAAD1BMVEUAAAAaGhpZWVmzs7P///8zYQijAAAACXBIWXMAAA7DAAAOwwHHb6hkAAANbUlEQVR4nO2d14LjKgxAdXf9/998Z8fGSKggmhPAPGwSisoZIYozOwBvyZSja+ksrlU9N8c08KfxBwju0h3QpwnRIhiTAQRJnzGA+kutK5IVtmVw/Joeo2iAK78i5wX0O8l+QZ3BNOhn/RWAyvlc7TebAUnaa8gDRTQhCwiulzDVxgH6dCKStedtInYPjKBPJyJFub2IQXhFOXqgF/MBOhiZ2QC57dW65faJB1LwT9nYRDFgDxEWl3y/woZbOq0ZnUk7iyc/XcN2Q6vVBLx1/FLTVQE7asmYsvNIqpaXlSfW4o4qlKU7xZTZLZNmiHVoD3QLfGaz0ktHZo2+Vx6/nDNuhJ0zX/FHlgcB+U4HGCVZtshZ4+pZa21B6Q8oc6+VxQTCAhVih8zBh84DfZSU3vIZXaVsLLbNBahulIgJ0k764CqthaWHkjZTE0x0SZclw/idNLanXUQPIZfPZMssInh2me9AqPFyIFnYUQ0jANdNkNI8qDRqITbXCVDSOztewEEyzxyAfNs/WwCc6zdPzsmilY6cARCdE3USrhAUFi/7jPIUoAb37k1/g3LQhWTOcN8PCJLXisFxHkkExLex7tsByftb/2ial80A0jZDNYrLS+0uuF6AsMuzAkg7kzz2bKZGT+7HmxnLlySpn70EfAsg4XROTasB5LTBfEL1HYAcRpSa6edj6/+OHNTOx5FtLEB+wcNKZoa1DT9cE7JuHVwCEEtZ8wHKRUDjcH7bU65DFV01rlhPW/v2gHJWLA/IXsPqn7RHCdkcVOnnxwG5DFgekKLD//wm104BSVKrD8tPAGo9Juc3AQRQxwz0DKDma6gyQF35PAGIKSjW2SGCvhhQIr9CoZePcbdW7+RwQOSEVKetGNDBvgXzxYA6PIErB3SEhxhuEZbs6rFuFTk1dmS5+cCBFAFe7Rt8fGaZdxwkeBDg1pz4ezRK1WZScpfnbhQtI9BbzqkE0E0pt6/22/YFgOR9UvDRw4cAAkhDdkFAoUWfeLgTTUMspzV5+N2AQgdxkcJNEkh7a+02bgZAoR+bd+GLUHakzQ6o9NyBViz8WQXU5uB8gH6HKKWXfKqqaXyHUm7A9dAdcTEANfo3K6AjLuqZCJoeUMMMiztCnVGrezMCIptkSA4qKaYXkHiSi7yazZsQEDmnk7WedWv3bk5A6JLpMAD1KB8HVKf+BWT3xZc+4fUFJDx7DwH0AkoM3QiQn4806rZ+c0BAf+MEWABtDejeIaOK+90L6N4Ox4tmsl+O79YElFGOjwuAaIXWY3NA15EddaVr2e6AqNc0EV3tctee5XsBQeo1JN3J2jaM0GcBWbrRdZjceXNA6EJV6Z3ko+0ARTzyA0C6e9wOEERASgi9gHARulPL1wTkCqDY0Qig3QAlsROuNGiXzQHhLyQIAZQavhcgQIDi56QLy0jrATL5hG3inYVeQHc1kKfJV1drl3hsBQjPqwiI8eEpaRNACZ/rloMH0AaATD73SfWixbvxcTsAik7SjVAugNYExHWjKryICf12AHSpB0olbYgbRTpMFjTEwv5Cy8s9oVgASfbxAFoe0G/BkIwlfltASoJ2zbAdAFH/AJXsJujYAZDIR/hwbAoo8Y66m5w9JJtXB5Q6JwHS+qIBywJiviF/2U5RtngUoa8BlH7G6/32gJQAQid7+p0OTcaqgLhjCBBct4uoTRWyKCDBL+Js+N2eu02VsiYgya10EQv3QofKZ11AOh8aM7sCsjY1kRDishkg2SdA5aA7IdXcNQEpLsXFKxiIvu9riFoSkFIdd0Dhc2jSRa0HyAwguDMPOeVbslYDpDl0uRpaYVdAqj94hiV9dgKku4PXMC+f9QC5+KR9NgJkOIM95bfRlsCFAFm+6J5atq4FyHTlBZTR+gLyBJC8gczIXAWQ7UhdAK0EyMNnZ0DZBb5qhq0DSA8PdLrYGJDKB3eo4DM1IHIaz/CpBjSK0COASHjYPTYFFO8Ds8uT5mbWzskB3QlY7kD7bgbottyzv6meYfMDUs0ntdUBtAYgsVXonO2mq6m10hDbW6SgQgPEqupT0BqAsheo9XwWAUTSsdpXqveqqbdTFdtbpKCCIdLUvoAufewPF5C+QrVbTaOpktgmkR6lMiGjr1Dv1tNmqii2RaRLq5CEFKUNM2zeKSZnaKuvUO3XU2ekKba3SK6BGW5fKQrVlXo6lEcAsSq964aABJ1qQwOfF1BW6jKAdIUvoF+NRpPootPCVQBl+byA9KaWGbYKIEtbUwB9GSDQSnZgViivLTLJ19lf6kQC/JVL/mrdtqUB0CBC1RGkETJVmQ7I7X77vgbQeV2hx5A26+BstUxpCaBZAFnI7BBbBVD4c0xuQDemzBxsnGGfBUSmDLBVzEfoerFVsNoSVx4GRPIIpcL+i7WCSDK18doSVz4QQZfKnN4kiuCvjqwIUIm/H5ticNmZI0nyjT7vFgQUnmVlu0U8Bwuq7BybA5AkPqjNbpLhmlykwhtContF7j4AiCXfs7b6PC0TsgCxSpdiRX2XgqQKy9O5fJ2tDllswsqARFFfDCgIPwIQ1PobVND3yOYHVKb0sSQN9C24p5go3kmoPQU9uIrFuhA+9YgkQjogVlmm6sFl/lIV/4SgJwdpChgj+YfSGEDPA8KR1KAXeKpeAFDaq1FHntDkgJqV5PZCknOlli0FKCXUIYCmBpRdyV5AmRDqMMOWBtQjBW0AKLWsVMu0gPLnjR4BNDMggc8AQGMIPQMot4ztDuhfsZKQ4FmNWfMC+isCior7BNDEgCQ+OIR2B5S9m+4zw9YDBLH9BWSFUKccPTGgTAh14jMzIHmv+PcFhNQYIfQCOs69kBJCqV/VTs4NSNwLIUCoZ+1DpqkBHTlAsVSH0OqA7slV6+fcgERCZIqhp3B1ds0PSHz6w926wqhKw8SAtMdjAh8A/rd5XfInByQ8gz5kQLud5m9ljlX+SkE1T7vnB5QSElPQmYF2BUQTtTLD4r/l0icH9PuNLBegKuELADrwWibuChsMWgTQnYgA52iyS7x7FgpeChA6XcB1/mLJp9S2EYQ+AOgkBLjgE2uDeYsAAgnQIQM6iubZIoDY/QYrSfdSwb2N7SqvRLET0p6AQl52ENoRENC8/EYQ1Rd0UiAan/MXRrzCJwYUGSDdCIiC5x7sUjE/oEQ3ImLxcRKaG5CsHLn0ApKUI4/MBO26IFoVEP1EXCQJq1BeNxu7yivWnuTsI/kd4oiP1SjilgOEP4VK3IWNscWtBegQWVSbtCKgglqHtPUAuQrcLxlrtwV05SZHxz0BhVyetXRbQMdxPW7NdloIUI3a3JiJAQEu7FGPW4ryPtHSYKcos6s8Lv4sf67y8+b8VOVLhtB0gC4Sf8RS402m92SANDKMUonMU7CqcR5AaFaFWAGRmHcJT4QrW/D+hIYBwgiQMoVQiRXhalK8mZ0EEAkfokyMoeO+c3UJ16/PZgGkhY+Slcjq77QaCSX1EwPKJu2LkefMpTkwEyDJ1iuI4MQhMXIZpO+ASOnkywBAJwU7TRhrWpVJo/iMAPTrO+A0ofTTE1Kd0ikAMfvgnDly326E+Fch6l1IjewcQekGBf6kSz3R3gcRgPFsv60MSdJUPuAQEvL2TYUiKtISVH0aUEUYp4BUoSQn8f8WVhMvG+cZ6it+YYJez9ACewkh+OMaJuyC+k4KnzRFae/0xXNRfgz58BlARpfOm9bibVHSNoCP50mT2d7HhvCmcGfEbgGeBpRV1W07f72KgK6sLYzi9nXnkwGUHd3PjOvFD0g2vP++rgVQ/9XUuBApktPdMKUxM7avJeGe8CxSsvY433vf2wBIvvVsMwa9V0Kpq0KXTcYimhnam0+yL1aS0cOI6gEN4EPla+n6WUTVgKD/dCfi9SW/+0qeMaQe0LiSJmnGaKRyZoreZo3rbwoSrnERzh6j46kS0DN80P3F/SnpKlQ+tpP+FB/xEYW4D/qp+O+n3E1av0Zj1CZjVD/tDaJ+6fwXEQGQz91M1FqsQX2UNx4MCJO09IokVUhmE/T8llYqJqJ/lLqokOuzA9t19ykWoQ8Cqlbdf1m2ALXnbGX0PAFk8emRiuTRE/Exp9gJqFH8zIDOCyQzhO55Vq1Cuu21h2R7PFbgPw+hE1OtCv5cILvCfw2f647eSch7actU4Ld57yFcdHwMEj15XP90IyRFzHEvvud7W8DnAcW1KaLqGUNUG8lg2Wtm9EOrUNanQHA30kn5XMBOcgACHyVviwdi+tG2LTIcAghI0Tp5YuUmEgIt4YPURdcknUXr3zUDBwaP66cF8ZbjBkJP8jxAgC5j/MpNzL7g/hoOsncooES2gSik6DvcIi0uJwbC7QQSpJ5/4CiJoDsUR19xWh9RvfC9hchHGoFf4KBBpj/HdgOKeXx0ekbyC7fAUL2YWx01dkm5W3yCW0o2TasDjQBqMEas1irGB1BLgUY+Ao1iQN9xlaiURuuUnZHYVauArw6iAV8WqADkM+OrI81d1EzYDmiVIqcloZK92aSIxw+pn9W4clHOtLyKvdmk1OSgrYq2c2CHPaV++aJureTvlGzHx/3tDuBVexR+Kn0LLf8DZrmORzq+TJ0AAAAASUVORK5CYII=" /></p>
+<p><img src="data:image/png;base64,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" /></p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">str</span>(M)
 <span class="co">#&gt; List of 20</span>
-<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.774 0.731 0.433 0.584 0.51 ...</span>
+<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.709 0.598 0.613 0.615 0.559 ...</span>
 <span class="co">#&gt;  $ samplePsi      : num [1:10, 1:2, 1:3] 0 0 0 0 0 0 0 0 0 0 ...</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 3</span>
 <span class="co">#&gt;   .. ..$ : chr [1:10] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...</span>
@@ -556,14 +560,14 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;NH&quot; &quot;MD&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:3] &quot;Florida&quot; &quot;Cuba&quot; &quot;Hisp&quot;</span>
 <span class="co">#&gt;  $ pointMC        : num 0.621</span>
-<span class="co">#&gt;  $ meanMC         : num 0.573</span>
-<span class="co">#&gt;  $ medianMC       : num 0.573</span>
-<span class="co">#&gt;  $ seMC           : num 0.11</span>
-<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.433 0.774</span>
+<span class="co">#&gt;  $ meanMC         : num 0.611</span>
+<span class="co">#&gt;  $ medianMC       : num 0.614</span>
+<span class="co">#&gt;  $ seMC           : num 0.08</span>
+<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.427 0.709</span>
 <span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
-<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.433 0.774</span>
-<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
-<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.433 0.774</span>
+<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.427 0.707</span>
+<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;0.6819024%&quot; &quot;92.69256%&quot;</span>
+<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.427 0.709</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 2</span>
 <span class="co">#&gt;   .. ..$ : chr &quot;var1&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;lower&quot; &quot;upper&quot;</span>

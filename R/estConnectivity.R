@@ -68,9 +68,9 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
                                  psi = psiNew))
   }
-  meanMC <- mean(sampleMC)
-  medianMC <- median(sampleMC)
-  seMC <- sd(sampleMC)
+  meanMC <- mean(sampleMC, na.rm=TRUE)
+  medianMC <- median(sampleMC, na.rm=TRUE)
+  seMC <- sd(sampleMC, na.rm=TRUE)
   # Calculate confidence intervals using quantiles of sampled MC
   simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
   z0 <- qnorm(sum((sampleMC)<meanMC)/nSamples)
@@ -283,9 +283,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
       bcP <- 1 - bcP
   }
   if (calcCorr) {
-    meanCorr <- mean(corr)
-    medianCorr <- median(corr)
-    seCorr <- sd(corr)
+    meanCorr <- mean(corr, na.rm=TRUE)
+    medianCorr <- median(corr, na.rm=TRUE)
+    seCorr <- sd(corr, na.rm=TRUE)
     simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
@@ -293,8 +293,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC),
-              medianMC = median(MC), seMC = sd(MC),
+              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
+              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
               simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = corr, pointCorr = pointCorr,
@@ -638,9 +638,9 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
           "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
           "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
   }
-  meanCorr <- mean(corr)
-  medianCorr <- median(corr)
-  seCorr <- sd(corr)
+  meanCorr <- mean(corr, na.rm=TRUE)
+  medianCorr <- median(corr, na.rm=TRUE)
+  seCorr <- sd(corr, na.rm=TRUE)
   simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
