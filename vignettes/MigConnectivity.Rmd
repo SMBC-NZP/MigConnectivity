@@ -435,18 +435,10 @@ To estimate MC and include location uncertainty the following data are needed:
 Below is a repeatable example for how to calculate location bias and location error using coordinates derived from light-level geolocators. 
     
 ```{r, eval = FALSE}
-# Define projections # 
-
-WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
-Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 
-          +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
-
-EquidistConic<-"+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007
-                +b=6371007 +units=m +no_defs"
+# Load in projections
+data("projections")
 
 # Define deployment locations (winter) # 
-
 captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
                            -80.94,25.13,   # Florida
                            -66.86,17.97),  # Puerto Rico
@@ -454,11 +446,11 @@ captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
 
 # Convert capture locations into SpatialPoints #
 
-CapLocs<-sp::SpatialPoints(captureLocations,sp::CRS(WGS84))
+CapLocs<-sp::SpatialPoints(captureLocations,sp::CRS(projections$WGS84))
 
 # Project Capture locations # 
 
-CapLocsM<-sp::spTransform(CapLocs, sp::CRS(EquidistConic))
+CapLocsM<-sp::spTransform(CapLocs, sp::CRS(projections$EquidistConic))
 
 # Retrieve raw non-breeding locations from github 
 # First grab the identity of the bird so we can loop through the files 
@@ -502,13 +494,13 @@ PR <- c(13:16)  # locations w/in list of winterBirds in Puerto Rico
 NB_GL <- lapply(Non_breeding_files, 
                 FUN = function(x){
                   sp::SpatialPoints(cbind(x$Longitude,x$Latitude),
-                                    sp::CRS(WGS84))})
+                                    sp::CRS(projections$WGS84))})
 
 # Project into UTM projection #
 
 NB_GLmeters <- lapply(NB_GL,
                       FUN = function(x){sp::spTransform(x,
-                                                      sp::CRS(EquidistConic))})
+                                          sp::CRS(projections$EquidistConic))})
 
 # Process to determine geolocator bias and variance-covariance in meters #
 
@@ -1535,13 +1527,14 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 `estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 5 above ("CentroidSampleBreeding4"; make sure you run example 5 code before running this section).  We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
 
 ```{r, eval = FALSE}
-WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-  
+# Load in projections
+data("projections")
+
 set.seed(75)
 capLocs14 <- lapply(breedingPos14, sp::SpatialPoints, 
-                    proj4string = sp::CRS(WGS84))
+                    proj4string = sp::CRS(projections$WGS84))
 targLocs14 <- lapply(winteringPos14, sp::SpatialPoints, 
-                     proj4string = sp::CRS(WGS84))
+                     proj4string = sp::CRS(projections$WGS84))
 
 
 # Relative abundance by scenario and breeding population
@@ -1744,32 +1737,24 @@ geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
 
-# Define projections
-WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
-Lambert <- "+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 
-            +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
-
-resampleProjection <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 
-                      +a=6371007 +b=6371007 +units=m +no_defs"
-
-targLocs14.2 <- lapply(targLocs14, sp::spTransform, CRSobj = sp::CRS(Lambert))
+targLocs14.2 <- lapply(targLocs14, sp::spTransform, 
+                       CRSobj = sp::CRS(projections$Lambert))
 
 # convert wintering locations to polygons using the helper function
 WinteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = WGS84, 
-                         projection.out = Lambert)
+                         projection.in = projections$WGS84, 
+                         projection.out = projections$Lambert)
 
 winteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = WGS84,
-                         projection.out = WGS84)
+                         projection.in = projections$WGS84,
+                         projection.out = projections$WGS84)
 
 winteringPolys2 <- lapply(winteringPos14,
                           toPoly,
-                          projection.in = WGS84,
-                          projection.out = resampleProjection)
+                          projection.in = projections$WGS84,
+                          projection.out = projections$EquidistConic)
 
 # Double check that the input center points and output polygons are ordered
 # correctly 
@@ -1849,7 +1834,7 @@ for (i in 13) { # only run one scenario
                                            WinteringPolys[[i]], 
                                            geoBias,
                                            geoVCov,
-                                           Lambert)
+                                           projections$Lambert)
     
     animalLoc14.2 <- animalLoc14[[i]]
     
@@ -1871,9 +1856,10 @@ for (i in 13) { # only run one scenario
     
     target.point.sample <- sp::SpatialPoints(
       results14.2[[sim]]$targetPointSample,
-                                             sp::CRS(Lambert))
+                                             sp::CRS(projections$Lambert))
     
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+    target.point.sample2 <- sp::spTransform(target.point.sample,
+                                            sp::CRS(projections$WGS84))
     
     targetDist0 <- geosphere::distVincentyEllipsoid(
                                      target.point.sample2[distIndices[,'row']],
@@ -1918,10 +1904,10 @@ for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
  for (i in 13) {
   points0 <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
-                                sp::CRS(Lambert))
+                                sp::CRS(projections$Lambert))
     
   points1 <- sp::spTransform(points0, 
-                              sp::CRS(resampleProjection))
+                              sp::CRS(projections$EquidistConic))
     
   animalLoc14[[sim]] <- changeLocations(
     sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,

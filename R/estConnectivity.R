@@ -117,7 +117,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-                       resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                       resampleProjection = projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -177,8 +177,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                                                     targetNames))
 
 
-  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
   MC <- corr <- rep(NA, nBoot)
 
   # determine the number of animals from the input data
@@ -205,13 +203,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
     # project target points to WGS #
-    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(projections$WGS84))
 
     targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
     targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(projections$WGS84))
 
     originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                                     nAnimals, nAnimals)
@@ -258,7 +256,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(projections$WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
@@ -386,26 +384,11 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    FALSE.
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
-#' @param resampleProjection Projection when sampling from geolocator bias/error. This projection needs units = m.
-#'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs".
-#'    The default setting preserves distances around latitude = 0 and longitude = 0. Below is a list of potentially useful projections
-#'    based on the location of \code{targetSites}.
-#'
-#'    NorthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    SouthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=-5 +lat_2=-42 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Europe <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=43 +lat_2=62 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    AsiaNorth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=15 +lat_2=65 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    AsiaSouth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=7 +lat_2=-32 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Africa <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=-23 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Arctic <- "+proj=aeqd +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Antarctic <- "+proj=aeqd +lat_0=-90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#' @param resampleProjection Projection when sampling from geolocator
+#'    bias/error. This projection needs units = m. Default is Equidistant
+#'    Conic. The default setting preserves distances around latitude = 0 and
+#'    longitude = 0. Other projections may work well, depending on the location
+#'    of \code{targetSites}.
 #'
 #'
 #' @return \code{estMC} returns a list with elements:
@@ -461,6 +444,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'      main MC formula or that for MC(R).}
 #' }
 #' @example inst/examples/estMCExamples.R
+#' @seealso \code{\link{calcMC}}, \code{\link{projections}}
 #' @export
 estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -472,9 +456,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
-                                        +x_0=0 +y_0=0 +a=6371007 +b=6371007
-                                        +units=m +no_defs") {
+                  resampleProjection = projections$EquidistConic) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -532,8 +514,11 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    a line every 100 bootstraps.  2 prints a line every bootstrap.
 #'    3 also prints the number of draws (for tuning nSim for GL data only).
 #' @param alpha Level for confidence/credible intervals provided.
-#' @param resampleProjection Projection when sampling from geolocator bias/error.
-#'    Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+#' @param resampleProjection Projection when sampling from geolocator
+#'    bias/error. This projection needs units = m. Default is Equidistant
+#'    Conic. The default setting preserves distances around latitude = 0 and
+#'    longitude = 0. Other projections may work well, depending on the location
+#'    of \code{targetSites}.
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
@@ -562,9 +547,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                      resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
-                                            +x_0=0 +y_0=0 +a=6371007 +b=6371007
-                                            +units=m +no_defs") {
+                      resampleProjection = projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -591,7 +574,6 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     }
     targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
   }
-  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
   corr <- rep(NA, nBoot)
 
@@ -602,13 +584,13 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
   # project target points to WGS #
-  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(projections$WGS84))
 
   targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
   targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-  originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
+  originPoints2 <- sp::spTransform(originPoints, sp::CRS(projections$WGS84))
 
   originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                             nAnimals, nAnimals)
@@ -634,7 +616,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(projections$WGS84))
     targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                                     target.point.sample2[distIndices[,'col']])
     targetDist1[lower.tri(targetDist1)] <- targetDist0
