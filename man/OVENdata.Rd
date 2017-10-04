@@ -3,9 +3,9 @@
 \docType{data}
 \name{OVENdata}
 \alias{OVENdata}
-\title{Ovenbird light-level geolocator, GPS and neccesary data}
+\title{Ovenbird light-level geolocator and GPS neccesary data}
 \format{A named list with the neccesary data to replicate the analyses
-found in Cohen et al. (in prep) with archical light-level geolocator and
+found in Cohen et al. (in press) with archival light-level geolocator and
 GPS data.
 The data contained in the list are:
 \itemize{
@@ -63,6 +63,7 @@ The data contained in the list are:
 OVENdata
 }
 \description{
-Ovenbird light-level geolocator, GPS and neccesary data
+Ovenbird data from Cohen et al. (in press) and Hallworth and Marra (2015).
 }
 \keyword{datasets}
+

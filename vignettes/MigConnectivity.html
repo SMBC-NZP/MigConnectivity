@@ -4,15 +4,13 @@
 
 <head>
 
-<meta charset="utf-8" />
+<meta charset="utf-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2017-09-07" />
+<meta name="date" content="2017-10-03" />
 
 <title>MigConnectivity package</title>
 
@@ -20,46 +18,32 @@
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css">
-div.sourceCode { overflow-x: auto; }
 table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
   margin: 0; padding: 0; vertical-align: baseline; border: none; }
 table.sourceCode { width: 100%; line-height: 100%; }
 td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
 td.sourceCode { padding-left: 5px; }
-code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code > span.dt { color: #902000; } /* DataType */
-code > span.dv { color: #40a070; } /* DecVal */
-code > span.bn { color: #40a070; } /* BaseN */
-code > span.fl { color: #40a070; } /* Float */
-code > span.ch { color: #4070a0; } /* Char */
-code > span.st { color: #4070a0; } /* String */
-code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code > span.ot { color: #007020; } /* Other */
-code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code > span.fu { color: #06287e; } /* Function */
-code > span.er { color: #ff0000; font-weight: bold; } /* Error */
-code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-code > span.cn { color: #880000; } /* Constant */
-code > span.sc { color: #4070a0; } /* SpecialChar */
-code > span.vs { color: #4070a0; } /* VerbatimString */
-code > span.ss { color: #bb6688; } /* SpecialString */
-code > span.im { } /* Import */
-code > span.va { color: #19177c; } /* Variable */
-code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code > span.op { color: #666666; } /* Operator */
-code > span.bu { } /* BuiltIn */
-code > span.ex { } /* Extension */
-code > span.pp { color: #bc7a00; } /* Preprocessor */
-code > span.at { color: #7d9029; } /* Attribute */
-code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
 </style>
 
 
-
-<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+<link href="data:text/css,body%20%7B%0A%20%20background%2Dcolor%3A%20%23fff%3B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20max%2Dwidth%3A%20700px%3B%0A%20%20overflow%3A%20visible%3B%0A%20%20padding%2Dleft%3A%202em%3B%0A%20%20padding%2Dright%3A%202em%3B%0A%20%20font%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0A%20%20font%2Dsize%3A%2014px%3B%0A%20%20line%2Dheight%3A%201%2E35%3B%0A%7D%0A%0A%23header%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0A%0A%23TOC%20%7B%0A%20%20clear%3A%20both%3B%0A%20%20margin%3A%200%200%2010px%2010px%3B%0A%20%20padding%3A%204px%3B%0A%20%20width%3A%20400px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20border%2Dradius%3A%205px%3B%0A%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20font%2Dsize%3A%2013px%3B%0A%20%20line%2Dheight%3A%201%2E3%3B%0A%7D%0A%20%20%23TOC%20%2Etoctitle%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%20%20font%2Dsize%3A%2015px%3B%0A%20%20%20%20margin%2Dleft%3A%205px%3B%0A%20%20%7D%0A%0A%20%20%23TOC%20ul%20%7B%0A%20%20%20%20padding%2Dleft%3A%2040px%3B%0A%20%20%20%20margin%2Dleft%3A%20%2D1%2E5em%3B%0A%20%20%20%20margin%2Dtop%3A%205px%3B%0A%20%20%20%20margin%2Dbottom%3A%205px%3B%0A%20%20%7D%0A%20%20%23TOC%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dleft%3A%20%2D2em%3B%0A%20%20%7D%0A%20%20%23TOC%20li%20%7B%0A%20%20%20%20line%2Dheight%3A%2016px%3B%0A%20%20%7D%0A%0Atable%20%7B%0A%20%20margin%3A%201em%20auto%3B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dcolor%3A%20%23DDDDDD%3B%0A%20%20border%2Dstyle%3A%20outset%3B%0A%20%20border%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0A%20%20border%2Dwidth%3A%202px%3B%0A%20%20padding%3A%205px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0A%20%20border%2Dwidth%3A%201px%3B%0A%20%20border%2Dstyle%3A%20inset%3B%0A%20%20line%2Dheight%3A%2018px%3B%0A%20%20padding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0A%20%20border%2Dleft%2Dstyle%3A%20none%3B%0A%20%20border%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Ap%20%7B%0A%20%20margin%3A%200%2E5em%200%3B%0A%7D%0A%0Ablockquote%20%7B%0A%20%20background%2Dcolor%3A%20%23f6f6f6%3B%0A%20%20padding%3A%200%2E25em%200%2E75em%3B%0A%7D%0A%0Ahr%20%7B%0A%20%20border%2Dstyle%3A%20solid%3B%0A%20%20border%3A%20none%3B%0A%20%20border%2Dtop%3A%201px%20solid%20%23777%3B%0A%20%20margin%3A%2028px%200%3B%0A%7D%0A%0Adl%20%7B%0A%20%20margin%2Dleft%3A%200%3B%0A%7D%0A%20%20dl%20dd%20%7B%0A%20%20%20%20margin%2Dbottom%3A%2013px%3B%0A%20%20%20%20margin%2Dleft%3A%2013px%3B%0A%20%20%7D%0A%20%20dl%20dt%20%7B%0A%20%20%20%20font%2Dweight%3A%20bold%3B%0A%20%20%7D%0A%0Aul%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%7D%0A%20%20ul%20li%20%7B%0A%20%20%20%20list%2Dstyle%3A%20circle%20outside%3B%0A%20%20%7D%0A%20%20ul%20ul%20%7B%0A%20%20%20%20margin%2Dbottom%3A%200%3B%0A%20%20%7D%0A%0Apre%2C%20code%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20color%3A%20%23333%3B%0A%7D%0Apre%20%7B%0A%20%20white%2Dspace%3A%20pre%2Dwrap%3B%20%20%20%20%2F%2A%20Wrap%20long%20lines%20%2A%2F%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20margin%3A%205px%200px%2010px%200px%3B%0A%20%20padding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0A%20%20background%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0A%0Acode%20%7B%0A%20%20font%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0A%20%20font%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0A%20%20padding%3A%202px%200px%3B%0A%7D%0A%0Adiv%2Efigure%20%7B%0A%20%20text%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0A%20%20background%2Dcolor%3A%20%23FFFFFF%3B%0A%20%20padding%3A%202px%3B%0A%20%20border%3A%201px%20solid%20%23DDDDDD%3B%0A%20%20border%2Dradius%3A%203px%3B%0A%20%20border%3A%201px%20solid%20%23CCCCCC%3B%0A%20%20margin%3A%200%205px%3B%0A%7D%0A%0Ah1%20%7B%0A%20%20margin%2Dtop%3A%200%3B%0A%20%20font%2Dsize%3A%2035px%3B%0A%20%20line%2Dheight%3A%2040px%3B%0A%7D%0A%0Ah2%20%7B%0A%20%20border%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20padding%2Dbottom%3A%202px%3B%0A%20%20font%2Dsize%3A%20145%25%3B%0A%7D%0A%0Ah3%20%7B%0A%20%20border%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0A%20%20padding%2Dtop%3A%2010px%3B%0A%20%20font%2Dsize%3A%20120%25%3B%0A%7D%0A%0Ah4%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0A%20%20margin%2Dleft%3A%208px%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Ah5%2C%20h6%20%7B%0A%20%20border%2Dbottom%3A%201px%20solid%20%23ccc%3B%0A%20%20font%2Dsize%3A%20105%25%3B%0A%7D%0A%0Aa%20%7B%0A%20%20color%3A%20%230033dd%3B%0A%20%20text%2Ddecoration%3A%20none%3B%0A%7D%0A%20%20a%3Ahover%20%7B%0A%20%20%20%20color%3A%20%236666ff%3B%20%7D%0A%20%20a%3Avisited%20%7B%0A%20%20%20%20color%3A%20%23800080%3B%20%7D%0A%20%20a%3Avisited%3Ahover%20%7B%0A%20%20%20%20color%3A%20%23BB00BB%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%20%20a%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0A%20%20%20%20text%2Ddecoration%3A%20underline%3B%20%7D%0A%0A%2F%2A%20Class%20described%20in%20https%3A%2F%2Fbenjeffrey%2Ecom%2Fposts%2Fpandoc%2Dsyntax%2Dhighlighting%2Dcss%0A%20%20%20Colours%20from%20https%3A%2F%2Fgist%2Egithub%2Ecom%2Frobsimmons%2F1172277%20%2A%2F%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Keyword%20%2A%2F%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%2F%2A%20DataType%20%2A%2F%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%2F%2A%20DecVal%20%28decimal%20values%29%20%2A%2F%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20BaseN%20%2A%2F%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Float%20%2A%2F%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20Char%20%2A%2F%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%2F%2A%20String%20%2A%2F%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%2F%2A%20Comment%20%2A%2F%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%2F%2A%20OtherToken%20%2A%2F%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20AlertToken%20%2A%2F%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%2F%2A%20Function%20calls%20%2A%2F%20%0Acode%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%2F%2A%20ErrorTok%20%2A%2F%0A%0A" rel="stylesheet" type="text/css" />
 
 </head>
 
@@ -67,11 +51,11 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 
 
-
-<h1 class="title toc-ignore">‘MigConnectivity’ package</h1>
+<div id="header">
+<h1 class="title">‘MigConnectivity’ package</h1>
 <h4 class="author"><em>Jeffrey A. Hostetler, Michael T. Hallworth</em></h4>
-<h4 class="date"><em>2017-09-07</em></h4>
-
+<h4 class="date"><em>2017-10-03</em></h4>
+</div>
 
 
 <div id="introduction" class="section level2">
@@ -85,7 +69,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><p>(Optional) Total sample size of animals used to estimate the transition probabilities.</p></li>
 </ol>
 <p>MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and approximates the correlation between individuals at those distances. Earlier methods (Mantel correlation; rM) used the correlation between two distance matrices of individual animals captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient approximation, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.</p>
-<p>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In revision. A quantitative definition for the strength of migratory connectivity.</p>
+<p>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In press. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution.</p>
 <div id="overview-of-functions" class="section level3">
 <h3>Overview of Functions</h3>
 <ol style="list-style-type: decimal">
@@ -100,17 +84,15 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div id="installing-migconnectivity-from-github" class="section level3">
 <h3>Installing ‘MigConnectivity’ from GitHub</h3>
 <p>In order to install the vignette along with the package use the following code with <code>build_vignettes = TRUE</code>. <strong>Note</strong> it takes quite a bit longer to download the package when <code>build_vignettes = TRUE</code>.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">'devtools'</span>)
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">'devtools'</span>)
 
 devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP/MigConnectivity&quot;</span>, <span class="dt">build_vignettes =</span> <span class="ot">TRUE</span>)
 
-<span class="kw">library</span>(MigConnectivity)</code></pre></div>
+<span class="kw">library</span>(MigConnectivity)</code></pre>
 </div>
 <div id="functions" class="section level3">
 <h3>Functions</h3>
-<p><code>calcMC</code> Calculate strength of migratory connectivity (MC)<br />
-<code>estMC</code> Estimate the strength of migratory connectivity (MC) while incorporating sampling uncertainty<br />
-<code>simMove</code> Simulates annual and seasonal movement of animals between regions</p>
+<p><code>calcMC</code> Calculate strength of migratory connectivity (MC)<br /><code>estMC</code> Estimate the strength of migratory connectivity (MC) while incorporating sampling uncertainty<br /><code>simMove</code> Simulates annual and seasonal movement of animals between regions</p>
 </div>
 </div>
 <div id="examples" class="section level2">
@@ -118,7 +100,7 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP
 <div id="utility-functions-for-use-in-vignette" class="section level3">
 <h3>Utility functions for use in vignette</h3>
 <p><code>mlogitMat</code>: Calculates probability matrix based on exponential decline with distance</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mlogitMat &lt;-<span class="st"> </span>function(slope, dist) {
+<pre class="sourceCode r"><code class="sourceCode r">mlogitMat &lt;-<span class="st"> </span>function(slope, dist) {
        preMat &lt;-<span class="st"> </span><span class="kw">exp</span>(-slope/<span class="kw">mean</span>(dist)*dist)
        <span class="kw">diag</span>(preMat) &lt;-<span class="st"> </span><span class="dv">0</span>
        nr &lt;-<span class="st"> </span><span class="kw">nrow</span>(dist)
@@ -129,9 +111,9 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP
       outMat[b,b] &lt;-<span class="st"> </span><span class="dv">1</span> -<span class="st"> </span><span class="kw">sum</span>(outMat[b, ])
   }
   <span class="kw">return</span>(outMat)
-}</code></pre></div>
+}</code></pre>
 <p><code>mlogitMC</code>: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength. Uses same argument (origin.abund) for relative or absolute abundance.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mlogitMC &lt;-<span class="st"> </span>function(slope, 
+<pre class="sourceCode r"><code class="sourceCode r">mlogitMC &lt;-<span class="st"> </span>function(slope, 
                      MC.in, 
                      origin.dist,
                      target.dist,
@@ -153,9 +135,9 @@ devtools::<span class="kw">install_github</span>(<span class="st">&quot;SMBC-NZP
                <span class="dt">sampleSize =</span> sample.size)
   
   <span class="kw">return</span>((MC.in -<span class="st"> </span>MC)^<span class="dv">2</span>)
-}</code></pre></div>
+}</code></pre>
 <p><code>calcStrengthInd</code>: rM function for individuals</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">calcStrengthInd &lt;-<span class="st"> </span>function(originDist, 
+<pre class="sourceCode r"><code class="sourceCode r">calcStrengthInd &lt;-<span class="st"> </span>function(originDist, 
                             targetDist, 
                             locations, 
                             <span class="dt">resamp=</span><span class="dv">1000</span>, 
@@ -164,14 +146,16 @@ nInd &lt;-<span class="st"> </span><span class="kw">dim</span>(locations)[<span 
 originDist2 &lt;-<span class="st"> </span>targetDist2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="dv">0</span>, nInd, nInd)
 for (i in <span class="dv">1</span>:(nInd<span class="dv">-1</span>)) {
  for (j in (i<span class="dv">+1</span>):nInd) {
-  originDist2[i,j] &lt;-<span class="st"> </span>originDist2[j,i] &lt;-<span class="st"> </span>originDist[locations[i,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
-  targetDist2[i,j] &lt;-<span class="st"> </span>targetDist2[j,i] &lt;-<span class="st"> </span>targetDist[locations[i,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+      originDist2[i,j] &lt;-<span class="st"> </span>originDist[locations[i,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+      targetDist2[i,j] &lt;-<span class="st"> </span>targetDist[locations[i,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+      originDist2[j,i] &lt;-<span class="st"> </span>originDist[locations[i,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
+      targetDist2[j,i] &lt;-<span class="st"> </span>targetDist[locations[i,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>], locations[j,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]]
     }
   }
 <span class="kw">return</span>(ncf::<span class="kw">mantel.test</span>(originDist2, targetDist2, <span class="dt">resamp=</span>resamp, <span class="dt">quiet =</span> !verbose))
-} </code></pre></div>
+} </code></pre>
 <p><code>calcPsiMC</code>: Simple approach to estimate psi matrix (transition probabilities) and MC from simulated or real data (does not incorporate sampling uncertainty)</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">calcPsiMC &lt;-<span class="st"> </span>function(originDist, 
+<pre class="sourceCode r"><code class="sourceCode r">calcPsiMC &lt;-<span class="st"> </span>function(originDist, 
                       targetDist, 
                       originRelAbund, 
                       locations, 
@@ -195,67 +179,65 @@ for (i in <span class="dv">1</span>:nInd) {
   if (<span class="kw">length</span>(bIndices) &amp;&amp;<span class="st"> </span><span class="kw">length</span>(wIndices))
     for (bi in bIndices)
       for (wi in wIndices)
-       psiMat[originMat[bi], targetMat[wi]] &lt;-<span class="st"> </span>psiMat[originMat[bi], targetMat[wi]] +<span class="st"> </span><span class="dv">1</span>
+       psiMat[originMat[bi], targetMat[wi]] &lt;-<span class="st"> </span>psiMat[originMat[bi], 
+                                                      targetMat[wi]] +<span class="st"> </span><span class="dv">1</span>
   }
   psiMat &lt;-<span class="st"> </span><span class="kw">apply</span>(psiMat, <span class="dv">2</span>, <span class="st">&quot;/&quot;</span>, <span class="kw">rowSums</span>(psiMat))
   MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(originDist, targetDist, <span class="dt">psi =</span> psiMat,
                <span class="dt">originRelAbund =</span> originRelAbund, <span class="dt">sampleSize =</span> nInd)
   <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">psi=</span>psiMat, <span class="dt">MC=</span>MC))
-}</code></pre></div>
+}</code></pre>
 <p><code>changeLocations</code>: transfers the simulated bird locations from the true populations to the researcher defined regions</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">changeLocations &lt;-<span class="st"> </span>function(animalLoc, 
+<pre class="sourceCode r"><code class="sourceCode r">changeLocations &lt;-<span class="st"> </span>function(animalLoc, 
                             breedingSiteTrans, 
                             winteringSiteTrans) {
   animalLoc[,<span class="dv">1</span>,,] &lt;-<span class="st"> </span>breedingSiteTrans[animalLoc[,<span class="dv">1</span>,,]]
   animalLoc[,<span class="dv">2</span>,,] &lt;-<span class="st"> </span>winteringSiteTrans[animalLoc[,<span class="dv">2</span>,,]]
   <span class="kw">return</span>(animalLoc)
-}</code></pre></div>
+}</code></pre>
 <p><code>simLocationError</code>: Simulates location error with defined bias and variance / covariance matrix</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">simLocationError &lt;-<span class="st"> </span>function(targetPoints, 
+<pre class="sourceCode r"><code class="sourceCode r">simLocationError &lt;-<span class="st"> </span>function(targetPoints, 
                              targetSites, 
-                             geoBias, 
-                             geoVCov, 
+                                         geoBias, 
+                                         geoVCov, 
                              projection, 
-                             <span class="dt">verbose =</span> <span class="dv">0</span>, 
-                             <span class="dt">nSim =</span> <span class="dv">1000</span>) {
-                             
+                                         <span class="dt">verbose =</span> <span class="dv">0</span>, 
+                                         <span class="dt">nSim =</span> <span class="dv">1000</span>) {
+
 nAnimals &lt;-<span class="st"> </span><span class="kw">length</span>(targetPoints)
 geoBias2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">rep</span>(geoBias, nSim), <span class="dt">nrow=</span>nSim, <span class="dt">byrow=</span>T)
 target.sample &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, nAnimals)
 target.point.sample &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nAnimals, <span class="dv">2</span>)
 
 for(i in <span class="dv">1</span>:nAnimals){
-    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
-      <span class="kw">cat</span>(<span class="st">'Animal'</span>, i, <span class="st">'of'</span>, nAnimals)
-    draws &lt;-<span class="st"> </span><span class="dv">0</span>
-    while (<span class="kw">is.na</span>(target.sample[i])) {
-      draws &lt;-<span class="st"> </span>draws +<span class="st"> </span><span class="dv">1</span>
+  if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
+    <span class="kw">cat</span>(<span class="st">'Animal'</span>, i, <span class="st">'of'</span>, nAnimals)
+  draws &lt;-<span class="st"> </span><span class="dv">0</span>
+  while (<span class="kw">is.na</span>(target.sample[i])) {
+    draws &lt;-<span class="st"> </span>draws +<span class="st"> </span><span class="dv">1</span>
+    <span class="co"># Sample random point for each bird </span>
+    <span class="co"># from parametric distribution of NB error</span>
+    point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(
+                  MASS::<span class="kw">mvrnorm</span>(<span class="dt">n=</span>nSim, 
+                  <span class="dt">mu=</span><span class="kw">cbind</span>(targetPoints@coords[i,<span class="dv">1</span>],targetPoints@coords[i,<span class="dv">2</span>]),
+                  <span class="dt">Sigma=</span>geoVCov)+
+<span class="st">                  </span>geoBias2,
+                  sp::<span class="kw">CRS</span>(projection))
       
-<span class="co"># Sample random point for each bird </span>
-<span class="co"># from parametric distribution of NB error</span>
-
-      point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(
-                    MASS::<span class="kw">mvrnorm</span>(<span class="dt">n=</span>nSim, 
-                    <span class="dt">mu=</span><span class="kw">cbind</span>(targetPoints@coords[i,<span class="dv">1</span>],targetPoints@coords[i,<span class="dv">2</span>]),
-                    <span class="dt">Sigma=</span>geoVCov)+
-<span class="st">                    </span>geoBias2,
-                    sp::<span class="kw">CRS</span>(projection))
-          
-      <span class="co"># filtered to stay in NB areas (land)</span>
-      
-      target.sample0 &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(point.sample, targetSites)
-      target.sample[i]&lt;-target.sample0[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]
-    }
-    
-target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]@coords
-    if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
-      <span class="kw">cat</span>(<span class="st">' '</span>, draws, <span class="st">'draws</span><span class="ch">\n</span><span class="st">'</span>)
+    <span class="co"># filtered to stay in NB areas (land)</span>
+    target.sample0 &lt;-<span class="st"> </span>sp::<span class="kw">over</span>(point.sample, targetSites)
+    target.sample[i]&lt;-target.sample0[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]
   }
+    
+  target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.sample0)][<span class="dv">1</span>]@coords
+  if (verbose &gt;<span class="st"> </span><span class="dv">0</span>)
+    <span class="kw">cat</span>(<span class="st">' '</span>, draws, <span class="st">'draws</span><span class="ch">\n</span><span class="st">'</span>)
+}
   <span class="kw">return</span>(<span class="kw">list</span>(<span class="dt">targetSample =</span> target.sample, 
               <span class="dt">targetPointSample =</span> target.point.sample))
-}</code></pre></div>
+}</code></pre>
 <p><code>toPoly</code>: Helper function to convert a string of XY coordinates of centroids to polygons</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">toPoly &lt;-<span class="st"> </span>function(siteCentroids,
+<pre class="sourceCode r"><code class="sourceCode r">toPoly &lt;-<span class="st"> </span>function(siteCentroids,
                    <span class="dt">projection.in =</span> <span class="st">&quot;+proj=longlat </span>
 <span class="st">                                    +datum=WGS84 </span>
 <span class="st">                                    +no_defs </span>
@@ -304,7 +286,7 @@ target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.
   }
   
   <span class="kw">return</span>(polys)
-}</code></pre></div>
+}</code></pre>
 </div>
 <div id="example-1" class="section level3">
 <h3>EXAMPLE 1</h3>
@@ -314,12 +296,9 @@ target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.
 <p>This function calculates the strength of migratory connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to calculate the strength of MC between three breeding and non-breeding regions.</p>
 <p>To calculate the strength of MC, you will need:</p>
 <ol style="list-style-type: decimal">
-<li>to define the number of breeding and non-breeding regions<br />
-</li>
-<li>the distance between the breeding regions and the distance between the non-breeding regions<br />
-</li>
-<li>the transition probabilities between each breeding and non-breeding region (<code>psi</code>)<br />
-</li>
+<li>to define the number of breeding and non-breeding regions<br /></li>
+<li>the distance between the breeding regions and the distance between the non-breeding regions<br /></li>
+<li>the transition probabilities between each breeding and non-breeding region (<code>psi</code>)<br /></li>
 <li>the relative abundance within each of the regions where individuals originate from (here the breeding regions)</li>
 <li>(optional) the total sample size of animals used to estimate the transition probabilities.</li>
 </ol>
@@ -328,10 +307,10 @@ target.point.sample[i, ]&lt;-point.sample[!<span class="kw">is.na</span>(target.
 <h3>Calculate MC between breeding and non-breeding regions</h3>
 <p>Simple example with three breeding and three non-breeding regions</p>
 <p>Define the number of breeding and non-breeding populations</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nBreeding &lt;-<span class="st"> </span><span class="dv">3</span> <span class="co">#number of breeding regions</span>
-nNonBreeding &lt;-<span class="st"> </span><span class="dv">3</span> <span class="co">#number of non-breeding regions</span></code></pre></div>
+<pre class="sourceCode r"><code class="sourceCode r">nBreeding &lt;-<span class="st"> </span><span class="dv">3</span> <span class="co">#number of breeding regions</span>
+nNonBreeding &lt;-<span class="st"> </span><span class="dv">3</span> <span class="co">#number of non-breeding regions</span></code></pre>
 <p>Generate a distance matrix between the different regions</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#distances between centriods of three breeding regions</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#distances between centriods of three breeding regions</span>
 breedDist &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">2</span>,
                       <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>,
                       <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">0</span>), nBreeding, nBreeding) 
@@ -339,16 +318,16 @@ breedDist &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span cla
 <span class="co">#distances between centriods of three non-breeding regions</span>
 nonBreedDist &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">5</span>, <span class="dv">10</span>,
                          <span class="dv">5</span>, <span class="dv">0</span>, <span class="dv">5</span>,
-                        <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">0</span>), nNonBreeding, nNonBreeding)</code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+                        <span class="dv">10</span>, <span class="dv">5</span>, <span class="dv">0</span>), nNonBreeding, nNonBreeding)</code></pre>
+<p><img src="data:image/png;base64,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" /></p>
 <p>Define the transition probabilities between the breeding and non-breeding regions</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#transition probabilities form each breeding to each non-breeding region</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#transition probabilities form each breeding to each non-breeding region</span>
 psi &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="fl">0.4</span>, <span class="fl">0.35</span>, <span class="fl">0.25</span>,
                 <span class="fl">0.3</span>, <span class="fl">0.4</span>, <span class="fl">0.3</span>,
-                <span class="fl">0.2</span>, <span class="fl">0.3</span>, <span class="fl">0.5</span>), nBreeding, nNonBreeding, <span class="dt">byrow =</span> <span class="ot">TRUE</span>) </code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+                <span class="fl">0.2</span>, <span class="fl">0.3</span>, <span class="fl">0.5</span>), nBreeding, nNonBreeding, <span class="dt">byrow =</span> <span class="ot">TRUE</span>) </code></pre>
+<p><img src="data:image/png;base64,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" /></p>
 <p>Define the relative abundance within the three breeding regions</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#equal relative abundance among the three breeding regions, must sum to 1                      </span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#equal relative abundance among the three breeding regions, must sum to 1                      </span>
 relN &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span>/nBreeding, nBreeding) 
 
 relN
@@ -357,9 +336,9 @@ relN
 <span class="co"># Define total sample size for psi data </span>
 <span class="co"># for small sample corrected version of MC </span>
 
-n &lt;-<span class="st"> </span><span class="dv">250</span></code></pre></div>
+n &lt;-<span class="st"> </span><span class="dv">250</span></code></pre>
 <p>Calculate the strength of migratory connectivity using the inputs above</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Calculate the strength of migratory connectivity </span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Calculate the strength of migratory connectivity </span>
 MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt">originDist =</span> breedDist,
              <span class="dt">targetDist =</span> nonBreedDist,
              <span class="dt">originRelAbund =</span> relN,
@@ -375,7 +354,7 @@ MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt"
              <span class="dt">sampleSize =</span> n)
 
 <span class="kw">round</span>(MC, <span class="dv">3</span>)
-<span class="co">#&gt; [1] 0.044</span></code></pre></div>
+<span class="co">#&gt; [1] 0.044</span></code></pre>
 </div>
 <div id="example-2" class="section level3">
 <h3>EXAMPLE 2</h3>
@@ -385,27 +364,24 @@ MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt"
 <p>Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions.</p>
 <p>To estimate MC and include location uncertainty the following data are needed:</p>
 <ol style="list-style-type: decimal">
-<li>A logical vector indicating the type of device the location estimates were derived from (GPS = FALSE, Light-level geolocator = TRUE)<br />
-</li>
-<li>Location Bias - a vector that has error estimates for both longitude and latitude<br />
-</li>
-<li>Location error - a variance, covariance matrix of longitude and latitude<br />
-</li>
-<li>Distance matrix between breeding and non-breeding regions<br />
-</li>
-<li>A shapefile of both breeding and non-breeding regions<br />
-</li>
-<li>The deployment locations and the ‘unknown’ locations derived from the tracking devices<br />
-</li>
+<li>A logical vector indicating the type of device the location estimates were derived from (GPS = FALSE, Light-level geolocator = TRUE)<br /></li>
+<li>Location Bias - a vector that has error estimates for both longitude and latitude<br /></li>
+<li>Location error - a variance, covariance matrix of longitude and latitude<br /></li>
+<li>Distance matrix between breeding and non-breeding regions<br /></li>
+<li>A shapefile of both breeding and non-breeding regions<br /></li>
+<li>The deployment locations and the ‘unknown’ locations derived from the tracking devices<br /></li>
 <li>The relative (or absolute) abundance within each region where the birds originate from (deployment regions)</li>
 </ol>
 <p>Below is a repeatable example for how to calculate location bias and location error using coordinates derived from light-level geolocators.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define projections # </span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Define projections # </span>
 
 WGS84&lt;-<span class="st">&quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>
 
 Lambert&lt;-<span class="st">&quot;+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 </span>
 <span class="st">          +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs&quot;</span>
+
+EquidistConic&lt;-<span class="st">&quot;+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007</span>
+<span class="st">                +b=6371007 +units=m +no_defs&quot;</span>
 
 <span class="co"># Define deployment locations (winter) # </span>
 
@@ -420,32 +396,27 @@ CapLocs&lt;-sp::<span class="kw">SpatialPoints</span>(captureLocations,sp::<span
 
 <span class="co"># Project Capture locations # </span>
 
-CapLocsM&lt;-sp::<span class="kw">spTransform</span>(CapLocs, sp::<span class="kw">CRS</span>(Lambert))
+CapLocsM&lt;-sp::<span class="kw">spTransform</span>(CapLocs, sp::<span class="kw">CRS</span>(EquidistConic))
 
 <span class="co"># Retrieve raw non-breeding locations from github </span>
 <span class="co"># First grab the identity of the bird so we can loop through the files </span>
 <span class="co"># For this example we are only interested in the error </span>
 <span class="co"># around non-breeding locations </span>
 <span class="co"># here we grab only the birds captured during the non-breeding season </span>
+<span class="co"># Using paste0 for vignette formatting purposes</span>
 
-<span class="co"># note - the link should be a single continuous link without breaks. </span>
-<span class="co"># Breaks were added here so users could see the entire link </span>
-
-winterBirds &lt;-<span class="st"> </span><span class="kw">dget</span>(<span class="st">&quot;https://raw.githubusercontent.com/</span>
-<span class="st">                    SMBC-NZP/MigConnectivity/master/</span>
-<span class="st">                    data-raw/GL_NonBreedingFiles/winterBirds.txt&quot;</span>)
+winterBirds &lt;-<span class="st"> </span><span class="kw">dget</span>(<span class="kw">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,
+                    <span class="st">&quot;SMBC-NZP/MigConnectivity/master/&quot;</span>,
+                    <span class="st">&quot;data-raw/GL_NonBreedingFiles/winterBirds.txt&quot;</span>))
 
 <span class="co"># create empty list to store the location data #</span>
 Non_breeding_files &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">'list'</span>,<span class="kw">length</span>(winterBirds))
 
-<span class="co"># note - the link below should be a single continuous link without breaks. </span>
-<span class="co"># Breaks were added here so users could see the entire link </span>
-
 <span class="co"># Get raw location data from Github #</span>
 for(i in <span class="dv">1</span>:<span class="kw">length</span>(winterBirds)){
-Non_breeding_files[[i]] &lt;-<span class="st"> </span><span class="kw">dget</span>(<span class="kw">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/</span>
-<span class="st">                                        SMBC-NZP/MigConnectivity/master/data-raw/</span>
-<span class="st">                                        GL_NonBreedingFiles/NonBreeding_&quot;</span>,
+Non_breeding_files[[i]] &lt;-<span class="st"> </span><span class="kw">dget</span>(<span class="kw">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,
+                                        <span class="st">&quot;SMBC-NZP/MigConnectivity/master/data-raw/&quot;</span>,
+                                        <span class="st">&quot;GL_NonBreedingFiles/NonBreeding_&quot;</span>,
                                         winterBirds[i],<span class="st">&quot;.txt&quot;</span>))
 }
 
@@ -475,38 +446,43 @@ NB_GL &lt;-<span class="st"> </span><span class="kw">lapply</span>(Non_breeding_
 
 NB_GLmeters &lt;-<span class="st"> </span><span class="kw">lapply</span>(NB_GL,
                       <span class="dt">FUN =</span> function(x){sp::<span class="kw">spTransform</span>(x,
-                                                        sp::<span class="kw">CRS</span>(Lambert))})
+                                                      sp::<span class="kw">CRS</span>(EquidistConic))})
 
 <span class="co"># Process to determine geolocator bias and variance-covariance in meters #</span>
 
 <span class="co"># generate empty vector to store data #</span>
-LongError&lt;-<span class="kw">rep</span>(<span class="ot">NA</span>,<span class="kw">length</span>(winterBirds)) <span class="co"># 16 birds recovered in non-breeding season</span>
+LongError&lt;-<span class="kw">rep</span>(<span class="ot">NA</span>,<span class="kw">length</span>(winterBirds)) 
 LatError&lt;-<span class="kw">rep</span>(<span class="ot">NA</span>,<span class="kw">length</span>(winterBirds))  
 
 <span class="co"># Calculate the error in longitude derived </span>
 <span class="co"># from geolocators from the true capture location </span>
 
 LongError[Jam] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[Jam],
-                         <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-CapLocsM@coords[<span class="dv">1</span>,<span class="dv">1</span>])}))
+                         <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-
+<span class="st">                                                  </span>CapLocsM@coords[<span class="dv">1</span>,<span class="dv">1</span>])}))
 
 LongError[Fla] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[Fla],
-                         <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-CapLocsM@coords[<span class="dv">2</span>,<span class="dv">1</span>])}))
+                         <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-
+<span class="st">                                                  </span>CapLocsM@coords[<span class="dv">2</span>,<span class="dv">1</span>])}))
 
 LongError[PR] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[PR],
-                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-CapLocsM@coords[<span class="dv">3</span>,<span class="dv">1</span>])}))
+                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">1</span>]-
+<span class="st">                                                 </span>CapLocsM@coords[<span class="dv">3</span>,<span class="dv">1</span>])}))
 
 <span class="co"># Calculate the error in latitude derived from</span>
 <span class="co"># geolocators from the true capture location </span>
 
 LatError[Jam] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[Jam],
-                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-CapLocsM@coords[<span class="dv">1</span>,<span class="dv">2</span>])}))
+                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-
+<span class="st">                                                 </span>CapLocsM@coords[<span class="dv">1</span>,<span class="dv">2</span>])}))
 
 LatError[Fla] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[Fla],
-                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-CapLocsM@coords[<span class="dv">2</span>,<span class="dv">2</span>])}))
+                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-
+<span class="st">                                                 </span>CapLocsM@coords[<span class="dv">2</span>,<span class="dv">2</span>])}))
 
 LatError[PR] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span class="kw">lapply</span>(NB_GLmeters[PR],
-                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-CapLocsM@coords[<span class="dv">3</span>,<span class="dv">2</span>])}))
-
+                        <span class="dt">FUN =</span> function(x){<span class="kw">mean</span>(x@coords[,<span class="dv">2</span>]-
+<span class="st">                                                 </span>CapLocsM@coords[<span class="dv">3</span>,<span class="dv">2</span>])}))
 
 <span class="co"># Get co-variance matrix for error of </span>
 <span class="co"># known non-breeding deployment sites </span>
@@ -516,18 +492,18 @@ LatError[PR] &lt;-<span class="st"> </span><span class="kw">unlist</span>(<span 
 geo.error.model &lt;-<span class="st"> </span><span class="kw">lm</span>(<span class="kw">cbind</span>(LongError,LatError) ~<span class="st"> </span><span class="dv">1</span>) 
 
 geo.bias &lt;-<span class="st"> </span><span class="kw">coef</span>(geo.error.model)
-geo.vcov &lt;-<span class="st"> </span><span class="kw">vcov</span>(geo.error.model)</code></pre></div>
+geo.vcov &lt;-<span class="st"> </span><span class="kw">vcov</span>(geo.error.model)</code></pre>
 <p>We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.</p>
 <p>Load location data that accompanies the <code>MigConnectivity</code> package. The location data are data from breeding Ovenbirds that were fit with Light-level geolocators or PinPoint-10 GPS tags.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">data</span>(OVENdata) <span class="co"># Ovenbird </span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">data</span>(OVENdata) <span class="co"># Ovenbird </span>
 
 <span class="kw">names</span>(OVENdata)
 <span class="co">#&gt;  [1] &quot;geo.bias&quot;       &quot;geo.vcov&quot;       &quot;isGL&quot;           &quot;targetPoints&quot;  </span>
 <span class="co">#&gt;  [5] &quot;originPoints&quot;   &quot;targetSites&quot;    &quot;originSites&quot;    &quot;originRelAbund&quot;</span>
-<span class="co">#&gt;  [9] &quot;originDist&quot;     &quot;targetDist&quot;</span></code></pre></div>
-<p>The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (<em>in revision</em>) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">'rgeos'</span>, <span class="st">'shape'</span>, <span class="st">'raster'</span>, <span class="st">'maptools'</span>, <span class="st">'rgdal'</span>))</code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(rgeos)
+<span class="co">#&gt;  [9] &quot;originDist&quot;     &quot;targetDist&quot;</span></code></pre>
+<p>The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (<em>in press</em>) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">'rgeos'</span>, <span class="st">'shape'</span>, <span class="st">'raster'</span>, <span class="st">'maptools'</span>, <span class="st">'rgdal'</span>))</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(rgeos)
 <span class="kw">library</span>(shape)
 <span class="kw">library</span>(raster)
 <span class="kw">library</span>(maptools)
@@ -553,27 +529,27 @@ raster::<span class="kw">crs</span>(wrld_simpl)
 
 wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span class="kw">crs</span>(OVENdata$targetSites))
 
-<span class="kw">plot</span>(wrld_simple,<span class="dt">add=</span><span class="ot">TRUE</span>)</code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<span class="kw">plot</span>(wrld_simple,<span class="dt">add=</span><span class="ot">TRUE</span>)</code></pre>
+<p><img src="data:image/png;base64,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" /></p>
 <p>The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">M&lt;-<span class="kw">estMC</span>(<span class="dt">isGL=</span>OVENdata$isGL, <span class="co"># Logical vector indicating light-level geolocator (T) GPS (F)</span>
+<pre class="sourceCode r"><code class="sourceCode r">M&lt;-<span class="kw">estMC</span>(<span class="dt">isGL=</span>OVENdata$isGL, <span class="co"># Logical vector: light-level geolocator(T)/GPS(F)</span>
          <span class="dt">geoBias =</span> OVENdata$geo.bias, <span class="co"># Light-level geolocator location bias</span>
-         <span class="dt">geoVCov =</span> OVENdata$geo.vcov, <span class="co"># Light-level geolocator co-variance matrix</span>
-         <span class="dt">targetDist =</span> OVENdata$targetDist, <span class="co"># Non-breeding target distribution distance matrix</span>
-         <span class="dt">originDist =</span> OVENdata$originDist, <span class="co"># Breeding / origin distribution distance matrix</span>
-         <span class="dt">targetSites =</span> OVENdata$targetSites, <span class="co"># Non-breeding target sites</span>
-         <span class="dt">originSites =</span> OVENdata$originSites, <span class="co"># Breeding origin sites </span>
+         <span class="dt">geoVCov =</span> OVENdata$geo.vcov, <span class="co">#Light-level geolocator covariance matrix</span>
+         <span class="dt">targetDist =</span> OVENdata$targetDist, <span class="co"># Target location distance matrix</span>
+         <span class="dt">originDist =</span> OVENdata$originDist, <span class="co"># Origin location distance matrix</span>
+         <span class="dt">targetSites =</span> OVENdata$targetSites, <span class="co"># Non-breeding / target sites</span>
+         <span class="dt">originSites =</span> OVENdata$originSites, <span class="co"># Breeding / origin sites </span>
          <span class="dt">originPoints =</span> OVENdata$originPoints, <span class="co"># Capture Locations </span>
-         <span class="dt">targetPoints =</span> OVENdata$targetPoints, <span class="co"># Non-breeding Locations derived from devices</span>
-         <span class="dt">originRelAbund =</span> OVENdata$originRelAbund, <span class="co"># Relative abundance within OriginSites</span>
-         <span class="dt">resampleProjection =</span> raster::<span class="kw">projection</span>(OVENdata$targetPoints), <span class="co">#Lambert projection</span>
+         <span class="dt">targetPoints =</span> OVENdata$targetPoints, <span class="co"># Target locations from devices</span>
+         <span class="dt">originRelAbund =</span> OVENdata$originRelAbund, <span class="co"># Origin relative abundances</span>
+         <span class="dt">resampleProjection =</span> raster::<span class="kw">projection</span>(OVENdata$targetPoints), 
          <span class="dt">verbose =</span> <span class="dv">0</span>,   <span class="co"># output options - see help ??estMC</span>
          <span class="dt">nSim =</span> <span class="dv">10</span>,     <span class="co"># This is set low for example</span>
-         <span class="dt">nSamples =</span> <span class="dv">10</span>) <span class="co"># This is set low for example </span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">str</span>(M)
+         <span class="dt">nSamples =</span> <span class="dv">10</span>) <span class="co"># This is set low for example </span></code></pre>
+<p><img src="data:image/png;base64,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" /></p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">str</span>(M)
 <span class="co">#&gt; List of 20</span>
-<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.615 0.557 0.575 0.736 0.593 ...</span>
+<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.709 0.598 0.613 0.615 0.559 ...</span>
 <span class="co">#&gt;  $ samplePsi      : num [1:10, 1:2, 1:3] 0 0 0 0 0 0 0 0 0 0 ...</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 3</span>
 <span class="co">#&gt;   .. ..$ : chr [1:10] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...</span>
@@ -584,14 +560,14 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;NH&quot; &quot;MD&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:3] &quot;Florida&quot; &quot;Cuba&quot; &quot;Hisp&quot;</span>
 <span class="co">#&gt;  $ pointMC        : num 0.621</span>
-<span class="co">#&gt;  $ meanMC         : num 0.627</span>
-<span class="co">#&gt;  $ medianMC       : num 0.607</span>
-<span class="co">#&gt;  $ seMC           : num 0.0685</span>
-<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.557 0.753</span>
+<span class="co">#&gt;  $ meanMC         : num 0.611</span>
+<span class="co">#&gt;  $ medianMC       : num 0.614</span>
+<span class="co">#&gt;  $ seMC           : num 0.08</span>
+<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.427 0.709</span>
 <span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
-<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.568 0.753</span>
-<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;18.11048%&quot; &quot;99.86884%&quot;</span>
-<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.557 0.753</span>
+<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.427 0.707</span>
+<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;0.6819024%&quot; &quot;92.69256%&quot;</span>
+<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.427 0.709</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 2</span>
 <span class="co">#&gt;   .. ..$ : chr &quot;var1&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;lower&quot; &quot;upper&quot;</span>
@@ -605,7 +581,7 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <span class="co">#&gt;  $ seCorr         : NULL</span>
 <span class="co">#&gt;  $ simpleCICorr   : NULL</span>
 <span class="co">#&gt;  $ bcCICorr       : NULL</span>
-<span class="co">#&gt;  $ inputSampleSize: int 39</span></code></pre></div>
+<span class="co">#&gt;  $ inputSampleSize: int 39</span></code></pre>
 </div>
 <div id="example-3" class="section level3">
 <h3>EXAMPLE 3</h3>
@@ -614,7 +590,7 @@ wrld_simple&lt;-sp::<span class="kw">spTransform</span>(wrld_simpl,raster::<span
 <h3><code>simMove</code> Simulates position of animals by individual, season, year, and month</h3>
 <p>Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. See above for details regarding the utility functions.</p>
 <p>Simulate data to demonstrate the use of <code>calcMC</code></p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
 <span class="co"># Parameters for simulations</span>
 
@@ -623,24 +599,23 @@ nYears &lt;-<span class="st"> </span><span class="dv">10</span> <span class="co"
 nMonths &lt;-<span class="st"> </span><span class="dv">4</span> <span class="co"># Four months within each season</span>
 
 nBreeding &lt;-<span class="st"> </span><span class="dv">100</span> <span class="co"># Number of populations</span>
-nWintering &lt;-<span class="st"> </span><span class="dv">100</span> <span class="co"># Number of populations </span></code></pre></div>
+nWintering &lt;-<span class="st"> </span><span class="dv">100</span> <span class="co"># Number of populations </span></code></pre>
 <p>Generate the spatial arrangement of breeding and non-breeding populations</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">breedingPos &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="kw">seq</span>(-<span class="dv">99</span>,-<span class="dv">81</span>,<span class="dv">2</span>), <span class="dt">each=</span><span class="kw">sqrt</span>(nBreeding)),
+<pre class="sourceCode r"><code class="sourceCode r">breedingPos &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="kw">seq</span>(-<span class="dv">99</span>,-<span class="dv">81</span>,<span class="dv">2</span>), <span class="dt">each=</span><span class="kw">sqrt</span>(nBreeding)),
                         <span class="kw">rep</span>(<span class="kw">seq</span>(<span class="dv">49</span>,<span class="dv">31</span>,-<span class="dv">2</span>), <span class="kw">sqrt</span>(nBreeding))), nBreeding, <span class="dv">2</span>)
 winteringPos &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="kw">seq</span>(-<span class="dv">79</span>,-<span class="dv">61</span>,<span class="dv">2</span>), <span class="dt">each=</span><span class="kw">sqrt</span>(nWintering)),
                          <span class="kw">rep</span>(<span class="kw">seq</span>(<span class="dv">9</span>,-<span class="dv">9</span>,-<span class="dv">2</span>), <span class="kw">sqrt</span>(nWintering))), nWintering, <span class="dv">2</span>)
 
 <span class="co"># calculate distance between populations</span>
-
 breedDist &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(breedingPos, <span class="st">'ellipsoid'</span>) 
 
-nonbreedDist &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(winteringPos, <span class="st">'ellipsoid'</span>) </code></pre></div>
+nonbreedDist &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(winteringPos, <span class="st">'ellipsoid'</span>) </code></pre>
 <p>The relative abundance of the study species is needed in each population. Here we generate those data below.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Breeding Abundance</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Breeding Abundance</span>
 breedingN &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">500</span>, nBreeding)
-breedingRelN &lt;-<span class="st"> </span>breedingN/<span class="kw">sum</span>(breedingN)</code></pre></div>
+breedingRelN &lt;-<span class="st"> </span>breedingN/<span class="kw">sum</span>(breedingN)</code></pre>
 <p>The transition probability (psi) between the breeding and non-breeding populations is calculated below.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set up psi matrix</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Set up psi matrix</span>
 o &lt;-<span class="st"> </span><span class="kw">optimize</span>(mlogitMC, <span class="dt">MC.in =</span> <span class="fl">0.25</span>, <span class="dt">origin.dist =</span> breedDist,
               <span class="dt">target.dist =</span> nonbreedDist, <span class="dt">origin.abund =</span> breedingRelN,
               <span class="dt">sample.size =</span> <span class="kw">sum</span>(breedingN),
@@ -648,9 +623,9 @@ o &lt;-<span class="st"> </span><span class="kw">optimize</span>(mlogitMC, <span
 
 slope &lt;-<span class="st"> </span>o$minimum
 
-psi &lt;-<span class="st"> </span><span class="kw">mlogitMat</span>(slope, breedDist)</code></pre></div>
+psi &lt;-<span class="st"> </span><span class="kw">mlogitMat</span>(slope, breedDist)</code></pre>
 <p>Now that we have all the data needed to calculate the strength of migratory connectivity we can use the <code>calcMC</code> function in the <code>MigConnecitivty</code> package to generate a standardized MC metric.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Baseline strength of migratory connectivity</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Baseline strength of migratory connectivity</span>
 MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt">originDist =</span> breedDist, 
              <span class="dt">targetDist =</span> nonbreedDist,
              <span class="dt">psi =</span> psi, 
@@ -659,12 +634,12 @@ MC &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt"
 
 <span class="co"># Show Results</span>
 MC
-<span class="co">#&gt; [1] 0.25</span></code></pre></div>
+<span class="co">#&gt; [1] 0.25</span></code></pre>
 </div>
 <div id="simmove-simulation-of-movement-between-breeding-and-non-breeding" class="section level3">
 <h3><code>simMove</code> Simulation of movement between breeding and non-breeding</h3>
 <p>Recycle data generated for the calcMC function - see above</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sims &lt;-<span class="st"> </span><span class="kw">simMove</span>(<span class="dt">breedingAbund =</span> breedingN, <span class="co"># Breeding relative abundance</span>
+<pre class="sourceCode r"><code class="sourceCode r">sims &lt;-<span class="st"> </span><span class="kw">simMove</span>(<span class="dt">breedingAbund =</span> breedingN, <span class="co"># Breeding relative abundance</span>
                <span class="dt">breedingDist =</span> breedDist,  <span class="co"># Breeding distance</span>
                <span class="dt">winteringDist =</span> nonbreedDist, <span class="co"># Non-breeding distance</span>
                <span class="dt">psi =</span> psi, <span class="co"># Transition probabilities</span>
@@ -686,7 +661,7 @@ MC
 <span class="co">#&gt;  $ breedDispMat: NULL</span>
 <span class="co">#&gt;  $ sumMoveMat  : NULL</span>
 <span class="co">#&gt;  $ winDispMat  : NULL</span>
-<span class="co">#&gt;  $ winMoveMat  : NULL</span></code></pre></div>
+<span class="co">#&gt;  $ winMoveMat  : NULL</span></code></pre>
 </div>
 </div>
 <div id="additional-examples-scenarios" class="section level2">
@@ -694,12 +669,10 @@ MC
 <div id="example-4" class="section level3">
 <h3>EXAMPLE 4</h3>
 <p>Calculate migratory connectivity for a range of input values</p>
-<p>Cohen et al. (<em>in revision</em>) used simulation to assess the influence of the three data inputs needed to calculate MC, including:</p>
+<p>Cohen et al. (<em>in press</em>) used simulation to assess the influence of the three data inputs needed to calculate MC, including:</p>
 <ol style="list-style-type: decimal">
-<li>matrix of transition probabilities from breeding regions to non-breeding regions<br />
-</li>
-<li>matrices of distances between breeding regions and between non-breeding regions<br />
-</li>
+<li>matrix of transition probabilities from breeding regions to non-breeding regions<br /></li>
+<li>matrices of distances between breeding regions and between non-breeding regions<br /></li>
 <li>relative abundance among breeding regions.</li>
 </ol>
 <p>Input value simulations included transition probabilities from four breeding to four non-breeding regions and relative abundance measured among breeding regions.</p>
@@ -717,41 +690,28 @@ MC
 <p>There were twelve spatial arrangement / distance scenarios:</p>
 <ol style="list-style-type: decimal">
 <li>Base distances, linear/ linear</li>
-<li>Distance between breeding sites 2 and 3 doubled<br />
-</li>
-<li>Distance between breeding sites 2 and 3 halved<br />
-</li>
-<li>Distance between breeding sites 3 and 4 doubled<br />
-</li>
-<li>Distance between breeding sites 3 and 4 halved<br />
-</li>
+<li>Distance between breeding sites 2 and 3 doubled<br /></li>
+<li>Distance between breeding sites 2 and 3 halved<br /></li>
+<li>Distance between breeding sites 3 and 4 doubled<br /></li>
+<li>Distance between breeding sites 3 and 4 halved<br /></li>
 <li>Breeding sites on square grid/ winter linear</li>
-<li>Distance between wintering sites 2 and 3 doubled<br />
-</li>
-<li>Distance between wintering sites 2 and 3 halved<br />
-</li>
-<li>Distance between wintering sites 3 and 4 doubled<br />
-</li>
-<li>Distance between wintering sites 3 and 4 halved<br />
-</li>
-<li>Breeding linear, Wintering sites on square grid<br />
-</li>
+<li>Distance between wintering sites 2 and 3 doubled<br /></li>
+<li>Distance between wintering sites 2 and 3 halved<br /></li>
+<li>Distance between wintering sites 3 and 4 doubled<br /></li>
+<li>Distance between wintering sites 3 and 4 halved<br /></li>
+<li>Breeding linear, Wintering sites on square grid<br /></li>
 <li>Wintering and breeding on square grid</li>
 </ol>
 <p>There were five relative breeding abundance scenarios:</p>
 <ol style="list-style-type: decimal">
-<li>Base, all equal<br />
-</li>
-<li>Abundance at site B doubled<br />
-</li>
-<li>Abundance at site B halved<br />
-</li>
-<li>Abundance at site D doubled<br />
-</li>
+<li>Base, all equal<br /></li>
+<li>Abundance at site B doubled<br /></li>
+<li>Abundance at site B halved<br /></li>
+<li>Abundance at site D doubled<br /></li>
 <li>Abundance at site D halved</li>
 </ol>
 <p>First we calculate MC for the eight transition probability scenarios (with base spatial arrangement and relative abundance):</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nScenarios1 &lt;-<span class="st"> </span><span class="kw">length</span>(samplePsis) <span class="co"># samplePsis - comes with MigConnectivity pacakge</span>
+<pre class="sourceCode r"><code class="sourceCode r">nScenarios1 &lt;-<span class="st"> </span><span class="kw">length</span>(samplePsis) <span class="co"># samplePsis - comes with MigConnectivity pacakge</span>
 
 <span class="co"># Create vector of length nScenarios1</span>
 MC1 &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="ot">NA</span>, nScenarios1)
@@ -774,9 +734,9 @@ for (i in <span class="dv">1</span>:nScenarios1) {
 <span class="co">#&gt;            Half Mix                 Low              Medium </span>
 <span class="co">#&gt;            0.600000            0.196000            0.504000 </span>
 <span class="co">#&gt; One Site Preference            Negative </span>
-<span class="co">#&gt;            0.164145           -0.066560</span></code></pre></div>
+<span class="co">#&gt;            0.164145           -0.066560</span></code></pre>
 <p>Add the scenarios for the spatial arrangements that result in different distances between regions:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nScenarios2 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginPos)
+<pre class="sourceCode r"><code class="sourceCode r">nScenarios2 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginPos)
 
 MC2 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios2)
 
@@ -820,9 +780,9 @@ for (i in <span class="dv">1</span>:nScenarios1) {
 <span class="co">#&gt; NB Dist 34*2 0.4882              0.2163  -0.0734</span>
 <span class="co">#&gt; NB Dist 34/2 0.4856              0.1149  -0.0572</span>
 <span class="co">#&gt; NB Grid      0.3601              0.1263   0.0669</span>
-<span class="co">#&gt; B/NB Grid    0.4340              0.1603   0.0728</span></code></pre></div>
+<span class="co">#&gt; B/NB Grid    0.4340              0.1603   0.0728</span></code></pre>
 <p>Another way of comparing results:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">
+<pre class="sourceCode r"><code class="sourceCode r">
 MC.diff2 &lt;-<span class="st"> </span><span class="kw">apply</span>(MC2, <span class="dv">2</span>, <span class="st">&quot;-&quot;</span>, MC2[ , <span class="dv">1</span>])
 
 <span class="kw">t</span>(<span class="kw">round</span>(MC.diff2, <span class="dv">4</span>))
@@ -851,12 +811,12 @@ MC.diff2 &lt;-<span class="st"> </span><span class="kw">apply</span>(MC2, <span 
 <span class="co">#&gt; NB Dist 34*2 -0.0158              0.0521  -0.0068</span>
 <span class="co">#&gt; NB Dist 34/2 -0.0184             -0.0493   0.0094</span>
 <span class="co">#&gt; NB Grid      -0.1439             -0.0378   0.1334</span>
-<span class="co">#&gt; B/NB Grid    -0.0700             -0.0038   0.1394</span></code></pre></div>
+<span class="co">#&gt; B/NB Grid    -0.0700             -0.0038   0.1394</span></code></pre>
 </div>
 <div id="add-the-relative-abundance-breeding-scenarios" class="section level3">
 <h3>Add the relative abundance breeding scenarios</h3>
 <p>Calculate MC across abundance and transition probability scenarios for breeding linear / winter linear arrangment:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nScenarios3 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginRelN)
+<pre class="sourceCode r"><code class="sourceCode r">nScenarios3 &lt;-<span class="st"> </span><span class="kw">length</span>(sampleOriginRelN)
 
 MC3 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
 
@@ -886,9 +846,9 @@ MC3[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; B Doub              0.1338  -0.0650</span>
 <span class="co">#&gt; B Half              0.1847  -0.0660</span>
 <span class="co">#&gt; D Doub              0.2992  -0.0219</span>
-<span class="co">#&gt; D Half              0.0886  -0.0399</span></code></pre></div>
+<span class="co">#&gt; D Half              0.0886  -0.0399</span></code></pre>
 <p>Calculate MC across abundance and transition probability scenarios for breeding grid/ winter grid arrangement:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MC4 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
+<pre class="sourceCode r"><code class="sourceCode r">MC4 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
 
 <span class="kw">rownames</span>(MC4) &lt;-<span class="st"> </span><span class="kw">names</span>(samplePsis)
 <span class="kw">colnames</span>(MC4) &lt;-<span class="st"> </span><span class="kw">names</span>(sampleOriginRelN)
@@ -916,9 +876,9 @@ MC4[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; B Doub              0.0970   0.0822</span>
 <span class="co">#&gt; B Half              0.1996   0.0778</span>
 <span class="co">#&gt; D Doub              0.3649   0.0822</span>
-<span class="co">#&gt; D Half              0.0519   0.0778</span></code></pre></div>
+<span class="co">#&gt; D Half              0.0519   0.0778</span></code></pre>
 <p>Calculate MC across abundance and transition probability scenarios for for breeding grid, winter linear arrangement</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">MC5 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
+<pre class="sourceCode r"><code class="sourceCode r">MC5 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, nScenarios1, nScenarios3)
 
 <span class="kw">rownames</span>(MC5) &lt;-<span class="st"> </span><span class="kw">names</span>(samplePsis)
 <span class="kw">colnames</span>(MC5) &lt;-<span class="st"> </span><span class="kw">names</span>(sampleOriginRelN)
@@ -946,10 +906,10 @@ MC5[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; B Doub              0.1140   0.0277</span>
 <span class="co">#&gt; B Half              0.2102   0.0801</span>
 <span class="co">#&gt; D Doub              0.3419   0.1334</span>
-<span class="co">#&gt; D Half              0.0737   0.0647</span></code></pre></div>
+<span class="co">#&gt; D Half              0.0737   0.0647</span></code></pre>
 </div>
-<div id="examples-5-12-from-sampling-regime-simulations-in-cohen-et-al.-in-revision" class="section level3">
-<h3>EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in revision)</h3>
+<div id="examples-5-12-from-sampling-regime-simulations-in-cohen-et-al.-in-press" class="section level3">
+<h3>EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in press)</h3>
 <p>Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:</p>
 <ol style="list-style-type: decimal">
 <li>Incorrect grouping of seasonal ranges into regions</li>
@@ -975,7 +935,7 @@ MC5[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <li>Breeding range divided along the longitudinal and latitudinal midpoint into four regions and non-breeding range divided along equal longitudinal breaks into ten regions</li>
 <li>Breeding range divided along equal longitudinal breaks into ten regions and non-breeding range divided along the longitudinal and latitudinal midpoint into four regions</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Run functions and parameters above first</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Run functions and parameters above first</span>
 <span class="kw">set.seed</span>(<span class="dv">75</span>)
 
 scenarios14 &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Base&quot;</span>, 
@@ -1146,40 +1106,40 @@ for (sim in <span class="dv">1</span>:nSims14) {
                   <span class="dt">nYears=</span>nYears,
                   <span class="dt">nMonths=</span>nMonths)
   
-for (i in <span class="dv">1</span>:nScenarios14) {
-  <span class="kw">cat</span>(<span class="st">&quot;</span><span class="ch">\t</span><span class="st">Scenario&quot;</span>, i, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
-  animalLoc14[[i]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(sim14[[scenarioToSampleMap14[i]]]$animalLoc,
-                                      breedingSiteTrans14[[i]], 
-                                      winteringSiteTrans14[[i]])
-    
-  results14[[i]] &lt;-<span class="st"> </span><span class="kw">calcPsiMC</span>(breedDist14[[i]], nonbreedDist14[[i]],
-                              animalLoc14[[i]], 
-                              <span class="dt">originRelAbund =</span> breedingRelN14[[i]], 
-                              <span class="dt">verbose =</span> F)
-    
-  compare14.array[sim, i, <span class="st">'MC'</span>] &lt;-<span class="st"> </span>results14[[i]]$MC
-    
-  compare14.array[sim, i, <span class="st">'Mantel'</span>] &lt;-<span class="st"> </span><span class="kw">calcStrengthInd</span>(breedDist14[[<span class="dv">1</span>]],
-                                                       nonbreedDist14[[<span class="dv">1</span>]],
-                                                       sim14[[scenarioToSampleMap14[i]]]$animalLoc,
-                                                       <span class="dt">resamp=</span><span class="dv">0</span>)$correlation
+  for (i in <span class="dv">1</span>:nScenarios14) {
+   <span class="kw">cat</span>(<span class="st">&quot;</span><span class="ch">\t</span><span class="st">Scenario&quot;</span>, i, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
+   animalLoc14[[i]]&lt;-<span class="kw">changeLocations</span>(
+     sim14[[scenarioToSampleMap14[i]]]$animalLoc,
+                                     breedingSiteTrans14[[i]], 
+                                     winteringSiteTrans14[[i]])
+      
+   results14[[i]] &lt;-<span class="st"> </span><span class="kw">calcPsiMC</span>(breedDist14[[i]], nonbreedDist14[[i]],
+                               animalLoc14[[i]], 
+                               <span class="dt">originRelAbund =</span> breedingRelN14[[i]], 
+                               <span class="dt">verbose =</span> F)
+      
+   compare14.array[sim, i, <span class="st">'MC'</span>] &lt;-<span class="st"> </span>results14[[i]]$MC
+      
+   compare14.array[sim,i,<span class="st">'Mantel'</span>]&lt;-<span class="kw">calcStrengthInd</span>(breedDist14[[<span class="dv">1</span>]],
+                                                    nonbreedDist14[[<span class="dv">1</span>]],
+                                   sim14[[scenarioToSampleMap14[i]]]$animalLoc,
+                                                    <span class="dt">resamp=</span><span class="dv">0</span>)$correlation
   }
 }
 
 <span class="co"># Compute means for each scenario</span>
 compare14$MC[<span class="dv">1</span>:nScenarios14 +<span class="st"> </span><span class="dv">1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare14.array[,,<span class="st">'MC'</span>], <span class="dv">2</span>, mean)
-compare14$Mantel[<span class="dv">1</span>:nScenarios14 +<span class="st"> </span><span class="dv">1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare14.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>, mean)
+compare14$Mantel[<span class="dv">1</span>:nScenarios14 +<span class="st"> </span><span class="dv">1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare14.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>, 
+                                              mean)
 
-compare14 &lt;-<span class="st"> </span><span class="kw">transform</span>(compare14, <span class="dt">MC.diff=</span>MC -<span class="st"> </span>MC[<span class="dv">1</span>], <span class="dt">Mantel.diff=</span>Mantel -<span class="st"> </span>Mantel[<span class="dv">1</span>])
-compare14</code></pre></div>
+compare14 &lt;-<span class="st"> </span><span class="kw">transform</span>(compare14, <span class="dt">MC.diff=</span>MC -<span class="st"> </span>MC[<span class="dv">1</span>], 
+                       <span class="dt">Mantel.diff=</span>Mantel -<span class="st"> </span>Mantel[<span class="dv">1</span>])
+compare14</code></pre>
 </div>
 <div id="example-6" class="section level3">
 <h3>EXAMPLE 6</h3>
 <p>Sampling regime 2 of 3</p>
-<p>Researchers divide populations differently than reality PLUS<br />
-Different distributions of sampling animals across breeding range PLUS<br />
-Sample sizes don’t always match relative abundances PLUS<br />
-Compare our approach and simple Mantel approach</p>
+<p>Researchers divide populations differently than reality PLUS<br />Different distributions of sampling animals across breeding range PLUS<br />Sample sizes don’t always match relative abundances PLUS<br />Compare our approach and simple Mantel approach</p>
 <ol style="list-style-type: decimal">
 <li>Base (10 years, uneven abundances but matches sampling)</li>
 <li>Breeding pops divided into 4 squares, sample across breeding range</li>
@@ -1188,7 +1148,7 @@ Compare our approach and simple Mantel approach</p>
 <li>Scenarios 2 plus 4</li>
 <li>Scenarios 3 plus 4</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
 <span class="co"># Transfer between true populations and researcher defined ones (only for</span>
 <span class="co"># breeding, as not messing with winter populations here)</span>
@@ -1291,7 +1251,8 @@ compare15 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span
 
 compare15.array &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="ot">NA</span>, <span class="kw">c</span>(nSims15, nScenarios15, <span class="dv">2</span>),
                          <span class="dt">dimnames =</span> <span class="kw">list</span>(<span class="dv">1</span>:nSims15,
-                                    <span class="kw">c</span>(<span class="st">&quot;Base&quot;</span>, <span class="st">&quot;Breeding4&quot;</span>, <span class="st">&quot;CentroidSampleBreeding4&quot;</span>,
+                                    <span class="kw">c</span>(<span class="st">&quot;Base&quot;</span>, <span class="st">&quot;Breeding4&quot;</span>, 
+                                      <span class="st">&quot;CentroidSampleBreeding4&quot;</span>,
                                       <span class="st">&quot;BiasedSample&quot;</span>, <span class="st">&quot;BiasedSampleBreeding4&quot;</span>,
                                       <span class="st">&quot;BiasedCentroidSampleBreeding4&quot;</span>),
                                     <span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">&quot;Mantel&quot;</span>)))
@@ -1311,7 +1272,7 @@ for (sim in <span class="dv">1</span>:nSims15) {
 for (i in <span class="dv">1</span>:nScenarios15) {
   <span class="kw">cat</span>(<span class="st">&quot;</span><span class="ch">\t</span><span class="st">Scenario&quot;</span>, i, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
     animalLoc15[[i]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(
-                        <span class="dt">animalLoc =</span> sim15[[scenarioToSampleMap15[i]]]$animalLoc,
+                        <span class="dt">animalLoc=</span>sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                         <span class="dt">breedingSiteTrans =</span> breedingSiteTrans15[[i]],
                         <span class="dt">winteringSiteTrans =</span> <span class="dv">1</span>:nWintering15[i])
     
@@ -1325,15 +1286,16 @@ compare15.array[sim, i, <span class="st">'MC'</span>] &lt;-<span class="st"> </s
 
 compare15.array[sim, i, <span class="st">'Mantel'</span>] &lt;-<span class="st"> </span><span class="kw">calcStrengthInd</span>(breedDist15[[<span class="dv">1</span>]],
                                                      nonbreedDist15[[<span class="dv">1</span>]],
-                                                     sim15[[scenarioToSampleMap15[i]]]$animalLoc,
+                                   sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                                     <span class="dt">resamp=</span><span class="dv">0</span>)$correlation
   }
 }
 
-compare15$MC[<span class="dv">1</span>:nScenarios15<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare15.array[,,<span class="st">'MC'</span>], <span class="dv">2</span>, mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+compare15$MC[<span class="dv">1</span>:nScenarios15<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare15.array[,,<span class="st">'MC'</span>], <span class="dv">2</span>, mean, 
+                                        <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
 
-compare15$Mantel[<span class="dv">1</span>:nScenarios15<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare15.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>,mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
-
+compare15$Mantel[<span class="dv">1</span>:nScenarios15<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare15.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>,
+                                            mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
 compare15 &lt;-<span class="st"> </span><span class="kw">transform</span>(compare15, <span class="dt">MC.diff=</span>MC -<span class="st"> </span>MC[<span class="dv">1</span>], 
                        <span class="dt">Mantel.diff=</span>Mantel -<span class="st"> </span>Mantel[<span class="dv">1</span>],
                        <span class="dt">MC.prop=</span>MC/MC[<span class="dv">1</span>],  
@@ -1343,7 +1305,7 @@ compare15 &lt;-<span class="st"> </span><span class="kw">transform</span>(compar
 compare15a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compare15[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios15, 
                                   <span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">&quot;MC.diff&quot;</span>, <span class="st">&quot;Mantel&quot;</span>, <span class="st">&quot;Mantel.diff&quot;</span>)])
 
-<span class="kw">rownames</span>(compare15a) &lt;-<span class="st"> </span>compare15$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios15]</code></pre></div>
+<span class="kw">rownames</span>(compare15a) &lt;-<span class="st"> </span>compare15$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios15]</code></pre>
 </div>
 <div id="example-7" class="section level3">
 <h3>EXAMPLE 7</h3>
@@ -1356,7 +1318,7 @@ compare15a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compa
 <li>Scenarios 2 plus 4</li>
 <li>Scenarios 3 plus 4</li>
 </ol>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">set.seed</span>(<span class="dv">75</span>)
 
 <span class="co"># Transfer between true populations and researcher defined ones</span>
 <span class="co"># (only for breeding, as not messing with winter populations here)</span>
@@ -1414,7 +1376,8 @@ for (i in <span class="dv">1</span>:nLevels16) {
   psi16a &lt;-<span class="st"> </span><span class="kw">mlogitMat</span>(slope16a, breedDist16[[<span class="dv">1</span>]])
   
   <span class="co"># Then use the rows of that psi matrix only for the one breeding quadrant</span>
-  rows &lt;-<span class="st"> </span><span class="dv">50</span>*(i %/%<span class="st"> </span><span class="dv">3</span>) +<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span>:<span class="dv">5</span>, <span class="dv">5</span>) +<span class="st"> </span><span class="kw">rep</span>(<span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">40</span>, <span class="dv">10</span>), <span class="dt">each=</span><span class="dv">5</span>) +<span class="st"> </span>((i<span class="dv">-1</span>) %%<span class="st"> </span><span class="dv">2</span>) *<span class="st"> </span><span class="dv">5</span>
+  rows &lt;-<span class="st"> </span><span class="dv">50</span>*(i %/%<span class="st"> </span><span class="dv">3</span>) +<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span>:<span class="dv">5</span>, <span class="dv">5</span>) +<span class="st"> </span><span class="kw">rep</span>(<span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">40</span>, <span class="dv">10</span>), <span class="dt">each=</span><span class="dv">5</span>) +<span class="st"> </span>
+<span class="st">    </span>((i<span class="dv">-1</span>) %%<span class="st"> </span><span class="dv">2</span>) *<span class="st"> </span><span class="dv">5</span>
   psi16[rows, ] &lt;-<span class="st"> </span>psi16a[rows, ]
 }
 
@@ -1477,7 +1440,7 @@ for (sim in <span class="dv">1</span>:nSims16) {
   
 for (i in <span class="dv">1</span>:nScenarios16) {
   <span class="kw">cat</span>(<span class="st">&quot;</span><span class="ch">\t</span><span class="st">Scenario&quot;</span>, i, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
-  animalLoc16[[i]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
+  animalLoc16[[i]]&lt;-<span class="kw">changeLocations</span>(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                       breedingSiteTrans16[[i]], 
                                       <span class="dv">1</span>:nWintering16[i])
     
@@ -1491,30 +1454,35 @@ compare16.array[sim, i, <span class="st">'MC'</span>] &lt;-<span class="st"> </s
     
 compare16.array[sim, i, <span class="st">'Mantel'</span>] &lt;-<span class="st"> </span><span class="kw">calcStrengthInd</span>(breedDist16[[<span class="dv">1</span>]],
                                                          nonbreedDist16[[<span class="dv">1</span>]],
-                                                         sim16[[scenarioToSampleMap16[i]]]$animalLoc,
+                                   sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                                          <span class="dt">resamp=</span><span class="dv">0</span>)$correlation
   }
 }
 
 compare16$MC[<span class="dv">1</span>:nScenarios16<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare16.array[,,<span class="st">'MC'</span>], <span class="dv">2</span>, mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
 
-compare16$Mantel[<span class="dv">1</span>:nScenarios16<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare16.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>, mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+compare16$Mantel[<span class="dv">1</span>:nScenarios16<span class="dv">+1</span>] &lt;-<span class="st"> </span><span class="kw">apply</span>(compare16.array[,,<span class="st">'Mantel'</span>], <span class="dv">2</span>, 
+                                            mean, <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
 
 compare16 &lt;-<span class="st"> </span><span class="kw">transform</span>(compare16, <span class="dt">MC.diff=</span>MC -<span class="st"> </span>MC[<span class="dv">1</span>], 
                        <span class="dt">Mantel.diff=</span>Mantel -<span class="st"> </span>Mantel[<span class="dv">1</span>])
 
-compare16a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compare16[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16, <span class="kw">c</span>(<span class="st">'MC'</span>,<span class="st">'MC.diff'</span>,<span class="st">&quot;Mantel&quot;</span>,<span class="st">&quot;Mantel.diff&quot;</span>)])
+compare16a &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(compare16[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16, <span class="kw">c</span>(<span class="st">'MC'</span>,<span class="st">'MC.diff'</span>,
+                                                        <span class="st">&quot;Mantel&quot;</span>,
+                                                        <span class="st">&quot;Mantel.diff&quot;</span>)])
 
-<span class="kw">rownames</span>(compare16a) &lt;-<span class="st"> </span>compare16$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16]</code></pre></div>
+<span class="kw">rownames</span>(compare16a) &lt;-<span class="st"> </span>compare16$Scenario[<span class="dv">1</span> +<span class="st"> </span><span class="dv">1</span>:nScenarios16]</code></pre>
 </div>
 <div id="example-8" class="section level3">
 <h3>EXAMPLE 8</h3>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error). Here we simulated data using the 13th scenario from example 5 above (“CentroidSampleBreeding4”; make sure you run example 5 code before running this section). We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">WGS84 &lt;-<span class="st"> &quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>
+<pre class="sourceCode r"><code class="sourceCode r">WGS84 &lt;-<span class="st"> &quot;+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0&quot;</span>
   
 <span class="kw">set.seed</span>(<span class="dv">75</span>)
-capLocs14 &lt;-<span class="st"> </span><span class="kw">lapply</span>(breedingPos14, sp::SpatialPoints, <span class="dt">proj4string =</span> sp::<span class="kw">CRS</span>(WGS84))
-targLocs14 &lt;-<span class="st"> </span><span class="kw">lapply</span>(winteringPos14, sp::SpatialPoints, <span class="dt">proj4string =</span> sp::<span class="kw">CRS</span>(WGS84))
+capLocs14 &lt;-<span class="st"> </span><span class="kw">lapply</span>(breedingPos14, sp::SpatialPoints, 
+                    <span class="dt">proj4string =</span> sp::<span class="kw">CRS</span>(WGS84))
+targLocs14 &lt;-<span class="st"> </span><span class="kw">lapply</span>(winteringPos14, sp::SpatialPoints, 
+                     <span class="dt">proj4string =</span> sp::<span class="kw">CRS</span>(WGS84))
 
 
 <span class="co"># Relative abundance by scenario and breeding population</span>
@@ -1530,10 +1498,10 @@ nSample14<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="d
 <span class="co"># How many sampled from each natural population (sampling scenarios separate</span>
 <span class="co"># from definition scenarios)</span>
 sampleBreeding14<span class="fl">.1</span> &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">round</span>(breedingRelN14[[<span class="dv">1</span>]]*nSample14<span class="fl">.1</span>),
-                         <span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">22</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.1</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">2</span>]*nSample14<span class="fl">.1</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">44</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">3</span>]*nSample14<span class="fl">.1</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">4</span>]*nSample14<span class="fl">.1</span>),
+                         <span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">22</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.1</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">2</span>]*nSample14<span class="fl">.1</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">44</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">3</span>]*nSample14<span class="fl">.1</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">4</span>]*nSample14<span class="fl">.1</span>),
                            <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">22</span>)),
                            <span class="kw">rep</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>),
                            <span class="kw">rep</span>(<span class="kw">round</span>(breedingRelN14[[<span class="dv">2</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.1</span>/<span class="dv">2</span>), <span class="dv">2</span>),
@@ -1587,7 +1555,7 @@ for (i in <span class="dv">13</span>) {
     
   compare14<span class="fl">.1</span>.array[sim,<span class="st">'Mantel'</span>] &lt;-<span class="st"> </span><span class="kw">calcStrengthInd</span>(breedDist14[[<span class="dv">1</span>]],
                                                   nonbreedDist14[[<span class="dv">1</span>]],
-                                                  sim14[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+                            sim14[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                                   <span class="dt">resamp=</span><span class="dv">0</span>)$correlation
   }
 })
@@ -1625,15 +1593,16 @@ for (sim in <span class="dv">1</span>:nSims14) {
   <span class="kw">cat</span>(<span class="st">&quot;Estimation&quot;</span>, sim, <span class="st">&quot;of&quot;</span>, nSims14, <span class="st">'</span><span class="ch">\n</span><span class="st">'</span>)
   
  for (i in <span class="dv">13</span>) {<span class="co">#:nScenarios14) {</span>
-  animalLoc14[[sim]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(sim14.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+  animalLoc14[[sim]] &lt;-<span class="st"> </span>
+<span class="st">    </span><span class="kw">changeLocations</span>(sim14.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]], 
                                         winteringSiteTrans14[[i]])
   
   results14[[sim]] &lt;-<span class="st"> </span><span class="kw">estMC</span>(breedDist14[[i]], 
                             nonbreedDist14[[i]],
                             <span class="dt">originRelAbund =</span> breedingRelN14[[i]],
-                            <span class="dt">originPoints =</span> capLocs14[[i]][animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
-                            <span class="dt">targetPoints =</span> targLocs14[[i]][animalLoc14[[sim]][, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
+              <span class="dt">originPoints =</span> capLocs14[[i]][animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
+              <span class="dt">targetPoints =</span> targLocs14[[i]][animalLoc14[[sim]][, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
                             <span class="dt">originAssignment =</span> animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>],
                             <span class="dt">targetAssignment =</span> animalLoc14[[sim]][, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>],
                             <span class="dt">nSamples =</span> <span class="dv">1000</span>,
@@ -1662,13 +1631,16 @@ vars14
 means14
 <span class="kw">colMeans</span>(pointEsts14<span class="fl">.1</span>) -<span class="st"> </span>MC14
 <span class="kw">sqrt</span>(<span class="kw">colMeans</span>((pointEsts14<span class="fl">.1</span> -<span class="st"> </span>MC14)^<span class="dv">2</span>))
-<span class="kw">summary</span>(ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
-<span class="kw">summary</span>(ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
+<span class="kw">summary</span>(ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
+<span class="st">          </span>ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
+<span class="kw">summary</span>(ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
+<span class="st">          </span>ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
 
 <span class="co"># Plot histograms of bootstrap estimation results</span>
 est.df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">2</span>, <span class="dt">each =</span> nSims14),
                      <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="dt">each =</span> <span class="dv">2</span> *<span class="st"> </span>nSims14),
-                     <span class="dt">sim =</span> <span class="kw">rep</span>(<span class="dv">1</span>:nSims14, <span class="dv">4</span>), <span class="dt">Estimate =</span> <span class="kw">c</span>(est14.array, var14.array))
+                     <span class="dt">sim =</span> <span class="kw">rep</span>(<span class="dv">1</span>:nSims14, <span class="dv">4</span>), 
+                     <span class="dt">Estimate =</span> <span class="kw">c</span>(est14.array, var14.array))
 
 trues.df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">2</span>),
                        <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="dt">each =</span> <span class="dv">2</span>),
@@ -1685,24 +1657,26 @@ g.est
 
 <span class="co"># Summary table of bootstrap estimation results</span>
 qualities14 &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">5</span>),
-                          <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)), <span class="dv">3</span>, <span class="dv">10</span>),
-                          <span class="dt">Measure =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Bias'</span>, <span class="st">'RMSE'</span>, <span class="st">&quot;Coverage&quot;</span>), <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>)),
+                          <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)), 
+                                         <span class="dv">3</span>, <span class="dv">10</span>),
+                          <span class="dt">Measure =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Bias'</span>, <span class="st">'RMSE'</span>, <span class="st">&quot;Coverage&quot;</span>), 
+                                        <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>)),
                           <span class="dt">Value =</span> <span class="kw">c</span>(<span class="kw">colMeans</span>(est14.array -<span class="st"> </span>MC14),
                                     <span class="kw">colMeans</span>(var14.array) -<span class="st"> </span>vars14,
                                     <span class="kw">sqrt</span>(<span class="kw">colMeans</span>((est14.array -<span class="st"> </span>MC14)^<span class="dv">2</span>)),
-                                    <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14.array[,<span class="dv">1</span>] -<span class="st"> </span>vars14[<span class="dv">1</span>])^<span class="dv">2</span>)),
-                                    <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14.array[,<span class="dv">2</span>] -<span class="st"> </span>vars14[<span class="dv">2</span>])^<span class="dv">2</span>)),
+                                    <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14.array[,<span class="dv">1</span>]-vars14[<span class="dv">1</span>])^<span class="dv">2</span>)),
+                                    <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14.array[,<span class="dv">2</span>]-vars14[<span class="dv">2</span>])^<span class="dv">2</span>)),
                                     <span class="kw">mean</span>(ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
 <span class="st">                                         </span>ci14.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14),
-                                    <span class="kw">mean</span>(ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
-<span class="st">                                         </span>ci14.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)))
+                                    <span class="kw">mean</span>(ci14.array[,<span class="st">&quot;Mantel&quot;</span>,<span class="st">'lower'</span>]&lt;=MC14 &amp;
+<span class="st">                                         </span>ci14.array[,<span class="st">&quot;Mantel&quot;</span>,<span class="st">'upper'</span>]&gt;=MC14)))
 
-<span class="kw">format</span>(qualities14, <span class="dt">digits =</span> <span class="dv">2</span>, <span class="dt">scientific =</span> F)</code></pre></div>
+<span class="kw">format</span>(qualities14, <span class="dt">digits =</span> <span class="dv">2</span>, <span class="dt">scientific =</span> F)</code></pre>
 </div>
 <div id="example-9" class="section level3">
 <h3>EXAMPLE 9</h3>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating uncertainty from location error associated with light-level geolocators. Again, we simulated data using the 13th scenario from example 5 above (“CentroidSampleBreeding4”; make sure you run examples 5 and 8 code before running this section).</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Simulation using error associated with light-level geolocators</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Simulation using error associated with light-level geolocators</span>
 <span class="co"># Assign geolocator bias / variance co-variance matrix</span>
 
 geoBias &lt;-<span class="st"> </span><span class="kw">c</span>(-<span class="dv">10000</span>, <span class="dv">50000</span>)
@@ -1736,7 +1710,8 @@ winteringPolys2 &lt;-<span class="st"> </span><span class="kw">lapply</span>(win
                           <span class="dt">projection.in =</span> WGS84,
                           <span class="dt">projection.out =</span> resampleProjection)
 
-<span class="co"># Double check that the input center points and output polygons are ordered correctly </span>
+<span class="co"># Double check that the input center points and output polygons are ordered</span>
+<span class="co"># correctly </span>
 <span class="kw">cbind</span>(breedingPos14[[<span class="dv">1</span>]][,<span class="dv">1</span>:<span class="dv">2</span>],
       <span class="kw">t</span>(<span class="kw">sapply</span>(<span class="kw">slot</span>(breedingPolys[[<span class="dv">1</span>]], <span class="st">&quot;polygons&quot;</span>),
                function(x){ <span class="kw">slot</span>(x,<span class="st">&quot;labpt&quot;</span>)})))
@@ -1752,13 +1727,14 @@ nSample14<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="d
 <span class="co"># How many sampled from each natural population (sampling scenarios separate</span>
 <span class="co"># from definition scenarios)</span>
 sampleBreeding14<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="kw">round</span>(breedingRelN14[[<span class="dv">1</span>]]*nSample14<span class="fl">.2</span>),
-                         <span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">22</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.2</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">2</span>]*nSample14<span class="fl">.2</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">44</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">3</span>]*nSample14<span class="fl">.2</span>),
-                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>), <span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">4</span>]*nSample14<span class="fl">.2</span>),
+                         <span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">22</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.2</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">2</span>]*nSample14<span class="fl">.2</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>,<span class="dv">44</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">3</span>]*nSample14<span class="fl">.2</span>),
+                           <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>),<span class="kw">round</span>(breedingRelN14[[<span class="dv">5</span>]][<span class="dv">4</span>]*nSample14<span class="fl">.2</span>),
                            <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">22</span>)),
                          <span class="kw">rep</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>),
-                               <span class="kw">rep</span>(<span class="kw">round</span>(breedingRelN14[[<span class="dv">2</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.2</span>/<span class="dv">2</span>), <span class="dv">2</span>),
+                               <span class="kw">rep</span>(<span class="kw">round</span>(breedingRelN14[[<span class="dv">2</span>]][<span class="dv">1</span>]*nSample14<span class="fl">.2</span>/<span class="dv">2</span>),
+                                   <span class="dv">2</span>),
                                <span class="kw">rep</span>(<span class="dv">0</span>, <span class="dv">4</span>)), <span class="dv">10</span>))
 
 <span class="kw">lapply</span>(sampleBreeding14<span class="fl">.2</span>, matrix, <span class="dt">nrow=</span><span class="dv">10</span>, <span class="dt">ncol=</span><span class="dv">10</span>)
@@ -1827,24 +1803,27 @@ for (i in <span class="dv">13</span>) { <span class="co"># only run one scenario
     compare14<span class="fl">.2</span>.array[sim, <span class="st">'MC'</span>] &lt;-<span class="st"> </span>results14[[i]]$MC
     
     originDist0 &lt;-<span class="st"> </span>geosphere::<span class="kw">distVincentyEllipsoid</span>(
-                                         breedingTruePoints14[distIndices[,<span class="st">'row'</span>]],
-                                         breedingTruePoints14[distIndices[,<span class="st">'col'</span>]])
+                                     breedingTruePoints14[distIndices[,<span class="st">'row'</span>]],
+                                     breedingTruePoints14[distIndices[,<span class="st">'col'</span>]])
     
     originDist1[<span class="kw">lower.tri</span>(originDist1)] &lt;-<span class="st"> </span>originDist0
     
-    target.point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(results14<span class="fl">.2</span>[[sim]]$targetPointSample,
+    target.point.sample &lt;-<span class="st"> </span>sp::<span class="kw">SpatialPoints</span>(
+      results14<span class="fl">.2</span>[[sim]]$targetPointSample,
                                              sp::<span class="kw">CRS</span>(Lambert))
     
     target.point.sample2 &lt;-<span class="st"> </span>sp::<span class="kw">spTransform</span>(target.point.sample,sp::<span class="kw">CRS</span>(WGS84))
     
     targetDist0 &lt;-<span class="st"> </span>geosphere::<span class="kw">distVincentyEllipsoid</span>(
-                                         target.point.sample2[distIndices[,<span class="st">'row'</span>]],
-                                         target.point.sample2[distIndices[,<span class="st">'col'</span>]])
+                                     target.point.sample2[distIndices[,<span class="st">'row'</span>]],
+                                     target.point.sample2[distIndices[,<span class="st">'col'</span>]])
     
     targetDist1[<span class="kw">lower.tri</span>(targetDist1)] &lt;-<span class="st"> </span>targetDist0
     
-    compare14<span class="fl">.2</span>.array[sim, <span class="st">'Mantel'</span>] &lt;-<span class="st"> </span>ncf::<span class="kw">mantel.test</span>(originDist1, targetDist1, 
-                                                         <span class="dt">resamp=</span><span class="dv">0</span>, <span class="dt">quiet =</span> T)$correlation
+    compare14<span class="fl">.2</span>.array[sim, <span class="st">'Mantel'</span>] &lt;-<span class="st"> </span>ncf::<span class="kw">mantel.test</span>(originDist1, 
+                                                         targetDist1, 
+                                                         <span class="dt">resamp=</span><span class="dv">0</span>, 
+                                                         <span class="dt">quiet =</span> T)$correlation
   }
 })
 
@@ -1883,14 +1862,15 @@ for (sim in <span class="dv">1</span>:nSims14<span class="fl">.2</span>) {
   points1 &lt;-<span class="st"> </span>sp::<span class="kw">spTransform</span>(points0, 
                               sp::<span class="kw">CRS</span>(resampleProjection))
     
-  animalLoc14[[sim]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(sim14<span class="fl">.2</span>.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
+  animalLoc14[[sim]] &lt;-<span class="st"> </span><span class="kw">changeLocations</span>(
+    sim14<span class="fl">.2</span>.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
                                         breedingSiteTrans14[[i]],
                                         winteringSiteTrans14[[i]])
   
   results14[[sim]] &lt;-<span class="st"> </span><span class="kw">estMC</span>(<span class="dt">originDist =</span> breedDist14[[i]],
                             <span class="dt">targetDist =</span> nonbreedDist14[[i]],
                             <span class="dt">originRelAbund =</span> breedingRelN14[[i]],
-                            <span class="dt">originPoints =</span> capLocs14[[i]][animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
+                <span class="dt">originPoints =</span> capLocs14[[i]][animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>], ],
                             <span class="dt">targetPoints =</span> points1,
                             <span class="dt">originAssignment =</span> animalLoc14[[sim]][, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>],
                             <span class="dt">targetAssignment =</span> results14<span class="fl">.2</span>[[sim]]$targetSample,
@@ -1927,15 +1907,19 @@ vars14<span class="fl">.2</span>
 <span class="kw">colMeans</span>(pointEsts14<span class="fl">.2</span>) -<span class="st"> </span>MC14
 <span class="kw">sqrt</span>(<span class="kw">colMeans</span>((pointEsts14<span class="fl">.2</span> -<span class="st"> </span>MC14)^<span class="dv">2</span>))
 means14<span class="fl">.2</span>
-<span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
-<span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
+<span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
+<span class="st">       </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
+<span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
+<span class="st">       </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)
 <span class="kw">sqrt</span>(vars14<span class="fl">.2</span>) /<span class="st"> </span>MC14
 <span class="kw">summary</span>(<span class="kw">sqrt</span>(var14<span class="fl">.2</span>.array)/est14<span class="fl">.2</span>.array)
 
 <span class="co"># Plot histograms of bootstrap estimation results</span>
 est14<span class="fl">.2</span>.df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">2</span>, <span class="dt">each =</span> nSims14<span class="fl">.2</span>),
-                     <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="dt">each =</span> <span class="dv">2</span> *<span class="st"> </span>nSims14<span class="fl">.2</span>),
-                     <span class="dt">sim =</span> <span class="kw">rep</span>(<span class="dv">1</span>:nSims14<span class="fl">.2</span>, <span class="dv">4</span>), <span class="dt">Estimate =</span> <span class="kw">c</span>(est14<span class="fl">.2</span>.array, var14<span class="fl">.2</span>.array))
+                     <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), 
+                                    <span class="dt">each =</span> <span class="dv">2</span> *<span class="st"> </span>nSims14<span class="fl">.2</span>),
+                     <span class="dt">sim =</span> <span class="kw">rep</span>(<span class="dv">1</span>:nSims14<span class="fl">.2</span>, <span class="dv">4</span>), 
+                     <span class="dt">Estimate =</span> <span class="kw">c</span>(est14<span class="fl">.2</span>.array, var14<span class="fl">.2</span>.array))
 
 trues14<span class="fl">.2</span>.df &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">2</span>),
                        <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="dt">each =</span> <span class="dv">2</span>),
@@ -1951,17 +1935,21 @@ g.est
 
 <span class="co"># Summary table of bootstrap estimation results</span>
 qualities14<span class="fl">.2</span> &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Parameter =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">&quot;MC&quot;</span>, <span class="st">'rM'</span>), <span class="dv">5</span>),
-                            <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)), <span class="dv">3</span>, <span class="dv">10</span>),
-                            <span class="dt">Measure =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Bias'</span>, <span class="st">'RMSE'</span>, <span class="st">&quot;Coverage&quot;</span>), <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>)),
+                            <span class="dt">Quantity =</span> <span class="kw">rep</span>(<span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Mean'</span>, <span class="st">'Variance'</span>), 
+                                               <span class="kw">c</span>(<span class="dv">2</span>, <span class="dv">2</span>)), <span class="dv">3</span>, <span class="dv">10</span>),
+                            <span class="dt">Measure =</span> <span class="kw">rep</span>(<span class="kw">c</span>(<span class="st">'Bias'</span>, <span class="st">'RMSE'</span>, <span class="st">&quot;Coverage&quot;</span>), 
+                                          <span class="kw">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>)),
                             <span class="dt">Value =</span> <span class="kw">c</span>(<span class="kw">colMeans</span>(est14<span class="fl">.2</span>.array -<span class="st"> </span>MC14),
                                       <span class="kw">colMeans</span>(var14<span class="fl">.2</span>.array) -<span class="st"> </span>vars14<span class="fl">.2</span>,
                                       <span class="kw">sqrt</span>(<span class="kw">colMeans</span>((est14<span class="fl">.2</span>.array -<span class="st"> </span>MC14)^<span class="dv">2</span>)),
-                                      <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14<span class="fl">.2</span>.array[,<span class="dv">1</span>] -<span class="st"> </span>vars14[<span class="dv">1</span>])^<span class="dv">2</span>)),
-                                      <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14<span class="fl">.2</span>.array[,<span class="dv">2</span>] -<span class="st"> </span>vars14[<span class="dv">2</span>])^<span class="dv">2</span>)),
-                                      <span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
-<span class="st">                                           </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;MC&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14),
-                                      <span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
-<span class="st">                                           </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)))
+                                      <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14<span class="fl">.2</span>.array[,<span class="dv">1</span>] -<span class="st"> </span>
+<span class="st">                                                   </span>vars14[<span class="dv">1</span>])^<span class="dv">2</span>)),
+                                      <span class="kw">sqrt</span>(<span class="kw">mean</span>((var14<span class="fl">.2</span>.array[,<span class="dv">2</span>] -<span class="st"> </span>
+<span class="st">                                                   </span>vars14[<span class="dv">2</span>])^<span class="dv">2</span>)),
+                                      <span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[,<span class="st">&quot;MC&quot;</span>,<span class="st">'lower'</span>]&lt;=MC14 &amp;
+<span class="st">                                           </span>ci14<span class="fl">.2</span>.array[,<span class="st">&quot;MC&quot;</span>,<span class="st">'upper'</span>]&gt;=MC14),
+                              <span class="kw">mean</span>(ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'lower'</span>] &lt;=<span class="st"> </span>MC14 &amp;<span class="st"> </span>
+<span class="st">                                   </span>ci14<span class="fl">.2</span>.array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">'upper'</span>] &gt;=<span class="st"> </span>MC14)))
 
 <span class="kw">format</span>(qualities14<span class="fl">.2</span>, <span class="dt">digits =</span> <span class="dv">2</span>, <span class="dt">scientific =</span> F)
 
@@ -1987,7 +1975,7 @@ g.est &lt;-<span class="st"> </span><span class="kw">ggplot</span>(est14.all.df,
 <span class="st">  </span><span class="kw">geom_vline</span>(<span class="kw">aes</span>(<span class="dt">xintercept =</span> Value), <span class="dt">data =</span> trues14.all.df) +
 <span class="st">  </span><span class="kw">theme_bw</span>() +<span class="st"> </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="kw">c</span>(<span class="fl">0.002</span>, <span class="fl">0.003</span>, <span class="fl">0.1</span>, <span class="fl">0.2</span>, <span class="fl">0.3</span>))
 
-g.est</code></pre></div>
+g.est</code></pre>
 </div>
 <div id="example-10" class="section level3">
 <h3>EXAMPLE 10</h3>
@@ -2002,11 +1990,11 @@ g.est</code></pre></div>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating location uncertainty</p>
 <p>Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals. See Example 2 above and estMC help file.</p>
 </div>
-<div id="example-13-from-process-error-simulation-in-cohen-et-al.-in-revision" class="section level3">
-<h3>EXAMPLE 13 (from process error simulation in Cohen et al. in revision)</h3>
+<div id="example-13-from-process-error-simulation-in-cohen-et-al.-in-press" class="section level3">
+<h3>EXAMPLE 13 (from process error simulation in Cohen et al. in press)</h3>
 <p><code>simMove</code> for measuring the influence of dispersal rates on MC</p>
 <p>Long-distance dispersal occurs when individuals that originate or breed in one population do not return to the same population to breed the next year. To quantify the sensitivity of MC to dispersal, we used simulations in which dispersal probability between breeding regions varied from low to high to measure the sensitivity of MC to dispersal.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Simulation ----
+<pre class="sourceCode r"><code class="sourceCode r">## Simulation ----
 nBreeding &lt;-<span class="st"> </span><span class="dv">100</span>
 nWintering &lt;-<span class="st"> </span><span class="dv">100</span>
 breedingPos &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="kw">c</span>(<span class="kw">rep</span>(<span class="kw">seq</span>(-<span class="dv">99</span>, -<span class="dv">81</span>, <span class="dv">2</span>), <span class="dt">each=</span><span class="kw">sqrt</span>(nBreeding)),
@@ -2078,7 +2066,8 @@ for(i in <span class="dv">1</span>:<span class="kw">length</span>(Drates)){
 
 Disp.df$Year &lt;-<span class="st"> </span>Disp.df$Year -<span class="st"> </span><span class="dv">1</span> <span class="co">#just run once!</span>
 
-<span class="kw">data.frame</span>(Disp.df, <span class="dt">roundMC =</span> <span class="kw">round</span>(Disp.df$MC, <span class="dv">2</span>), <span class="dt">nearZero =</span> Disp.df$MC &lt;<span class="st"> </span><span class="fl">0.01</span>)
+<span class="kw">data.frame</span>(Disp.df, <span class="dt">roundMC =</span> <span class="kw">round</span>(Disp.df$MC, <span class="dv">2</span>), 
+           <span class="dt">nearZero =</span> Disp.df$MC &lt;<span class="st"> </span><span class="fl">0.01</span>)
 
 
 <span class="co"># Convert dispersal rates to probabilities of dispersing at least certain distance</span>
@@ -2087,7 +2076,8 @@ probFarDisp &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span c
 
 for (i in <span class="dv">1</span>:<span class="kw">length</span>(Drates)) {
   for (k in <span class="dv">1</span>:nBreeding) {
-    probFarDisp[k, i] &lt;-<span class="st"> </span><span class="kw">sum</span>(birdLocDisp[[i]]$natalDispMat[k, <span class="kw">which</span>(breedDist[k, ]&gt;=<span class="st"> </span>threshold)])
+    probFarDisp[k, i] &lt;-<span class="st"> </span>
+<span class="st">      </span><span class="kw">sum</span>(birdLocDisp[[i]]$natalDispMat[k, <span class="kw">which</span>(breedDist[k, ]&gt;=<span class="st"> </span>threshold)])
   }
 }
 
@@ -2103,13 +2093,17 @@ line_set=<span class="kw">c</span>(<span class="fl">0.5</span>, <span class="fl"
 <span class="st"> </span><span class="kw">geom_line</span>()+
 <span class="st"> </span><span class="kw">scale_size_manual</span>(<span class="dt">values=</span>line_set)+
 <span class="st"> </span><span class="kw">labs</span>(<span class="dt">size=</span><span class="st">&quot;Dispersal Rate&quot;</span>)+
-<span class="st"> </span><span class="kw">scale_y_continuous</span>(<span class="st">&quot;MC&quot;</span>, <span class="dt">limits=</span><span class="kw">c</span>(-.<span class="dv">005</span>, <span class="fl">0.26</span>), <span class="dt">breaks=</span><span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>, <span class="fl">0.15</span>, <span class="fl">0.2</span>, <span class="fl">0.25</span>))+
+<span class="st"> </span><span class="kw">scale_y_continuous</span>(<span class="st">&quot;MC&quot;</span>, <span class="dt">limits=</span><span class="kw">c</span>(-.<span class="dv">005</span>, <span class="fl">0.26</span>), 
+                    <span class="dt">breaks=</span><span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.05</span>, <span class="fl">0.1</span>, <span class="fl">0.15</span>, <span class="fl">0.2</span>, <span class="fl">0.25</span>))+
 <span class="st"> </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks=</span><span class="kw">c</span>(<span class="dv">0</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">9</span>, <span class="dv">12</span>, <span class="dv">15</span>))+
 <span class="st"> </span><span class="kw">theme_bw</span>()+
-<span class="st"> </span><span class="kw">theme</span>(<span class="dt">axis.title=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">16</span>, <span class="dt">face =</span><span class="st">&quot;bold&quot;</span>),<span class="dt">axis.text=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>),
-       <span class="dt">panel.grid.major =</span> <span class="kw">element_line</span>(<span class="dt">color=</span><span class="st">&quot;grey90&quot;</span>),<span class="dt">panel.grid.major.x =</span> <span class="kw">element_blank</span>(),
-       <span class="dt">legend.title=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>), <span class="dt">legend.text=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>))
-}</code></pre></div>
+<span class="st"> </span><span class="kw">theme</span>(<span class="dt">axis.title=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">16</span>, <span class="dt">face =</span><span class="st">&quot;bold&quot;</span>),
+       <span class="dt">axis.text=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>),
+       <span class="dt">panel.grid.major =</span> <span class="kw">element_line</span>(<span class="dt">color=</span><span class="st">&quot;grey90&quot;</span>),
+       <span class="dt">panel.grid.major.x =</span> <span class="kw">element_blank</span>(),
+       <span class="dt">legend.title=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>), 
+       <span class="dt">legend.text=</span><span class="kw">element_text</span>(<span class="dt">size=</span><span class="dv">14</span>))
+}</code></pre>
 </div>
 </div>
 
@@ -2120,7 +2114,7 @@ line_set=<span class="kw">c</span>(<span class="fl">0.5</span>, <span class="fl"
   (function () {
     var script = document.createElement("script");
     script.type = "text/javascript";
-    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
     document.getElementsByTagName("head")[0].appendChild(script);
   })();
 </script>

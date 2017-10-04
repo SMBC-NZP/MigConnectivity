@@ -7,7 +7,7 @@
 estMantel(targetPoints, originPoints, isGL, geoBias = NULL, geoVCov = NULL,
   targetSites = NULL, nBoot = 1000, nSim = 1000, verbose = 0,
   alpha = 0.05,
-  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0\\n                                            +x_0=0 +y_0=0 +a=6371007 +b=6371007\\n                                            +units=m +no_defs")
+  resampleProjection = MigConnectivity::projections$EquidistConic)
 }
 \arguments{
 \item{targetPoints}{A \code{SpatialPoints} object, with length number of
@@ -46,8 +46,11 @@ a line every 100 bootstraps.  2 prints a line every bootstrap.
 
 \item{alpha}{Level for confidence/credible intervals provided.}
 
-\item{resampleProjection}{Projection when sampling from geolocator bias/error.
-Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"}
+\item{resampleProjection}{Projection when sampling from geolocator
+bias/error. This projection needs units = m. Default is Equidistant
+Conic. The default setting preserves distances around latitude = 0 and
+longitude = 0. Other projections may work well, depending on the location
+of \code{targetSites}.}
 }
 \value{
 \code{estMantel} returns a list with elements:
@@ -66,12 +69,12 @@ Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
 data.
 }
 \examples{
-rM1 <- estMantel(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-                 geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
+                 geoBias = OVENdata$geo.bias, # Geolocator location bias
+                 geoVCov = OVENdata$geo.vcov, # Location covariance matrix
                  targetSites = OVENdata$targetSites, # Non-breeding target sites
                  originPoints = OVENdata$originPoints, # Capture Locations
-                 targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+                 targetPoints = OVENdata$targetPoints, # Target locations
                  verbose = 1,   # output options
                  nBoot = 100, # This is set low for example
                  resampleProjection = raster::projection(OVENdata$targetSites))
@@ -80,3 +83,4 @@ str(rM1)
 \seealso{
 \code{\link{estMC}}
 }
+

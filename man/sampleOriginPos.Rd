@@ -2,10 +2,10 @@
 % Please edit documentation in R/data.R
 \docType{data}
 \name{sampleOriginPos}
-\alias{sampleOriginPos}
 \alias{sampleOriginDist}
-\alias{sampleTargetPos}
+\alias{sampleOriginPos}
 \alias{sampleTargetDist}
+\alias{sampleTargetPos}
 \title{Example origin and target site positions and distances on a 2-D plane}
 \format{Each dataset is a named list with 12 matrices in it, representing 12
 scenarios. The position matrices each have 2 columns (x and y position) and
@@ -50,9 +50,10 @@ sampleTargetDist
 }
 \description{
 \code{sampleOriginPos} is a dataset containing example origin site positions
-from 12 scenarios used in Cohen et al. (in prep.).  For the same 12
+from 12 scenarios used in Cohen et al. (in press).  For the same 12
 scenarios, \code{sampleOriginDist} contains the origin site distances,
 \code{sampleTargetPos} contains the target site positions, and
 \code{sampleTargetDist} contains the target site distances.
 }
 \keyword{datasets}
+

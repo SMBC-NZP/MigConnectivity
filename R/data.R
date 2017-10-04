@@ -1,6 +1,6 @@
 #' Example transition probabilities (psis) between origin and target sites
 #'
-#' A dataset containing example psi matrices used in Cohen et al. (in prep.).
+#' A dataset containing example psi matrices used in Cohen et al. (in press).
 #'
 #' @format A named list with 8 transition probability matrices in it. The
 #' direction is from origin site (rows) to target sites (columns), so each
@@ -29,7 +29,7 @@
 #' Example origin and target site positions and distances on a 2-D plane
 #'
 #' \code{sampleOriginPos} is a dataset containing example origin site positions
-#' from 12 scenarios used in Cohen et al. (in prep.).  For the same 12
+#' from 12 scenarios used in Cohen et al. (in press).  For the same 12
 #' scenarios, \code{sampleOriginDist} contains the origin site distances,
 #' \code{sampleTargetPos} contains the target site positions, and
 #' \code{sampleTargetDist} contains the target site distances.
@@ -105,16 +105,18 @@
 #' Example relative abundance estimates from simulated data
 #'
 #' A dataset containing mcmc relative abundance estimates from simulated
-#' BBS-type data from Cohen et al. (in prep). Each estimate can
+#' BBS-type data from Cohen et al. (in press). Each estimate can
 #' be used in \code{estMC} function to estimate MC with uncertainty.
 #'
 #' @format A list with 100 mcmc (coda) estimates in it.
 "abundExamples"
 
-#' Ovenbird light-level geolocator, GPS and neccesary data
+#' Ovenbird light-level geolocator and GPS neccesary data
+#'
+#' Ovenbird data from Cohen et al. (in press) and Hallworth and Marra (2015).
 #'
 #' @format A named list with the neccesary data to replicate the analyses
-#' found in Cohen et al. (in prep) with archical light-level geolocator and
+#' found in Cohen et al. (in press) with archival light-level geolocator and
 #' GPS data.
 #' The data contained in the list are:
 #' \itemize{
@@ -169,3 +171,18 @@
 #'        Format: square distance matrix
 #' }
 "OVENdata"
+
+#' Map projections
+#'
+#' Map projections used when sampling from geolocator bias/error, for
+#' example. The argument \code{resampleProjection} in \code{estMC} and
+#' \code{estMantel} need units = m, which is true of all of these except
+#' WGS84 (the second). First item is Equidistant Conic, which preserves
+#' distances around latitude = 0 and longitude = 0. This is a good general
+#' purpose projection, but the ideal projection may depend on the locations of
+#' your points.  See names in list for suggestions. Other potential projections
+#' can be found at \url{http://www.spatialreference.org/ref/}
+#'
+#' @format A named list of strings.
+"projections"
+

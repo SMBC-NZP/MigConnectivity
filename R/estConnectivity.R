@@ -46,7 +46,7 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   psi.array <- array(0, c(nSamples, nOrigin, nTarget))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
-      cat("\tSample",i,"of",nSamples,"\n")
+      cat("\tSample", i, "of", nSamples, "at", date(), "\n")
     # Generate random transition probability matrices
     # resampling from each files, 1000 samples from each of the 100 files
     # using the estimates of psi and uncertainty from the mark file to generate a new estimate of psi
@@ -67,10 +67,15 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                                  psi = psiNew, sampleSize = sampleSize),
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
                                  psi = psiNew))
+    if (verbose > 1 || verbose == 1 && i %% 10 == 0)
+      cat(" MC mean:", mean(sampleMC, na.rm=TRUE),
+          "SD:", sd(sampleMC, na.rm=TRUE),
+          "low quantile:", quantile(sampleMC, alpha/2, na.rm=TRUE),
+          "high quantile:", quantile(sampleMC, 1-alpha/2, na.rm=TRUE), "\n")
   }
-  meanMC <- mean(sampleMC)
-  medianMC <- median(sampleMC)
-  seMC <- sd(sampleMC)
+  meanMC <- mean(sampleMC, na.rm=TRUE)
+  medianMC <- median(sampleMC, na.rm=TRUE)
+  seMC <- sd(sampleMC, na.rm=TRUE)
   # Calculate confidence intervals using quantiles of sampled MC
   simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
   z0 <- qnorm(sum((sampleMC)<meanMC)/nSamples)
@@ -112,7 +117,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-                       resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -133,9 +138,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
   if(class(originSites)=="SpatialPolygonsDataFrame"){
-    originSites <- sp::SpatialPolygons(originSites@polygons)}
+    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
   if(class(targetSites)=="SpatialPolygonsDataFrame"){
-    targetSites <- sp::SpatialPolygons(targetSites@polygons)}
+    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
   if (is.null(targetAssignment))
@@ -172,8 +177,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                                                     targetNames))
 
 
-  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
   MC <- corr <- rep(NA, nBoot)
 
   # determine the number of animals from the input data
@@ -200,13 +203,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
     # project target points to WGS #
-    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
     targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
     targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
     originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                                     nAnimals, nAnimals)
@@ -253,7 +256,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
@@ -264,7 +267,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
             "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
     }
   }
-  MC.z0 <- qnorm(sum((MC)<mean(MC))/nBoot)
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
@@ -283,9 +286,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
       bcP <- 1 - bcP
   }
   if (calcCorr) {
-    meanCorr <- mean(corr)
-    medianCorr <- median(corr)
-    seCorr <- sd(corr)
+    meanCorr <- mean(corr, na.rm=TRUE)
+    medianCorr <- median(corr, na.rm=TRUE)
+    seCorr <- sd(corr, na.rm=TRUE)
     simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
@@ -293,8 +296,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC),
-              medianMC = median(MC), seMC = sd(MC),
+              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
+              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
               simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = corr, pointCorr = pointCorr,
@@ -369,8 +372,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'  to 0 (default) or any greater integer to specify where to stop ignoring
 #'  samples ("burn-in").
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
-#'  a line every 100 samples or bootstraps.  2 prints a line every sample or
-#'  bootstrap. 3 also prints the number of draws (for tuning nSim for GL data only).
+#'  a line every 100 samples or bootstraps and a summary every 10.  2 prints a
+#'  line and summary every sample or bootstrap. 3 also prints the number of
+#'  draws (for tuning nSim for GL data only).
 #' @param calcCorr In addition to MC, should function also estimate Mantel
 #'    correlation between release and non-release locations (GPS or GL data
 #'    only)?  Default is FALSE.
@@ -380,26 +384,11 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    FALSE.
 #' @param sigConst Value to compare MC to in significance test.
 #'    Default is 0.
-#' @param resampleProjection Projection when sampling from geolocator bias/error. This projection needs units = m.
-#'    Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs".
-#'    The default setting preserves distances around latitude = 0 and longitude = 0. Below is a list of potentially useful projections
-#'    based on the location of \code{targetSites}.
-#'
-#'    NorthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    SouthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=-5 +lat_2=-42 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Europe <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=43 +lat_2=62 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    AsiaNorth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=15 +lat_2=65 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    AsiaSouth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=7 +lat_2=-32 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Africa <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=-23 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Arctic <- "+proj=aeqd +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-#'
-#'    Antarctic <- "+proj=aeqd +lat_0=-90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+#' @param resampleProjection Projection when sampling from geolocator
+#'    bias/error. This projection needs units = m. Default is Equidistant
+#'    Conic. The default setting preserves distances around latitude = 0 and
+#'    longitude = 0. Other projections may work well, depending on the location
+#'    of \code{targetSites}.
 #'
 #'
 #' @return \code{estMC} returns a list with elements:
@@ -455,6 +444,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'      main MC formula or that for MC(R).}
 #' }
 #' @example inst/examples/estMCExamples.R
+#' @seealso \code{\link{calcMC}}, \code{\link{projections}}
 #' @export
 estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -466,9 +456,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
-                                        +x_0=0 +y_0=0 +a=6371007 +b=6371007
-                                        +units=m +no_defs") {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -526,8 +514,11 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    a line every 100 bootstraps.  2 prints a line every bootstrap.
 #'    3 also prints the number of draws (for tuning nSim for GL data only).
 #' @param alpha Level for confidence/credible intervals provided.
-#' @param resampleProjection Projection when sampling from geolocator bias/error.
-#'    Default Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+#' @param resampleProjection Projection when sampling from geolocator
+#'    bias/error. This projection needs units = m. Default is Equidistant
+#'    Conic. The default setting preserves distances around latitude = 0 and
+#'    longitude = 0. Other projections may work well, depending on the location
+#'    of \code{targetSites}.
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
@@ -542,12 +533,12 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #' @export
 #'
 #' @examples
-#' rM1 <- estMantel(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-#'                  geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-#'                  geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+#' rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
+#'                  geoBias = OVENdata$geo.bias, # Geolocator location bias
+#'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
 #'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
 #'                  originPoints = OVENdata$originPoints, # Capture Locations
-#'                  targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+#'                  targetPoints = OVENdata$targetPoints, # Target locations
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
 #'                  resampleProjection = raster::projection(OVENdata$targetSites))
@@ -556,9 +547,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                      resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0
-                                            +x_0=0 +y_0=0 +a=6371007 +b=6371007
-                                            +units=m +no_defs") {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -585,7 +574,6 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     }
     targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
   }
-  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
   corr <- rep(NA, nBoot)
 
@@ -596,13 +584,13 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
   # project target points to WGS #
-  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
   targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
   targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-  originPoints2 <- sp::spTransform(originPoints, sp::CRS(WGS84))
+  originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
   originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                             nAnimals, nAnimals)
@@ -628,7 +616,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(WGS84))
+    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
     targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                                     target.point.sample2[distIndices[,'col']])
     targetDist1[lower.tri(targetDist1)] <- targetDist0
@@ -638,9 +626,9 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
           "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
           "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
   }
-  meanCorr <- mean(corr)
-  medianCorr <- median(corr)
-  seCorr <- sd(corr)
+  meanCorr <- mean(corr, na.rm=TRUE)
+  medianCorr <- median(corr, na.rm=TRUE)
+  seCorr <- sd(corr, na.rm=TRUE)
   simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),

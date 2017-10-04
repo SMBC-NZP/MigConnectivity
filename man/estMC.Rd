@@ -11,7 +11,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-  resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0\\n                                        +x_0=0 +y_0=0 +a=6371007 +b=6371007\\n                                        +units=m +no_defs")
+  resampleProjection = MigConnectivity::projections$EquidistConic)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -91,8 +91,9 @@ to 0 (default) or any greater integer to specify where to stop ignoring
 samples ("burn-in").}
 
 \item{verbose}{0 (default) to 3. 0 prints no output during run. 1 prints
-a line every 100 samples or bootstraps.  2 prints a line every sample or
-bootstrap. 3 also prints the number of draws (for tuning nSim for GL data only).}
+a line every 100 samples or bootstraps and a summary every 10.  2 prints a
+line and summary every sample or bootstrap. 3 also prints the number of
+draws (for tuning nSim for GL data only).}
 
 \item{calcCorr}{In addition to MC, should function also estimate Mantel
 correlation between release and non-release locations (GPS or GL data
@@ -107,26 +108,11 @@ FALSE.}
 \item{sigConst}{Value to compare MC to in significance test.
 Default is 0.}
 
-\item{resampleProjection}{Projection when sampling from geolocator bias/error. This projection needs units = m.
-   Default is Equidistant Conic = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs".
-   The default setting preserves distances around latitude = 0 and longitude = 0. Below is a list of potentially useful projections
-   based on the location of \code{targetSites}.
-
-   NorthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=60 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   SouthAmerica <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=-5 +lat_2=-42 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   Europe <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=43 +lat_2=62 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   AsiaNorth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=15 +lat_2=65 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   AsiaSouth <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=7 +lat_2=-32 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   Africa <- "+proj=eqdc +lat_0=0 +lon_0=0 +lat_1=20 +lat_2=-23 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   Arctic <- "+proj=aeqd +lat_0=90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
-
-   Antarctic <- "+proj=aeqd +lat_0=-90 +lon_0=0 +x_0=0 +y_0=0 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"}
+\item{resampleProjection}{Projection when sampling from geolocator
+bias/error. This projection needs units = m. Default is Equidistant
+Conic. The default setting preserves distances around latitude = 0 and
+longitude = 0. Other projections may work well, depending on the location
+of \code{targetSites}.}
 }
 \value{
 \code{estMC} returns a list with elements:
@@ -218,18 +204,20 @@ trueMC
 
 # Storage matrix for samples
 cmrMCSample <- matrix(NA, nSamplesCMR, nSimulationsCMR)
-summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC, estimate=NA,
-                        mean=NA, median=NA, se=NA, lcl.simple=NA, ucl.simple=NA,
-                        lcl.BC=NA, ucl.BC=NA)
+summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC,
+                         estimate=NA, mean=NA, median=NA, se=NA, lcl.simple=NA,
+                         ucl.simple=NA, lcl.BC=NA, ucl.BC=NA)
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\\n")
-  # Note: getCMRexample requires a valid internet connection and that GitHub is accessible
+  # Note: getCMRexample requires a valid internet connection and that GitHub is
+  # accessible
   fm <- getCMRexample(r)
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
                    originSites = 5:8, targetSites = c(3,2,1,4),
                    nSamples = nSamplesCMR, verbose = 0,
-                   sampleSize = length(grep('[2-5]', fm$data$data$ch))) #Not really needed (big sample sizes)
+                   sampleSize = length(grep('[2-5]', fm$data$data$ch)))
+  #sampleSize argument not really needed (big sample sizes)
   cmrMCSample[ , r] <- results$sampleMC
   summaryCMR$estimate[r] <- results$pointMC
   summaryCMR$mean[r] <- results$meanMC
@@ -283,7 +271,7 @@ for (r in 1:nSimulationsAbund) {
 }
 
 summaryAbund <- transform(summaryAbund, coverage.simple = (True >= lcl.simple &
-                                                             True <= ucl.simple),
+                                                           True <= ucl.simple),
                           coverage.BC=(True>=lcl.BC & True<=ucl.BC),
                           coverage.HPD=(True>=lclHPD & True<=uclHPD))
 summaryAbund
@@ -303,16 +291,16 @@ nSamplesGLGPS <- 200 # Number of bootstrap iterations
 }
 
 # Estimate MC only, treat all data as geolocator
-GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-             geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-             geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-             targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-             originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
+             geoBias = OVENdata$geo.bias, #Light-level geolocator location bias
+             geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+             targetDist = OVENdata$targetDist, # targetSites distance matrix
+             originDist = OVENdata$originDist, # originSites distance matrix
              targetSites = OVENdata$targetSites, # Non-breeding target sites
              originSites = OVENdata$originSites, # Breeding origin sites
              originPoints = OVENdata$originPoints, # Capture Locations
-             targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-             originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+             targetPoints = OVENdata$targetPoints, # Device target locations
+             originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
              verbose = 1,   # output options
              nSamples = nSamplesGLGPS,# This is set low for example
              resampleProjection = raster::projection(OVENdata$targetSites))
@@ -320,16 +308,16 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
 str(GL_mc)
 
 # Estimate MC and rM, treat all data as is
-Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-                geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-                geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-                targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-                originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+                geoBias = OVENdata$geo.bias, # Light-level GL location bias
+                geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+                targetDist = OVENdata$targetDist, # targetSites distance matrix
+                originDist = OVENdata$originDist, # originSites distance matrix
                 targetSites = OVENdata$targetSites, # Non-breeding target sites
                 originSites = OVENdata$originSites, # Breeding origin sites
                 originPoints = OVENdata$originPoints, # Capture Locations
-                targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-                originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+                targetPoints = OVENdata$targetPoints, # Device target locations
+                originRelAbund = OVENdata$originRelAbund,#Origin relative abund
                 verbose = 1,   # output options
                 calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS, # This is set low for example
@@ -337,11 +325,13 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator 
                 resampleProjection = raster::projection(OVENdata$targetSites))
 
 # For treating all data as GPS,
-# Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #
+# Move the latitude of birds with locations that fall off shore - only change
+# Latitude Estimate #
 tp<-OVENdata$targetPoints@coords
 sp::plot(OVENdata$targetPoints)
 sp::plot(OVENdata$targetSites,add=TRUE)
-text(OVENdata$targetPoints@coords[,1],OVENdata$targetPoints@coords[,2],label=c(1:39))
+text(OVENdata$targetPoints@coords[,1], OVENdata$targetPoints@coords[,2],
+     label=c(1:39))
 
 tp[5,2]<- -1899469
 tp[10,2]<- -2007848
@@ -354,14 +344,14 @@ oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
 raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
-GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-              targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-              originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
+              targetDist = OVENdata$targetDist, # targetSites distance matrix
+              originDist = OVENdata$originDist, # originSites distance matrix
               targetSites = OVENdata$targetSites, # Non-breeding target sites
               originSites = OVENdata$originSites, # Breeding origin sites
               originPoints = OVENdata$originPoints, # Capture Locations
-              targetPoints = oven_targetPoints, # Non-breeding Locations derived from devices
-              originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+              targetPoints = oven_targetPoints, # Device target locations
+              originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
               verbose = 1,   # output options
               nSamples = nSamplesGLGPS) # This is set low for example
 
@@ -369,3 +359,7 @@ str(GPS_mc)
 str(Combined)
 str(GL_mc)
 }
+\seealso{
+\code{\link{calcMC}}, \code{\link{projections}}
+}
+

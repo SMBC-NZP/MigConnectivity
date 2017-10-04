@@ -30,6 +30,7 @@ row of each matrix sums to 1.  The psi matrices are:
 samplePsis
 }
 \description{
-A dataset containing example psi matrices used in Cohen et al. (in prep.).
+A dataset containing example psi matrices used in Cohen et al. (in press).
 }
 \keyword{datasets}
+
