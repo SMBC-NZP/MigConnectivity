@@ -181,7 +181,7 @@
 #' distances around latitude = 0 and longitude = 0. This is a good general
 #' purpose projection, but the ideal projection may depend on the locations of
 #' your points.  See names in list for suggestions. Other potential projections
-#' can be found at \link{www.spatialreference.org/ref}
+#' can be found at \url{http://www.spatialreference.org/ref/}
 #'
 #' @format A named list of strings.
 "projections"

@@ -11,7 +11,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-  resampleProjection = projections$EquidistConic)
+  resampleProjection = MigConnectivity::projections$EquidistConic)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -204,18 +204,20 @@ trueMC
 
 # Storage matrix for samples
 cmrMCSample <- matrix(NA, nSamplesCMR, nSimulationsCMR)
-summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC, estimate=NA,
-                        mean=NA, median=NA, se=NA, lcl.simple=NA, ucl.simple=NA,
-                        lcl.BC=NA, ucl.BC=NA)
+summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC,
+                         estimate=NA, mean=NA, median=NA, se=NA, lcl.simple=NA,
+                         ucl.simple=NA, lcl.BC=NA, ucl.BC=NA)
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\\n")
-  # Note: getCMRexample requires a valid internet connection and that GitHub is accessible
+  # Note: getCMRexample requires a valid internet connection and that GitHub is
+  # accessible
   fm <- getCMRexample(r)
   results <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
                    originDist = originDist, targetDist = targetDist,
                    originSites = 5:8, targetSites = c(3,2,1,4),
                    nSamples = nSamplesCMR, verbose = 0,
-                   sampleSize = length(grep('[2-5]', fm$data$data$ch))) #Not really needed (big sample sizes)
+                   sampleSize = length(grep('[2-5]', fm$data$data$ch)))
+  #sampleSize argument not really needed (big sample sizes)
   cmrMCSample[ , r] <- results$sampleMC
   summaryCMR$estimate[r] <- results$pointMC
   summaryCMR$mean[r] <- results$meanMC
@@ -269,7 +271,7 @@ for (r in 1:nSimulationsAbund) {
 }
 
 summaryAbund <- transform(summaryAbund, coverage.simple = (True >= lcl.simple &
-                                                             True <= ucl.simple),
+                                                           True <= ucl.simple),
                           coverage.BC=(True>=lcl.BC & True<=ucl.BC),
                           coverage.HPD=(True>=lclHPD & True<=uclHPD))
 summaryAbund
@@ -289,16 +291,16 @@ nSamplesGLGPS <- 200 # Number of bootstrap iterations
 }
 
 # Estimate MC only, treat all data as geolocator
-GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-             geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-             geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-             targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-             originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
+             geoBias = OVENdata$geo.bias, #Light-level geolocator location bias
+             geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+             targetDist = OVENdata$targetDist, # targetSites distance matrix
+             originDist = OVENdata$originDist, # originSites distance matrix
              targetSites = OVENdata$targetSites, # Non-breeding target sites
              originSites = OVENdata$originSites, # Breeding origin sites
              originPoints = OVENdata$originPoints, # Capture Locations
-             targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-             originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+             targetPoints = OVENdata$targetPoints, # Device target locations
+             originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
              verbose = 1,   # output options
              nSamples = nSamplesGLGPS,# This is set low for example
              resampleProjection = raster::projection(OVENdata$targetSites))
@@ -306,16 +308,16 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector indicating light-level geolocator (TRUE
 str(GL_mc)
 
 # Estimate MC and rM, treat all data as is
-Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-                geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-                geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
-                targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-                originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+                geoBias = OVENdata$geo.bias, # Light-level GL location bias
+                geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+                targetDist = OVENdata$targetDist, # targetSites distance matrix
+                originDist = OVENdata$originDist, # originSites distance matrix
                 targetSites = OVENdata$targetSites, # Non-breeding target sites
                 originSites = OVENdata$originSites, # Breeding origin sites
                 originPoints = OVENdata$originPoints, # Capture Locations
-                targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
-                originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+                targetPoints = OVENdata$targetPoints, # Device target locations
+                originRelAbund = OVENdata$originRelAbund,#Origin relative abund
                 verbose = 1,   # output options
                 calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS, # This is set low for example
@@ -323,11 +325,13 @@ Combined<-estMC(isGL=OVENdata$isGL, # Logical vector for light-level geolocator 
                 resampleProjection = raster::projection(OVENdata$targetSites))
 
 # For treating all data as GPS,
-# Move the latitude of birds with locations that fall off shore - only change Latitude Estimate #
+# Move the latitude of birds with locations that fall off shore - only change
+# Latitude Estimate #
 tp<-OVENdata$targetPoints@coords
 sp::plot(OVENdata$targetPoints)
 sp::plot(OVENdata$targetSites,add=TRUE)
-text(OVENdata$targetPoints@coords[,1],OVENdata$targetPoints@coords[,2],label=c(1:39))
+text(OVENdata$targetPoints@coords[,1], OVENdata$targetPoints@coords[,2],
+     label=c(1:39))
 
 tp[5,2]<- -1899469
 tp[10,2]<- -2007848
@@ -340,14 +344,14 @@ oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
 raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
-GPS_mc<-estMC(isGL=FALSE, # Logical vector indicating light-level geolocator (TRUE) or GPS (F)
-              targetDist = OVENdata$targetDist, # Non-breeding target distribution distance matrix
-              originDist = OVENdata$originDist, # Breeding / origin distribution distance matrix
+GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
+              targetDist = OVENdata$targetDist, # targetSites distance matrix
+              originDist = OVENdata$originDist, # originSites distance matrix
               targetSites = OVENdata$targetSites, # Non-breeding target sites
               originSites = OVENdata$originSites, # Breeding origin sites
               originPoints = OVENdata$originPoints, # Capture Locations
-              targetPoints = oven_targetPoints, # Non-breeding Locations derived from devices
-              originRelAbund = OVENdata$originRelAbund, # Relative abundance within OriginSites
+              targetPoints = oven_targetPoints, # Device target locations
+              originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
               verbose = 1,   # output options
               nSamples = nSamplesGLGPS) # This is set low for example
 

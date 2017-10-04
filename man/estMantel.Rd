@@ -6,7 +6,8 @@
 \usage{
 estMantel(targetPoints, originPoints, isGL, geoBias = NULL, geoVCov = NULL,
   targetSites = NULL, nBoot = 1000, nSim = 1000, verbose = 0,
-  alpha = 0.05, resampleProjection = projections$EquidistConic)
+  alpha = 0.05,
+  resampleProjection = MigConnectivity::projections$EquidistConic)
 }
 \arguments{
 \item{targetPoints}{A \code{SpatialPoints} object, with length number of
@@ -68,12 +69,12 @@ Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
 data.
 }
 \examples{
-rM1 <- estMantel(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-                 geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
+                 geoBias = OVENdata$geo.bias, # Geolocator location bias
+                 geoVCov = OVENdata$geo.vcov, # Location covariance matrix
                  targetSites = OVENdata$targetSites, # Non-breeding target sites
                  originPoints = OVENdata$originPoints, # Capture Locations
-                 targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+                 targetPoints = OVENdata$targetPoints, # Target locations
                  verbose = 1,   # output options
                  nBoot = 100, # This is set low for example
                  resampleProjection = raster::projection(OVENdata$targetSites))

@@ -117,7 +117,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-                       resampleProjection = projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -203,13 +203,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
     # project target points to WGS #
-    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(projections$WGS84))
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
     targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
     targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(projections$WGS84))
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
     originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                                     nAnimals, nAnimals)
@@ -256,7 +256,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(projections$WGS84))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
       targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                            target.point.sample2[distIndices[,'col']])
       targetDist1[lower.tri(targetDist1)] <- targetDist0
@@ -456,7 +456,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  resampleProjection = projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -533,12 +533,12 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #' @export
 #'
 #' @examples
-#' rM1 <- estMantel(isGL=OVENdata$isGL, # Logical vector for light-level geolocator (TRUE) or GPS (F)
-#'                  geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
-#'                  geoVCov = OVENdata$geo.vcov, # Light-level geolocator co-variance matrix
+#' rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
+#'                  geoBias = OVENdata$geo.bias, # Geolocator location bias
+#'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
 #'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
 #'                  originPoints = OVENdata$originPoints, # Capture Locations
-#'                  targetPoints = OVENdata$targetPoints, # Non-breeding Locations derived from devices
+#'                  targetPoints = OVENdata$targetPoints, # Target locations
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
 #'                  resampleProjection = raster::projection(OVENdata$targetSites))
@@ -547,7 +547,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                      resampleProjection = projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -584,13 +584,13 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
   # project target points to WGS #
-  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(projections$WGS84))
+  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
   targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
 
   targetDist1[lower.tri(targetDist1)] <- targetDist0
 
-  originPoints2 <- sp::spTransform(originPoints, sp::CRS(projections$WGS84))
+  originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
 
   originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
                             nAnimals, nAnimals)
@@ -616,7 +616,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(projections$WGS84))
+    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
     targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
                                                     target.point.sample2[distIndices[,'col']])
     targetDist1[lower.tri(targetDist1)] <- targetDist0
