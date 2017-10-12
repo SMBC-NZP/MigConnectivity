@@ -73,9 +73,7 @@ calcMC <- function(originDist, targetDist, originRelAbund, psi, sampleSize=NULL)
   # sum(probability of each combination of origin sites and target sites *
   # (distance between origin sites - mean origin site distance) * (distance between target sites - mean target site distance)) /
   # (SD in origin site distances * SD in target site distances)
-  MC <- sum(M *
-              (matrix(rep(originDist, nTarget^2), nOrigin^2, nTarget^2) - mu.bD) *
-              (matrix(rep(targetDist, nOrigin^2), nOrigin^2, nTarget^2, byrow=T) - mu.wD))/(sd.bD*sd.wD)
+  MC <- c((c(originDist - mu.bD) / sd.bD) %*% M %*% (c(targetDist - mu.wD) / sd.wD))
   return(MC)
 }
 
