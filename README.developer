@@ -44,6 +44,10 @@ Done
 6. Add extra while loop to estMC to make sure at least two target sites are
 represented each time, thus making sure the number of bootstraps inference is
 based on is the same as the input number of samples.  Status: Proposed
+7. Create diffMC function to generate difference with SD and CI between two or
+more independent estimates of MC / rM. Status: Proposed
+8. Add calcMantel function, for consistency and easy of use. Not really needed.
+Status: Proposed
 
 Proposed Updates
 1. When manuscript is accepted, update references to it throughout
