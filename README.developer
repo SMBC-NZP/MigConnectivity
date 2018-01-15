@@ -44,7 +44,10 @@ Done
 6. Add extra while loop to estMC to make sure at least two target sites are
 represented each time, thus making sure the number of bootstraps inference is
 based on is the same as the input number of samples.  Status: Proposed
-
+7. Add warnings / while loop to estMC when resampling and assigning target
+sites so that calculations don't run for days without ever producing results.
+Status: proposed 
+ 
 Proposed Updates
 1. When manuscript is accepted, update references to it throughout
 documentation. Then again once in print. Status: All references currently are
