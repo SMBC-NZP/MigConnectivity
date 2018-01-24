@@ -144,4 +144,3 @@ rel_abund1 <- transform(rel_abund1,
 
 summary(rel_abund1)
 }
-

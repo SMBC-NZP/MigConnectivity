@@ -19,4 +19,3 @@ your points.  See names in list for suggestions. Other potential projections
 can be found at \url{http://www.spatialreference.org/ref/}
 }
 \keyword{datasets}
-

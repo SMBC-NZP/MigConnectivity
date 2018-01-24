@@ -33,4 +33,3 @@ samplePsis
 A dataset containing example psi matrices used in Cohen et al. (in press).
 }
 \keyword{datasets}
-

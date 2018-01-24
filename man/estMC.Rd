@@ -362,4 +362,3 @@ str(GL_mc)
 \seealso{
 \code{\link{calcMC}}, \code{\link{projections}}
 }
-

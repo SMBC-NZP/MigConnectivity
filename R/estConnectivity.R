@@ -236,7 +236,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites, targetAssignment = targetAssignment,
-                          resampleProjection = resampleProjection)
+                          resampleProjection = resampleProjection, nSim = nSim)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)

@@ -83,4 +83,3 @@ str(rM1)
 \seealso{
 \code{\link{estMC}}
 }
-

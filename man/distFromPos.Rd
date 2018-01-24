@@ -42,4 +42,3 @@ nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 breedDist[1:12, 1:12]
 breedDist[1:12, c(1,91,100)]
 }
-
