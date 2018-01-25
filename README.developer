@@ -48,6 +48,9 @@ based on is the same as the input number of samples.  Status: Proposed
 more independent estimates of MC / rM. Status: Proposed
 8. Add calcMantel function, for consistency and ease of use. Not really needed.
 Status: Proposed
+9. Add warnings / while loop to estMC when resampling and assigning target
+sites so that calculations don't run for days without ever producing results.
+Status: Proposed
 
 Updates
 1. When manuscript is accepted, update references to it throughout
@@ -60,4 +63,5 @@ error crs(not identical). However, if the targetSites ==SpatialPolygons - you
 don't get the error. Status: Fixed
 2. estMC and estMantel summary statistics don't come out if there are any NAs
 or NaNs in the sample.  Status: Fixed
-
+3. nSim wasn't being passed along in estMC, so setting it away from default did
+nothing. Status: Fixed
