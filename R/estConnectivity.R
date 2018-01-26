@@ -220,7 +220,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
   }
 
-  for (boot in 1:nBoot) {
+  boot <- 1
+  while (boot <= nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Make sure have birds from every origin site
@@ -268,6 +269,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
             "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
     }
+    if (!is.na(MC[boot]))
+      boot <- boot + 1
   }
   MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
@@ -527,6 +530,10 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
 #'    of \code{targetSites}.
+#' @param maxTries Maximum number of times to run a single GL bootstrap before
+#'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
+#'    parameter was added to prevent GL setups where some sample points never
+#'    land on target sites from running indefinitely.
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
