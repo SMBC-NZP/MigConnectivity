@@ -117,7 +117,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+                       maxTries = 300) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -236,7 +237,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites, targetAssignment = targetAssignment,
-                          resampleProjection = resampleProjection, nSim = nSim)
+                          resampleProjection = resampleProjection, nSim = nSim,
+                          maxTries = maxTries)
+    if (!is.null(maxTries) && !is.null(tSamp$draws) && tSamp$draws > maxTries)
+      stop('More point draws in a bootstrap than limit maxTries, exiting.  Examine targetSites, geoBias, and geoVcov to see why so many sample points are outside sites.')
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
@@ -389,6 +393,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
 #'    of \code{targetSites}.
+#' @param maxTries Maximum number of times to run a single GL bootstrap before
+#'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
+#'    parameter was added to prevent GL setups where some sample points never
+#'    land on target sites from running indefinitely.
 #'
 #'
 #' @return \code{estMC} returns a list with elements:
@@ -456,7 +464,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+                  maxTries = 300) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -470,7 +479,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       nBoot = nSamples, verbose=verbose,
                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                       approxSigTest = approxSigTest, sigConst = sigConst,
-                      resampleProjection = resampleProjection))
+                      resampleProjection = resampleProjection,
+                      maxTries = maxTries))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
