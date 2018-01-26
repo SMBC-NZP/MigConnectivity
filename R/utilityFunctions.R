@@ -106,6 +106,8 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                                                                         good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
       toSample <- which(is.na(target.sample))
     }
+    if (!is.null(maxTries) && draws > maxTries)
+      stop('More point draws in a bootstrap than limit maxTries, exiting.  Examine targetSites, geoBias, and geoVcov to see why so many sample points are outside sites.')
   }
   return(list(target.sample = target.sample, target.point.sample = target.point.sample,
               draws = draws))

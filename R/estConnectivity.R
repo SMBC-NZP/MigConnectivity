@@ -239,8 +239,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                           targetSites = targetSites, targetAssignment = targetAssignment,
                           resampleProjection = resampleProjection, nSim = nSim,
                           maxTries = maxTries)
-    if (!is.null(maxTries) && !is.null(tSamp$draws) && tSamp$draws > maxTries)
-      stop('More point draws in a bootstrap than limit maxTries, exiting.  Examine targetSites, geoBias, and geoVcov to see why so many sample points are outside sites.')
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
@@ -557,7 +555,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+            maxTries = 300) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -618,7 +617,8 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites,
-                          resampleProjection = resampleProjection)
+                          resampleProjection = resampleProjection,
+                          maxTries = maxTries)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
