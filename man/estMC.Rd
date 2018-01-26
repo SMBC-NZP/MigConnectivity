@@ -290,7 +290,7 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
-nSamplesGLGPS <- 200 # Number of bootstrap iterations
+nSamplesGLGPS <- 100 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
   install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))

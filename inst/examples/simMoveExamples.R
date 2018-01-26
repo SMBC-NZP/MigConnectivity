@@ -84,18 +84,15 @@ breedingRelN <- breedingN/sum(breedingN)
 }
 
 # Set up psi matrix
-o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
-              target.dist = nonbreedDist, origin.abund = breedingRelN,
-              sample.size = sum(breedingN),
-              interval = c(0, 10), tol = .Machine$double.eps^0.125)
+slope <- 1.923904
 \dontrun{
   o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
                 target.dist = nonbreedDist, origin.abund = breedingRelN,
                 sample.size = sum(breedingN),
                 interval = c(0, 10), tol = .Machine$double.eps^0.5)
+  o
+  slope <- o$minimum
 }
-o
-slope <- o$minimum
 psi <- mlogitMat(slope, breedDist)
 
 # Baseline strength of migratory connectivity
@@ -106,9 +103,9 @@ round(MC, 4)
 
 ## Dispersal simulations---
 set.seed(1516)
-nYears <- 5 # Lower for example speed
+nYears <- 4 # Lower for example speed
 nMonths <- 2 # Each season, lower for example speed
-Drates <- c(0.04, 0.16, 0.64)    #rates of dispersal, fewer for example speed
+Drates <- c(0.04, 0.16)    #rates of dispersal, fewer for example speed
 \dontrun{
   nYears <- 15
   nMonths <- 4 # Each season

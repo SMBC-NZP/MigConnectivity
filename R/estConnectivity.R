@@ -1,3 +1,5 @@
+#' @import stats
+
 ###############################################################################
 # Estimate MC from abundance and transition probability estimates.
 ###############################################################################
@@ -676,7 +678,7 @@ getCMRexample <- function(number = 1) {
   file.name <- paste0('out_', obj.name, '.rds')
   url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/', file.name, '?raw=true')
   temp <- paste(tempdir(), file.name, sep = '/')
-  download.file(url1, temp, mode = 'wb')
+  utils::download.file(url1, temp, mode = 'wb')
   fm <- readRDS(temp)
   unlink(temp)
   return(fm)

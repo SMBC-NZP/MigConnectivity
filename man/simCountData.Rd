@@ -66,7 +66,7 @@ sdYear. <- 0.18
 # Number of simulated datasets to create and model
 nsims <- 50 # reduced for example speed
 # Number of MCMC iterations
-ni. <- 1500 # reduced for example speed
+ni. <- 1000 # reduced for example speed
 # Number of iterations to thin from posterior
 nt. <- 1
 # Number of iterations to discard as burn-in
