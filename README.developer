@@ -43,14 +43,14 @@ differently for CMR and GL data, documentation matches what CMR does).  Status:
 Done (v0.2.4)
 6. Add extra while loop to estMC to make sure at least two target sites are
 represented each time, thus making sure the number of bootstraps inference is
-based on is the same as the input number of samples.  Status: Proposed
+based on is the same as the input number of samples. Status: Done (develop only)
 7. Create diffMC function to generate difference with SD and CI between two or
 more independent estimates of MC / rM. Status: Proposed
 8. Add calcMantel function, for consistency and ease of use. Not really needed.
 Status: Proposed
 9. Add warnings / while loop to estMC when resampling and assigning target
 sites so that calculations don't run for days without ever producing results.
-Status: Proposed
+Status: Done (develop only)
 
 Updates
 1. When manuscript is accepted, update references to it throughout
