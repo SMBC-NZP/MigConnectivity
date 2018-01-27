@@ -21,7 +21,7 @@ devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
 
 ### Links to previous versions
 
-[![v0.2.3]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.3) released Sept. 7 2017    
-[![v0.2.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.2) released Aug. 4 2017    
-[![v0.1.10]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.1.10) released Mar. 13 2017    
+[[v0.2.3]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.3) released Sept. 7 2017    
+[[v0.2.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.2) released Aug. 4 2017    
+[[v0.1.10]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.1.10) released Mar. 13 2017    
 
