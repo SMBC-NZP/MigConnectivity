@@ -1,4 +1,4 @@
-# MigConnectivity
+# MigConnectivity [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002229.svg)](https://zenodo.org/badge/DOI/10.5281/zenodo.1002229.svg)    
 The MigConnectivity package estimates the strength of migratory connectivity for migratory animals
 
 Migratory Connectivity (MC) is a standardized metric to quantify migratory connectivity between two phases 
@@ -18,3 +18,10 @@ to install the vignette on your machine along with the package use the following
 ```r
 devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
 ```
+
+### Links to previous versions
+
+[![v0.2.3]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.3) released Sept. 7 2017    
+[![v0.2.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.2) released Aug. 4 2017    
+[![v0.1.10]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.1.10) released Mar. 13 2017    
+
