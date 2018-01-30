@@ -1,4 +1,4 @@
-# MigConnectivity [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002229.svg)](https://zenodo.org/badge/DOI/10.5281/zenodo.1002229.svg)    
+# MigConnectivity [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002229.svg)](https://zenodo.org/record/1002229#.Wm_Oh3xG1EY)    
 The MigConnectivity package estimates the strength of migratory connectivity for migratory animals
 
 Migratory Connectivity (MC) is a standardized metric to quantify migratory connectivity between two phases 
