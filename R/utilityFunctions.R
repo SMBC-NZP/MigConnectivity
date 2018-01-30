@@ -107,7 +107,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
       toSample <- which(is.na(target.sample))
     }
     if (!is.null(maxTries) && draws > maxTries)
-      stop(paste0('maxTires (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
+      stop(paste0('maxTries (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
   }
   return(list(target.sample = target.sample, target.point.sample = target.point.sample,
               draws = draws))
