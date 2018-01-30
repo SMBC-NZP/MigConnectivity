@@ -47,7 +47,8 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
 # Called by estMantel and estMCGlGps
 targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                          nSim = 1000, targetSites = NULL, targetAssignment = NULL,
-                         resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs") {
+                         resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
+                         maxTries = 300) {
   nAnimals <- length(targetPoints)
 
   WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
@@ -89,7 +90,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
   }
   else {
     draws <- 0
-    while (length(toSample) > 0) {
+    while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
       point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
@@ -105,6 +106,8 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                                                                         good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
       toSample <- which(is.na(target.sample))
     }
+    if (!is.null(maxTries) && draws > maxTries)
+      stop(paste0('maxTries (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
   }
   return(list(target.sample = target.sample, target.point.sample = target.point.sample,
               draws = draws))

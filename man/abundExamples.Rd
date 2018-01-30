@@ -14,4 +14,3 @@ BBS-type data from Cohen et al. (in press). Each estimate can
 be used in \code{estMC} function to estimate MC with uncertainty.
 }
 \keyword{datasets}
-

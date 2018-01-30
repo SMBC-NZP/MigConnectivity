@@ -7,8 +7,8 @@ output:
   rmarkdown::html_vignette: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
-  %\VignetteEngine{knitr::rmarkdown}
   %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
 ---
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
@@ -608,7 +608,6 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
          resampleProjection = raster::projection(OVENdata$targetPoints), 
          verbose = 0,   # output options - see help ??estMC
-         nSim = 10,     # This is set low for example
          nSamples = 10) # This is set low for example 
 ```
 

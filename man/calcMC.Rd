@@ -163,4 +163,3 @@ for (i in 1:nScenarios1) {
 t(round(MC5, 4)) # breeding grid, winter linear arrangement
 
 }
-

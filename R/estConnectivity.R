@@ -1,3 +1,5 @@
+#' @import stats
+
 ###############################################################################
 # Estimate MC from abundance and transition probability estimates.
 ###############################################################################
@@ -117,7 +119,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+                       maxTries = 300) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -219,7 +222,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
   }
 
-  for (boot in 1:nBoot) {
+  boot <- 1
+  while (boot <= nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Make sure have birds from every origin site
@@ -236,7 +240,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites, targetAssignment = targetAssignment,
-                          resampleProjection = resampleProjection)
+                          resampleProjection = resampleProjection, nSim = nSim,
+                          maxTries = maxTries)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
@@ -266,6 +271,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
             "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
     }
+    if (!is.na(MC[boot]))
+      boot <- boot + 1
   }
   MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
@@ -389,6 +396,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
 #'    of \code{targetSites}.
+#' @param maxTries Maximum number of times to run a single GL bootstrap before
+#'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
+#'    parameter was added to prevent GL setups where some sample points never
+#'    land on target sites from running indefinitely.
 #'
 #'
 #' @return \code{estMC} returns a list with elements:
@@ -456,7 +467,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+                  maxTries = 300) {
   if (is.null(psi)) {
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
@@ -470,7 +482,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       nBoot = nSamples, verbose=verbose,
                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                       approxSigTest = approxSigTest, sigConst = sigConst,
-                      resampleProjection = resampleProjection))
+                      resampleProjection = resampleProjection,
+                      maxTries = maxTries))
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
@@ -519,6 +532,10 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
 #'    of \code{targetSites}.
+#' @param maxTries Maximum number of times to run a single GL bootstrap before
+#'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
+#'    parameter was added to prevent GL setups where some sample points never
+#'    land on target sites from running indefinitely.
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
@@ -547,7 +564,8 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = MigConnectivity::projections$EquidistConic) {
+            resampleProjection = MigConnectivity::projections$EquidistConic,
+            maxTries = 300) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -608,7 +626,8 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites,
-                          resampleProjection = resampleProjection)
+                          resampleProjection = resampleProjection,
+                          maxTries = maxTries)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
@@ -659,7 +678,7 @@ getCMRexample <- function(number = 1) {
   file.name <- paste0('out_', obj.name, '.rds')
   url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/', file.name, '?raw=true')
   temp <- paste(tempdir(), file.name, sep = '/')
-  download.file(url1, temp, mode = 'wb')
+  utils::download.file(url1, temp, mode = 'wb')
   fm <- readRDS(temp)
   unlink(temp)
   return(fm)

@@ -23,38 +23,45 @@ GitHub, go to website and create new release.  On SMBC-NZP / MigConnectivity
 choose releases then Draft a new release.  Fill in version number and relevant
 updates since last version.
 
-Proposed Extensions
+Extensions
 1. Create variable(s) with projection strings, so users don't have to type them
 in or copy and paste them if they want to use one of our defaults.  It would
 also reduce the number of times these long strings would appear in the
 documentation, which could improve formatting.  They could either be individual
 string variables (e.g., "Lambert," "WGS84") or a list variable (i.e.,
-"projections").  Status: Done
+"projections").  Status: Done (v0.2.4)
 2. Allow users to include relative abundance uncertainty with GL or GPS data as
 well as with CMR data or alone.  Status: Proposed
-3. Allow users to estimate MC (and rM?) from other data types, like isotopes
-and morphometrics.  Need to find out nature of these data.  It's possible they
-could be covered by the GL option, in which case we might just have to update
-help file.  Status: Proposed
-4. Allow users to resampling from transition matrix uncertainty from sources
+3. Allow users to estimate MC (and rM) from intrinsic data types, like isotopes
+and morphometrics.  Status: Proposed
+4. Allow users to resample from transition matrix uncertainty from sources
 other than RMark.  Status: Proposed
 5. Line up estMC outputs and help file better (currently verbose works
 differently for CMR and GL data, documentation matches what CMR does).  Status:
-Done
+Done (v0.2.4)
 6. Add extra while loop to estMC to make sure at least two target sites are
 represented each time, thus making sure the number of bootstraps inference is
-based on is the same as the input number of samples.  Status: Proposed
+based on is the same as the input number of samples. Status: Done (v0.2.5)
+7. Create diffMC function to generate difference with SD and CI between two or
+more independent estimates of MC / rM. Status: Proposed
+8. Add calcMantel function, for consistency and ease of use. Not really needed.
+Status: Proposed
+9. Add warnings / while loop to estMC when resampling and assigning target
+sites so that calculations don't run for days without ever producing results.
+Status: Done (v0.2.5)
+10. Break up vignette into more manageable parts.  Status: Proposed
 
-Proposed Updates
+Updates
 1. When manuscript is accepted, update references to it throughout
 documentation. Then again once in print. Status: All references currently are
 "in press."  Probably should add a few more references too.
 
-Proposed Bug Fixes
+Bug Fixes
 1. in the estMC function if targetSites == SpatialPolygonDataFrame - you get an
 error crs(not identical). However, if the targetSites ==SpatialPolygons - you
-don't get the error. Status: Fixed
+don't get the error. Status: Fixed (v0.2.4)
 2. estMC and estMantel summary statistics don't come out if there are any NAs
-or NaNs in the sample.  Status: Fixed
-
+or NaNs in the sample.  Status: Fixed (v0.2.4)
+3. nSim wasn't being passed along in estMC, so setting it away from default did
+nothing. Status: Fixed (v0.2.5)
 
