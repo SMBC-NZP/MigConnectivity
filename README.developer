@@ -48,7 +48,8 @@ more independent estimates of MC / rM. Status: Proposed
 Status: Proposed
 9. Add warnings / while loop to estMC when resampling and assigning target
 sites so that calculations don't run for days without ever producing results.
-Status: Done (develop only)
+Status: Done (v0.2.5)
+10. Break up vignette into more manageable parts.  Status: Proposed
 
 Updates
 1. When manuscript is accepted, update references to it throughout
@@ -62,4 +63,4 @@ don't get the error. Status: Fixed (v0.2.4)
 2. estMC and estMantel summary statistics don't come out if there are any NAs
 or NaNs in the sample.  Status: Fixed (v0.2.4)
 3. nSim wasn't being passed along in estMC, so setting it away from default did
-nothing. Status: Fixed (develop only)
+nothing. Status: Fixed (v0.2.5)
