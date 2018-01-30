@@ -66,4 +66,3 @@ OVENdata
 Ovenbird data from Cohen et al. (in press) and Hallworth and Marra (2015).
 }
 \keyword{datasets}
-

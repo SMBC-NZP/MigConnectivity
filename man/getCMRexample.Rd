@@ -24,4 +24,3 @@ internet connection.
 \seealso{
 \code{\link{estMC}}
 }
-

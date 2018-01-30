@@ -11,7 +11,8 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-  resampleProjection = MigConnectivity::projections$EquidistConic)
+  resampleProjection = MigConnectivity::projections$EquidistConic,
+  maxTries = 300)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -113,6 +114,11 @@ bias/error. This projection needs units = m. Default is Equidistant
 Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
 of \code{targetSites}.}
+
+\item{maxTries}{Maximum number of times to run a single GL bootstrap before
+exiting with an error.  Default is 300.  Set to NULL to never stop.  This
+parameter was added to prevent GL setups where some sample points never
+land on target sites from running indefinitely.}
 }
 \value{
 \code{estMC} returns a list with elements:
@@ -284,7 +290,7 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
-nSamplesGLGPS <- 200 # Number of bootstrap iterations
+nSamplesGLGPS <- 100 # Number of bootstrap iterations
 \dontrun{
   nSamplesGLGPS <- 10000 # Number of bootstrap iterations
   install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
@@ -362,4 +368,3 @@ str(GL_mc)
 \seealso{
 \code{\link{calcMC}}, \code{\link{projections}}
 }
-
