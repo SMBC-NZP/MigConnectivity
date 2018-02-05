@@ -685,24 +685,59 @@ getCMRexample <- function(number = 1) {
 }
 
 
-diffMC <- function(estimates, nSamples = NULL, alpha = 0.05) {
+#' Pairwise differences between two or more independent MC estimates
+#'
+#' @param estimates List of at leat two MC estimates, provided by the estMC
+#'    function. If this is a named list (recommended), the function will use
+#'    these names in labeling the differences.
+#' @param nSamples If NULL (default), compares all MC samples from each pair of
+#'    MC estimates.  Otherwise an integer, number of samples (with replacement)
+#'    to draw from each pair.
+#' @param alpha Level for confidence/credible intervals provided.
+#' @param returnSamples Should the function return all the sampled differences?
+#'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
+#'    compute your own summary statistics.
+#'
+#' @return  \code{diffMC} returns a list with elements:
+#' \describe{
+#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
+#'      differences for each pairwise comparison. Estimates of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+#'      pairwise comparison, estimated from SD of sampled differences.
+#'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
+#'      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sampleMC}.}
+#'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
+#'      intervals for MC differences for each pairwise comparison. Preferable
+#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+#'      difference. \code{simpleCI} is preferred when
+#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
+#'   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+#'      differences for each pairwise comparison, etimated using the highest
+#'      posterior density (HPD) method.}
+#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
+#'      List of sampled values for each pairwise MC difference.}
+#' }
+#' @export
+#'
+# @examples
+diffMC <- function(estimates, nSamples = NULL, alpha = 0.05, returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   nSamplesEst <- sapply(estimates, function(x) length(x$sampleMC))
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
-  comparisons <- matrix(c(rep(2:nEst, 1:(nEst - 1)), sequence(1:(nEst - 1))), nComparisons, 2)
-  if (is.null(nSamples)) {
-    nSamplesBy <- nSamplesEst[comparisons[,1]] * nSamplesEst[comparisons[,2]]
-  }
-  else {
-    nSamplesBy <- rep(nSamples, nComparisons)
-  }
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
   for (i in 1:nComparisons) {
     if (is.null(nSamples))
-      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleMC, times = nSamplesEst[comparisons[,2]]) -
-        rep(estimates[[comparisons[i, 2]]]$sampleMC, each = nSamplesEst[comparisons[,1]])
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleMC, times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$sampleMC, each = nSamplesEst[comparisons[i, 1]])
     else
       diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleMC, nSamples, replace = T) -
         sample(estimates[[comparisons[i, 2]]]$sampleMC, nSamples, replace = T)
@@ -712,18 +747,19 @@ diffMC <- function(estimates, nSamples = NULL, alpha = 0.05) {
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
   diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
-  bcCI <- sapply(diffSamples, function(MC) quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8))
-  diff.mcmc <- sapply(diffSamples, coda::as.mcmc)
+  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+                       na.rm=TRUE, type = 8), diffSamples, diff.z0)
+  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
   hpdCI <- sapply(diff.mcmc, function(MC) coda::HPDinterval(MC, 1-alpha))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
-  names(medianDiff) <- names(seDiff) <- paste(names(estimates[comparisons[,1]]),
-                                              '-', names(estimates[comparisons[,2]]))
-  names(simpleCI) <- names(bcCI) <- paste(names(estimates[comparisons[,1]]),
-                                          '-', names(estimates[comparisons[,2]]))
-  return(list(sampleDiff = diffSamples, meanDiff = meanDiff,
-              medianDiff = medianDiff, seDiff = seDiff,
-              simpleCI = simpleCI,
-              bcCI = bcCI, hpdCI = hpdCI))
+  names(medianDiff) <- names(seDiff) <- names(diffSamples)
+  colnames(simpleCI) <- colnames(bcCI) <- colnames(hpdCI) <- names(diffSamples)
+  if (returnSamples)
+    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
+                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                sampleDiff = diffSamples))
+  else
+    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
+                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI))
 }
