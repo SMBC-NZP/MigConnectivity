@@ -683,3 +683,47 @@ getCMRexample <- function(number = 1) {
   unlink(temp)
   return(fm)
 }
+
+
+diffMC <- function(estimates, nSamples = NULL, alpha = 0.05) {
+  nEst <- length(estimates)
+  nComparisons <- choose(nEst, 2)
+  nSamplesEst <- sapply(estimates, function(x) length(x$sampleMC))
+  diffSamples <- vector('list', nComparisons)
+  if (is.null(names(estimates)))
+    names(estimates) <- 1:nEst
+  comparisons <- matrix(c(rep(2:nEst, 1:(nEst - 1)), sequence(1:(nEst - 1))), nComparisons, 2)
+  if (is.null(nSamples)) {
+    nSamplesBy <- nSamplesEst[comparisons[,1]] * nSamplesEst[comparisons[,2]]
+  }
+  else {
+    nSamplesBy <- rep(nSamples, nComparisons)
+  }
+  for (i in 1:nComparisons) {
+    if (is.null(nSamples))
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleMC, times = nSamplesEst[comparisons[,2]]) -
+        rep(estimates[[comparisons[i, 2]]]$sampleMC, each = nSamplesEst[comparisons[,1]])
+    else
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleMC, nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$sampleMC, nSamples, replace = T)
+  }
+  meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
+  medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
+  seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
+  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
+  bcCI <- sapply(diffSamples, function(MC) quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
+                       na.rm=TRUE, type = 8))
+  diff.mcmc <- sapply(diffSamples, coda::as.mcmc)
+  hpdCI <- sapply(diff.mcmc, function(MC) coda::HPDinterval(MC, 1-alpha))
+  names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
+                                                 '-', names(estimates[comparisons[,2]]))
+  names(medianDiff) <- names(seDiff) <- paste(names(estimates[comparisons[,1]]),
+                                              '-', names(estimates[comparisons[,2]]))
+  names(simpleCI) <- names(bcCI) <- paste(names(estimates[comparisons[,1]]),
+                                          '-', names(estimates[comparisons[,2]]))
+  return(list(sampleDiff = diffSamples, meanDiff = meanDiff,
+              medianDiff = medianDiff, seDiff = seDiff,
+              simpleCI = simpleCI,
+              bcCI = bcCI, hpdCI = hpdCI))
+}
