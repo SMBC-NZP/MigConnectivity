@@ -690,9 +690,9 @@ getCMRexample <- function(number = 1) {
 #' @param estimates List of at leat two MC estimates, provided by the estMC
 #'    function. If this is a named list (recommended), the function will use
 #'    these names in labeling the differences.
-#' @param nSamples If NULL (default), compares all MC samples from each pair of
-#'    MC estimates.  Otherwise an integer, number of samples (with replacement)
-#'    to draw from each pair.
+#' @param nSamples A positive integer, number of samples (with replacement)
+#'    to draw from each pair of MC estimates (default 100000).  If set to NULL,
+#'    compares all MC samples from each pair.
 #' @param alpha Level for confidence/credible intervals provided.
 #' @param returnSamples Should the function return all the sampled differences?
 #'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
@@ -726,7 +726,7 @@ getCMRexample <- function(number = 1) {
 #' @export
 #'
 # @examples
-diffMC <- function(estimates, nSamples = NULL, alpha = 0.05, returnSamples = F) {
+diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   nSamplesEst <- sapply(estimates, function(x) length(x$sampleMC))

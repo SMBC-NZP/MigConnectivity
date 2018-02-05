@@ -4,16 +4,16 @@
 \alias{diffMC}
 \title{Pairwise differences between two or more independent MC estimates}
 \usage{
-diffMC(estimates, nSamples = NULL, alpha = 0.05, returnSamples = F)
+diffMC(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = F)
 }
 \arguments{
-\item{estimates}{List of MC estimates, provided by the estMC function. If
-this is a named list (recommended), the function will use these names in
-labeling the differences.}
+\item{estimates}{List of at leat two MC estimates, provided by the estMC
+function. If this is a named list (recommended), the function will use
+these names in labeling the differences.}
 
-\item{nSamples}{If NULL (default), compares all MC samples from each pair of
-MC estimates.  Otherwise an integer, number of samples (with replacement)
-to draw from each pair.}
+\item{nSamples}{A positive integer, number of samples (with replacement)
+to draw from each pair of MC estimates (default 100000).  If set to NULL,
+compares all MC samples from each pair.}
 
 \item{alpha}{Level for confidence/credible intervals provided.}
 
