@@ -42,12 +42,21 @@ IsoAssign <- function(isovalues,
                       slope,
                       oddsRatio = FALSE,
                       odds = NULL,
+                      SingleCellAssign = FALSE,
+                      nSim = NULL,
+                      Data.Frame = FALSE,
+                      assignExtent = c(-179,-60,15,89),
                       return = "probability",
                       element = "Hydrogen",
                       surface = FALSE,
                       period = "Annual"){
+  # quick input check #
+if(!return %in% c("probability","population","odds","sim.cell")){
+  stop("return must be either probability,population,odds,sim.cell")}
 
-isomap <- getIsoMap(element = element, surface = surface, period = "Annual")
+isomap <- getIsoMap(element = element, surface = surface, period = period)
+
+isomap <- raster::crop(isomap,raster::extent(assignExtent))
 
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
 
@@ -60,6 +69,10 @@ assignments <- raster::stack(assignments)
 
 # Transform the assignments into a true probability surface #
 assign2prob <- assignments/raster::cellStats(assignments,sum)
+
+if(Data.Frame == TRUE){
+assing2probDF <- data.frame(raster::rasterToPoints(assign2prob))
+}
 
 oddsFun <- function(x,odds = odds){
   predict(smooth.spline(x = cumsum(sort(x)),
@@ -78,10 +91,34 @@ step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
 step2 <- raster::reclassify(step1,cbind(cuts,1,1))
 
 SamplePop <- sum(step2)
+
+if(Data.Frame == TRUE){
+  step2DF <- data.frame(raster::rasterToPoints(step2))
+  SamplePopDF <- data.frame(raster::rasterToPoints(SamplePop))
+}
 }
 
-if(return == "probability"){return(assign2prob)}
-if(return == "odds"){return(step2)}
-if(return == "population"){return(SamplePop)}
+if(SingleCellAssign == TRUE){
+  if(!is.null(nSim)) nSim<-1000;
+xysim <- array(NA,c(nSim,2,raster::nlayers(assign2prob)))
+dimnames(xysim)[[1]] <- 1:nSim
+dimnames(xysim)[[2]] <- c("Longitude","Latitude")
+dimnames(xysim)[[3]] <- names(assign2prob)
 
+matvals <- raster::rasterToPoints(assign2prob)
+
+for(i in 1:nSim){
+  multidraw <- apply(matvals[,3:ncol(matvals)],2,FUN = function(x){rmultinom(n = 1, size = 1, prob = x)})
+  xysim[i,1,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+  xysim[i,2,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+}
+}
+
+if(return == "probability" & Data.Frame == FALSE){return(assign2prob)}
+if(return == "probability" & Data.Frame == TRUE){return(assing2probDF)}
+if(return == "odds" & Data.Frame == FALSE){return(step2)}
+if(return == "odds" & Data.Frame == TRUE){return(step2DF)}
+if(return == "population" & Data.Frame == FALSE){return(SamplePop)}
+if(return == "population" & Data.Frame == TRUE){return(SamplePopDF)}
+if(return == "sim.cell"){return(xysim)}
 }
