@@ -314,6 +314,267 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 }
 
 ###############################################################################
+#
+#
+# Resampling of uncertainty from intrinsic markers (Stable-Isotopes)
+#
+#
+###############################################################################
+estMCisotope <- function(targetDist,
+                         originRelAbund,
+                         targetPoints,
+                         targetSites,
+                         sampleSize = NULL,
+                         targetAssignment=NULL,
+                         originPoints=NULL,
+                         originSites=NULL,
+                         originDist = NULL,
+                         originAssignment=NULL,
+                         originNames=NULL,
+                         targetNames=NULL,
+                         nBoot = 1000,
+                         verbose=0,
+                         nSim = NULL,
+                         calcCorr=TRUE,
+                         alpha = 0.05,
+                         approxSigTest = F,
+                         sigConst = 0,
+                         resampleProjection = MigConnectivity::projections$EquidistConic,
+                         maxTries = 300) {
+
+  # Input checking and assignment
+  if (!(verbose %in% 0:3)){
+    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
+
+  if ((is.null(originPoints) || is.null(originSites)) && is.null(originAssignment)){
+    stop("Need to define either originAssignment or originSites and originPoints")}
+
+  if (calcCorr && is.null(originPoints)){
+    stop('If calcCorr is TRUE, need to define originPoints')}
+
+  if ((is.null(targetPoints) || is.null(targetSites)) && is.null(targetAssignment)){
+    stop("Need to define either targetAssignment or targetSites and targetPoints")}
+
+  nAnimals <- dim(targetPoints)[3]
+
+  if(class(originSites)=="SpatialPolygonsDataFrame"){
+    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
+  if(class(targetSites)=="SpatialPolygonsDataFrame"){
+    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
+  if (is.null(originAssignment))
+    originAssignment <- sp::over(originPoints, originSites)
+  #if (is.null(targetAssignment))
+  #  targetAssignment <- sp::over(targetPoints, targetSites)
+  nOriginSites <- length(unique(originAssignment))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
+
+  #  if (length(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
+  #      length(originAssignment)!=nAnimals)
+  #    stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
+
+  if (any(is.na(originAssignment)))
+    stop("NAs in origin sites (make sure all points fall within polygons)")
+
+  if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
+    stop('originRelAbund should be vector with length number of origin sites that sums to 1')
+
+  if(!is.null(originPoints))
+    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+      stop('Coordinate system definition needed for originSites & originPoints')
+    }
+  #if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
+  #  stop('Coordinate system definition needed for targetSites & targetPoints')
+  #}
+
+  # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
+  nrandomDraws <- dim(targetPoints)[1]
+
+  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+
+  if (is.null(targetNames))
+    targetNames <- names(targetSites)
+
+  if (is.null(originNames))
+    originNames <- names(originSites)
+
+  if (is.null(sampleSize))
+    sampleSize <- nAnimals
+
+  if (dim(originDist)!=rep(nOriginSites,2) ||
+      dim(targetDist)!=rep(nTargetSites,2))
+    stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
+
+  sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
+                                    dimnames = list(1:nBoot, originNames,
+                                                    targetNames))
+
+
+  MC <- corr <- rep(NA, nBoot)
+
+  # Point estimate of MC
+  pointSites <- array(0, c(nOriginSites, nTargetSites),
+                      dimnames = list(originNames, targetNames))
+
+  # # Choose a random draw between 1 and the number of random samples #
+  if (is.null(targetAssignment)){
+
+    samp <- sample.int(n = nrandomDraws,size = 1)
+
+    # Sample individual animals with replacement
+    animal.sample <- sample.int(nAnimals, replace=TRUE)
+
+    # Create a new targetPoints shapefile from the samp
+    sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+                                                           proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
+
+    sampTargetPoints <- sp::spTransform(sampTargetPoints,sp::CRS(resampleProjection))
+
+    targetAssignment <- sp::over(sampTargetPoints, targetSites)
+  }
+
+  for(i in 1:nAnimals)
+    pointSites[originAssignment[i], targetAssignment[i]] <-
+    pointSites[originAssignment[i], targetAssignment[i]] + 1
+
+  pointPsi <- prop.table(pointSites, 1)
+
+  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+                    sampleSize = sampleSize)
+
+  if (calcCorr) {
+    # Choose a random draw between 1 and the number of random samples #
+    #samp <- sample.int(n = nrandomDraws,size = 1)
+
+    # Sample individual animals with replacement
+    #animal.sample <- sample.int(nAnimals, replace=TRUE)
+
+    # Create a new targetPoints shapefile from the samp
+    #sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+    #                                      proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
+
+    targetDist1 <- matrix(NA, nAnimals, nAnimals)
+
+    targetDist1[lower.tri(targetDist1)] <- 1
+
+    distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
+
+    # project target points to WGS #
+    targetPoints2 <- sp::spTransform(sampTargetPoints, sp::CRS(MigConnectivity::projections$WGS84))
+
+    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
+
+    targetDist1[lower.tri(targetDist1)] <- targetDist0
+
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+
+    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
+                              nAnimals, nAnimals)
+
+    originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
+
+    pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+  }
+
+  boot <- 1
+  while (boot <= nBoot) {
+    if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
+      cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
+    # Make sure have birds from every origin site
+    origin.sample <- 'Filler' # Start with one origin site
+    while (length(unique(origin.sample)) < nOriginSites) { #2
+      # Sample individual animals with replacement
+      animal.sample <- sample.int(nAnimals, replace=TRUE)
+      # Get origin points for those animals
+      if (calcCorr)
+        origin.point.sample <- originPoints[animal.sample]
+      # Get origin population for each animal sampled
+      origin.sample <- originAssignment[animal.sample]
+    }
+    # Choose a random draw between 1 and the number of random samples #
+    samp <- sample.int(n = nrandomDraws,size = 1)
+
+    # Create a new targetPoints shapefile from the samp
+    sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+                                                           proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
+
+    tSamp <- targetSample(isGL = rep(FALSE,length(animal.sample)), geoBias = NULL, geoVCov = NULL,
+                          targetPoints = sampTargetPoints, animal.sample = animal.sample,
+                          targetSites = targetSites, targetAssignment = targetAssignment,
+                          resampleProjection = resampleProjection, nSim = nSim,
+                          maxTries = maxTries)
+
+    target.sample <- tSamp$target.sample
+    target.point.sample <- tSamp$target.point.sample
+    if (verbose > 2)
+      cat(' ', tSamp$draws, 'draws\n')
+    # Now that we have breeding and non-breeding site for point, add to transition count matrix
+    sites <- table(origin.sample, target.sample)
+    sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
+    # Create psi matrix as proportion of those from each breeding site that went to each NB site
+    psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
+    # Calculate MC from that psi matrix
+    MC[boot] <- calcMC(originDist, targetDist, originRelAbund,
+                       psi.array[boot, , ], sampleSize)
+    if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
+      cat(" MC mean:", mean(MC, na.rm=TRUE), "SD:", sd(MC, na.rm=TRUE),
+          "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
+          "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
+    if (calcCorr) {
+      originDist1 <- originDistStart[animal.sample, animal.sample]
+      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
+      targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
+                                                      target.point.sample2[distIndices[,'col']])
+      targetDist1[lower.tri(targetDist1)] <- targetDist0
+      corr[boot] <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+      if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
+        cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
+            "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
+            "high quantile:", quantile(corr, 1-alpha/2, na.rm=TRUE), "\n")
+    }
+    if (!is.na(MC[boot]))
+      boot <- boot + 1
+  }
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
+  bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
+                   na.rm=TRUE, type = 8)
+  MC.mcmc <- coda::as.mcmc(MC) # Ha!
+  hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
+  if (!approxSigTest)
+    simpleP <- bcP <- NULL
+  else {
+    if (pointMC > sigConst)
+      simpleP <- sum(MC < sigConst) / nBoot
+    else
+      simpleP <- sum(MC > sigConst) / nBoot
+    if (simpleP == 0)
+      simpleP <- 0.5 / nBoot
+    bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
+    if (pointMC < sigConst)
+      bcP <- 1 - bcP
+  }
+  if (calcCorr) {
+    meanCorr <- mean(corr, na.rm=TRUE)
+    medianCorr <- median(corr, na.rm=TRUE)
+    seCorr <- sd(corr, na.rm=TRUE)
+    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+    corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
+    bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
+                         na.rm=TRUE, type = 8)
+  } else
+    pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
+  return(list(sampleMC = MC, samplePsi = psi.array,
+              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
+              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
+              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
+              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
+              sampleCorr = corr, pointCorr = pointCorr,
+              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+              inputSampleSize = sampleSize))
+}
+
+###############################################################################
 #' Estimate MC from abundance and/or transition probability estimates OR
 #' geolocator and/or GPS data.
 #'
@@ -468,8 +729,18 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
-                  maxTries = 300) {
+                  maxTries = 300,
+                  intrinsic = FALSE) {
   if (is.null(psi)) {
+    if(intrinsic){
+      return(estMCisotope(targetDist = targetDist,originRelAbund = originRelAbund,targetPoints = targetPoints,
+                      targetSites = targetSites,sampleSize = sampleSize,targetAssignment=targetAssignment,
+                      originPoints=originPoints,originSites=originSites,originDist = originDist,
+                      originAssignment=originAssignment,originNames=originNames,targetNames=targetNames,
+                      nBoot = nSamples,verbose=verbose,nSim = nSim,calcCorr=calcCorr,alpha = alpha,
+                      approxSigTest = approxSigTest,sigConst = sigConst,resampleProjection = resampleProjection,
+                      maxTries = maxTries))
+    }else{
     return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                       originRelAbund=originRelAbund, sampleSize = sampleSize,
                       originDist=originDist,
@@ -483,7 +754,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                       approxSigTest = approxSigTest, sigConst = sigConst,
                       resampleProjection = resampleProjection,
-                      maxTries = maxTries))
+                      maxTries = maxTries))}
   }
   else {
     return(estMCCmrAbund(originRelAbund = originRelAbund,
