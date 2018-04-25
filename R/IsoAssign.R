@@ -145,7 +145,7 @@ if(dataFrame == TRUE){
 if(SingleCellAssign == TRUE){
   if(is.null(nSim)) nSim<-1000;
 xysim <- array(NA,c(nSim,2,raster::nlayers(assign2prob)))
-dimnames(xysim)[[1]] <- 1:nSim
+#dimnames(xysim)[[1]] <- 1:nSim
 dimnames(xysim)[[2]] <- c("Longitude","Latitude")
 dimnames(xysim)[[3]] <- names(assign2prob)
 
