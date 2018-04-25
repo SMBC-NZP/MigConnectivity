@@ -975,7 +975,7 @@ getCMRexample <- function(number = 1) {
 #'      differences for each pairwise comparison. Estimates of difference
 #'      between MC values incorporating parametric uncertainty.}
 #'   \item{\code{seDiff}}{Vector with standard errors of MC differences for each
-#'      pairwise comparison, estimated from SD of sampled differences.
+#'      pairwise comparison, estimated from SD of sampled differences.}
 #'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
 #'      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
 #'      quantiles of \code{sampleMC}.}

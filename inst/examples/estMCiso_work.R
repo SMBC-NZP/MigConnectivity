@@ -2,7 +2,7 @@ source("R/getIsoMap.R")
 source("R/IsoAssign.R")
 source("R/estConnectivity.R")
 source("R/utilityFunctions.R")
-library(raster)
+library(raster); library(MigConnectivity)
 
 OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
@@ -46,14 +46,14 @@ targetSites <- raster::intersect(OVENdist,r2)
 targetSites$layer <- 1:length(targetSites)
 targetSites <- as(targetSites,"SpatialPolygons")
 
-targetDist <- MigConnectivity::distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
+targetDist <- distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
 
 plot(targetSites)
 plot(SpatialPoints(t(b[1,,])),add = TRUE, pch = 19)
 
 results <- array(NA,c(151,1000))
 for(i in 1:1000){
-results[,i]<-over(SpatialPoints(t(b[i,,]),proj4string= CRS(targetPolys@proj4string@projargs)),targetSites)
+results[,i]<-over(SpatialPoints(t(b[i,,]),proj4string= CRS(targetSites@proj4string@projargs)),targetSites)
 }
 
 Countries <- shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
@@ -66,7 +66,7 @@ FL <- rgeos::gUnaryUnion(FL,id = FL$STATE)
 
 originSites <- rbind(JAM,FL)
 
-originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 
 ever <- length(grep(OVENvals[,1],pattern = "EVER"))/nrow(OVENvals)
 jam <- length(grep(OVENvals[,1],pattern = "JAM"))/nrow(OVENvals)
@@ -96,7 +96,7 @@ MC <- estMC(targetDist = targetDist,
             originRelAbund = originRelAbundance,
             targetPoints = b,
             targetSites = targetSites,
-            sampleSize = dim(b)[3],
+            #sampleSize = dim(b)[3],
             targetAssignment=NULL,
             originDist = originDist,
             originPoints=originPoints,
@@ -105,9 +105,9 @@ MC <- estMC(targetDist = targetDist,
             originNames=NULL,
             targetNames=NULL,
             nSamples = 100,
-            verbose=3,
+            verbose=1,
             nSim = 10,
-            calcCorr=FALSE,
+            calcCorr=TRUE,
             alpha = 0.05,
             approxSigTest = F,
             sigConst = 0,
@@ -115,3 +115,4 @@ MC <- estMC(targetDist = targetDist,
             maxTries = 300,
             intrinsic = TRUE)
 
+str(MC)

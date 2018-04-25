@@ -12,7 +12,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300)
+  maxTries = 300, intrinsic = FALSE)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
