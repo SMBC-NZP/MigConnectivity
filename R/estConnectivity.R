@@ -428,7 +428,6 @@ estMCisotope <- function(targetDist,
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
-
     tSamp <- targetSampleIsotope(targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites,
                           resampleProjection = resampleProjection, nSim = nSim,
