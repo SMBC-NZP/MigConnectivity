@@ -404,6 +404,72 @@ estMCisotope <- function(targetDist,
       dim(targetDist)!=rep(nTargetSites,2))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
 
+  # Point estimate of MC
+  # pointSites <- array(0, c(nOriginSites, nTargetSites),
+  #                     dimnames = list(originNames, targetNames))
+  #
+  # # # Choose a random draw between 1 and the number of random samples #
+  # if (is.null(targetAssignment)){
+  #
+  #   samp <- sample.int(n = nrandomDraws,size = 1)
+  #
+  #   # Sample individual animals with replacement
+  #   animal.sample <- sample.int(nAnimals, replace=TRUE)
+  #
+  #   # Create a new targetPoints shapefile from the samp
+  #   sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+  #                                                          proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
+  #
+  #   sampTargetPoints <- sp::spTransform(sampTargetPoints,sp::CRS(resampleProjection))
+  #
+  #   targetAssignment <- sp::over(sampTargetPoints, targetSites)
+  # }
+  #
+  # for(i in 1:nAnimals)
+  #   pointSites[originAssignment[i], targetAssignment[i]] <-
+  #   pointSites[originAssignment[i], targetAssignment[i]] + 1
+  #
+  # pointPsi <- prop.table(pointSites, 1)
+  #
+  # pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+  #                   sampleSize = sampleSize)
+  #
+  # if (calcCorr) {
+  #   # Choose a random draw between 1 and the number of random samples #
+  #   #samp <- sample.int(n = nrandomDraws,size = 1)
+  #
+  #   # Sample individual animals with replacement
+  #   #animal.sample <- sample.int(nAnimals, replace=TRUE)
+  #
+  #   # Create a new targetPoints shapefile from the samp
+  #   #sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+  #   #                                      proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
+  #
+  #   targetDist1 <- matrix(NA, nAnimals, nAnimals)
+  #
+  #   targetDist1[lower.tri(targetDist1)] <- 1
+  #
+  #   distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
+  #
+  #   # project target points to WGS #
+  #   targetPoints2 <- sp::spTransform(sampTargetPoints, sp::CRS(MigConnectivity::projections$WGS84))
+  #
+  #   targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
+  #
+  #   targetDist1[lower.tri(targetDist1)] <- targetDist0
+  #
+  #   originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+  #
+  #   originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
+  #                             nAnimals, nAnimals)
+  #
+  #   originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
+  #
+  #   pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+  # }
+
+
+
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
@@ -411,69 +477,6 @@ estMCisotope <- function(targetDist,
 
   MC <- corr <- rep(NA, nBoot)
 
-  # Point estimate of MC
-  pointSites <- array(0, c(nOriginSites, nTargetSites),
-                      dimnames = list(originNames, targetNames))
-
-  # # Choose a random draw between 1 and the number of random samples #
-  if (is.null(targetAssignment)){
-
-    samp <- sample.int(n = nrandomDraws,size = 1)
-
-    # Sample individual animals with replacement
-    animal.sample <- sample.int(nAnimals, replace=TRUE)
-
-    # Create a new targetPoints shapefile from the samp
-    sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
-                                                           proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
-
-    sampTargetPoints <- sp::spTransform(sampTargetPoints,sp::CRS(resampleProjection))
-
-    targetAssignment <- sp::over(sampTargetPoints, targetSites)
-  }
-
-  for(i in 1:nAnimals)
-    pointSites[originAssignment[i], targetAssignment[i]] <-
-    pointSites[originAssignment[i], targetAssignment[i]] + 1
-
-  pointPsi <- prop.table(pointSites, 1)
-
-  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
-                    sampleSize = sampleSize)
-
-  if (calcCorr) {
-    # Choose a random draw between 1 and the number of random samples #
-    #samp <- sample.int(n = nrandomDraws,size = 1)
-
-    # Sample individual animals with replacement
-    #animal.sample <- sample.int(nAnimals, replace=TRUE)
-
-    # Create a new targetPoints shapefile from the samp
-    #sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
-    #                                      proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
-
-    targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-    targetDist1[lower.tri(targetDist1)] <- 1
-
-    distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
-
-    # project target points to WGS #
-    targetPoints2 <- sp::spTransform(sampTargetPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
-
-    targetDist1[lower.tri(targetDist1)] <- targetDist0
-
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
-                              nAnimals, nAnimals)
-
-    originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
-
-    pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
-  }
 
   boot <- 1
   while (boot <= nBoot) {
@@ -490,15 +493,14 @@ estMCisotope <- function(targetDist,
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
-    # Choose a random draw between 1 and the number of random samples #
-    samp <- sample.int(n = nrandomDraws,size = 1)
+    # Choose a random draw between 1 and the number of random samples for each animal #
+    # samp <- sample.int(n = nrandomDraws,size = 1)
+    #
+    # # Create a new targetPoints shapefile from the samp
+    # sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
+    #                                                        proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
 
-    # Create a new targetPoints shapefile from the samp
-    sampTargetPoints <- suppressWarnings(sp::SpatialPoints(t(targetPoints[samp,,animal.sample]),
-                                                           proj4string = sp::CRS(MigConnectivity::projections$WGS84)))
-
-    tSamp <- targetSample(isGL = rep(FALSE,length(animal.sample)), geoBias = NULL, geoVCov = NULL,
-                          targetPoints = sampTargetPoints, animal.sample = animal.sample,
+    tSamp <- targetSampleIsotope(targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites, targetAssignment = targetAssignment,
                           resampleProjection = resampleProjection, nSim = nSim,
                           maxTries = maxTries)
@@ -564,11 +566,11 @@ estMCisotope <- function(targetDist,
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
+              pointPsi = NA, pointMC = NA, meanMC = mean(MC, na.rm=TRUE),
               medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
               simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = pointCorr,
+              sampleCorr = corr, pointCorr = NA,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
               inputSampleSize = sampleSize))
