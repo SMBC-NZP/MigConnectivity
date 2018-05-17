@@ -113,6 +113,71 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
               draws = draws))
 }
 
+# Called by estMCisotope
+targetSampleIsotope <- function(targetPoints, animal.sample,
+                         nSim = 1000, targetSites = NULL,
+                         resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
+                         maxTries = 300) {
+  nAnimals <- dim(targetPoints)[3]
+  # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
+  nrandomDraws <- dim(targetPoints)[1]
+
+  targetPoints1 <- array(aperm(targetPoints, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
+
+  targetDist1 <- matrix(NA, nAnimals, nAnimals)
+
+  targetDist1[lower.tri(targetDist1)] <- 1
+
+  distIndices <- which(!is.na(targetDist1), arr.ind = T)
+
+  # project target points to WGS #
+  targetPoints2 <- sp::SpatialPoints(targetPoints1, proj4string = sp::CRS(projections$WGS84))
+
+  target.sample <- rep(NA, nAnimals)
+  target.point.sample <- matrix(NA, nAnimals, 2)
+  toSample <- 1:nAnimals
+  if (is.null(targetSites)) {
+    draws <- 1
+    samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
+    samp2 <- samp + (toSample - 1) * nrandomDraws
+    point.sample <- sp::SpatialPoints(targetPoints2[samp2],
+                                      proj4string = sp::CRS(resampleProjection))
+    target.point.sample[toSample, ]<- t(point.sample@coords)
+  }
+  else {
+    draws <- 0
+    while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
+      draws <- draws + 1
+      samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
+      samp2 <- samp + rep(toSample - 1, each = nSim) * nrandomDraws
+      point.sample <- sp::SpatialPoints(targetPoints2[samp2],
+                                        proj4string = sp::CRS(resampleProjection))
+      # point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
+      #                             MASS::mvrnorm, n=nSim, Sigma=geoVCov),
+      #                       c(nSim, 2, length(toSample))) - geoBias2
+      # point.sample <- apply(point.sample, 3, sp::SpatialPoints,
+      #                       proj4string = sp::CRS(resampleProjection))
+      target.sample0 <- sp::over(point.sample, y = targetSites)
+      target.sample1 <- matrix(target.sample0, nSim, length(toSample))
+#      target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
+      # good.sample <- which(!is.na(target.sample0))
+      # if (length(good.sample) > 1) {
+      #
+      # }
+      good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1])
+      target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
+      if (any(!is.na(good.sample)))
+        target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(function(x, y) y[x]@coords,
+                                                                        good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
+      toSample <- which(is.na(target.sample))
+    }
+    if (!is.null(maxTries) && draws > maxTries)
+      stop(paste0('maxTries (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
+  }
+  return(list(target.sample = target.sample, target.point.sample = target.point.sample,
+              draws = draws))
+}
+
 
 #' Distance matrix from position matrix
 #'

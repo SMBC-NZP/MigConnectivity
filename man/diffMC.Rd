@@ -21,6 +21,33 @@ compares all MC samples from each pair.}
 Defaults to FALSE to reduce storage requirements. Change to TRUE to
 compute your own summary statistics.}
 }
+\value{
+\code{diffMC} returns a list with elements:
+\describe{
+  \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
+     differences for each pairwise comparison. Estimates of difference
+     between MC values incorporating parametric uncertainty.}
+  \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+     pairwise comparison, estimated from SD of sampled differences.}
+  \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
+     MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+     quantiles of \code{sampleMC}.}
+  \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
+     intervals for MC differences for each pairwise comparison. Preferable
+     to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+     difference. \code{simpleCI} is preferred when
+     \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+     these should be identical.  Estimated as the
+     \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+     \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+     differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
+  \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+     differences for each pairwise comparison, etimated using the highest
+     posterior density (HPD) method.}
+  \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
+     List of sampled values for each pairwise MC difference.}
+}
+}
 \description{
 Pairwise differences between two or more independent MC estimates
 }

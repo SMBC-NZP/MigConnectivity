@@ -48,8 +48,9 @@ targetSites <- as(targetSites,"SpatialPolygons")
 
 targetDist <- distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
 
-plot(targetSites)
+plot(targetSites, add=T, col = "red")
 plot(SpatialPoints(t(b[1,,])),add = TRUE, pch = 19)
+plot(point.sample,add = TRUE, pch = 19)
 
 results <- array(NA,c(151,1000))
 for(i in 1:1000){
@@ -105,7 +106,7 @@ MC <- estMC(targetDist = targetDist,
             originNames=NULL,
             targetNames=NULL,
             nSamples = 100,
-            verbose=1,
+            verbose=2,
             nSim = 10,
             calcCorr=TRUE,
             alpha = 0.05,
