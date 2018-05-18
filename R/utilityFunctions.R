@@ -124,12 +124,6 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
 
   targetPoints1 <- array(aperm(targetPoints, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
 
-  targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-  targetDist1[lower.tri(targetDist1)] <- 1
-
-  distIndices <- which(!is.na(targetDist1), arr.ind = T)
-
   # project target points to WGS #
   targetPoints2 <- sp::SpatialPoints(targetPoints1, proj4string = sp::CRS(projections$WGS84))
 
@@ -140,8 +134,8 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
     samp2 <- samp + (toSample - 1) * nrandomDraws
-    point.sample <- sp::SpatialPoints(targetPoints2[samp2],
-                                      proj4string = sp::CRS(resampleProjection))
+    point.sample <- sp::spTransform(targetPoints2[samp2],
+                                    sp::CRS(resampleProjection))
     target.point.sample[toSample, ]<- t(point.sample@coords)
   }
   else {
@@ -149,9 +143,9 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
-      samp2 <- samp + rep(toSample - 1, each = nSim) * nrandomDraws
-      point.sample <- sp::SpatialPoints(targetPoints2[samp2],
-                                        proj4string = sp::CRS(resampleProjection))
+      samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
+      point.sample <- sp::spTransform(targetPoints2[samp2],
+                                      sp::CRS(resampleProjection))
       # point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
       #                             MASS::mvrnorm, n=nSim, Sigma=geoVCov),
       #                       c(nSim, 2, length(toSample))) - geoBias2
@@ -164,11 +158,11 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
       # if (length(good.sample) > 1) {
       #
       # }
-      good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1])
+      good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1]) +
+        seq(from = 0, by = nSim, length.out = length(toSample))
       target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
       if (any(!is.na(good.sample)))
-        target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(function(x, y) y[x]@coords,
-                                                                        good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
+        target.point.sample[toSample[!is.na(good.sample)], ]<- point.sample[good.sample[!is.na(good.sample)]]@coords
       toSample <- which(is.na(target.sample))
     }
     if (!is.null(maxTries) && draws > maxTries)

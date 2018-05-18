@@ -403,6 +403,20 @@ estMCisotope <- function(targetDist,
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
 
 
+  if (calcCorr) {
+    targetDist1 <- matrix(NA, nAnimals, nAnimals)
+
+    targetDist1[lower.tri(targetDist1)] <- 1
+
+    distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
+
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+
+    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
+                                    nAnimals, nAnimals)
+
+  }
+
 
 
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
