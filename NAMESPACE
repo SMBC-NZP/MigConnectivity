@@ -2,6 +2,7 @@
 
 export(calcMC)
 export(diffMC)
+export(diffMantel)
 export(distFromPos)
 export(estMC)
 export(estMantel)

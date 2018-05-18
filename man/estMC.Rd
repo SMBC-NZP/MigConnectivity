@@ -3,7 +3,7 @@
 \name{estMC}
 \alias{estMC}
 \title{Estimate MC from abundance and/or transition probability estimates OR
-geolocator and/or GPS data.}
+geolocator and/or GPS data OR intrinsic markers.}
 \usage{
 estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originSites = NULL, targetSites = NULL, originPoints = NULL,
@@ -12,7 +12,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300, intrinsic = FALSE)
+  maxTries = 300, isIntrinsic = FALSE)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -24,33 +24,38 @@ matrix.}
 \item{originRelAbund}{Relative abundance estimates at B origin sites. Either
 a numeric vector of length B that sums to 1 or an mcmc object with
 \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
-Currently, an mcmc object doesn't work with geolocator or GPS data.}
+Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
+data.}
 
 \item{psi}{Transition probabilities between B origin and W target sites.
 Either a matrix with B rows and W columns where rows sum to 1 or a MARK
 object with estimates of transition probabilities.  If you are estimating
-MC from GPS or geolocator data, leave this as NULL.}
+MC from GPS, geolocator, or intrinsic data, leave this as NULL.}
 
 \item{sampleSize}{Total sample size of animals that psi will be estimated from.
 Should be the number of animals released in one of the origin sites and
 observed in one of the target sites.  Optional, but recommended, unless
-you are estimating MC from GPS or geolocator data (in which case the
-function can calculate it for you).}
+you are estimating MC from GPS, geolocator, or intrinsic data (in which
+case the function can calculate it for you).}
 
 \item{originSites}{If \code{psi} is a MARK object, this must be a numeric
-vector indicating which sites are origin.  If using GL or GPS data,
-this can be the geographic definition of sites in the release season.}
+vector indicating which sites are origin.  If using GPS, geolocator, or
+intrinsic data, this can be the geographic definition of sites in the
+release season.}
 
 \item{targetSites}{If \code{psi} is a MARK object, this must be a numeric
-vector indicating which sites are target.  If using GL or GPS data,
-this must be the geographic definition of sites in the non-release season.}
+vector indicating which sites are target.  If using GPS, geolocator, or
+intrinsic data, this must be the geographic definition of sites in the
+non-release season.}
 
 \item{originPoints}{A \code{SpatialPoints} object, with length number of
 animals tracked.  Each point indicates the release location of an animal.}
 
-\item{targetPoints}{A \code{SpatialPoints} object, with length number of
-animals tracked.  Each point indicates the point estimate location in
-the non-release season.}
+\item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} object, with
+length number ofanimals tracked.  Each point indicates the point estimate
+location in the non-release season. For isotope data, the results of
+\code{isoAssign} (an array with dimensions number of sampled points x 2 x
+number of animals).}
 
 \item{originAssignment}{Assignment of \code{originPoints} to release season
 sites. Integer vector with length number of animals tracked. Optional,
@@ -67,12 +72,14 @@ length number of animals tracked.}
 sites.}
 
 \item{nSamples}{Number of times to resample \code{psi} and/or
-\code{originRelAbund} OR number of bootstrap runs for GL or GPS data. In
-the latter case, animals are sampled with replacement for each. For all,
+\code{originRelAbund} OR number of times to resample \code{targetPoints}
+for intrinsic data OR number of bootstrap runs for GL or GPS data. In
+the last two cases, animals are sampled with replacement for each. For all,
 the purpose is to estimate sampling uncertainty.}
 
-\item{nSim}{Tuning parameter for GL data. Affects only the speed; 1000 seems
-to work well with our data.  Should be integer > 0.}
+\item{nSim}{Tuning parameter for GL or intrinsic data. Affects only the
+speed; 1000 seems to work well with our GL data and 10 for our intrinsic
+data, but your results may vary.  Should be integer > 0.}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators.
 Should be either single TRUE or FALSE value, or vector with length of
@@ -94,7 +101,7 @@ samples ("burn-in").}
 \item{verbose}{0 (default) to 3. 0 prints no output during run. 1 prints
 a line every 100 samples or bootstraps and a summary every 10.  2 prints a
 line and summary every sample or bootstrap. 3 also prints the number of
-draws (for tuning nSim for GL data only).}
+draws (for tuning nSim for GL/intrinsic data only).}
 
 \item{calcCorr}{In addition to MC, should function also estimate Mantel
 correlation between release and non-release locations (GPS or GL data
@@ -115,10 +122,15 @@ Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
 of \code{targetSites}.}
 
-\item{maxTries}{Maximum number of times to run a single GL bootstrap before
-exiting with an error.  Default is 300.  Set to NULL to never stop.  This
-parameter was added to prevent GL setups where some sample points never
-land on target sites from running indefinitely.}
+\item{maxTries}{Maximum number of times to run a single GL/intrinsic
+bootstrap before exiting with an error.  Default is 300.  Set to NULL to
+never stop.  Thisparameter was added to prevent GL setups where some
+sample points never land on target sites from running indefinitely.}
+
+\item{isIntrinsic}{Logical indicating whether the animals are tracked via
+intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
+connectivity for all intrinsically marked animals or all extrinsic (e.g.,
+bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.}
 }
 \value{
 \code{estMC} returns a list with elements:
@@ -177,7 +189,7 @@ land on target sites from running indefinitely.}
 \description{
 Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
 relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
-data.
+data OR intrinsic markers such as isotopes.
 }
 \examples{
 set.seed(101)

@@ -106,14 +106,17 @@ MC <- estMC(targetDist = targetDist,
             originNames=NULL,
             targetNames=NULL,
             nSamples = 100,
-            verbose=2,
-            nSim = 5,
+            verbose = 2,
+            nSim = 4,
             calcCorr=TRUE,
             alpha = 0.05,
             approxSigTest = F,
             sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
             maxTries = 300,
-            intrinsic = TRUE)
+            isIntrinsic = TRUE)
 
 str(MC)
+
+(mcDiff <- diffMC(list(OVEN1 = Combined, OVEN2 = MC)))
+(rMDiff <- diffMantel(list(OVEN1 = Combined, OVEN2 = MC)))

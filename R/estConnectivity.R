@@ -520,11 +520,11 @@ estMCisotope <- function(targetDist,
 
 ###############################################################################
 #' Estimate MC from abundance and/or transition probability estimates OR
-#' geolocator and/or GPS data.
+#' geolocator and/or GPS data OR intrinsic markers.
 #'
 #' Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
 #' relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
-#' data.
+#' data OR intrinsic markers such as isotopes.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
 #'  matrix.
@@ -533,27 +533,32 @@ estMCisotope <- function(targetDist,
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
 #'  a numeric vector of length B that sums to 1 or an mcmc object with
 #'  \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
-#'  Currently, an mcmc object doesn't work with geolocator or GPS data.
+#'  Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
+#'  data.
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1 or a MARK
 #'  object with estimates of transition probabilities.  If you are estimating
-#'  MC from GPS or geolocator data, leave this as NULL.
+#'  MC from GPS, geolocator, or intrinsic data, leave this as NULL.
 #' @param sampleSize Total sample size of animals that psi will be estimated from.
 #'    Should be the number of animals released in one of the origin sites and
 #'    observed in one of the target sites.  Optional, but recommended, unless
-#'    you are estimating MC from GPS or geolocator data (in which case the
-#'    function can calculate it for you).
+#'    you are estimating MC from GPS, geolocator, or intrinsic data (in which
+#'    case the function can calculate it for you).
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
-#'  vector indicating which sites are origin.  If using GL or GPS data,
-#'  this can be the geographic definition of sites in the release season.
+#'  vector indicating which sites are origin.  If using GPS, geolocator, or
+#'  intrinsic data, this can be the geographic definition of sites in the
+#'  release season.
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
-#'  vector indicating which sites are target.  If using GL or GPS data,
-#'  this must be the geographic definition of sites in the non-release season.
+#'  vector indicating which sites are target.  If using GPS, geolocator, or
+#'  intrinsic data, this must be the geographic definition of sites in the
+#'  non-release season.
 #' @param originPoints A \code{SpatialPoints} object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal.
-#' @param targetPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the point estimate location in
-#'    the non-release season.
+#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
+#'    length number ofanimals tracked.  Each point indicates the point estimate
+#'    location in the non-release season. For isotope data, the results of
+#'    \code{isoAssign} (an array with dimensions number of sampled points x 2 x
+#'    number of animals).
 #' @param originAssignment Assignment of \code{originPoints} to release season
 #'    sites. Integer vector with length number of animals tracked. Optional,
 #'    but if using GL or GPS data, either \code{originAssignment} or
@@ -565,11 +570,13 @@ estMCisotope <- function(targetDist,
 #' @param targetNames Optional. Vector of names for the non-release season
 #'    sites.
 #' @param nSamples Number of times to resample \code{psi} and/or
-#'    \code{originRelAbund} OR number of bootstrap runs for GL or GPS data. In
-#'    the latter case, animals are sampled with replacement for each. For all,
+#'    \code{originRelAbund} OR number of times to resample \code{targetPoints}
+#'    for intrinsic data OR number of bootstrap runs for GL or GPS data. In
+#'    the last two cases, animals are sampled with replacement for each. For all,
 #'    the purpose is to estimate sampling uncertainty.
-#' @param nSim Tuning parameter for GL data. Affects only the speed; 1000 seems
-#'    to work well with our data.  Should be integer > 0.
+#' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
+#'    speed; 1000 seems to work well with our GL data and 10 for our intrinsic
+#'    data, but your results may vary.  Should be integer > 0.
 #' @param isGL Indicates whether or which animals were tracked with geolocators.
 #'    Should be either single TRUE or FALSE value, or vector with length of
 #'    number of animals tracked, with TRUE for animals in
@@ -586,7 +593,7 @@ estMCisotope <- function(targetDist,
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
 #'  a line every 100 samples or bootstraps and a summary every 10.  2 prints a
 #'  line and summary every sample or bootstrap. 3 also prints the number of
-#'  draws (for tuning nSim for GL data only).
+#'  draws (for tuning nSim for GL/intrinsic data only).
 #' @param calcCorr In addition to MC, should function also estimate Mantel
 #'    correlation between release and non-release locations (GPS or GL data
 #'    only)?  Default is FALSE.
@@ -601,11 +608,14 @@ estMCisotope <- function(targetDist,
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
 #'    of \code{targetSites}.
-#' @param maxTries Maximum number of times to run a single GL bootstrap before
-#'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
-#'    parameter was added to prevent GL setups where some sample points never
-#'    land on target sites from running indefinitely.
-#'
+#' @param maxTries Maximum number of times to run a single GL/intrinsic
+#'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
+#'    never stop.  Thisparameter was added to prevent GL setups where some
+#'    sample points never land on target sites from running indefinitely.
+#' @param isIntrinsic Logical indicating whether the animals are tracked via
+#'    intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
+#'    connectivity for all intrinsically marked animals or all extrinsic (e.g.,
+#'    bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.
 #'
 #' @return \code{estMC} returns a list with elements:
 #' \describe{
@@ -674,9 +684,9 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   approxSigTest = FALSE, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
                   maxTries = 300,
-                  intrinsic = FALSE) {
+                  isIntrinsic = FALSE) {
   if (is.null(psi)) {
-    if(intrinsic){
+    if(isIntrinsic){
       return(estMCisotope(targetDist = targetDist,originRelAbund = originRelAbund,targetPoints = targetPoints,
                       targetSites = targetSites,sampleSize = sampleSize,targetAssignment=targetAssignment,
                       originPoints=originPoints,originSites=originSites,originDist = originDist,
@@ -902,6 +912,11 @@ getCMRexample <- function(number = 1) {
 
 #' Pairwise differences between two or more independent MC estimates
 #'
+#' Estimates mean (and median) differences in MC, and includes measures of
+#' uncertainty (SE and CI).  For those measures of uncertainty to be accurate,
+#' only apply this function to MC estimates where all data sources are
+#' independent (e.g., different species).
+#'
 #' @param estimates List of at leat two MC estimates, provided by the estMC
 #'    function. If this is a named list (recommended), the function will use
 #'    these names in labeling the differences.
@@ -956,6 +971,92 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
     else
       diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleMC, nSamples, replace = T) -
         sample(estimates[[comparisons[i, 2]]]$sampleMC, nSamples, replace = T)
+  }
+  meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
+  medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
+  seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
+  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+                       na.rm=TRUE, type = 8), diffSamples, diff.z0)
+  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
+  hpdCI <- sapply(diff.mcmc, function(MC) coda::HPDinterval(MC, 1-alpha))
+  names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
+                                                 '-', names(estimates[comparisons[,2]]))
+  names(medianDiff) <- names(seDiff) <- names(diffSamples)
+  colnames(simpleCI) <- colnames(bcCI) <- colnames(hpdCI) <- names(diffSamples)
+  if (returnSamples)
+    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
+                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                sampleDiff = diffSamples))
+  else
+    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
+                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI))
+}
+
+#' Pairwise differences between two or more independent Mantel correlation
+#' estimates
+#'
+#' Estimates mean (and median) differences in Mantel correlations (rM), and
+#' includes measures of uncertainty (SE and CI).  For those measures of
+#' uncertainty to be accurate, only apply this function to rM estimates where
+#' all data sources are independent (e.g., different species).
+#'
+#' @param estimates List of at leat two Mantel correlation estimates, provided
+#'    by either the estMC or the estMantel functions. If this is a named list
+#'    (recommended), the function will use these names in labeling the
+#'    differences.
+#' @param nSamples A positive integer, number of samples (with replacement)
+#'    to draw from each pair of MC estimates (default 100000).  If set to NULL,
+#'    compares all Mantel correlation samples from each pair.
+#' @param alpha Level for confidence/credible intervals provided.
+#' @param returnSamples Should the function return all the sampled differences?
+#'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
+#'    compute your own summary statistics.
+#'
+#' @return  \code{diffMantel} returns a list with elements:
+#' \describe{
+#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
+#'      differences for each pairwise comparison. Estimates of difference
+#'      between rM values incorporating parametric uncertainty.}
+#'   \item{\code{seDiff}}{Vector with standard errors of rM differences for each
+#'      pairwise comparison, estimated from SD of sampled differences.}
+#'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
+#'      rM differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sampleCorr}.}
+#'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
+#'      intervals for rM differences for each pairwise comparison. Preferable
+#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the rM
+#'      difference. \code{simpleCI} is preferred when
+#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
+#'   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for rM
+#'      differences for each pairwise comparison, etimated using the highest
+#'      posterior density (HPD) method.}
+#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
+#'      List of sampled values for each pairwise rM difference.}
+#' }
+#' @export
+#'
+# @examples
+diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
+  nEst <- length(estimates)
+  nComparisons <- choose(nEst, 2)
+  nSamplesEst <- sapply(estimates, function(x) length(x$sampleCorr))
+  diffSamples <- vector('list', nComparisons)
+  if (is.null(names(estimates)))
+    names(estimates) <- 1:nEst
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
+  for (i in 1:nComparisons) {
+    if (is.null(nSamples))
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleCorr, times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$sampleCorr, each = nSamplesEst[comparisons[i, 1]])
+    else
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleCorr, nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$sampleCorr, nSamples, replace = T)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
