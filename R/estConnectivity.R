@@ -442,6 +442,8 @@ estMCisotope <- function(targetDist,
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
+
+    # Resample from points for each animal
     tSamp <- targetSampleIsotope(targetPoints = targetPoints, animal.sample = animal.sample,
                           targetSites = targetSites,
                           resampleProjection = resampleProjection, nSim = nSim,
@@ -624,9 +626,11 @@ estMCisotope <- function(targetDist,
 #'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nSamples} x
 #'      [number of origin sites] x [number of target sites]. Provided to allow
 #'      the user to compute own summary statistics.}
-#'   \item{\code{pointPsi}}{Simple point estimate of psi matrix.}
+#'   \item{\code{pointPsi}}{Simple point estimate of psi matrix, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
 #'   \item{\code{pointMC}}{Simple point estimate of MC, using the point
-#'      estimates of \code{psi} and \code{originRelAbund}.}
+#'      estimates of \code{psi} and \code{originRelAbund}, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
 #'   \item{\code{meanMC, medianMC}}{Mean and median of \code{sampleMC}.
 #'      Estimates of MC incorporating parametric uncertainty.}
 #'   \item{\code{seMC}}{Standard error of MC, estimated from SD of
@@ -659,8 +663,9 @@ estMCisotope <- function(targetDist,
 #'      correlation. Provided to allow the user to compute own summary
 #'      statistics.  NULL when \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
 #'   \item{\code{pointCorr}}{Simple point estimate of continuous correlation,
-#'      using \code{originPoints} and \code{targetPoints}.  NULL when
-#'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
+#'      using \code{originPoints} and \code{targetPoints}, not accounting
+#'      for sampling error. NULL when \code{calcCorr==FALSE} or
+#'      \code{!is.null(psi)} or \code{isIntrinsic == TRUE}.}
 #'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
 #'      statistics for continuous correlation bootstraps.  NULL when
 #'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}

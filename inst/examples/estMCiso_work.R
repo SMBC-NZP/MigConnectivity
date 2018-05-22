@@ -8,6 +8,9 @@ OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 
 OVENvals <- OVENvals[grep(OVENvals[,1],pattern = "NH", invert = TRUE),]
 
+nSamples <- 1000
+nAnimals <- nrow(OVENvals)
+
 a <- Sys.time()
 b <- isoAssign(isovalues = OVENvals[,2],
                isoSTD = 12,
@@ -16,7 +19,7 @@ b <- isoAssign(isovalues = OVENvals[,2],
                oddsRatio = FALSE,
                odds = NULL,
                SingleCellAssign = TRUE,
-               nSim = 1000,
+               nSamples = nSamples,
                dataFrame = FALSE,
                sppShapefile = OVENdist,
                assignExtent = NULL,
@@ -44,13 +47,14 @@ targetSites <- as(targetSites,"SpatialPolygons")
 
 targetDist <- distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
 
-plot(targetSites, add=T, col = "red")
+plot(targetSites)
 plot(SpatialPoints(t(b[1,,])),add = TRUE, pch = 19)
-plot(point.sample,add = TRUE, pch = 19)
 
-results <- array(NA,c(151,1000))
-for(i in 1:1000){
-results[,i]<-over(SpatialPoints(t(b[i,,]),proj4string= CRS(targetSites@proj4string@projargs)),targetSites)
+results <- array(NA, c(nAnimals, nSamples))
+for(i in 1:nSamples) {
+  results[, i] <- over(SpatialPoints(t(b[i, , ]),
+                                     proj4string = CRS(targetSites@proj4string@projargs)),
+                       targetSites)
 }
 
 Countries <- shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
@@ -65,14 +69,14 @@ originSites <- rbind(JAM,FL)
 
 originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 
-ever <- length(grep(OVENvals[,1],pattern = "EVER"))/nrow(OVENvals)
-jam <- length(grep(OVENvals[,1],pattern = "JAM"))/nrow(OVENvals)
+ever <- length(grep(OVENvals[,1],pattern = "EVER")) / nAnimals
+jam <- length(grep(OVENvals[,1],pattern = "JAM")) / nAnimals
 
 
-originRelAbundance <- as.matrix(c(jam,ever))
+originRelAbundance <- as.matrix(c(jam, ever))
 
-targetSites <- sp::spTransform(targetSites,CRS(MigConnectivity::projections$Lambert))
-originSites <- sp::spTransform(originSites,CRS(MigConnectivity::projections$Lambert))
+targetSites <- sp::spTransform(targetSites, CRS(MigConnectivity::projections$Lambert))
+originSites <- sp::spTransform(originSites, CRS(MigConnectivity::projections$Lambert))
 
 set.seed(12)
 originLongLat <- array(NA,c(nrow(OVENvals),2))
@@ -89,28 +93,27 @@ originPoints <- sp::spTransform(originPoints,sp::CRS(MigConnectivity::projection
 
 #library(MigConnectivity)
 
-MC <- estMC(targetDist = targetDist,
+system.time(MC <- estMC(targetDist = targetDist,
             originRelAbund = originRelAbundance,
             targetPoints = b,
             targetSites = targetSites,
-            #sampleSize = dim(b)[3],
-            targetAssignment=NULL,
+            targetAssignment = NULL,
             originDist = originDist,
-            originPoints=originPoints,
-            originSites=originSites,
-            originAssignment=NULL,
-            originNames=NULL,
-            targetNames=NULL,
+            originPoints = originPoints,
+            originSites = originSites,
+            originAssignment = NULL,
+            originNames = NULL,
+            targetNames = NULL,
             nSamples = 100,
-            verbose = 2,
-            nSim = 4,
+            verbose = 1,
+            nSim = 5,
             calcCorr=TRUE,
             alpha = 0.05,
             approxSigTest = F,
             sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
             maxTries = 300,
-            isIntrinsic = TRUE)
+            isIntrinsic = TRUE))
 
 str(MC)
 

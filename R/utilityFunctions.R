@@ -44,6 +44,7 @@ mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.rel.abund) {
   return((MC.in - MC)^2)
 }
 
+# Samples from GL and/or GPS locations
 # Called by estMantel and estMCGlGps
 targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                          nSim = 1000, targetSites = NULL, targetAssignment = NULL,
@@ -53,19 +54,19 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
 
   WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-  targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-  targetDist1[lower.tri(targetDist1)] <- 1
-
-  distIndices <- which(!is.na(targetDist1), arr.ind = T)
-
-  # project target points to WGS #
-  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
-
-  targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
-                                                  targetPoints2[distIndices[,'col'],])
-
-  targetDist1[lower.tri(targetDist1)] <- targetDist0
+  # targetDist1 <- matrix(NA, nAnimals, nAnimals)
+  #
+  # targetDist1[lower.tri(targetDist1)] <- 1
+  #
+  # distIndices <- which(!is.na(targetDist1), arr.ind = T)
+  #
+  # # project target points to WGS #
+  # targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(WGS84))
+  #
+  # targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],
+  #                                                 targetPoints2[distIndices[,'col'],])
+  #
+  # targetDist1[lower.tri(targetDist1)] <- targetDist0
 
   if (is.null(targetAssignment)) {
     if (!is.null(targetSites))
@@ -74,11 +75,15 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
       targetAssignment <- rep(0, nAnimals)
   }
 
+  # Storage
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
+  # Fill in GPS values (no location uncertainty)
   target.sample[which(!isGL[animal.sample])] <- targetAssignment[animal.sample[which(!isGL[animal.sample])]]
   target.point.sample[which(!isGL[animal.sample]), ] <- targetPoints[animal.sample[which(!isGL[animal.sample])],]@coords
+  # Which to sample still
   toSample <- which(isGL[animal.sample])
+  # In this case, only have to sample each GL animal once, because no restrictions
   if (is.null(targetSites) && any(isGL[animal.sample])) {
     draws <- 1
     geoBias2 <- array(rep(geoBias, length(toSample)), c(2, length(toSample)))
@@ -92,15 +97,24 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
     draws <- 0
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
+      # Create giant version of geoBias we can subtract from point.sample
       geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
+      # Draw random points for GL animals from multivariate normal distribution
       point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
                                   MASS::mvrnorm, n=nSim, Sigma=geoVCov),
                             c(nSim, 2, length(toSample))) - geoBias2
+      # Convert those to SpatialPoints
       point.sample <- apply(point.sample, 3, sp::SpatialPoints,
                             proj4string = sp::CRS(resampleProjection))
+      # Find out which sampled points are in a target site
       target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
+      # Identify which animals have at least one valid sample point. good.sample
+      # will be NA for those that don't.  For those that do, it will location in
+      # point.sample first valid point can be found.
       good.sample <- apply(target.sample0, 2, function(x) which(!is.na(x))[1])
+      # Fill in target site of valid sampled points
       target.sample[toSample] <- apply(target.sample0, 2, function(x) x[!is.na(x)][1])
+      # Fill in target points of valid sampled points
       if (any(!is.na(good.sample)))
         target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(function(x, y) y[x]@coords,
                                                                         good.sample[!is.na(good.sample)], point.sample[!is.na(good.sample)]))
@@ -113,6 +127,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
               draws = draws))
 }
 
+# Samples from isotope target points
 # Called by estMCisotope
 targetSampleIsotope <- function(targetPoints, animal.sample,
                          nSim, targetSites = NULL,
@@ -124,6 +139,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
   # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
   nrandomDraws <- dim(targetPoints)[1]
 
+  # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
   targetPoints1 <- array(aperm(targetPoints, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
 
   # project target points to WGS #
@@ -132,6 +148,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   toSample <- 1:nAnimals
+  # In this case, only need to draw once, as no limits on where points can be
   if (is.null(targetSites)) {
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
@@ -148,27 +165,26 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
 
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
+      # Select nSim points for each animal still to be sampled
       samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
       samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
       point.sample <- targetPoints2[samp2]
-      # point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
-      #                             MASS::mvrnorm, n=nSim, Sigma=geoVCov),
-      #                       c(nSim, 2, length(toSample))) - geoBias2
-      # point.sample <- apply(point.sample, 3, sp::SpatialPoints,
-      #                       proj4string = sp::CRS(resampleProjection))
+      # Check which points are in target sites
       target.sample0 <- sp::over(point.sample, y = targetSites)
+      # Organize into matrix (separate by animal)
       target.sample1 <- matrix(target.sample0, nSim, length(toSample))
-#      target.sample0 <- sapply(point.sample, sp::over, y = targetSites)
-      # good.sample <- which(!is.na(target.sample0))
-      # if (length(good.sample) > 1) {
-      #
-      # }
+      # Identify which animals have a valid point (inside a target site).
+      # good.sample, for those that don't, will be NA. For those that do, it
+      # will be location in point.sample where first valid point is.
       good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1]) +
         seq(from = 0, by = nSim, length.out = length(toSample))
+      # Put in target sites of animals with valid points sampled
       target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
-      if (any(!is.na(good.sample)))
+      # Put in target points of animals with valid points sampled
+      if (any(!is.na(good.sample))) {
         target.point.sample[toSample[!is.na(good.sample)],1]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,1]
         target.point.sample[toSample[!is.na(good.sample)],2]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,2]
+      }
       toSample <- which(is.na(target.sample))
     }
     if (!is.null(maxTries) && draws > maxTries)
