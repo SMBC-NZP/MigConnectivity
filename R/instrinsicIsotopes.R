@@ -11,7 +11,7 @@
 #' @param slope value from calibration
 #' @param oddsRatio logical to convert probability into odds ratio
 #' @param odds if \code{oddsRatio} the odds ratio to use to set likely and unlikely locations
-#' @param singleCellAssign if TRUE generates \code{nSim} single location assignments using a multinomial
+#' @param singleCellAssign if TRUE generates \code{nSamples} single location assignments using a multinomial
 #'        distribution using the assignment probability.
 #' @param restrict2Likely if \code{TRUE} restricts locations to fall within the most probable assignment
 #'        locations if \code{singleCellAssign = TRUE}. Only used when \code{oddsRatio = TRUE}.
@@ -84,7 +84,7 @@ isoAssign <- function(isovalues,
 
   # quick input check #
 if(!return %in% c("probability","population","odds","sim.cell")){
-  stop("return must be either probability,population,odds,sim.cell")}
+  stop("return must be either probability, population, odds, or sim.cell")}
 
 # download isoscape map
 isomap <- getIsoMap(element = element, surface = surface, period = period)
@@ -92,22 +92,20 @@ isomap <- getIsoMap(element = element, surface = surface, period = period)
 # Series of checks for a species range map inputs
 # 1. if sppShapefile == NULL - use extent option
 if(is.null(sppShapefile)){
-isomap <- raster::crop(isomap,raster::extent(assignExtent))
+  isomap <- raster::crop(isomap,raster::extent(assignExtent))
 }
 # 2. if sppShapefile provided check that it has a projection defined
 #    if not stop - if so, mask the isoscape to range
-if(!is.null(sppShapefile) & is.na(raster::crs(sppShapefile))){
+if(is.na(raster::crs(sppShapefile))){
   stop("coordinate system needed for sppShapefile")}
-if(!is.null(sppShapefile) & (sppShapefile@proj4string@projargs == isomap@crs@projargs)){
-isomap <- raster::crop(isomap, sppShapefile)
-isomap <- raster::mask(isomap, sppShapefile)
-}
 # 3. if the projections don't match - project into same as isomap then mask
-if(!is.null(sppShapefile) & !(sppShapefile@proj4string@projargs == isomap@crs@projargs)){
-sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
+if(sppShapefile@proj4string@projargs != isomap@crs@projargs){
+  sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
+}
+
 isomap <- raster::crop(isomap, sppShapefile)
 isomap <- raster::mask(isomap, sppShapefile)
-}
+
 
 # generate a 'feather'/animal isoscape
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
@@ -120,10 +118,10 @@ assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
 assignments <- raster::stack(assignments)
 
 # Transform the assignments into a true probability surface #
-assign2prob <- assignments/raster::cellStats(assignments,sum)
+assign2prob <- assignments/raster::cellStats(assignments, sum)
 
-if(dataFrame == TRUE){
-assing2probDF <- dataFrame(raster::rasterToPoints(assign2prob))
+if(dataFrame == TRUE) {
+  assign2probDF <- data.frame(raster::rasterToPoints(assign2prob))
 }
 
 oddsFun <- function(x,odds = odds){
@@ -132,51 +130,53 @@ oddsFun <- function(x,odds = odds){
                         spar = 0.1),odds)$y
 }
 
-if(oddsRatio == TRUE){
- if(is.null(odds)) odds <- 0.33;
+if(oddsRatio == TRUE) {
+ if (is.null(odds))
+   odds <- 0.33
 
-matvals <- raster::values(assign2prob)
+  matvals <- raster::values(assign2prob)
 
-cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
+  cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
 
-step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
-step2 <- raster::reclassify(step1,cbind(cuts,1,1))
+  step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
+  step2 <- raster::reclassify(step1,cbind(cuts,1,1))
 
-SamplePop <- sum(step2)
+  SamplePop <- sum(step2)
 
-if(dataFrame == TRUE){
-  step2DF <- dataFrame(raster::rasterToPoints(step2))
-  SamplePopDF <- dataFrame(raster::rasterToPoints(SamplePop))
-}
-}
-
-if(SingleCellAssign == TRUE){
-  if(is.null(nSamples)) nSamples<-1000;
-xysim <- array(NA,c(nSamples,2,raster::nlayers(assign2prob)))
-#dimnames(xysim)[[1]] <- 1:nSamples
-dimnames(xysim)[[2]] <- c("Longitude","Latitude")
-dimnames(xysim)[[3]] <- names(assign2prob)
-
-# converts raster to matrix of XY then probs
-matvals <- raster::rasterToPoints(assign2prob)
-
-# Restrict random point estimates to 'likely' origin area #
-if(restrict2Likely && oddsRatio){
-binaryLikely <- raster::rasterToPoints(step2)
-matvals[,3:ncol(matvals)] <- matvals[,3:ncol(matvals)]*binaryLikely[,3:ncol(matvals)]
-matvals[matvals==0]<-NA
+  if(dataFrame == TRUE) {
+    step2DF <- data.frame(raster::rasterToPoints(step2))
+    SamplePopDF <- data.frame(raster::rasterToPoints(SamplePop))
+  }
 }
 
-# This draws samples 1 per animal nSamples number of times and fills the xysim with x,y coords
-for(i in 1:nSamples){
-  multidraw <- apply(matvals[,3:ncol(matvals)],2,FUN = function(x){rmultinom(n = 1, size = 1, prob = x)})
-  xysim[i,1,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
-  xysim[i,2,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
-}
+if (SingleCellAssign == TRUE) {
+  if (is.null(nSamples))
+    nSamples <- 1000
+  xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
+  #dimnames(xysim)[[1]] <- 1:nSamples
+  dimnames(xysim)[[2]] <- c("Longitude","Latitude")
+  dimnames(xysim)[[3]] <- names(assign2prob)
+
+  # converts raster to matrix of XY then probs
+  matvals <- raster::rasterToPoints(assign2prob)
+
+  # Restrict random point estimates to 'likely' origin area #
+  if(restrict2Likely && oddsRatio){
+    binaryLikely <- raster::rasterToPoints(step2)
+    matvals[,3:ncol(matvals)] <- matvals[,3:ncol(matvals)] * binaryLikely[,3:ncol(matvals)]
+    matvals[matvals==0] <- NA
+  }
+
+  # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
+  for(i in 3:ncol(matvals)) {
+    multidraw <- rmultinom(n = nSamples, size = 1, prob = matvals[,i])
+    xysim[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+    xysim[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+  }
 }
 #What should be returned
 if(return == "probability" & dataFrame == FALSE){return(assign2prob)}
-if(return == "probability" & dataFrame == TRUE){return(assing2probDF)}
+if(return == "probability" & dataFrame == TRUE){return(assign2probDF)}
 if(return == "odds" & dataFrame == FALSE){return(step2)}
 if(return == "odds" & dataFrame == TRUE){return(step2DF)}
 if(return == "population" & dataFrame == FALSE){return(SamplePop)}
