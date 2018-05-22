@@ -1,0 +1,259 @@
+---
+title: '''MigConnectivity'' package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{simMove}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
+```
+
+`simMove` Simulates annual movement of animals between regions across seasons for years and months with individual variability and strength of migratory connectivity (MC). Incorporates movement among regions within a season and movement among regions between seasons. Between seasons, animals either return to the same region each year or return to a different region in the subsequent year (dispersal). Between year dispersal rates occur during the first year (natal) or any subsequent year (breeding or non-breeding). Simulation does not incorporate births or deaths.  
+
+
+### `simMove` Simulates position of animals by individual, season, year, and month  
+
+Calculate the strength of migratory connectivity based on simulation data for 10 years of movement between breeding and non-breeding seasonal ranges. Breeding and non-breeding ranges are equally divided into 100 regions on an ellipsoid globe. See above for details regarding the utility functions. 
+
+Simulate data to demonstrate the use of `calcMC`   
+
+**The following code uses some utility functions that needed to be loaded prior to executing the code. See <a href="">utility functions vignette</a>.**
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(MigConnectivity)
+
+mlogitMat <- function(slope, dist) {
+       preMat <- exp(-slope/mean(dist)*dist)
+       diag(preMat) <- 0
+       nr <- nrow(dist)
+       nc <- ncol(dist)
+       outMat <- matrix(0, nr, nc)
+  for (b in 1:nr) {
+      outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
+      outMat[b,b] <- 1 - sum(outMat[b, ])
+  }
+  return(outMat)
+}
+
+mlogitMC <- function(slope, 
+                     MC.in, 
+                     origin.dist,
+                     target.dist,
+                     origin.abund,
+                     sample.size) {
+  
+    nBreeding <- nrow(origin.dist)
+    nWintering <- nrow(target.dist)
+    psi <- mlogitMat(slope, origin.dist)
+    
+  if (any(psi<0))
+    
+    return(5*slope^2)
+    
+  MC <- calcMC(origin.dist, 
+               target.dist, 
+               originRelAbund = origin.abund,
+               psi, 
+               sampleSize = sample.size)
+  
+  return((MC.in - MC)^2)
+}
+
+calcStrengthInd <- function(originDist, 
+                            targetDist, 
+                            locations, 
+                            resamp=1000, 
+                            verbose = 0) {
+nInd <- dim(locations)[1]
+originDist2 <- targetDist2 <- matrix(0, nInd, nInd)
+for (i in 1:(nInd-1)) {
+ for (j in (i+1):nInd) {
+      originDist2[i,j] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
+      targetDist2[i,j] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
+      originDist2[j,i] <- originDist[locations[i,1,1,1], locations[j,1,1,1]]
+      targetDist2[j,i] <- targetDist[locations[i,2,1,1], locations[j,2,1,1]]
+    }
+  }
+return(ncf::mantel.test(originDist2, targetDist2, resamp=resamp, quiet = !verbose))
+} 
+
+calcPsiMC <- function(originDist, 
+                      targetDist, 
+                      originRelAbund, 
+                      locations, 
+                      years = 1, 
+                      months = 1, 
+                      verbose=F) {
+  
+  nOrigin <- nrow(originDist)
+  nTarget <- nrow(targetDist)
+  psiMat <- matrix(0, nOrigin, nTarget)
+  nInd <- dim(locations)[1]
+  nYears <- dim(locations)[3]
+  nMonths <- dim(locations)[4]
+for (i in 1:nInd) {
+  if (i %% 1000 == 0 && verbose) #
+      cat("Individual", i, "of", nInd, "\n")
+    originMat <- locations[i, 1, years, months]
+    targetMat <- locations[i, 2, years, months]
+    bIndices <- which(!is.na(originMat))
+    wIndices <- which(!is.na(targetMat))
+  if (length(bIndices) && length(wIndices))
+    for (bi in bIndices)
+      for (wi in wIndices)
+       psiMat[originMat[bi], targetMat[wi]] <- psiMat[originMat[bi], 
+                                                      targetMat[wi]] + 1
+  }
+  psiMat <- apply(psiMat, 2, "/", rowSums(psiMat))
+  MC <- calcMC(originDist, targetDist, psi = psiMat,
+               originRelAbund = originRelAbund, sampleSize = nInd)
+  return(list(psi=psiMat, MC=MC))
+}
+
+changeLocations <- function(animalLoc, 
+                            breedingSiteTrans, 
+                            winteringSiteTrans) {
+  animalLoc[,1,,] <- breedingSiteTrans[animalLoc[,1,,]]
+  animalLoc[,2,,] <- winteringSiteTrans[animalLoc[,2,,]]
+  return(animalLoc)
+}
+
+simLocationError <- function(targetPoints, 
+                             targetSites, 
+                                         geoBias, 
+                                         geoVCov, 
+                             projection, 
+                                         verbose = 0, 
+                                         nSim = 1000) {
+
+nAnimals <- length(targetPoints)
+geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+target.sample <- rep(NA, nAnimals)
+target.point.sample <- matrix(NA, nAnimals, 2)
+
+for(i in 1:nAnimals){
+  if (verbose > 0)
+    cat('Animal', i, 'of', nAnimals)
+  draws <- 0
+  while (is.na(target.sample[i])) {
+    draws <- draws + 1
+    # Sample random point for each bird 
+    # from parametric distribution of NB error
+    point.sample <- sp::SpatialPoints(
+                  MASS::mvrnorm(n=nSim, 
+                  mu=cbind(targetPoints@coords[i,1],targetPoints@coords[i,2]),
+                  Sigma=geoVCov)+
+                  geoBias2,
+                  sp::CRS(projection))
+      
+    # filtered to stay in NB areas (land)
+    target.sample0 <- sp::over(point.sample, targetSites)
+    target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
+  }
+    
+  target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+  if (verbose > 0)
+    cat(' ', draws, 'draws\n')
+}
+  return(list(targetSample = target.sample, 
+              targetPointSample = target.point.sample))
+}
+```
+
+```{r}
+set.seed(75)
+
+# Parameters for simulations
+
+nSeasons <- 2 # population with two discrete seasons - breeding / non-breeding
+nYears <- 10 # Ten years of data
+nMonths <- 4 # Four months within each season
+
+nBreeding <- 100 # Number of populations
+nWintering <- 100 # Number of populations 
+```
+Generate the spatial arrangement of breeding and non-breeding populations  
+
+```{r}
+breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
+                        rep(seq(49,31,-2), sqrt(nBreeding))), nBreeding, 2)
+winteringPos <- matrix(c(rep(seq(-79,-61,2), each=sqrt(nWintering)),
+                         rep(seq(9,-9,-2), sqrt(nWintering))), nWintering, 2)
+
+# calculate distance between populations
+breedDist <- distFromPos(breedingPos, 'ellipsoid') 
+
+nonbreedDist <- distFromPos(winteringPos, 'ellipsoid') 
+```
+
+The relative abundance of the study species is needed in each population. Here we generate those data below.
+```{r}
+# Breeding Abundance
+breedingN <- rep(500, nBreeding)
+breedingRelN <- breedingN/sum(breedingN)
+```
+
+The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
+
+```{r, echo = FALSE}
+# These are the results from the optimization below. To save time these # slope is hardcoded here.
+slope <- 1.920933
+psi <- mlogitMat(slope,breedDist)
+```
+
+```{r, eval = FALSE}
+# Set up psi matrix
+o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
+              target.dist = nonbreedDist, origin.abund = breedingRelN,
+              sample.size = sum(breedingN),
+              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+
+slope <- o$minimum
+
+psi <- mlogitMat(slope, breedDist)
+```
+
+Now that we have all the data needed to calculate the strength of migratory connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
+```{r, eval = FALSE}
+# Baseline strength of migratory connectivity
+MC <- calcMC(originDist = breedDist, 
+             targetDist = nonbreedDist,
+             psi = psi, 
+             originRelAbund = breedingRelN,
+             sampleSize = sum(breedingN))
+```
+
+```{r, echo = FALSE}
+MC <- 0.2499999
+```
+```{r}
+# Show Results
+MC
+```
+
+### `simMove` Simulation of movement between breeding and non-breeding
+
+Recycle data generated for the calcMC function - see above 
+```{r}
+sims <- simMove(breedingAbund = breedingN, # Breeding relative abundance
+               breedingDist = breedDist,  # Breeding distance
+               winteringDist = nonbreedDist, # Non-breeding distance
+               psi = psi, # Transition probabilities
+               nYears = nYears, # Number of years
+               nMonths = nMonths, # Number of months
+               winMoveRate = 0, # winter movement rate
+               sumMoveRate = 0, # breeding movement rate
+               winDispRate = 0, # winter dispersal rate
+               sumDispRate = 0, # summer disperal rate
+               natalDispRate = 0, # natal dispersal rate
+               breedDispRate = 0, # breeding dispersal rate
+               verbose = 0) # verbose output
+
+
+str(sims)
+```

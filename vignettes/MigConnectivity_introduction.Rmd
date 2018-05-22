@@ -1,0 +1,71 @@
+---
+title: '''MigConnectivity'' package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{isotope MC}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+```{r, echo = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
+```
+
+##Introduction  
+
+Technological advancements have spurred rapid growth in the study of migratory connectivity,
+the spatial and temporal linkage of migratory populations throughout the annual cycle. However, 
+the lack of a quantitative definition for the strength of migratory connectivity (MC) has limited our ability to draw 
+inferences across species, studies, and data types about the seasonal co-occurrence of 
+populations. MC is a standardized metric to quantify migratory connectivity between two phases 
+of the annual cycle. It is independent of data type and accounts for the relative abundance of 
+populations distributed across a seasonal range. Negative values of MC indicate that individuals 
+close to each other in one season are further apart in the other season. If MC = 0, no relationship 
+exists between distances in one season and another; if MC = 1, the relative distances between 
+individuals in one season are the same in the other, although the scale can differ.  
+
+Three data inputs are needed to calculate MC, and one is optional:   
+
+1.  The probabilities of movement between regions (i.e., transition probabilities);  
+
+1.  Distances between regions within the two distinct seasonal ranges (e.g., a matrix of distances between all regions within the breeding range and a matrix of distances between all regions within the non-breeding range);  
+
+1.  Relative abundance among regions within the seasonal range from which the transition probabilities originate (e.g., relative abundance among breeding regions); 
+
+1.  (Optional) Total sample size of animals used to estimate the transition probabilities.
+
+MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and approximates the correlation between individuals at those distances. Earlier methods (Mantel correlation; rM) used the correlation between two distance matrices of individual animals captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient approximation, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.  
+
+
+<a href="https://doi.org/10.1111/2041-210X.12916" target=blank>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. 2018. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution. 9(3) 513-524.</a> 
+
+### Overview of Functions  
+
+1. `calcMC`  calculates the strength of migratory connectivity (MC) with the transitional probabilities between regions, distances between regions within the two seasonal ranges,  relative abundance among regions within the seasonal range from which the transition probabilities originate, and (optionally) the total sample size of the transitional probability data. For more information and sample code see <a href="">LINK TO calcMC vignette here</a><br>
+
+1. `estMC` estimates the strength of migratory connectivity (MC) with estimates of uncertainty. MC estimated either with transition probability estimates or individual assignments to regions from either tracking data or stable-isotopes. Uses re-sampling to measure MC uncertainty from RMark transition probability matrix estimates and/or JAGS relative abundance MCMC samples OR geolocator and/or GPS data OR stable-isotope assignments. For more information and sample code see <a href="">LINK TO estMC vignette here</a><br>  
+
+1. `simMove` Simulates annual movement of animals between regions across seasons for years and months with individual variability and strength of migratory connectivity (MC). Incorporates movement among regions within a season and movement among regions between seasons. Between seasons, animals either return to the same region each year or return to a different region in the subsequent year (dispersal). Between year dispersal rates occur during the first year (natal) or any subsequent year (breeding or non-breeding). Simulation does not incorporate births or deaths. For more information and sample code see <a href="">LINK TO simMove vignette here</a><br>
+
+
+## Getting Started  
+### Installing 'MigConnectivity' from GitHub
+
+In order to install the vignette along with the package use the following code with `build_vignettes = TRUE`. 
+**Note** it takes quite a bit longer to download the package when `build_vignettes = TRUE`.
+
+```{r eval = FALSE}
+install.packages('devtools')
+
+devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
+
+library(MigConnectivity)
+```
+
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+library(MigConnectivity)
+```
+
