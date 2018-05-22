@@ -115,9 +115,11 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
 
 # Called by estMCisotope
 targetSampleIsotope <- function(targetPoints, animal.sample,
-                         nSim = 1000, targetSites = NULL,
+                         nSim, targetSites = NULL,
                          resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
                          maxTries = 300) {
+  # Here is a catch to save Mike from himself
+  if(is.null(nSim)){nSim<-1000}
   nAnimals <- dim(targetPoints)[3]
   # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
   nrandomDraws <- dim(targetPoints)[1]
@@ -134,18 +136,21 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
     samp2 <- samp + (toSample - 1) * nrandomDraws
-    point.sample <- sp::spTransform(targetPoints2[samp2],
-                                    sp::CRS(resampleProjection))
-    target.point.sample[toSample, ]<- t(point.sample@coords)
+    point.sample <- targetPoints2[samp2]
+    # Changed to make sure x,y coords stack correctly
+    target.point.sample[toSample,1]<- point.sample@coords[,1]
+    target.point.sample[toSample,2]<- point.sample@coords[,2]
   }
   else {
     draws <- 0
+    # Make sure targetSites are WGS84
+    targetSites <- sp::spTransform(targetSites, sp::CRS(projections$WGS84))
+
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
       samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
-      point.sample <- sp::spTransform(targetPoints2[samp2],
-                                      sp::CRS(resampleProjection))
+      point.sample <- targetPoints2[samp2]
       # point.sample <- array(apply(targetPoints@coords[animal.sample[toSample], , drop = FALSE], 1,
       #                             MASS::mvrnorm, n=nSim, Sigma=geoVCov),
       #                       c(nSim, 2, length(toSample))) - geoBias2
@@ -162,7 +167,8 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
         seq(from = 0, by = nSim, length.out = length(toSample))
       target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
       if (any(!is.na(good.sample)))
-        target.point.sample[toSample[!is.na(good.sample)], ]<- point.sample[good.sample[!is.na(good.sample)]]@coords
+        target.point.sample[toSample[!is.na(good.sample)],1]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,1]
+        target.point.sample[toSample[!is.na(good.sample)],2]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,2]
       toSample <- which(is.na(target.sample))
     }
     if (!is.null(maxTries) && draws > maxTries)
