@@ -115,7 +115,7 @@ assignments <- raster::stack(assignments)
 assign2prob <- assignments/raster::cellStats(assignments,sum)
 
 if(dataFrame == TRUE){
-assing2probDF <- dataFrame(raster::rasterToPoints(assign2prob))
+assing2probDF <- data.frame(raster::rasterToPoints(assign2prob))
 }
 
 oddsFun <- function(x,odds = odds){
@@ -151,11 +151,19 @@ dimnames(xysim)[[3]] <- names(assign2prob)
 
 matvals <- raster::rasterToPoints(assign2prob)
 
-for(i in 1:nSim){
-  multidraw <- apply(matvals[,3:ncol(matvals)],2,FUN = function(x){rmultinom(n = 1, size = 1, prob = x)})
-  xysim[i,1,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
-  xysim[i,2,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
-}
+# system.time(for(i in 1:nSim){
+#   multidraw <- apply(matvals[,3:ncol(matvals)],2,FUN = function(x){rmultinom(n = 1, size = 1, prob = x)})
+#   xysim[i,1,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+#   xysim[i,2,] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+# })
+
+system.time(for(i in 3:ncol(matvals)){
+  multidraw <- rmultinom(n = nSim, size = 1, prob = matvals[, i])
+  xysim[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+  xysim[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+})
+
+
 }
 
 if(return == "probability" & dataFrame == FALSE){return(assign2prob)}
