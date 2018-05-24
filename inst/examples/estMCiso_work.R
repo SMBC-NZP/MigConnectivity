@@ -11,6 +11,7 @@ OVENvals <- OVENvals[grep(OVENvals[,1],pattern = "NH", invert = TRUE),]
 nSamples <- 1000
 nAnimals <- nrow(OVENvals)
 
+set.seed(122)
 a <- Sys.time()
 b <- isoAssign(isovalues = OVENvals[,2],
                isoSTD = 12,
@@ -26,7 +27,8 @@ b <- isoAssign(isovalues = OVENvals[,2],
                return = "sim.cell",
                element = "Hydrogen",
                surface = FALSE,
-               period = "Annual")
+               period = "Annual",
+               restrict2Likely = TRUE)
 Sys.time()-a
 
 str(b)
@@ -56,6 +58,48 @@ for(i in 1:nSamples) {
                                      proj4string = CRS(targetSites@proj4string@projargs)),
                        targetSites)
 }
+
+# What is proportion of simulated points not in targetSites, with restrict2Likely TRUE?
+sum(is.na(results)) / length(results)
+# [1] 0.07018543
+
+set.seed(122)
+a <- Sys.time()
+b <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = FALSE,
+               odds = NULL,
+               SingleCellAssign = TRUE,
+               nSamples = nSamples,
+               dataFrame = FALSE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "sim.cell",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = FALSE)
+Sys.time()-a
+
+results <- array(NA, c(nAnimals, nSamples))
+for(i in 1:nSamples) {
+  results[, i] <- over(SpatialPoints(t(b[i, , ]),
+                                     proj4string = CRS(targetSites@proj4string@projargs)),
+                       targetSites)
+}
+
+# What is proportion of simulated points not in targetSites, with restrict2Likely FALSE?
+sum(is.na(results)) / length(results)
+# Same:
+# [1] 0.07018543
+
+# Plot points that aren't in targetSites only
+notIn <- which(is.na(t(results)), arr.ind = T)
+plot(targetSites)
+for (i in 1:nrow(notIn))
+  plot(SpatialPoints(t(b[notIn[i,1],,notIn[i,2]])),add = TRUE, pch = 19)
 
 Countries <- shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
 JAM <- Countries[Countries$NAME == "Jamaica",]
@@ -105,9 +149,9 @@ system.time(MC <- estMC(targetDist = targetDist,
             originNames = NULL,
             targetNames = NULL,
             nSamples = 100,
-            verbose = 1,
+            verbose = 2,
             nSim = 5,
-            calcCorr=TRUE,
+            calcCorr = TRUE,
             alpha = 0.05,
             approxSigTest = F,
             sigConst = 0,
@@ -119,3 +163,116 @@ str(MC)
 
 (mcDiff <- diffMC(list(OVEN1 = Combined, OVEN2 = MC)))
 (rMDiff <- diffMantel(list(OVEN1 = Combined, OVEN2 = MC)))
+
+object.size(b)
+bp <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = FALSE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = FALSE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "probability",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(bp)
+bpd <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = FALSE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = TRUE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "probability",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(bpd)
+bo <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = TRUE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = FALSE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "odds",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(bo)
+bod <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = TRUE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = TRUE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "odds",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(bod)
+pop <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = TRUE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = FALSE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "population",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(pop)
+popd <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               oddsRatio = TRUE,
+               odds = NULL,
+               SingleCellAssign = F,
+               nSamples = nSamples,
+               dataFrame = TRUE,
+               sppShapefile = OVENdist,
+               assignExtent = NULL,
+               return = "population",
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               restrict2Likely = TRUE)
+object.size(popd)
+print(object.size(b), units = "Mb")
+print(object.size(bp), units = "Mb")
+print(object.size(pop), units = "Mb")
+print(object.size(bpd), units = "Mb")
+print(object.size(popd), units = "Mb")
+print(object.size(b) + object.size(bp) + object.size(bo) + object.size(pop), units = "Mb")
+print(object.size(b) + object.size(bpd) + object.size(bod) + object.size(popd), units = "Mb")
+print(object.size(b) + object.size(bp) + object.size(bo) + object.size(pop) +
+  object.size(bpd) + object.size(bod) + object.size(popd), units = "Mb")

@@ -52,8 +52,6 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
                          maxTries = 300) {
   nAnimals <- length(targetPoints)
 
-  WGS84 <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
   # targetDist1 <- matrix(NA, nAnimals, nAnimals)
   #
   # targetDist1[lower.tri(targetDist1)] <- 1

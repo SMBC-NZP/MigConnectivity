@@ -83,7 +83,7 @@ isoAssign <- function(isovalues,
                       period = "Annual"){
 
   # quick input check #
-if(!return %in% c("probability","population","odds","sim.cell")){
+if(!(return %in% c("probability","population","odds","sim.cell"))){
   stop("return must be either probability, population, odds, or sim.cell")}
 
 # download isoscape map
@@ -174,6 +174,7 @@ if (SingleCellAssign == TRUE) {
     xysim[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
   }
 }
+
 #What should be returned
 if(return == "probability" & dataFrame == FALSE){return(assign2prob)}
 if(return == "probability" & dataFrame == TRUE){return(assign2probDF)}
