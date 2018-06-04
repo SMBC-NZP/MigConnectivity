@@ -104,7 +104,8 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
               bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = NULL, pointCorr = NULL,
               meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
-              simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize))
+              simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
+              alpha = alpha, sigConst = sigConst))
 }
 
 ###############################################################################
@@ -310,7 +311,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
               sampleCorr = corr, pointCorr = pointCorr,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize))
+              inputSampleSize = sampleSize,
+              alpha = alpha, sigConst = sigConst))
 }
 
 ###############################################################################
@@ -353,9 +355,12 @@ estMCisotope <- function(targetDist,
     stop('If calcCorr is TRUE, need to define originPoints')}
 
   if ((is.null(targetPoints) || is.null(targetSites)) && is.null(targetAssignment)){
-    stop("Need to define either targetAssignment or targetSites and targetPoints")}
+    stop("Need to define targetPoints and either targetAssignment or targetSites")}
 
-  nAnimals <- dim(targetPoints)[3]
+  if (!inherits(targetPoints, 'isoAssign'))
+    stop("targetPoints should be output of isoAssign when isIntrinsic == TRUE")
+
+  pointsAssigned <- !(is.null(targetPoints$SingleCell) || is.na(targetPoints$SingleCell))
 
   if(class(originSites)=="SpatialPolygonsDataFrame"){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
@@ -363,6 +368,24 @@ estMCisotope <- function(targetDist,
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
+
+  nAnimals <- ifelse(pointsAssigned, dim(targetPoints$SingleCell)[3], dim(targetPoints$probassign)[3])
+  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+
+  if (pointsAssigned && !is.null(targetSites)) {
+    nSamples <- dim(targetPoints$SingleCell)[1]
+    overlay <- array(NA, c(nAnimals, nSamples))
+    for(i in 1:nSamples) {
+      overlay[, i] <- over(SpatialPoints(t(targetPoints$SingleCell[i, , ]),
+                                         proj4string = CRS(targetSites@proj4string@projargs)),
+                           targetSites)
+    }
+    if (any(is.na(overlay)))
+      pointsAssigned <- FALSE
+  }
+  else
+    overlay <- NULL
+
   #if (is.null(targetAssignment))
   #  targetAssignment <- sp::over(targetPoints, targetSites)
   nOriginSites <- length(unique(originAssignment))
@@ -387,7 +410,6 @@ estMCisotope <- function(targetDist,
   #}
 
 
-  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
 
   if (is.null(targetNames))
     targetNames <- names(targetSites)
@@ -444,10 +466,12 @@ estMCisotope <- function(targetDist,
     }
 
     # Resample from points for each animal
-    tSamp <- targetSampleIsotope(targetPoints = targetPoints, animal.sample = animal.sample,
-                          targetSites = targetSites,
-                          resampleProjection = resampleProjection, nSim = nSim,
-                          maxTries = maxTries)
+    tSamp <- targetSampleIsotope(targetPoints = targetPoints,
+                                 animal.sample = animal.sample,
+                                 targetSites = targetSites,
+                                 resampleProjection = resampleProjection, nSim = nSim,
+                                 maxTries = maxTries, pointsAssigned = pointsAssigned,
+                                 overlay = overlay)
 
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
@@ -517,7 +541,8 @@ estMCisotope <- function(targetDist,
               sampleCorr = corr, pointCorr = NA,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
               simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize))
+              inputSampleSize = sampleSize,
+              alpha = alpha, sigConst = sigConst))
 }
 
 ###############################################################################
@@ -733,9 +758,10 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                         alpha = alpha, approxSigTest = approxSigTest,
                         sigConst = sigConst)
   }
-  class(mc) <- ifelse(calcCorr & !is.null(psi),
-                      c("estMC", "estMantel", "estMigConnectivity"),
-                      c("estMC", "estMigConnectivity"))
+  if (calcCorr & is.null(psi))
+    class(mc) <- c("estMC", "estMantel", "estMigConnectivity")
+  else
+    class(mc) <- c("estMC", "estMigConnectivity")
   return(mc)
 }
 
@@ -898,7 +924,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
                         meanCorr = meanCorr, medianCorr = medianCorr,
                         seCorr=seCorr, simpleCICorr=simpleCICorr,
-                        bcCICorr=bcCICorr),
+                        bcCICorr=bcCICorr, alpha = alpha),
                    class = c("estMantel", "estMigConnectivity")))
 }
 
@@ -1008,7 +1034,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        hpdCI = hpdCI, sampleDiff = sampleDiff),
+                        hpdCI = hpdCI, sampleDiff = sampleDiff, alpha = alpha),
                    class = c('diffMC', 'diffMigConnectivity')))
 }
 
@@ -1092,6 +1118,6 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        hpdCI = hpdCI, sampleDiff = sampleDiff),
+                        hpdCI = hpdCI, sampleDiff = sampleDiff, alpha = alpha),
                    class = c('diffMantel', 'diffMigConnectivity')))
 }

@@ -17,14 +17,14 @@ b <- isoAssign(isovalues = OVENvals[,2],
                isoSTD = 12,
                intercept = -10,
                slope = 0.8,
-               oddsRatio = FALSE,
-               odds = NULL,
-               SingleCellAssign = TRUE,
+               #oddsRatio = FALSE,
+               #odds = NULL,
+               #SingleCellAssign = TRUE,
                nSamples = nSamples,
-               dataFrame = FALSE,
+               #dataFrame = FALSE,
                sppShapefile = OVENdist,
                assignExtent = NULL,
-               return = "sim.cell",
+               #return = "sim.cell",
                element = "Hydrogen",
                surface = FALSE,
                period = "Annual",
@@ -54,7 +54,7 @@ plot(SpatialPoints(t(b[1,,])),add = TRUE, pch = 19)
 
 results <- array(NA, c(nAnimals, nSamples))
 for(i in 1:nSamples) {
-  results[, i] <- over(SpatialPoints(t(b[i, , ]),
+  results[, i] <- over(SpatialPoints(t(b$SingleCell[i, , ]),
                                      proj4string = CRS(targetSites@proj4string@projargs)),
                        targetSites)
 }
@@ -85,7 +85,7 @@ Sys.time()-a
 
 results <- array(NA, c(nAnimals, nSamples))
 for(i in 1:nSamples) {
-  results[, i] <- over(SpatialPoints(t(b[i, , ]),
+  results[, i] <- over(SpatialPoints(t(b$SingleCell[i, , ]),
                                      proj4string = CRS(targetSites@proj4string@projargs)),
                        targetSites)
 }
@@ -160,6 +160,7 @@ system.time(MC <- estMC(targetDist = targetDist,
             isIntrinsic = TRUE))
 
 str(MC)
+summary(MC, digits = 2)
 
 (mcDiff <- diffMC(list(OVEN1 = Combined, OVEN2 = MC)))
 (rMDiff <- diffMantel(list(OVEN1 = Combined, OVEN2 = MC)))

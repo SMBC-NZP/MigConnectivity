@@ -8,11 +8,10 @@ a probability surface of origin assignment from a vector of stable-isotope value
 Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
 waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}}
 \usage{
-isoAssign(isovalues, isoSTD, intercept, slope, oddsRatio = FALSE,
-  odds = NULL, SingleCellAssign = FALSE, restrict2Likely = TRUE,
-  nSamples = NULL, dataFrame = FALSE, sppShapefile = NULL,
-  assignExtent = c(-179, -60, 15, 89), return = "probability",
-  element = "Hydrogen", surface = FALSE, period = "Annual")
+isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
+  restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
+  assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
+  surface = FALSE, period = "Annual")
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}
@@ -23,8 +22,6 @@ isoAssign(isovalues, isoSTD, intercept, slope, oddsRatio = FALSE,
 
 \item{slope}{value from calibration}
 
-\item{oddsRatio}{logical to convert probability into odds ratio}
-
 \item{odds}{if \code{oddsRatio} the odds ratio to use to set likely and unlikely locations}
 
 \item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the most probable assignment
@@ -32,18 +29,11 @@ locations if \code{singleCellAssign = TRUE}. Only used when \code{oddsRatio = TR
 
 \item{nSamples}{integer specifying how many random samples to draw from a multinomial distribution.}
 
-\item{dataFrame}{logical defining whether to return results as a data.frame. If FALSE (default) returns a
-raster layer.}
-
 \item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
 areas.}
 
 \item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
-
-\item{return}{which assignment map to return. 'probability' returns assignment probability.
-'odds' returns a single map for each isovalue as likely or unlikely assignment. 'population'
-the population level assignment (sum of all 'odds').}
 
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
@@ -56,11 +46,18 @@ of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
 
-\item{singleCellAssign}{if TRUE generates \code{nSamples} single location assignments using a multinomial
-distribution using the assignment probability.}
+\item{dataFrame}{logical defining whether to return results as a data.frame. If FALSE (default) returns a
+raster layer.}
 }
 \value{
-raster stack, raster layer or data.frame if \code{dataFrame = TRUE} of assignment probabilites
+returns an \code{isoAssign} object containing the following:
+    1. raster stack of individual probabilistic assignments,
+    2. raster stack that includes likely vs unlikely origin for each animal,
+    3. a raster for population level assignment (sum of # 2),
+    4. data.frame of individual probability surfaces,
+    5. data.frame of likely vs unlikley surfaces,
+    6. data.frame of population level assignment &
+    7. array of coordinates (longitude,latitude) for single cell assignment
 }
 \description{
 isoAssign

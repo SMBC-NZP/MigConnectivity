@@ -128,26 +128,31 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
 # Samples from isotope target points
 # Called by estMCisotope
 targetSampleIsotope <- function(targetPoints, animal.sample,
-                         nSim, targetSites = NULL,
+                         nSim = 10, targetSites = NULL,
                          resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
-                         maxTries = 300) {
+                         maxTries = 300, pointsAssigned = FALSE,
+                         overlay = NULL) {
   # Here is a catch to save Mike from himself
-  if(is.null(nSim)){nSim<-1000}
-  nAnimals <- dim(targetPoints)[3]
-  # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
-  nrandomDraws <- dim(targetPoints)[1]
+  #if(is.null(nSim)){nSim<-1000}
+  if (pointsAssigned) {
+    nAnimals <- dim(targetPoints$SingleCell)[3]
+    # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
+    nrandomDraws <- dim(targetPoints$SingleCell)[1]
 
-  # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
-  targetPoints1 <- array(aperm(targetPoints, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
+    # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
+    targetPoints1 <- array(aperm(targetPoints$SingleCell, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
 
-  # project target points to WGS #
-  targetPoints2 <- sp::SpatialPoints(targetPoints1, proj4string = sp::CRS(projections$WGS84))
-
+    # project target points to WGS #
+    targetPoints2 <- sp::SpatialPoints(targetPoints1, proj4string = sp::CRS(projections$WGS84))
+  }
+  else {
+    nAnimals <- dim(targetPoints$probassign)[3]
+  }
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   toSample <- 1:nAnimals
   # In this case, only need to draw once, as no limits on where points can be
-  if (is.null(targetSites)) {
+  if (pointsAssigned) {
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
     samp2 <- samp + (toSample - 1) * nrandomDraws
@@ -155,6 +160,10 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     # Changed to make sure x,y coords stack correctly
     target.point.sample[toSample,1]<- point.sample@coords[,1]
     target.point.sample[toSample,2]<- point.sample@coords[,2]
+  }
+  else if (is.null(targetSites)) {
+    draws <- 1
+
   }
   else {
     draws <- 0
