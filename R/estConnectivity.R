@@ -691,39 +691,52 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   maxTries = 300,
                   isIntrinsic = FALSE) {
   if (is.null(psi)) {
-    if(isIntrinsic){
-      return(estMCisotope(targetDist = targetDist,originRelAbund = originRelAbund,targetPoints = targetPoints,
-                      targetSites = targetSites,sampleSize = sampleSize,targetAssignment=targetAssignment,
-                      originPoints=originPoints,originSites=originSites,originDist = originDist,
-                      originAssignment=originAssignment,originNames=originNames,targetNames=targetNames,
-                      nBoot = nSamples,verbose=verbose,nSim = nSim,calcCorr=calcCorr,alpha = alpha,
-                      approxSigTest = approxSigTest,sigConst = sigConst,resampleProjection = resampleProjection,
-                      maxTries = maxTries))
-    }else{
-    return(estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
-                      originRelAbund=originRelAbund, sampleSize = sampleSize,
-                      originDist=originDist,
-                      targetDist=targetDist,
-                      targetPoints=targetPoints, targetSites=targetSites,
-                      targetAssignment=targetAssignment,
-                      originPoints=originPoints, originSites=originSites,
-                      originAssignment=originAssignment,
-                      originNames=originNames, targetNames=targetNames,
-                      nBoot = nSamples, verbose=verbose,
-                      nSim = nSim, calcCorr=calcCorr, alpha = alpha,
-                      approxSigTest = approxSigTest, sigConst = sigConst,
-                      resampleProjection = resampleProjection,
-                      maxTries = maxTries))}
+    if(isIntrinsic) {
+      mc <- estMCisotope(targetDist = targetDist,
+                         originRelAbund = originRelAbund,
+                         targetPoints = targetPoints,
+                         targetSites = targetSites, sampleSize = sampleSize,
+                         targetAssignment = targetAssignment,
+                         originPoints=originPoints, originSites=originSites,
+                         originDist = originDist,
+                         originAssignment = originAssignment,
+                         originNames = originNames, targetNames = targetNames,
+                         nBoot = nSamples, verbose = verbose, nSim = nSim,
+                         calcCorr=calcCorr, alpha = alpha,
+                         approxSigTest = approxSigTest, sigConst = sigConst,
+                         resampleProjection = resampleProjection,
+                         maxTries = maxTries)
+    }
+    else {
+      mc <- estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                       originRelAbund=originRelAbund, sampleSize = sampleSize,
+                       originDist=originDist,
+                       targetDist=targetDist,
+                       targetPoints=targetPoints, targetSites=targetSites,
+                       targetAssignment=targetAssignment,
+                       originPoints=originPoints, originSites=originSites,
+                       originAssignment=originAssignment,
+                       originNames=originNames, targetNames=targetNames,
+                       nBoot = nSamples, verbose=verbose,
+                       nSim = nSim, calcCorr=calcCorr, alpha = alpha,
+                       approxSigTest = approxSigTest, sigConst = sigConst,
+                       resampleProjection = resampleProjection,
+                       maxTries = maxTries)
+    }
   }
   else {
-    return(estMCCmrAbund(originRelAbund = originRelAbund,
-                         sampleSize = sampleSize, psi = psi,
-                         originDist = originDist, targetDist = targetDist,
-                         originSites=originSites, targetSites=targetSites,
-                         nSamples = nSamples, row0 = row0, verbose=verbose,
-                         alpha = alpha, approxSigTest = approxSigTest,
-                         sigConst = sigConst))
+    mc <- estMCCmrAbund(originRelAbund = originRelAbund,
+                        sampleSize = sampleSize, psi = psi,
+                        originDist = originDist, targetDist = targetDist,
+                        originSites=originSites, targetSites=targetSites,
+                        nSamples = nSamples, row0 = row0, verbose=verbose,
+                        alpha = alpha, approxSigTest = approxSigTest,
+                        sigConst = sigConst)
   }
+  class(mc) <- ifelse(calcCorr & !is.null(psi),
+                      c("estMC", "estMantel", "estMigConnectivity"),
+                      c("estMC", "estMigConnectivity"))
+  return(mc)
 }
 
 #' Estimate Mantel correlation (rM) from geolocator and/or GPS data.
@@ -882,9 +895,11 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8)
-  return(list(sampleCorr = corr, pointCorr = pointCorr,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr))
+  return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
+                        meanCorr = meanCorr, medianCorr = medianCorr,
+                        seCorr=seCorr, simpleCICorr=simpleCICorr,
+                        bcCICorr=bcCICorr),
+                   class = c("estMantel", "estMigConnectivity")))
 }
 
 ###############################################################################
@@ -990,13 +1005,11 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
   colnames(simpleCI) <- colnames(bcCI) <- colnames(hpdCI) <- names(diffSamples)
-  if (returnSamples)
-    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
-                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                sampleDiff = diffSamples))
-  else
-    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
-                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI))
+  sampleDiff <- ifelse(returnSamples, diffSamples, NA)
+  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
+                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
+                        hpdCI = hpdCI, sampleDiff = sampleDiff),
+                   class = c('diffMC', 'diffMigConnectivity')))
 }
 
 #' Pairwise differences between two or more independent Mantel correlation
@@ -1076,11 +1089,9 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
   colnames(simpleCI) <- colnames(bcCI) <- colnames(hpdCI) <- names(diffSamples)
-  if (returnSamples)
-    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
-                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                sampleDiff = diffSamples))
-  else
-    return(list(meanDiff = meanDiff, medianDiff = medianDiff, seDiff = seDiff,
-                simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI))
+  sampleDiff <- ifelse(returnSamples, diffSamples, NA)
+  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
+                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
+                        hpdCI = hpdCI, sampleDiff = sampleDiff),
+                   class = c('diffMantel', 'diffMigConnectivity')))
 }
