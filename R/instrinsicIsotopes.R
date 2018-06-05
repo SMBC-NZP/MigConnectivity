@@ -194,6 +194,7 @@ for(i in 3:ncol(matvals)) {
     xysimulation[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
     xysimulation[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
     # check to see which are in the distribution and which fall outside
+    if(!is.null(sppShapefile)){
     randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i-2],xysimulation[,2,i-2]),
                                     sp::CRS(sppShapefile@proj4string@projargs))
     inout <- sp::over(randpoints,sppShapefile)
@@ -202,7 +203,11 @@ for(i in 3:ncol(matvals)) {
     samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
     xysim[,1,i-2] <- InDist@coords[samplecoords,1]
     xysim[,1,i-2] <- InDist@coords[samplecoords,2]
-
+    }else{
+    randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
+    xysim[,1,i-2] <- xysimulation[randsamples,1,i-2]
+    xysim[,2,i-2] <- xysimulation[randsamples,2,i-2]
+    }
     # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
   #samplenum <- 1
   #while(numInDist<nSamples){
