@@ -11,7 +11,7 @@ waters into a 'tissuescape' using a user-provided intercept, slope and standard 
 isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
   assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
-  surface = FALSE, period = "Annual")
+  surface = FALSE, period = "Annual", seed = NULL)
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}
@@ -45,6 +45,8 @@ which returns the isotopes ratio found in precipitation.}
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
+
+\item{seed}{numeric value fed to \code{set.seed} for random number generation. Default = NULL.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:

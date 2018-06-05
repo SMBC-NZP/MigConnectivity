@@ -203,7 +203,7 @@ for(i in 3:ncol(matvals)) {
     InDist <- randpoints[which(inout$INOUT == 1),]
     samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
     xysim[,1,i-2] <- InDist@coords[samplecoords,1]
-    xysim[,1,i-2] <- InDist@coords[samplecoords,2]
+    xysim[,2,i-2] <- InDist@coords[samplecoords,2]
     }else{
     randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
     xysim[,1,i-2] <- xysimulation[randsamples,1,i-2]
