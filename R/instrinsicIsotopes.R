@@ -9,12 +9,10 @@
 #' @param isoSTD standard deviation from calibration
 #' @param intercept intercept value from calibration
 #' @param slope value from calibration
-#' @param odds if \code{oddsRatio} the odds ratio to use to set likely and unlikely locations
-#' @param restrict2Likely if \code{TRUE} restricts locations to fall within the most probable assignment
-#'        locations if \code{singleCellAssign = TRUE}. Only used when \code{oddsRatio = TRUE}.
+#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.33
+#' @param restrict2Likely if \code{TRUE} restricts locations to fall within the 'likely' assignment
+#'        locations.
 #' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
-#' @param dataFrame logical defining whether to return results as a data.frame. If FALSE (default) returns a
-#'        raster layer.
 #' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
 #'        areas.
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
@@ -29,13 +27,13 @@
 #'      \code{element} of interest.
 #'
 #' @return returns an \code{isoAssign} object containing the following:
-#'     1. raster stack of individual probabilistic assignments,
-#'     2. raster stack that includes likely vs unlikely origin for each animal,
-#'     3. a raster for population level assignment (sum of # 2),
-#'     4. data.frame of individual probability surfaces,
-#'     5. data.frame of likely vs unlikley surfaces,
-#'     6. data.frame of population level assignment &
-#'     7. array of coordinates (longitude,latitude) for single cell assignment
+#'     1. \code{probassign} raster stack of individual probabilistic assignments,
+#'     2. \code{oddsassign} raster stack that includes likely vs unlikely origin for each animal,
+#'     3. \code{popassign} a raster for population level assignment (sum of # 2),
+#'     4. \code{probDF} data.frame of individual probability surfaces,
+#'     5. \code{oddsDF} data.frame of likely vs unlikley surfaces,
+#'     6. \code{popDF} data.frame of population level assignment &
+#'     7. \code{SingeCell} array of coordinates (longitude,latitude) for single cell assignment
 #'
 #' @export
 #'
@@ -98,6 +96,7 @@ cat("\n Restricting possible assignments to species distribution \n")
 
 # mask the isomap to sppShapefile
 isomap <- raster::mask(isomap, sppShapefile)
+isomap <- raster::crop(isomap, sppShapefile)
 }
 
 # generate a 'feather'/animal isoscape

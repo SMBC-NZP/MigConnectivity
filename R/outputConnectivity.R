@@ -1,4 +1,9 @@
 #' @export
+is.isoAssign <- function(x) inherits(x, "isoAssign")
+is.estMC <- function(x) inherits(x, "estMC")
+
+#' @export
+print <- function(x,...) UseMethod("print")
 print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("Migratory Connectivity Strength Estimate(s)\n")
@@ -41,8 +46,50 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
 }
 
 #' @export
+summary <- function(x,...) UseMethod("summary")
 summary.estMigConnectivity <- function(x, ...)
 {
   print.estMigConnectivity(x, ...)
 }
 
+summary.isoAssign<-function(x, ...){
+  cat("Individual Probability Surfaces \n")
+  print(x$probassign,...)
+  cat("\n Individual likely/unlikely Surfaces \n")
+  print(x$oddsassign,...)
+  cat("\n Population-level assignment Surface \n")
+  print(x$popassign,...)
+  cat("\n Individual Probability data frame* \n")
+  print(x$probDF[1:6,1:5])
+  cat("\n Individual likely/unlikely data frame* \n")
+  print(x$oddsDF[1:6,1:5])
+  cat("\n Individual single cell assignment \n")
+  str(x$SingleCell)
+  cat("\n * only first few columns are printed")
+}
+
+#' basic plot function for the different isoAssign outputs
+#' @export
+plot <- function(x,...) UseMethod("plot")
+plot.isoAssign <- function(x,map,...){
+  if(!(map %in% c("probability","population","odds"))){
+    stop("map must be either probability, population, or odds")}
+  op <- par(no.readonly = TRUE)
+  if(map == "population"){
+    raster::plot(x$popassign,horiz = TRUE,...)
+  }
+  if(map == "probability"){
+    for(i in 1:raster::nlayers(x$probassign)){
+      raster::plot(x$probassign[[i]],horiz = TRUE,...)
+      par(ask = TRUE)
+    }
+    par(op)
+  }
+  if(map == "odds"){
+    for(i in 1:raster::nlayers(x$probassign)){
+      raster::plot(x$oddsassign[[i]],horiz = TRUE,...)
+      par(ask = TRUE)
+    }
+    par(op)
+  }
+}
