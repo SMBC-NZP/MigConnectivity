@@ -25,6 +25,7 @@
 #'     of mean annual values in precipitation for the \code{element}. If
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
+#' @param seed numeric value fed to \code{set.seed} for random number generation. Default = NULL.
 #'
 #' @return returns an \code{isoAssign} object containing the following:
 #'     1. \code{probassign} raster stack of individual probabilistic assignments,

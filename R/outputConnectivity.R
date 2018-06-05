@@ -63,8 +63,8 @@ summary.isoAssign<-function(x, ...){
   print(x$oddsDF[1:6,1:5])
   cat("\n Individual single cell assignment \n")
   str(x$SingleCell)
-  cat("\ Random number seed set to \n")
-  print(x$seed)
+  cat("\n Random number seed set to: \n")
+  print(x$RandomSeed)
   cat("\n * only first few columns are printed")
 
 }
