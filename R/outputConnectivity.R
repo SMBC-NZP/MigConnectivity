@@ -47,10 +47,8 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
 
 #' @export
 summary <- function(x,...) UseMethod("summary")
-summary.estMigConnectivity <- function(x, ...)
-{
-  print.estMigConnectivity(x, ...)
-}
+
+summary.estMigConnectivity <- function(x, ...){print.estMigConnectivity(x, ...)}
 
 summary.isoAssign<-function(x, ...){
   cat("Individual Probability Surfaces \n")
@@ -65,7 +63,10 @@ summary.isoAssign<-function(x, ...){
   print(x$oddsDF[1:6,1:5])
   cat("\n Individual single cell assignment \n")
   str(x$SingleCell)
+  cat("\ Random number seed set to \n")
+  print(x$seed)
   cat("\n * only first few columns are printed")
+
 }
 
 #' basic plot function for the different isoAssign outputs
@@ -92,4 +93,5 @@ plot.isoAssign <- function(x,map,...){
     }
     par(op)
   }
+  on.exit(par(op))
 }

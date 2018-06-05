@@ -72,7 +72,8 @@ isoAssign <- function(isovalues,
                       assignExtent = c(-179,-60,15,89),
                       element = "Hydrogen",
                       surface = FALSE,
-                      period = "Annual"){
+                      period = "Annual",
+                      seed = NULL){
 # download isoscape map
 isomap <- getIsoMap(element = element, surface = surface, period = period)
 
@@ -93,6 +94,8 @@ if(!is.null(sppShapefile)){
   }
 
 cat("\n Restricting possible assignments to species distribution \n")
+
+sppShapefile$INOUT<-1
 
 # mask the isomap to sppShapefile
 isomap <- raster::mask(isomap, sppShapefile)
@@ -159,9 +162,15 @@ SamplePopDF <- data.frame(raster::rasterToPoints(SamplePop))
 
 # SINGLE CELL PROBABILITY ASSIGNMENTS - this makes MC possible with isotopes
 if (is.null(nSamples)){ nSamples <- 1000}
+if(is.null(seed)){seed <- as.numeric(Sys.time())}
 
+# Set random number generator to replicate results
+set.seed(seed)
 
 # generate empty array to fill with locations
+# make a simulated array twice the size to weed out locations
+# that fall outside of distribution
+xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,raster::nlayers(assign2prob)))
 xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
 # name the array
   #dimnames(xysim)[[1]] <- 1:nSamples
@@ -178,10 +187,49 @@ if(restrict2Likely){
 
 cat("\n Generating single cell assignments \n")
   # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
+
 for(i in 3:ncol(matvals)) {
-    multidraw <- rmultinom(n = nSamples, size = 1, prob = matvals[,i])
-    xysim[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
-    xysim[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+
+    multidraw <- rmultinom(n = nSamples+floor((nSamples/2)), size = 1, prob = matvals[,i])
+    xysimulation[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+    xysimulation[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+    # check to see which are in the distribution and which fall outside
+    randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i-2],xysimulation[,2,i-2]),
+                                    sp::CRS(sppShapefile@proj4string@projargs))
+    inout <- sp::over(randpoints,sppShapefile)
+    # How many are in
+    InDist <- randpoints[which(inout$INOUT == 1),]
+    samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
+    xysim[,1,i-2] <- InDist@coords[samplecoords,1]
+    xysim[,1,i-2] <- InDist@coords[samplecoords,2]
+
+    # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
+  #samplenum <- 1
+  #while(numInDist<nSamples){
+   # if(verbose){cat(samplenum," resampling events to ensure points fall within distribution \n")}
+   # identify which rows need new points
+   # NeedsNewPoints <- which(is.na(inout$INOUT),arr.ind = TRUE)
+   # how many are needed
+   # NumNewDraws <- length(NeedsNewPoints)
+   # sample 1000 new draws
+   # NewDraws <- rmultinom(n = nSamples, size = 1, prob = matvals[,i])
+   # take a subsample of the new draws of size NumNewDraws
+   # subsample <- sample(x = which(NewDraws == 1,arr.ind = TRUE)[,1],
+   #                     size = NumNewDraws,
+   #                     replace = FALSE)
+
+   # fill with the subsample
+   # xysim[NeedsNewPoints,1,i-2] <- matvals[subsample,1]
+   # xysim[NeedsNewPoints,2,i-2] <- matvals[subsample,2]
+
+   # check to see which are in the distribution and which fall outside
+   # inout <- sp::over(sp::SpatialPoints(cbind(xysim[,1,i-2],xysim[,2,i-2]),
+   #                                     sp::CRS(sppShapefile@proj4string@projargs)),sppShapefile)
+   # How many are in
+   # numInDist <- sum(inout$INOUT,na.rm = TRUE)
+   # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
+   # samplenum <- samplenum+1
+  #}
 }
 
 
@@ -191,11 +239,13 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         probDF = assign2probDF,
                         oddsDF = step2DF,
                         popDF = SamplePopDF,
-                        SingleCell = xysim),
+                        SingleCell = xysim,
+                        RandomSeed = seed),
                         class = "isoAssign")
 
 
 cat("\n Done \n")
+cat("\n Random number seed used = ", seed,"\n")
 return(isoAssignReturn)
 }
 
