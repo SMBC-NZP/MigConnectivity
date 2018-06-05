@@ -131,7 +131,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
                          nSim = 10, targetSites = NULL,
                          resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
                          maxTries = 300, pointsAssigned = FALSE,
-                         overlay = NULL) {
+                         targCon = NULL, pointsInSites = FALSE) {
   # Here is a catch to save Mike from himself
   #if(is.null(nSim)){nSim<-1000}
   if (pointsAssigned) {
@@ -148,11 +148,14 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
   else {
     nAnimals <- dim(targetPoints$probassign)[3]
   }
+  if (!pointsInSites)
+    # converts raster to matrix of XY then probs
+    matvals <- raster::rasterToPoints(targetPoints$probassign)
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   toSample <- 1:nAnimals
-  # In this case, only need to draw once, as no limits on where points can be
-  if (pointsAssigned) {
+  # In this case, only need to draw once, because already determined that points fall in targetSites
+  if (pointsInSites) {
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
     samp2 <- samp + (toSample - 1) * nrandomDraws
@@ -160,37 +163,70 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     # Changed to make sure x,y coords stack correctly
     target.point.sample[toSample,1]<- point.sample@coords[,1]
     target.point.sample[toSample,2]<- point.sample@coords[,2]
+    if (!is.null(targCon))
+      # Grab the relevant target sites
+      target.sample[toSample] <- targCon[samp2]
   }
+  # In this case, only need to draw once, as no limits on where points can be
   else if (is.null(targetSites)) {
     draws <- 1
-
+    # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
+    for(i in 3:ncol(matvals)) {
+      animals <- which(animal.sample==i - 2)
+      if (length(animals) > 0) {
+        multidraw <- rmultinom(n = length(animals), size = 1, prob = matvals[,i])
+        target.point.sample[animals,1] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+        target.point.sample[animals,2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+      }
+    }
   }
   else {
     draws <- 0
     # Make sure targetSites are WGS84
     targetSites <- sp::spTransform(targetSites, sp::CRS(projections$WGS84))
-
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
-      # Select nSim points for each animal still to be sampled
-      samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
-      samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
-      point.sample <- targetPoints2[samp2]
-      # Check which points are in target sites
-      target.sample0 <- sp::over(point.sample, y = targetSites)
-      # Organize into matrix (separate by animal)
-      target.sample1 <- matrix(target.sample0, nSim, length(toSample))
-      # Identify which animals have a valid point (inside a target site).
-      # good.sample, for those that don't, will be NA. For those that do, it
-      # will be location in point.sample where first valid point is.
-      good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1]) +
-        seq(from = 0, by = nSim, length.out = length(toSample))
-      # Put in target sites of animals with valid points sampled
-      target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
-      # Put in target points of animals with valid points sampled
-      if (any(!is.na(good.sample))) {
-        target.point.sample[toSample[!is.na(good.sample)],1]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,1]
-        target.point.sample[toSample[!is.na(good.sample)],2]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,2]
+      if (!pointsAssigned) {
+        # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
+        for(i in 3:ncol(matvals)) {
+          animals <- which(animal.sample[toSample]==i - 2)
+          if (length(animals) > 0) {
+            multidraw <- rmultinom(n = length(animals)*nSim, size = 1, prob = matvals[,i])
+            point.sample <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
+            point.sample1 <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(projections$WGS84))
+            # Check which points are in target sites
+            target.sample0 <- sp::over(point.sample1, y = targetSites)
+            good.sample <- which(!is.na(target.sample0))
+            nToFill <- min(length(good.sample), length(animals))
+            if (nToFill > 0) {
+              target.sample[animals[1:nToFill]] <- target.sample0[good.sample[1:nToFill]]
+              target.point.sample[animals[1:nToFill], 1] <- point.sample[good.sample[1:nToFill], 1]
+              target.point.sample[animals[1:nToFill], 2] <- point.sample[good.sample[1:nToFill], 2]
+            }
+          }
+        }
+      }
+      else {
+        # Select nSim points for each animal still to be sampled
+        samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
+        samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
+        point.sample <- targetPoints2[samp2]
+        # Check which points are in target sites
+        target.sample0 <- sp::over(point.sample, y = targetSites)
+        # Organize into matrix (separate by animal)
+        target.sample1 <- matrix(target.sample0, nSim, length(toSample))
+        # Identify which animals have a valid point (inside a target site).
+        # good.sample, for those that don't, will be NA. For those that do, it
+        # will be location in point.sample where first valid point is.
+        good.sample <- apply(target.sample1, 2, function(x) which(!is.na(x))[1]) +
+          seq(from = 0, by = nSim, length.out = length(toSample))
+        # Put in target sites of animals with valid points sampled
+        target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
+        # Put in target points of animals with valid points sampled
+        if (any(!is.na(good.sample))) {
+          target.point.sample[toSample[!is.na(good.sample)],1]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,1]
+          target.point.sample[toSample[!is.na(good.sample)],2]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,2]
+        }
       }
       toSample <- which(is.na(target.sample))
     }

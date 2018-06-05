@@ -1,9 +1,11 @@
 #' @export
 is.isoAssign <- function(x) inherits(x, "isoAssign")
+#' @export
 is.estMC <- function(x) inherits(x, "estMC")
 
+# @export
+#print <- function(x,...) UseMethod("print")
 #' @export
-print <- function(x,...) UseMethod("print")
 print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("Migratory Connectivity Strength Estimate(s)\n")
@@ -45,13 +47,15 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
   }
 }
 
+# @export
+#summary <- function(x,...) UseMethod("summary")
 #' @export
-summary <- function(x,...) UseMethod("summary")
 summary.estMigConnectivity <- function(x, ...)
 {
   print.estMigConnectivity(x, ...)
 }
 
+#' @export
 summary.isoAssign<-function(x, ...){
   cat("Individual Probability Surfaces \n")
   print(x$probassign,...)
@@ -69,8 +73,9 @@ summary.isoAssign<-function(x, ...){
 }
 
 #' basic plot function for the different isoAssign outputs
+# @export
+#plot <- function(x,...) UseMethod("plot")
 #' @export
-plot <- function(x,...) UseMethod("plot")
 plot.isoAssign <- function(x,map,...){
   if(!(map %in% c("probability","population","odds"))){
     stop("map must be either probability, population, or odds")}
