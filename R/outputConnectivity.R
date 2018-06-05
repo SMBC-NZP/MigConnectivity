@@ -69,7 +69,10 @@ summary.isoAssign<-function(x, ...){
   print(x$oddsDF[1:6,1:5])
   cat("\n Individual single cell assignment \n")
   str(x$SingleCell)
+  cat("\n Random number seed set to: \n")
+  print(x$RandomSeed)
   cat("\n * only first few columns are printed")
+
 }
 
 #' basic plot function for the different isoAssign outputs
@@ -97,4 +100,5 @@ plot.isoAssign <- function(x,map,...){
     }
     par(op)
   }
+  on.exit(par(op))
 }
