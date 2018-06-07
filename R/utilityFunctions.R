@@ -173,6 +173,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       # Select nSim points for each animal still to be sampled
+      if(!exists("nrandomDraws")){nrandomDraws <- 1000}
       samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
       samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
       point.sample <- targetPoints2[samp2]
