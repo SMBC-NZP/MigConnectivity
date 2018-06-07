@@ -31,7 +31,7 @@ b <- isoAssign(isovalues = OVENvals[,2],
                restrict2Likely = TRUE)
 Sys.time()-a
 
-str(b)
+summary(b)
 
 OVENdist <- rgeos::gUnaryUnion(OVENdist, id = OVENdist$ORIGIN)
 

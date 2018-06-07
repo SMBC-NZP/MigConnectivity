@@ -11,7 +11,7 @@ waters into a 'tissuescape' using a user-provided intercept, slope and standard 
 isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
   assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
-  surface = FALSE, period = "Annual")
+  surface = FALSE, period = "Annual", seed = NULL)
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}
@@ -22,10 +22,10 @@ isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
 
 \item{slope}{value from calibration}
 
-\item{odds}{if \code{oddsRatio} the odds ratio to use to set likely and unlikely locations}
+\item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.33}
 
-\item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the most probable assignment
-locations if \code{singleCellAssign = TRUE}. Only used when \code{oddsRatio = TRUE}.}
+\item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the 'likely' assignment
+locations.}
 
 \item{nSamples}{integer specifying how many random samples to draw from a multinomial distribution.}
 
@@ -46,18 +46,17 @@ of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
 
-\item{dataFrame}{logical defining whether to return results as a data.frame. If FALSE (default) returns a
-raster layer.}
+\item{seed}{numeric value fed to \code{set.seed} for random number generation. Default = NULL.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:
-    1. raster stack of individual probabilistic assignments,
-    2. raster stack that includes likely vs unlikely origin for each animal,
-    3. a raster for population level assignment (sum of # 2),
-    4. data.frame of individual probability surfaces,
-    5. data.frame of likely vs unlikley surfaces,
-    6. data.frame of population level assignment &
-    7. array of coordinates (longitude,latitude) for single cell assignment
+    1. \code{probassign} raster stack of individual probabilistic assignments,
+    2. \code{oddsassign} raster stack that includes likely vs unlikely origin for each animal,
+    3. \code{popassign} a raster for population level assignment (sum of # 2),
+    4. \code{probDF} data.frame of individual probability surfaces,
+    5. \code{oddsDF} data.frame of likely vs unlikley surfaces,
+    6. \code{popDF} data.frame of population level assignment &
+    7. \code{SingeCell} array of coordinates (longitude,latitude) for single cell assignment
 }
 \description{
 isoAssign

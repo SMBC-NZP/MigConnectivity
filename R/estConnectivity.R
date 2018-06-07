@@ -372,19 +372,20 @@ estMCisotope <- function(targetDist,
   nAnimals <- ifelse(pointsAssigned, dim(targetPoints$SingleCell)[3], dim(targetPoints$probassign)[3])
   targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
 
+  pointsInSites <- FALSE
   if (pointsAssigned && !is.null(targetSites)) {
     nSamples <- dim(targetPoints$SingleCell)[1]
-    overlay <- array(NA, c(nAnimals, nSamples))
+    targCon <- array(NA, c(nSamples, nAnimals))
     for(i in 1:nSamples) {
-      overlay[, i] <- over(SpatialPoints(t(targetPoints$SingleCell[i, , ]),
+      targCon[i, ] <- over(SpatialPoints(t(targetPoints$SingleCell[i, , ]),
                                          proj4string = CRS(targetSites@proj4string@projargs)),
                            targetSites)
     }
-    if (any(is.na(overlay)))
-      pointsAssigned <- FALSE
+    if (!any(is.na(targCon)))
+      pointsInSites <- TRUE
   }
   else
-    overlay <- NULL
+    targCon <- NULL
 
   #if (is.null(targetAssignment))
   #  targetAssignment <- sp::over(targetPoints, targetSites)
@@ -471,7 +472,7 @@ estMCisotope <- function(targetDist,
                                  targetSites = targetSites,
                                  resampleProjection = resampleProjection, nSim = nSim,
                                  maxTries = maxTries, pointsAssigned = pointsAssigned,
-                                 overlay = overlay)
+                                 targCon = targCon, pointsInSites = pointsInSites)
 
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
