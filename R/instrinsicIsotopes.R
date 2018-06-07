@@ -9,12 +9,15 @@
 #' @param isoSTD standard deviation from calibration
 #' @param intercept intercept value from calibration
 #' @param slope value from calibration
-#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.33
+#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.67
 #' @param restrict2Likely if \code{TRUE} restricts locations to fall within the 'likely' assignment
 #'        locations.
 #' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
 #' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
 #'        areas.
+#' @param relativeAbun raster with relative abundance (must match extent of isotope assignment)
+#' @param isoWght weighting value to apply to isotope assignment \see{weightAssign}
+#' @param abunWght weighting value to apply to relative abundance prior \see{weightAssign}
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
 #' @param element The elemental isotope of interest. Currently the only
@@ -66,10 +69,13 @@ isoAssign <- function(isovalues,
                       isoSTD,
                       intercept,
                       slope,
-                      odds = 0.33,
+                      odds = 0.67,
                       restrict2Likely = TRUE,
                       nSamples = NULL,
                       sppShapefile = NULL,
+                      relativeAbun = NULL,
+                      isoWght = NULL,
+                      abunWght = NULL,
                       assignExtent = c(-179,-60,15,89),
                       element = "Hydrogen",
                       surface = FALSE,
@@ -102,7 +108,19 @@ sppShapefile$INOUT<-1
 isomap <- raster::mask(isomap, sppShapefile)
 isomap <- raster::crop(isomap, sppShapefile)
 }
-
+if(!is.null(relativeAbun) && !inherits(relativeAbun,"RasterLayer")){stop("relativeAbun should be a raster layer")}
+if(!is.null(relativeAbun) && inherits(relativeAbun,"RasterLayer")){
+# if isomap and relativeAbun don't have the same resolution and/or extent
+# change to relativeAbun to match isomap
+if(!raster::compareRaster(isomap,relativeAbun, values = FALSE)){
+# project to match isomap
+relativeAbun <- raster::projectRaster(relativeAbun,isomap)
+# re-scale to ensure sums to 1
+relativeAbun <- relativeAbun/raster::cellStats(relativeAbun,sum)
+}
+# if relativeAbun isn't a probability surface - generate probability surface #
+if(raster::cellStats(relativeAbun,sum)!=1){relativeAbun <- relativeAbun/raster::cellStats(relativeAbun,sum)}
+}
 # generate a 'feather'/animal isoscape
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
 
@@ -120,6 +138,28 @@ assignments <- raster::stack(assignments)
 # Transform the assignments into a true probability surface #
 assign2prob <- assignments/raster::cellStats(assignments, sum)
 
+# Weighted Assignments
+if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && is.null(abunWght)){
+cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")
+assign2prob <- assign2prob*relativeAbun
+assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
+}
+if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && !is.null(abunWght)){
+cat("\n Creating weighted posterior assignments \n")
+assign2prob <- (assign2prob^isoWght)*(relativeAbun^abunWght)
+assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
+}
+
+if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && !is.null(abunWght)){
+cat("\n Creating posterior abundance weighted assignments \n")
+assign2prob <- assign2prob*(relativeAbun^abunWght)
+assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
+}
+if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && is.null(abunWght)){
+cat("\n Creating posterior isotope weighted assignments \n")
+assign2prob <- (assign2prob^isoWght)*relativeAbun
+assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
+}
 # Create a dataframe with XY coords and probabilites for each animal
 assign2probDF <- data.frame(raster::rasterToPoints(assign2prob))
 
@@ -127,30 +167,24 @@ assign2probDF <- data.frame(raster::rasterToPoints(assign2prob))
 oddsFun <- function(x,odds = odds){
   predict(smooth.spline(x = cumsum(sort(x)),
                         sort(x),
-                        spar = 0.1),odds)$y
+                        spar = 0.1),(1-odds))$y
 }
 
 # if odds is left null - use default of 0.33
- if (is.null(odds)){odds <- 0.33}
+if (is.null(odds)){odds <- 0.67}
 
 # extract values from the probability assignment
-matvals <- raster::values(assign2prob)
+matvals <- raster::rasterToPoints(assign2prob)
 
 cat("\n Generating likely vs unlikely assignments \n")
 # apply the odds function
-cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
+
+cuts <- apply(matvals[,3:ncol(matvals)],2,FUN = oddsFun,odds = odds)
 
 # reclassify the rasters based on likely v unlikely
-step1 <- mapply(FUN=function(x,y){raster::reclassify(assign2prob[[x]],cbind(0,y,0))},
-                x = 1:raster::nlayers(assign2prob),
-                y=cuts)
-step1 <- raster::stack(step1)
-step2 <- mapply(FUN=function(x,y){raster::reclassify(step1[[x]],cbind(y,1,1))},
-                x = 1:raster::nlayers(step1),
-                y=cuts)
-step2 <- raster::stack(step2)
-#step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
-#step2 <- raster::reclassify(step1,cbind(cuts,1,1))
+
+step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
+step2 <- raster::reclassify(step1,cbind(cuts,1,1))
 
 # convert to dataframe
 LikelyUnlikely <- raster::rasterToPoints(step2)
@@ -179,7 +213,7 @@ xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
   dimnames(xysim)[[3]] <- names(assign2prob)
 
 # converts raster to matrix of XY then probs
-matvals <- raster::rasterToPoints(assign2prob)
+#matvals <- raster::rasterToPoints(assign2prob)
 
 # Restrict random point estimates to 'likely' origin area #
 if(restrict2Likely){
@@ -203,7 +237,7 @@ for(i in 3:ncol(matvals)) {
     InDist <- randpoints[which(inout$INOUT == 1),]
     samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
     xysim[,1,i-2] <- InDist@coords[samplecoords,1]
-    xysim[,1,i-2] <- InDist@coords[samplecoords,2]
+    xysim[,2,i-2] <- InDist@coords[samplecoords,2]
     }else{
     randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
     xysim[,1,i-2] <- xysimulation[randsamples,1,i-2]
@@ -472,3 +506,241 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   }
 
 }
+
+#'Calculate Weights for Isotope Assignments
+#' weightAssign
+#'
+#' The primary purpose of this function is to determine whether weighting likelihood based isotope assignments
+#' and prior information, such as relative abundance can improve the model performance compared to the
+#' isotope-only model. To do this, we raise the likelihood and prior values to powers from 10^−1
+#' to 10 and measure model performance using the assignment error rate and assignment area. Weights < 1 flatten
+#' the likelihood/prior distributions (giving relatively more weight to smaller values) and weights > 1
+#' sharpen the distributions (giving relatively less weight to smaller values. The \code{weightAssign} function
+#' generates origin assignments using stable-hydrogen isotopes in tissue. If first generates
+#' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample
+#' captured at a known location. Probabilistic assignments are constructed by first converting observed
+#' stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
+#' a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+#'
+#'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 2017} for more information.
+#'
+#' @param knownlocs matrix of capture locations of the same length as \code{isovalues}
+#' @param isovalues vector of tissue isotope values from known locations
+#' @param isoSTD standard deviation from calibration
+#' @param intercept intercept value from calibration
+#' @param slope value from calibration
+#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.67
+#' @param relativeAbundance raster layer of relative abundance that sums to 1.
+#' @param weightRange vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
+#'        Default = c(-1,1)
+#' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
+#'        areas.
+#' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
+#'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
+#' @param element The elemental isotope of interest. Currently the only
+#'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
+#' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
+#'     which returns the isotopes ratio found in precipitation.
+#' @param period The time period of interest. If 'Annual' returns a raster
+#'     of mean annual values in precipitation for the \code{element}. If
+#'     'GrowingSeason' returns growing season values in precipitation for
+#'      \code{element} of interest.
+#'
+#' @return returns an \code{weightAssign} object containing the following:
+#'     1. \code{top} data.frame with the optimal weightings,
+#'     2. \code{frontier} data.frame with values that fall along the Pareto frontier,
+#'     3. \code{performance} data.frame with error rate and assignment area for each weight combination
+#'
+#' @export
+#'
+#' @example
+#' \dontrun{
+#' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+#' crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#'
+#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#'
+#' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
+#' knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
+#'
+#' download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+#' unzip("oven.zip")
+#' oven_dist <- raster::shapefile("ra06740.shp")
+#'
+#' # Empty raster with the same dimensions as isoscape and Ovenbird distribution
+#' r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
+#'                     xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
+#'                     crs = MigConnectivity::projections$WGS84)
+#'
+#' relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
+#' relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
+#'
+#BE <- weightAssign(knownLocs = knownLocs,
+#'                  isovalues = HBEFbirds[,2],
+#'                  isoSTD = 12,
+#'                  intercept = -10,
+#'                  slope = 0.8,
+#'                  odds = 0.67,
+#'                  relativeAbundance = relativeAbund,
+#'                  weightRange = c(-1,1),
+#'                  sppShapefile = OVENdist,
+#'                  assignExtent = c(-179,-60,15,89),
+#'                  element = "Hydrogen",
+#'                  surface = FALSE,
+#'                  period = "Annual")
+#'}
+weightAssign <- function(knownLocs,
+                         isovalues,
+                         isoSTD,
+                         intercept,
+                         slope,
+                         odds = 0.67,
+                         relativeAbundance,
+                         weightRange = c(-1,1),
+                         sppShapefile = NULL,
+                         assignExtent = c(-179,-60,15,89),
+                         element = "Hydrogen",
+                         surface = FALSE,
+                         period = "Annual"){
+a <- Sys.time()
+  # Check to make sure knownLocs are added by user
+  if(is.null(knownLocs)){
+    stop("Known locations are needed to determine weighted assignemnts")}
+  if(nrow(knownLocs)!=length(isovalues)){
+    stop("A known location (knownLocs) is needed for each isotope value (isovalues)")
+  }
+  # download isoscape map
+  isomap <- getIsoMap(element = element, surface = surface, period = period)
+
+  # 1. if sppShapefile == NULL - use extent option
+  if(is.null(sppShapefile)){
+    isomap <- raster::crop(isomap,raster::extent(assignExtent))
+  }
+
+  # Series of checks for a species range map inputs
+  if(!is.null(sppShapefile)){
+    # 2. if sppShapefile provided check that it has a projection defined
+    #    if not stop - if so, mask the isoscape to range
+    if(is.na(raster::crs(sppShapefile))){
+      stop("coordinate system needed for sppShapefile")}
+    # 3. if the projections don't match - project into same as isomap then mask
+    if(sppShapefile@proj4string@projargs != isomap@crs@projargs){
+      sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
+    }
+
+    cat("\n Restricting possible assignments to species distribution \n")
+
+    sppShapefile$INOUT<-1
+
+    # mask the isomap to sppShapefile
+    isomap <- raster::mask(isomap, sppShapefile)
+    isomap <- raster::crop(isomap, sppShapefile)
+  }
+
+  # generate a 'feather'/animal isoscape
+  animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
+
+  # spatially explicit assignment
+  assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
+
+  # apply the assignment function to all input values
+  cat("\n Generating probabilistic assignments \n")
+
+  assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
+
+  # stack the assignment probabilities into a single raster stack
+  assignments <- raster::stack(assignments)
+    # Transform the assignments into a true probability surface #
+  assignIsoprob <- assignments/raster::cellStats(assignments, sum)
+
+  # function to make an odds ratio (likely vs unlikely) assignment
+  oddsFun <- function(x,odds = odds){
+    predict(smooth.spline(x = cumsum(sort(x)),
+                          sort(x),
+                          spar = 0.1),(1-odds))$y
+  }
+    # if odds is left null - use default of 0.67
+  if (is.null(odds)){odds <- 0.67}
+
+  # HERE IS WHERE TO IMPLEMENT THE WEIGHTED ASSIGNMENT
+  # The weighting scheme
+  weight_range <-seq(from = weightRange[1], to = weightRange[2], by = .1)
+  weights <-expand.grid(x = 10 ^ weight_range, y = 10 ^ weight_range)
+  weights <- rbind(data.frame(x=1,y=0),weights)
+  names(weights) <-c("iso_weight", "abun_weight")
+
+sum_weights <- vector('list',nrow(weights))
+cat("\n Interating through possible weighted assignments \n")
+pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
+for(i in 1:nrow(weights)){
+  utils::setTxtProgressBar(pb, i)
+    tempAssign <- (assignIsoprob^weights$iso_weight[i])*
+                  (relativeAbundance^weights$abun_weight[i])
+
+    tempAssign <- tempAssign/raster::cellStats(tempAssign,sum)
+
+    matvalsWeight <- raster::rasterToPoints(tempAssign)
+
+    cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
+
+    step1 <- stack(raster::reclassify(tempAssign,cbind(0,cuts,0)))
+    step2 <- stack(raster::reclassify(step1,cbind(cuts,1,1)))
+
+    correctAssign <- diag(extract(step2,knownLocs))
+    errorRate <- 1-mean(correctAssign)
+    areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
+
+sum_weights[[i]] <- data.frame(isoWeight=log(weights$iso_weight[i],base = 10),
+                              abunWeight=log(weights$abun_weight[i],base = 10),
+                              error = errorRate,
+                              area = mean(areaAssign))
+}
+close(pb)
+bind_weights <- do.call('rbind',sum_weights)
+
+matvalsWeight <- raster::rasterToPoints(assignIsoprob)
+
+cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
+
+step1 <- stack(raster::reclassify(assignIsoprob,cbind(0,cuts,0)))
+step2 <- stack(raster::reclassify(step1,cbind(cuts,1,1)))
+
+correctAssign <- diag(extract(step2,knownLocs))
+errorRate <- 1-mean(correctAssign)
+areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
+
+sum_weight <- data.frame(isoWeight=1,
+                         abunWeight=NA,
+                         error = errorRate,
+                         area = mean(areaAssign))
+
+iso_performance <- rbind(sum_weight,bind_weights)
+iso_performance$area_percent <- iso_performance$area/max(iso_performance$area)
+
+pareto <- function(df){
+  df.sorted <- df[with(df,order(df$error, df$area_percent)),]
+  front <- df.sorted[which(!duplicated(cummin(df.sorted$area_percent))),]
+  return(front)
+}
+top_assign <- function(front, df){
+  baseline <- df[is.na(df$abunWeight),]
+  error_base <- baseline$error
+  area_base <- baseline$area_percent
+  top <- front[(front$error < error_base  & front$area_percent < area_base),]
+  return(top)
+}
+
+cat("\n finding optimal assignment weights \n")
+frontier <-pareto(iso_performance)
+
+top <-top_assign(front = frontier, df = iso_performance)
+
+b <- Sys.time()-a
+cat("\n Done: calculation took", b,attributes(b)$units,"\n")
+return(structure(list(top = top,
+                      frontier = frontier,
+                      performance = iso_performance), class = "weightAssign"))
+
+}
+
