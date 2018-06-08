@@ -8,8 +8,9 @@ a probability surface of origin assignment from a vector of stable-isotope value
 Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
 waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}}
 \usage{
-isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
+isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
+  relativeAbun = NULL, isoWght = NULL, abunWght = NULL,
   assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
   surface = FALSE, period = "Annual", seed = NULL)
 }
@@ -22,7 +23,7 @@ isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.33,
 
 \item{slope}{value from calibration}
 
-\item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.33}
+\item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.67}
 
 \item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the 'likely' assignment
 locations.}
@@ -31,6 +32,12 @@ locations.}
 
 \item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
 areas.}
+
+\item{relativeAbun}{raster with relative abundance (must match extent of isotope assignment)}
+
+\item{isoWght}{weighting value to apply to isotope assignment \see{weightAssign}}
+
+\item{abunWght}{weighting value to apply to relative abundance prior \see{weightAssign}}
 
 \item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}

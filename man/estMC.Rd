@@ -120,7 +120,7 @@ Default is 0.}
 bias/error. This projection needs units = m. Default is Equidistant
 Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
-of \code{targetSites}.}
+of \code{targetSites}.  Ignored unless data are geolocator or GPS.}
 
 \item{maxTries}{Maximum number of times to run a single GL/intrinsic
 bootstrap before exiting with an error.  Default is 300.  Set to NULL to

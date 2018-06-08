@@ -341,7 +341,7 @@ estMCisotope <- function(targetDist,
                          alpha = 0.05,
                          approxSigTest = F,
                          sigConst = 0,
-                         resampleProjection = MigConnectivity::projections$EquidistConic,
+                         resampleProjection = MigConnectivity::projections$WGS84,
                          maxTries = 300) {
 
   # Input checking and assignment
@@ -372,6 +372,9 @@ estMCisotope <- function(targetDist,
   nAnimals <- ifelse(pointsAssigned, dim(targetPoints$SingleCell)[3], dim(targetPoints$probassign)[3])
   targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
 
+  if (length(originAssignment)!=nAnimals)
+    stop("originAssignment/originPoints should be the same length as targetPoints/targetAssignment (number of animals)")
+
   pointsInSites <- FALSE
   if (pointsAssigned && !is.null(targetSites)) {
     nSamples <- dim(targetPoints$SingleCell)[1]
@@ -383,6 +386,9 @@ estMCisotope <- function(targetDist,
     }
     if (!any(is.na(targCon)))
       pointsInSites <- TRUE
+    else if (verbose > 0)
+      cat('Single cell assignment points supplied, but some points (proportion',
+        sum(is.na(targCon))/length(targCon), ') not in targetSites\n')
   }
   else
     targCon <- NULL
@@ -465,7 +471,10 @@ estMCisotope <- function(targetDist,
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
-
+    if (verbose > 2)
+      cat("Origin sample complete, making target sample with",
+          ifelse(pointsAssigned, "points assigned,", "no points assigned,"),
+          ifelse(pointsInSites, "all points in sites\n", "not all points in sites\n"))
     # Resample from points for each animal
     tSamp <- targetSampleIsotope(targetPoints = targetPoints,
                                  animal.sample = animal.sample,
@@ -635,7 +644,7 @@ estMCisotope <- function(targetDist,
 #'    bias/error. This projection needs units = m. Default is Equidistant
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
-#'    of \code{targetSites}.
+#'    of \code{targetSites}.  Ignored unless data are geolocator or GPS.
 #' @param maxTries Maximum number of times to run a single GL/intrinsic
 #'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
 #'    never stop.  Thisparameter was added to prevent GL setups where some
@@ -730,7 +739,6 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                          nBoot = nSamples, verbose = verbose, nSim = nSim,
                          calcCorr=calcCorr, alpha = alpha,
                          approxSigTest = approxSigTest, sigConst = sigConst,
-                         resampleProjection = resampleProjection,
                          maxTries = maxTries)
     }
     else {
