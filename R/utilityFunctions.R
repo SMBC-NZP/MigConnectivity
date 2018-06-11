@@ -158,7 +158,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
   if (pointsInSites) {
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
-    samp2 <- samp + (toSample - 1) * nrandomDraws
+    samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
     point.sample <- targetPoints2[samp2]
     # Changed to make sure x,y coords stack correctly
     target.point.sample[toSample,1]<- point.sample@coords[,1]
