@@ -12,7 +12,7 @@ estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300, isIntrinsic = FALSE)
+  maxTries = 300, targetIntrinsic = NULL, isIntrinsic = FALSE)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -53,9 +53,7 @@ animals tracked.  Each point indicates the release location of an animal.}
 
 \item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} object, with
 length number ofanimals tracked.  Each point indicates the point estimate
-location in the non-release season. For isotope data, the results of
-\code{isoAssign} (an array with dimensions number of sampled points x 2 x
-number of animals).}
+location in the non-release season.}
 
 \item{originAssignment}{Assignment of \code{originPoints} to release season
 sites. Integer vector with length number of animals tracked. Optional,

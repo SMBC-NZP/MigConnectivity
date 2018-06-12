@@ -308,7 +308,7 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         popDF = SamplePopDF,
                         SingleCell = xysim,
                         RandomSeed = seed),
-                        class = "isoAssign")
+                        class = c("isoAssign", "intrinsicAssign"))
 
 
 if(verbose>0){cat("\n Done \n"); cat("\n Random number seed used = ", seed,"\n")}

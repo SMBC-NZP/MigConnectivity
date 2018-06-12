@@ -139,7 +139,7 @@ originPoints <- sp::spTransform(originPoints,sp::CRS(MigConnectivity::projection
 
 system.time(MC <- estMC(targetDist = targetDist,
             originRelAbund = originRelAbundance,
-            targetPoints = b,
+            targetIntrinsic = b,
             targetSites = targetSites,
             targetAssignment = NULL,
             originDist = originDist,

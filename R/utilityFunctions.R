@@ -127,7 +127,7 @@ targetSample <- function(isGL, geoBias, geoVCov, targetPoints, animal.sample,
 
 # Samples from isotope target points
 # Called by estMCisotope
-targetSampleIsotope <- function(targetPoints, animal.sample,
+targetSampleIsotope <- function(targetIntrinsic, animal.sample,
                          nSim = 10, targetSites = NULL,
                          resampleProjection = "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs",
                          maxTries = 300, pointsAssigned = FALSE,
@@ -135,22 +135,22 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
   # Here is a catch to save Mike from himself
   #if(is.null(nSim)){nSim<-1000}
   if (pointsAssigned) {
-    nAnimals <- dim(targetPoints$SingleCell)[3]
+    nAnimals <- dim(targetIntrinsic$SingleCell)[3]
     # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
-    nrandomDraws <- dim(targetPoints$SingleCell)[1]
+    nrandomDraws <- dim(targetIntrinsic$SingleCell)[1]
 
     # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
-    targetPoints1 <- array(aperm(targetPoints$SingleCell, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
+    targetIntrinsic1 <- array(aperm(targetIntrinsic$SingleCell, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
 
     # project target points to WGS #
-    targetPoints2 <- sp::SpatialPoints(targetPoints1, proj4string = sp::CRS(projections$WGS84))
+    targetIntrinsic2 <- sp::SpatialPoints(targetIntrinsic1, proj4string = sp::CRS(projections$WGS84))
   }
   else {
-    nAnimals <- dim(targetPoints$probassign)[3]
+    nAnimals <- dim(targetIntrinsic$probassign)[3]
   }
   if (!pointsInSites)
     # converts raster to matrix of XY then probs
-    matvals <- raster::rasterToPoints(targetPoints$probassign)
+    matvals <- raster::rasterToPoints(targetIntrinsic$probassign)
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   toSample <- 1:nAnimals
@@ -159,7 +159,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
     samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
-    point.sample <- targetPoints2[samp2]
+    point.sample <- targetIntrinsic2[samp2]
     # Changed to make sure x,y coords stack correctly
     target.point.sample[toSample,1]<- point.sample@coords[,1]
     target.point.sample[toSample,2]<- point.sample@coords[,2]
@@ -210,7 +210,7 @@ targetSampleIsotope <- function(targetPoints, animal.sample,
         # Select nSim points for each animal still to be sampled
         samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
         samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
-        point.sample <- targetPoints2[samp2]
+        point.sample <- targetIntrinsic2[samp2]
         # Check which points are in target sites
         target.sample0 <- sp::over(point.sample, y = targetSites)
         # Organize into matrix (separate by animal)

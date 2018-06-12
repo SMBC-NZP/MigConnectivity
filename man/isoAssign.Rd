@@ -12,7 +12,7 @@ isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
   relativeAbun = NULL, isoWght = NULL, abunWght = NULL,
   assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
-  surface = FALSE, period = "Annual", seed = NULL)
+  surface = FALSE, period = "Annual", seed = NULL, verbose = 1)
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}
@@ -54,6 +54,9 @@ of mean annual values in precipitation for the \code{element}. If
  \code{element} of interest.}
 
 \item{seed}{numeric value fed to \code{set.seed} for random number generation. Default = NULL.}
+
+\item{verbose}{takes values 0, 1 (default) or 2. 0 prints no output during run. 1 prints
+a message detailing where in the process the function is. 2 prints the animal currently being sampled.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:

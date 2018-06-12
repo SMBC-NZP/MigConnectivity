@@ -324,7 +324,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 ###############################################################################
 estMCisotope <- function(targetDist,
                          originRelAbund,
-                         targetPoints,
+                         targetIntrinsic,
                          targetSites,
                          sampleSize = NULL,
                          targetAssignment=NULL,
@@ -354,13 +354,13 @@ estMCisotope <- function(targetDist,
   if (calcCorr && is.null(originPoints)){
     stop('If calcCorr is TRUE, need to define originPoints')}
 
-  if ((is.null(targetPoints) || is.null(targetSites)) && is.null(targetAssignment)){
-    stop("Need to define targetPoints and either targetAssignment or targetSites")}
+  if ((is.null(targetIntrinsic) || is.null(targetSites)) && is.null(targetAssignment)){
+    stop("Need to define targetIntrinsic and either targetAssignment or targetSites")}
 
-  if (!inherits(targetPoints, 'isoAssign'))
-    stop("targetPoints should be output of isoAssign when isIntrinsic == TRUE")
+  if (!inherits(targetIntrinsic, 'isoAssign'))
+    stop("targetIntrinsic should be output of isoAssign when isIntrinsic == TRUE")
 
-  pointsAssigned <- !(is.null(targetPoints$SingleCell) || is.na(targetPoints$SingleCell))
+  pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
 
   if(class(originSites)=="SpatialPolygonsDataFrame"){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
@@ -369,18 +369,18 @@ estMCisotope <- function(targetDist,
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
 
-  nAnimals <- ifelse(pointsAssigned, dim(targetPoints$SingleCell)[3], dim(targetPoints$probassign)[3])
+  nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
   targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
 
   if (length(originAssignment)!=nAnimals)
-    stop("originAssignment/originPoints should be the same length as targetPoints/targetAssignment (number of animals)")
+    stop("originAssignment/originPoints should be the same length as targetIntrinsic/targetAssignment (number of animals)")
 
   pointsInSites <- FALSE
   if (pointsAssigned && !is.null(targetSites)) {
-    nSamples <- dim(targetPoints$SingleCell)[1]
+    nSamples <- dim(targetIntrinsic$SingleCell)[1]
     targCon <- array(NA, c(nSamples, nAnimals))
     for(i in 1:nSamples) {
-      targCon[i, ] <- over(SpatialPoints(t(targetPoints$SingleCell[i, , ]),
+      targCon[i, ] <- over(SpatialPoints(t(targetIntrinsic$SingleCell[i, , ]),
                                          proj4string = CRS(targetSites@proj4string@projargs)),
                            targetSites)
     }
@@ -393,14 +393,9 @@ estMCisotope <- function(targetDist,
   else
     targCon <- NULL
 
-  #if (is.null(targetAssignment))
-  #  targetAssignment <- sp::over(targetPoints, targetSites)
   nOriginSites <- length(unique(originAssignment))
   nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
 
-  #  if (length(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
-  #      length(originAssignment)!=nAnimals)
-  #    stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
 
   if (any(is.na(originAssignment)))
     stop("NAs in origin sites (make sure all points fall within polygons)")
@@ -412,9 +407,6 @@ estMCisotope <- function(targetDist,
     if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
-  #if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
-  #  stop('Coordinate system definition needed for targetSites & targetPoints')
-  #}
 
 
 
@@ -476,7 +468,7 @@ estMCisotope <- function(targetDist,
           ifelse(pointsAssigned, "points assigned,", "no points assigned,"),
           ifelse(pointsInSites, "all points in sites\n", "not all points in sites\n"))
     # Resample from points for each animal
-    tSamp <- targetSampleIsotope(targetPoints = targetPoints,
+    tSamp <- targetSampleIsotope(targetIntrinsic = targetIntrinsic,
                                  animal.sample = animal.sample,
                                  targetSites = targetSites,
                                  resampleProjection = resampleProjection, nSim = nSim,
@@ -593,9 +585,7 @@ estMCisotope <- function(targetDist,
 #'    animals tracked.  Each point indicates the release location of an animal.
 #' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
 #'    length number ofanimals tracked.  Each point indicates the point estimate
-#'    location in the non-release season. For isotope data, the results of
-#'    \code{isoAssign} (an array with dimensions number of sampled points x 2 x
-#'    number of animals).
+#'    location in the non-release season.
 #' @param originAssignment Assignment of \code{originPoints} to release season
 #'    sites. Integer vector with length number of animals tracked. Optional,
 #'    but if using GL or GPS data, either \code{originAssignment} or
@@ -649,6 +639,8 @@ estMCisotope <- function(targetDist,
 #'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
 #'    never stop.  Thisparameter was added to prevent GL setups where some
 #'    sample points never land on target sites from running indefinitely.
+#' @param targetIntrinsic For intrinsic tracking data, the results of
+#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign).
 #' @param isIntrinsic Logical indicating whether the animals are tracked via
 #'    intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 #'    connectivity for all intrinsically marked animals or all extrinsic (e.g.,
@@ -723,13 +715,13 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
-                  maxTries = 300,
+                  maxTries = 300, targetIntrinsic = NULL,
                   isIntrinsic = FALSE) {
   if (is.null(psi)) {
     if(isIntrinsic) {
       mc <- estMCisotope(targetDist = targetDist,
                          originRelAbund = originRelAbund,
-                         targetPoints = targetPoints,
+                         targetIntrinsic = targetIntrinsic,
                          targetSites = targetSites, sampleSize = sampleSize,
                          targetAssignment = targetAssignment,
                          originPoints=originPoints, originSites=originSites,
