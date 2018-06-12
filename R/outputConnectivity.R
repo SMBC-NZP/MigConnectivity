@@ -47,16 +47,9 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
   }
 }
 
-# @export
-#summary <- function(x,...) UseMethod("summary")
 #' @export
-summary.estMigConnectivity <- function(x, ...)
-{
-  print.estMigConnectivity(x, ...)
-}
-
-#' @export
-summary.isoAssign<-function(x, ...){
+print.instrinsicAssign <- function(x, digits = max(3L, getOption("digits") - 3L), ...){
+if(inherits(x,"isoAssign")){
   cat("Individual Probability Surfaces \n")
   print(x$probassign,...)
   cat("\n Individual likely/unlikely Surfaces \n")
@@ -72,33 +65,59 @@ summary.isoAssign<-function(x, ...){
   cat("\n Random number seed set to: \n")
   print(x$RandomSeed)
   cat("\n * only first few columns are printed")
+}
+}
+# @export
+#summary <- function(x,...) UseMethod("summary")
+#' @export
+summary.estMigConnectivity <- function(x, ...)
+{
+  print.estMigConnectivity(x, ...)
+}
 
+#' @export
+summary.intrinsicAssign<-function(x, ...){
+  print.intrinsicAssign(x,...)
 }
 
 #' basic plot function for the different isoAssign outputs
 # @export
 #plot <- function(x,...) UseMethod("plot")
 #' @export
+plot.intrinsicAssign <- function(x,map,...){
+  if(inherits(x,"isoAssign")){
 plot.isoAssign <- function(x,map,...){
-  if(!(map %in% c("probability","population","odds"))){
-    stop("map must be either probability, population, or odds")}
-  op <- par(no.readonly = TRUE)
-  if(map == "population"){
-    raster::plot(x$popassign,horiz = TRUE,...)
-  }
-  if(map == "probability"){
-    for(i in 1:raster::nlayers(x$probassign)){
-      raster::plot(x$probassign[[i]],horiz = TRUE,...)
-      par(ask = TRUE)
-    }
+    if(!(map %in% c("probability","population","odds"))){
+      stop("map must be either probability, population, or odds")}
+    op <- par(no.readonly = TRUE)
+    if(map == "population"){
+      raster::plot(x$popassign,horiz = TRUE,...)
+      }
+    if(map == "probability"){
+      for(i in 1:raster::nlayers(x$probassign)){
+        raster::plot(x$probassign[[i]],horiz = TRUE,...)
+        par(ask = TRUE)
+      }
     par(op)
-  }
-  if(map == "odds"){
-    for(i in 1:raster::nlayers(x$probassign)){
-      raster::plot(x$oddsassign[[i]],horiz = TRUE,...)
-      par(ask = TRUE)
     }
+    if(map == "odds"){
+      for(i in 1:raster::nlayers(x$probassign)){
+        raster::plot(x$oddsassign[[i]],horiz = TRUE,...)
+        par(ask = TRUE)
+      }
     par(op)
   }
   on.exit(par(op))
+  }
+  }
+ if(inherits(x,"weightAssign")){
+   par(bty = "L")
+   plot((x$performance$area/max(x$performance$area))~x$performance$error,
+        las = 1, ylab = "Assignment Area",
+        xlab = "Error",pch = 19, cex = 1.25, col = "gray")
+   points((x$frontier$area/max(x$performance$area))~x$frontier$error, col = "red", pch = 19, cex = 1.25)
+   points((x$top$area/max(x$performance$area))~x$top$error, col = "blue", pch = 19, cex = 1.25)
+ }
+
 }
+
