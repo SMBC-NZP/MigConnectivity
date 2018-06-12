@@ -29,7 +29,8 @@
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
 #' @param seed numeric value fed to \code{set.seed} for random number generation. Default = NULL.
-#'
+#' @param verbose takes values 0, 1 (default) or 2. 0 prints no output during run. 1 prints
+#'  a message detailing where in the process the function is. 2 prints the animal currently being sampled.
 #' @return returns an \code{isoAssign} object containing the following:
 #'     1. \code{probassign} raster stack of individual probabilistic assignments,
 #'     2. \code{oddsassign} raster stack that includes likely vs unlikely origin for each animal,
@@ -80,7 +81,11 @@ isoAssign <- function(isovalues,
                       element = "Hydrogen",
                       surface = FALSE,
                       period = "Annual",
-                      seed = NULL){
+                      seed = NULL,
+                      verbose=1){
+# force verbose to default when outside specified range.
+if(!(verbose %in% c(0,1,2))){verbose = 1}
+
 # download isoscape map
 isomap <- getIsoMap(element = element, surface = surface, period = period)
 
@@ -100,7 +105,7 @@ if(!is.null(sppShapefile)){
     sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
   }
 
-cat("\n Restricting possible assignments to species distribution \n")
+if(verbose>0){cat("\n Restricting possible assignments to species distribution \n")}
 
 sppShapefile$INOUT<-1
 
@@ -128,7 +133,7 @@ animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
 assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
 
 # apply the assignment function to all input values
-cat("\n Generating probabilistic assignments \n")
+if(verbose>0){cat("\n Generating probabilistic assignments \n")}
 
 assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
 
@@ -140,23 +145,23 @@ assign2prob <- assignments/raster::cellStats(assignments, sum)
 
 # Weighted Assignments
 if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && is.null(abunWght)){
-cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")
+  if(verbose>0){cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")}
 assign2prob <- assign2prob*relativeAbun
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && !is.null(abunWght)){
-cat("\n Creating weighted posterior assignments \n")
+  if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
 assign2prob <- (assign2prob^isoWght)*(relativeAbun^abunWght)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 
 if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && !is.null(abunWght)){
-cat("\n Creating posterior abundance weighted assignments \n")
+  if(verbose>0){cat("\n Creating posterior abundance weighted assignments \n")}
 assign2prob <- assign2prob*(relativeAbun^abunWght)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && is.null(abunWght)){
-cat("\n Creating posterior isotope weighted assignments \n")
+  if(verbose>0){cat("\n Creating posterior isotope weighted assignments \n")}
 assign2prob <- (assign2prob^isoWght)*relativeAbun
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
@@ -175,16 +180,29 @@ if (is.null(odds)){odds <- 0.67}
 
 # extract values from the probability assignment
 matvals <- raster::rasterToPoints(assign2prob)
+# XY coords of raster
+matvalsXY <- matvals[,1:2]
+# drop XY from matvals
+matvals <- matvals[,-(1:2)]
 
-cat("\n Generating likely vs unlikely assignments \n")
+if(verbose>0){cat("\n Generating likely vs unlikely assignments \n")}
 # apply the odds function
 
-cuts <- apply(matvals[,3:ncol(matvals)],2,FUN = oddsFun,odds = odds)
+cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
 
 # reclassify the rasters based on likely v unlikely
 
-step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
-step2 <- raster::reclassify(step1,cbind(cuts,1,1))
+step1 <- mapply(FUN = function(x,y){raster::reclassify(assign2prob[[x]],cbind(0,y,0))},
+                x = 1:raster::nlayers(assign2prob),
+                y = cuts)
+step1 <- raster::stack(step1)
+step2 <- mapply(FUN = function(x,y){raster::reclassify(step1[[x]],cbind(y,1,1))},
+                x = 1:raster::nlayers(step1),
+                y = cuts)
+step2 <- raster::stack(step2)
+
+#step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
+#step2 <- raster::reclassify(step1,cbind(cuts,1,1))
 
 # convert to dataframe
 LikelyUnlikely <- raster::rasterToPoints(step2)
@@ -217,31 +235,40 @@ xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
 
 # Restrict random point estimates to 'likely' origin area #
 if(restrict2Likely){
-    matvals[,3:ncol(matvals)] <- matvals[,3:ncol(matvals)] * LikelyUnlikely[,3:ncol(matvals)]
+    matvals<- matvals* LikelyUnlikely[,3:ncol(LikelyUnlikely)]
 }
 
-cat("\n Generating single cell assignments \n")
+  if(verbose>0){cat("\n Generating single cell assignments \n")}
   # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
-
-for(i in 3:ncol(matvals)) {
+ if(verbose>1){
+    cat("\b\b\b\b\b\b");
+    cat("\n      animal # ",sprintf("%3d",1),"\n");
+    flush.console()
+  }
+for(i in 1:ncol(matvals)) {
+  if(verbose>1){
+    cat("\b\b\b\b\b\b");
+    cat(sprintf("%3d",i),"\n");
+    flush.console()
+  }
 
     multidraw <- rmultinom(n = nSamples+floor((nSamples/2)), size = 1, prob = matvals[,i])
-    xysimulation[,1,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],1]
-    xysimulation[,2,i-2] <- matvals[which(multidraw == 1, arr.ind = TRUE)[,1],2]
+    xysimulation[,1,i] <- matvalsXY[which(multidraw == 1, arr.ind = TRUE)[,1],1]
+    xysimulation[,2,i] <- matvalsXY[which(multidraw == 1, arr.ind = TRUE)[,1],2]
     # check to see which are in the distribution and which fall outside
     if(!is.null(sppShapefile)){
-    randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i-2],xysimulation[,2,i-2]),
+    randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
                                     sp::CRS(sppShapefile@proj4string@projargs))
     inout <- sp::over(randpoints,sppShapefile)
     # How many are in
     InDist <- randpoints[which(inout$INOUT == 1),]
     samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
-    xysim[,1,i-2] <- InDist@coords[samplecoords,1]
-    xysim[,2,i-2] <- InDist@coords[samplecoords,2]
+    xysim[,1,i] <- InDist@coords[samplecoords,1]
+    xysim[,2,i] <- InDist@coords[samplecoords,2]
     }else{
     randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
-    xysim[,1,i-2] <- xysimulation[randsamples,1,i-2]
-    xysim[,2,i-2] <- xysimulation[randsamples,2,i-2]
+    xysim[,1,i] <- xysimulation[randsamples,1,i]
+    xysim[,2,i] <- xysimulation[randsamples,2,i]
     }
     # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
   #samplenum <- 1
@@ -284,8 +311,7 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         class = "isoAssign")
 
 
-cat("\n Done \n")
-cat("\n Random number seed used = ", seed,"\n")
+if(verbose>0){cat("\n Done \n"); cat("\n Random number seed used = ", seed,"\n")}
 return(isoAssignReturn)
 }
 
