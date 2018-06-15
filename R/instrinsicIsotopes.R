@@ -151,17 +151,21 @@ assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && !is.null(abunWght)){
   if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
+  isoWght <- 10^isoWght
+  abunWght <- 10^abunWght
 assign2prob <- (assign2prob^isoWght)*(relativeAbun^abunWght)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 
 if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && !is.null(abunWght)){
   if(verbose>0){cat("\n Creating posterior abundance weighted assignments \n")}
+  abunWght <- 10^abunWght
 assign2prob <- assign2prob*(relativeAbun^abunWght)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && is.null(abunWght)){
   if(verbose>0){cat("\n Creating posterior isotope weighted assignments \n")}
+  isoWght <- 10^isoWght
 assign2prob <- (assign2prob^isoWght)*relativeAbun
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
