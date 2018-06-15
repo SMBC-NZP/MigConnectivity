@@ -233,6 +233,7 @@ POPs[[p]] <- sum(pop_p)
 POPSdf[[p]] <- data.frame(raster::rasterToPoints(POPs[[p]]))
 }
 SamplePop <- stack(POPs)
+names(SamplePop)<-Pops
 SamplePopDF <- do.call('cbind',POPSdf)
 }
 
