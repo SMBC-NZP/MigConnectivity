@@ -18,6 +18,7 @@
 #' @param relativeAbun raster with relative abundance (must match extent of isotope assignment)
 #' @param isoWght weighting value to apply to isotope assignment \see{weightAssign}
 #' @param abunWght weighting value to apply to relative abundance prior \see{weightAssign}
+#' @param population vector identifying location where animal was captured. Same order as \code{isovalues}
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
 #' @param element The elemental isotope of interest. Currently the only
@@ -32,13 +33,16 @@
 #' @param verbose takes values 0, 1 (default) or 2. 0 prints no output during run. 1 prints
 #'  a message detailing where in the process the function is. 2 prints the animal currently being sampled.
 #' @return returns an \code{isoAssign} object containing the following:
-#'     1. \code{probassign} raster stack of individual probabilistic assignments,
-#'     2. \code{oddsassign} raster stack that includes likely vs unlikely origin for each animal,
-#'     3. \code{popassign} a raster for population level assignment (sum of # 2),
-#'     4. \code{probDF} data.frame of individual probability surfaces,
-#'     5. \code{oddsDF} data.frame of likely vs unlikley surfaces,
-#'     6. \code{popDF} data.frame of population level assignment &
-#'     7. \code{SingeCell} array of coordinates (longitude,latitude) for single cell assignment
+#'  \describe{
+#'   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
+#'   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
+#'   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
+#'   If \code{population} is vector then returns a raster stack for each unqiue \code{population} provided}
+#'   \item{\code{probDF}}{data.frame of individual probability surfaces}
+#'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
+#'   \item{\code{popDF}}{data.frame of population level assignment}
+#'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
+#'   }
 #'
 #' @export
 #'
@@ -77,6 +81,7 @@ isoAssign <- function(isovalues,
                       relativeAbun = NULL,
                       isoWght = NULL,
                       abunWght = NULL,
+                      population = NULL,
                       assignExtent = c(-179,-60,15,89),
                       element = "Hydrogen",
                       surface = FALSE,
@@ -212,10 +217,24 @@ step2 <- raster::stack(step2)
 LikelyUnlikely <- raster::rasterToPoints(step2)
 step2DF <- data.frame(LikelyUnlikely)
 
+if(is.null(population)){
 # Return the population level odds assignment - i.e, how many animals
 SamplePop <- sum(step2)
 # convert to dataframe
 SamplePopDF <- data.frame(raster::rasterToPoints(SamplePop))
+} else {
+nPop <- length(unique(population))
+Pops <- unique(population)
+POPs <- POPSdf <- vector("list",nPop)
+for(p in 1:nPop){
+aniPop <- which(population == Pops[p])
+pop_p <- step2[[aniPop]]
+POPs[[p]] <- sum(pop_p)
+POPSdf[[p]] <- data.frame(raster::rasterToPoints(POPs[[p]]))
+}
+SamplePop <- stack(POPs)
+SamplePopDF <- do.call('cbind',POPSdf)
+}
 
 # SINGLE CELL PROBABILITY ASSIGNMENTS - this makes MC possible with isotopes
 if (is.null(nSamples)){ nSamples <- 1000}
@@ -577,10 +596,11 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'      \code{element} of interest.
 #'
 #' @return returns an \code{weightAssign} object containing the following:
-#'     1. \code{top} data.frame with the optimal weightings,
-#'     2. \code{frontier} data.frame with values that fall along the Pareto frontier,
-#'     3. \code{performance} data.frame with error rate and assignment area for each weight combination
-#'
+#'   \describe{
+#'    \item{\code{top}}{data.frame with the optimal weightings}
+#'    \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
+#'    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
+#' }
 #' @export
 #'
 #' @example
