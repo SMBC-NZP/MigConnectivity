@@ -11,8 +11,9 @@ waters into a 'tissuescape' using a user-provided intercept, slope and standard 
 isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
   relativeAbun = NULL, isoWght = NULL, abunWght = NULL,
-  assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
-  surface = FALSE, period = "Annual", seed = NULL, verbose = 1)
+  population = NULL, assignExtent = c(-179, -60, 15, 89),
+  element = "Hydrogen", surface = FALSE, period = "Annual", seed = NULL,
+  verbose = 1)
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}
@@ -39,6 +40,8 @@ areas.}
 
 \item{abunWght}{weighting value to apply to relative abundance prior \see{weightAssign}}
 
+\item{population}{vector identifying location where animal was captured. Same order as \code{isovalues}}
+
 \item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
 
@@ -60,13 +63,16 @@ a message detailing where in the process the function is. 2 prints the animal cu
 }
 \value{
 returns an \code{isoAssign} object containing the following:
-    1. \code{probassign} raster stack of individual probabilistic assignments,
-    2. \code{oddsassign} raster stack that includes likely vs unlikely origin for each animal,
-    3. \code{popassign} a raster for population level assignment (sum of # 2),
-    4. \code{probDF} data.frame of individual probability surfaces,
-    5. \code{oddsDF} data.frame of likely vs unlikley surfaces,
-    6. \code{popDF} data.frame of population level assignment &
-    7. \code{SingeCell} array of coordinates (longitude,latitude) for single cell assignment
+ \describe{
+  \item{\code{probassign}}{raster stack of individual probabilistic assignments}
+  \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
+  \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
+  If \code{population} is vector then returns a raster stack for each unqiue \code{population} provided}
+  \item{\code{probDF}}{data.frame of individual probability surfaces}
+  \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
+  \item{\code{popDF}}{data.frame of population level assignment}
+  \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
+  }
 }
 \description{
 isoAssign

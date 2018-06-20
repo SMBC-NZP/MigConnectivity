@@ -47,9 +47,11 @@ of mean annual values in precipitation for the \code{element}. If
 }
 \value{
 returns an \code{weightAssign} object containing the following:
-    1. \code{top} data.frame with the optimal weightings,
-    2. \code{frontier} data.frame with values that fall along the Pareto frontier,
-    3. \code{performance} data.frame with error rate and assignment area for each weight combination
+  \describe{
+   \item{\code{top}}{data.frame with the optimal weightings}
+   \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
+   \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
+}
 }
 \description{
 The primary purpose of this function is to determine whether weighting likelihood based isotope assignments

@@ -48,7 +48,7 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
 }
 
 #' @export
-print.instrinsicAssign <- function(x, digits = max(3L, getOption("digits") - 3L), ...){
+print.intrinsicAssign <- function(x, digits = max(3L, getOption("digits") - 3L), ...){
 if(inherits(x,"isoAssign")){
   cat("Individual Probability Surfaces \n")
   print(x$probassign,...)
