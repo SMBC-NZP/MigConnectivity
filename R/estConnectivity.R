@@ -79,10 +79,11 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   medianMC <- median(sampleMC, na.rm=TRUE)
   seMC <- sd(sampleMC, na.rm=TRUE)
   # Calculate confidence intervals using quantiles of sampled MC
-  simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = F)
   z0 <- qnorm(sum((sampleMC)<meanMC)/nSamples)
   bcCI <- quantile(sampleMC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8)
+                       na.rm=TRUE, type = 8, names = F)
   MC.mcmc <- coda::as.mcmc(sampleMC) # Ha!
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
   if (!approxSigTest)
@@ -277,7 +278,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   }
   MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8)
+                       na.rm=TRUE, type = 8, names = F)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
   if (!approxSigTest)
@@ -297,16 +298,18 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     meanCorr <- mean(corr, na.rm=TRUE)
     medianCorr <- median(corr, na.rm=TRUE)
     seCorr <- sd(corr, na.rm=TRUE)
-    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                             names = F)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                           na.rm=TRUE, type = 8)
+                           na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
               pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
               medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
+              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                                  type = 8, names = F),
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = corr, pointCorr = pointCorr,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
@@ -509,7 +512,7 @@ estMCisotope <- function(targetDist,
   }
   MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                   na.rm=TRUE, type = 8)
+                   na.rm=TRUE, type = 8, names = F)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
   hpdCI <- coda::HPDinterval(MC.mcmc, 1-alpha)
   if (!approxSigTest)
@@ -529,16 +532,18 @@ estMCisotope <- function(targetDist,
     meanCorr <- mean(corr, na.rm=TRUE)
     medianCorr <- median(corr, na.rm=TRUE)
     seCorr <- sd(corr, na.rm=TRUE)
-    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                             names = F)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                         na.rm=TRUE, type = 8)
+                         na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   return(list(sampleMC = MC, samplePsi = psi.array,
               pointPsi = NA, pointMC = NA, meanMC = mean(MC, na.rm=TRUE),
               medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8),
+              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                                  type = 8, names = F),
               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
               sampleCorr = corr, pointCorr = NA,
               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
@@ -918,10 +923,11 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   meanCorr <- mean(corr, na.rm=TRUE)
   medianCorr <- median(corr, na.rm=TRUE)
   seCorr <- sd(corr, na.rm=TRUE)
-  simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                           names = F)
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8)
+                       na.rm=TRUE, type = 8, names = F)
   return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
                         meanCorr = meanCorr, medianCorr = medianCorr,
                         seCorr=seCorr, simpleCICorr=simpleCICorr,
@@ -1022,10 +1028,11 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
-  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                     type = 8, names = F)
   diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
   bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8), diffSamples, diff.z0)
+                       na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
   diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
   hpdCI <- sapply(diff.mcmc, function(MC) coda::HPDinterval(MC, 1-alpha))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
@@ -1106,10 +1113,11 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
-  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                     type = 8, names = F)
   diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
   bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8), diffSamples, diff.z0)
+                       na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
   diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
   hpdCI <- sapply(diff.mcmc, function(MC) coda::HPDinterval(MC, 1-alpha))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
