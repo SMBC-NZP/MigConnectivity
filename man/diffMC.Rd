@@ -41,9 +41,6 @@ compute your own summary statistics.}
      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
-  \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
-     differences for each pairwise comparison, etimated using the highest
-     posterior density (HPD) method.}
   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
      List of sampled values for each pairwise MC difference.}
 }
