@@ -247,7 +247,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
-      cat(' ', tSamp$draws, 'draws\n')
+      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
     sites <- table(origin.sample, target.sample)
     sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
@@ -480,8 +480,8 @@ estMCisotope <- function(targetDist,
 
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
-    if (verbose > 2)
-      cat(' ', tSamp$draws, 'draws\n')
+    if (verbose > 2 & !pointsInSites)
+      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
     sites <- table(origin.sample, target.sample)
     sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
@@ -715,7 +715,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                   originPoints = NULL, targetPoints = NULL,
                   originAssignment = NULL, targetAssignment = NULL,
                   originNames = NULL, targetNames = NULL,
-                  nSamples = 1000, nSim = 1000, isGL = FALSE,
+                  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000), isGL = FALSE,
                   geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0,  calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
@@ -906,7 +906,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
-      cat(' ', tSamp$draws, 'draws\n')
+      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))

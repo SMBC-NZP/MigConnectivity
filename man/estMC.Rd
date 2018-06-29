@@ -8,8 +8,9 @@ geolocator and/or GPS data OR intrinsic markers.}
 estMC(originDist, targetDist, originRelAbund, psi = NULL, sampleSize = NULL,
   originSites = NULL, targetSites = NULL, originPoints = NULL,
   targetPoints = NULL, originAssignment = NULL, targetAssignment = NULL,
-  originNames = NULL, targetNames = NULL, nSamples = 1000, nSim = 1000,
-  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
+  originNames = NULL, targetNames = NULL, nSamples = 1000,
+  nSim = ifelse(isTRUE(isIntrinsic), 10, 1000), isGL = FALSE,
+  geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
   calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
   maxTries = 300, targetIntrinsic = NULL, isIntrinsic = FALSE)
