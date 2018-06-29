@@ -126,6 +126,9 @@ bootstrap before exiting with an error.  Default is 300.  Set to NULL to
 never stop.  Thisparameter was added to prevent GL setups where some
 sample points never land on target sites from running indefinitely.}
 
+\item{targetIntrinsic}{For intrinsic tracking data, the results of
+\code{isoAssign} or a similar function, of class \code{intrinsicAssign}.}
+
 \item{isIntrinsic}{Logical indicating whether the animals are tracked via
 intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 connectivity for all intrinsically marked animals or all extrinsic (e.g.,

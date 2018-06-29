@@ -3,12 +3,7 @@
 \name{getIsoMap}
 \alias{getIsoMap}
 \title{Get Isoscape map
-The \code{getIsoMap} function downloads predicted isoscape maps from
- \url{http://wateriso.utah.edu/waterisotopes/}. The function first checks
-whether the isoscapes are located within the current working directory
-\code{getwd()}. If a local copy of the isoscape is found, it's read into
-the environment. If not, the isoscape is downloaded and imported
-as a raster.}
+getIsoMap}
 \usage{
 getIsoMap(element = "Hydrogen", surface = FALSE, period = "Annual")
 }
@@ -16,19 +11,18 @@ getIsoMap(element = "Hydrogen", surface = FALSE, period = "Annual")
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
 
-\item{surface}{if "TRUE" returns surface water values. Defaults is 'FALSE'
+\item{surface}{if "TRUE" returns surface water values. Default is 'FALSE'
 which returns the isotopes ratio found in precipitation.}
 
-\item{period}{The time period of interest. If 'Annual' returns a raster
+\item{period}{The time period of interest. If 'Annual' (default) returns a raster
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
 }
 \value{
-raster layer
+returns a global \code{RasterLayer} (resolution = 0.333'x0.3333') object for the \code{element} and \code{period} of interest
 }
 \description{
-Get Isoscape map
 The \code{getIsoMap} function downloads predicted isoscape maps from
  \url{http://wateriso.utah.edu/waterisotopes/}. The function first checks
 whether the isoscapes are located within the current working directory

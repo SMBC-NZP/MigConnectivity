@@ -1,3 +1,4 @@
+#' Generate probabilitistic isotope assignments
 #' isoAssign
 #' The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 #' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
@@ -15,9 +16,9 @@
 #' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
 #' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
 #'        areas.
-#' @param relativeAbun raster with relative abundance (must match extent of isotope assignment)
-#' @param isoWght weighting value to apply to isotope assignment \see{weightAssign}
-#' @param abunWght weighting value to apply to relative abundance prior \see{weightAssign}
+#' @param relAbund raster with relative abundance (must match extent of isotope assignment)
+#' @param isoWeight weighting value to apply to isotope assignment
+#' @param abunWeight weighting value to apply to relative abundance prior
 #' @param population vector identifying location where animal was captured. Same order as \code{isovalues}
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
@@ -37,17 +38,19 @@
 #'   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
 #'   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
 #'   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
-#'   If \code{population} is vector then returns a raster stack for each unique \code{population} provided}
+#'   If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
 #'   \item{\code{probDF}}{data.frame of individual probability surfaces}
 #'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
 #'   \item{\code{popDF}}{data.frame of population level assignment}
 #'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
 #'   \item{\code{targetSites}}{\code{SpatialPolygons} layer representing isotope bands equivilant to \code{isoSTD}}
+#'   \item{\code{RandomSeed}}{the RNG seed used when generating locations from the multinomial distribution}
 #'   }
 #'
+#' @seealso{\code{\link{weightAssign}}}
 #' @export
 #'
-#' @example
+#' @examples
 #' \dontrun{
 #' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
@@ -79,9 +82,9 @@ isoAssign <- function(isovalues,
                       restrict2Likely = TRUE,
                       nSamples = NULL,
                       sppShapefile = NULL,
-                      relativeAbun = NULL,
-                      isoWght = NULL,
-                      abunWght = NULL,
+                      relAbund = NULL,
+                      isoWeight = NULL,
+                      abunWeight = NULL,
                       population = NULL,
                       assignExtent = c(-179,-60,15,89),
                       element = "Hydrogen",
@@ -119,18 +122,18 @@ sppShapefile$INOUT<-1
 isomap <- raster::mask(isomap, sppShapefile)
 isomap <- raster::crop(isomap, sppShapefile)
 }
-if(!is.null(relativeAbun) && !inherits(relativeAbun,"RasterLayer")){stop("relativeAbun should be a raster layer")}
-if(!is.null(relativeAbun) && inherits(relativeAbun,"RasterLayer")){
-# if isomap and relativeAbun don't have the same resolution and/or extent
-# change to relativeAbun to match isomap
-if(!raster::compareRaster(isomap,relativeAbun, values = FALSE)){
+if(!is.null(relAbund) && !inherits(relAbund,"RasterLayer")){stop("relAbund should be a raster layer")}
+if(!is.null(relAbund) && inherits(relAbund,"RasterLayer")){
+# if isomap and relAbund don't have the same resolution and/or extent
+# change to relAbund to match isomap
+if(!raster::compareRaster(isomap,relAbund, values = FALSE)){
 # project to match isomap
-relativeAbun <- raster::projectRaster(relativeAbun,isomap)
+relAbund <- raster::projectRaster(relAbund,isomap)
 # re-scale to ensure sums to 1
-relativeAbun <- relativeAbun/raster::cellStats(relativeAbun,sum)
+relAbund <- relAbund/raster::cellStats(relAbund,sum)
 }
-# if relativeAbun isn't a probability surface - generate probability surface #
-if(raster::cellStats(relativeAbun,sum)!=1){relativeAbun <- relativeAbun/raster::cellStats(relativeAbun,sum)}
+# if relAbund isn't a probability surface - generate probability surface #
+if(raster::cellStats(relAbund,sum)!=1){relAbund <- relAbund/raster::cellStats(relAbund,sum)}
 }
 # generate a 'feather'/animal isoscape
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
@@ -167,29 +170,29 @@ assignments <- raster::stack(assignments)
 assign2prob <- assignments/raster::cellStats(assignments, sum)
 
 # Weighted Assignments
-if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && is.null(abunWght)){
+if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && is.null(abunWeight)){
   if(verbose>0){cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")}
-assign2prob <- assign2prob*relativeAbun
+assign2prob <- assign2prob*relAbund
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
-if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && !is.null(abunWght)){
+if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && !is.null(abunWeight)){
   if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
-  isoWght <- 10^isoWght
-  abunWght <- 10^abunWght
-assign2prob <- (assign2prob^isoWght)*(relativeAbun^abunWght)
+  isoWeight <- 10^isoWeight
+  abunWeight <- 10^abunWeight
+assign2prob <- (assign2prob^isoWeight)*(relAbund^abunWeight)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 
-if(inherits(relativeAbun,"RasterLayer") && is.null(isoWght) && !is.null(abunWght)){
+if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && !is.null(abunWeight)){
   if(verbose>0){cat("\n Creating posterior abundance weighted assignments \n")}
-  abunWght <- 10^abunWght
-assign2prob <- assign2prob*(relativeAbun^abunWght)
+  abunWeight <- 10^abunWeight
+assign2prob <- assign2prob*(relAbund^abunWeight)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
-if(inherits(relativeAbun,"RasterLayer") && !is.null(isoWght) && is.null(abunWght)){
+if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && is.null(abunWeight)){
   if(verbose>0){cat("\n Creating posterior isotope weighted assignments \n")}
-  isoWght <- 10^isoWght
-assign2prob <- (assign2prob^isoWght)*relativeAbun
+  isoWeight <- 10^isoWeight
+assign2prob <- (assign2prob^isoWeight)*relAbund
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 # Create a dataframe with XY coords and probabilites for each animal
@@ -361,6 +364,8 @@ return(isoAssignReturn)
 
 
 #' Get Isoscape map
+#' getIsoMap
+#'
 #' The \code{getIsoMap} function downloads predicted isoscape maps from
 #'  \url{http://wateriso.utah.edu/waterisotopes/}. The function first checks
 #' whether the isoscapes are located within the current working directory
@@ -368,19 +373,19 @@ return(isoAssignReturn)
 #' the environment. If not, the isoscape is downloaded and imported
 #' as a raster.
 #'
+#'
 #' @param element The elemental isotope of interest. Currently the only
 #'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
-#' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
+#' @param surface if "TRUE" returns surface water values. Default is 'FALSE'
 #'     which returns the isotopes ratio found in precipitation.
-#' @param period The time period of interest. If 'Annual' returns a raster
+#' @param period The time period of interest. If 'Annual' (default) returns a raster
 #'     of mean annual values in precipitation for the \code{element}. If
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
 #'
-#' @return raster layer
+#' @return returns a global \code{RasterLayer} (resolution = 0.333'x0.3333') object for the \code{element} and \code{period} of interest
 #'
 #' @export
-#'
 #' @examples
 #' \dontrun{
 #' getIsoMap(element = "Hydrogen", period = "Annual")
@@ -599,7 +604,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' @param intercept intercept value from calibration
 #' @param slope value from calibration
 #' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.67
-#' @param relativeAbundance raster layer of relative abundance that sums to 1.
+#' @param relAbund raster layer of relative abundance that sums to 1.
 #' @param weightRange vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 #'        Default = c(-1,1)
 #' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
@@ -623,7 +628,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' }
 #' @export
 #'
-#' @example
+#' @examples
 #' \dontrun{
 #' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
@@ -652,7 +657,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'                  intercept = -10,
 #'                  slope = 0.8,
 #'                  odds = 0.67,
-#'                  relativeAbundance = relativeAbund,
+#'                  relAbund = relativeAbund,
 #'                  weightRange = c(-1,1),
 #'                  sppShapefile = OVENdist,
 #'                  assignExtent = c(-179,-60,15,89),
@@ -666,7 +671,7 @@ weightAssign <- function(knownLocs,
                          intercept,
                          slope,
                          odds = 0.67,
-                         relativeAbundance,
+                         relAbund,
                          weightRange = c(-1,1),
                          sppShapefile = NULL,
                          assignExtent = c(-179,-60,15,89),
@@ -746,7 +751,7 @@ pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)
     tempAssign <- (assignIsoprob^weights$iso_weight[i])*
-                  (relativeAbundance^weights$abun_weight[i])
+                  (relAbund^weights$abun_weight[i])
 
     tempAssign <- tempAssign/raster::cellStats(tempAssign,sum)
 

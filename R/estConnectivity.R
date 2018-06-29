@@ -645,7 +645,7 @@ estMCisotope <- function(targetDist,
 #'    never stop.  Thisparameter was added to prevent GL setups where some
 #'    sample points never land on target sites from running indefinitely.
 #' @param targetIntrinsic For intrinsic tracking data, the results of
-#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign).
+#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}.
 #' @param isIntrinsic Logical indicating whether the animals are tracked via
 #'    intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 #'    connectivity for all intrinsically marked animals or all extrinsic (e.g.,
