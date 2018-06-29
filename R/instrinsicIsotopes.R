@@ -37,7 +37,7 @@
 #'   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
 #'   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
 #'   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
-#'   If \code{population} is vector then returns a raster stack for each unqiue \code{population} provided}
+#'   If \code{population} is vector then returns a raster stack for each unique \code{population} provided}
 #'   \item{\code{probDF}}{data.frame of individual probability surfaces}
 #'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
 #'   \item{\code{popDF}}{data.frame of population level assignment}
@@ -136,7 +136,7 @@ if(raster::cellStats(relativeAbun,sum)!=1){relativeAbun <- relativeAbun/raster::
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
 
 # generate targetSites - seq from min to max values by isoSTD
-isocut <- cut(animap, breaks= seq(from = raster::cellStats(animap,min),
+isocut <- raster::cut(animap, breaks= seq(from = raster::cellStats(animap,min),
                                   to = raster::cellStats(animap,max),
                                   by = isoSTD))
 

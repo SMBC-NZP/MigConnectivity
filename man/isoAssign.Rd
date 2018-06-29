@@ -67,11 +67,12 @@ returns an \code{isoAssign} object containing the following:
   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
-  If \code{population} is vector then returns a raster stack for each unqiue \code{population} provided}
+  If \code{population} is vector then returns a raster stack for each unique \code{population} provided}
   \item{\code{probDF}}{data.frame of individual probability surfaces}
   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
   \item{\code{popDF}}{data.frame of population level assignment}
   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
+  \item{\code{targetSites}}{\code{SpatialPolygons} layer representing isotope bands equivilant to \code{isoSTD}}
   }
 }
 \description{
