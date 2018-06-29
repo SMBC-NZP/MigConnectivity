@@ -20,7 +20,7 @@ estMC(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 matrix.}
 
 \item{targetDist}{Distances between the W target sites.  Symmetric W by W
-matrix.}
+matrix.  Optional for intrinsic data.}
 
 \item{originRelAbund}{Relative abundance estimates at B origin sites. Either
 a numeric vector of length B that sums to 1 or an mcmc object with
@@ -47,7 +47,8 @@ release season.}
 \item{targetSites}{If \code{psi} is a MARK object, this must be a numeric
 vector indicating which sites are target.  If using GPS, geolocator, or
 intrinsic data, this must be the geographic definition of sites in the
-non-release season.}
+non-release season.  Optional for intrinsic data; if left out, the function
+will use the \code{targetSites} defined in \code{targetIntrinsic}.}
 
 \item{originPoints}{A \code{SpatialPoints} object, with length number of
 animals tracked.  Each point indicates the release location of an animal.}
@@ -381,6 +382,9 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
 str(GPS_mc)
 str(Combined)
 str(GL_mc)
+
+
+#
 }
 \seealso{
 \code{\link{calcMC}}, \code{\link{projections}}

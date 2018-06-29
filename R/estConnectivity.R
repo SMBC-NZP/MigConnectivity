@@ -390,8 +390,8 @@ estMCisotope <- function(targetDist=NULL,
     nSamples <- dim(targetIntrinsic$SingleCell)[1]
     targCon <- array(NA, c(nSamples, nAnimals))
     for(i in 1:nSamples) {
-      targCon[i, ] <- over(SpatialPoints(t(targetIntrinsic$SingleCell[i, , ]),
-                                         proj4string = CRS(targetSites@proj4string@projargs)),
+      targCon[i, ] <- sp::over(sp::SpatialPoints(t(targetIntrinsic$SingleCell[i, , ]),
+                                         proj4string = sp::CRS(targetSites@proj4string@projargs)),
                            targetSites)
     }
     if (!any(is.na(targCon)))
@@ -525,14 +525,14 @@ estMCisotope <- function(targetDist=NULL,
   if (!approxSigTest)
     simpleP <- bcP <- NULL
   else {
-    if (pointMC > sigConst)
+    if (mean(MC, na.rm=TRUE) > sigConst)
       simpleP <- sum(MC < sigConst) / nBoot
     else
       simpleP <- sum(MC > sigConst) / nBoot
     if (simpleP == 0)
       simpleP <- 0.5 / nBoot
     bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
-    if (pointMC < sigConst)
+    if (mean(MC, na.rm=TRUE) < sigConst)
       bcP <- 1 - bcP
   }
   if (calcCorr) {
@@ -570,7 +570,7 @@ estMCisotope <- function(targetDist=NULL,
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
 #'  matrix.
 #' @param targetDist Distances between the W target sites.  Symmetric W by W
-#'  matrix.
+#'  matrix.  Optional for intrinsic data.
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
 #'  a numeric vector of length B that sums to 1 or an mcmc object with
 #'  \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
@@ -592,7 +592,8 @@ estMCisotope <- function(targetDist=NULL,
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are target.  If using GPS, geolocator, or
 #'  intrinsic data, this must be the geographic definition of sites in the
-#'  non-release season.
+#'  non-release season.  Optional for intrinsic data; if left out, the function
+#'  will use the \code{targetSites} defined in \code{targetIntrinsic}.
 #' @param originPoints A \code{SpatialPoints} object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal.
 #' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with

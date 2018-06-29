@@ -1,6 +1,6 @@
-#' @export
+# @export
 is.isoAssign <- function(x) inherits(x, "isoAssign")
-#' @export
+# @export
 is.estMC <- function(x) inherits(x, "estMC")
 
 # @export
@@ -57,11 +57,11 @@ if(inherits(x,"isoAssign")){
   cat("\n Population-level assignment Surface \n")
   print(x$popassign,...)
   cat("\n Individual Probability data frame* \n")
-  str(x$probDF[,1:5])
+  utils::str(x$probDF[,1:5])
   cat("\n Individual likely/unlikely data frame* \n")
-  str(x$oddsDF[,1:5])
+  utils::str(x$oddsDF[,1:5])
   cat("\n Individual single cell assignment \n")
-  str(x$SingleCell)
+  utils::str(x$SingleCell)
   cat("\n Target sites spatial layer \n")
   print(x$targetSites)
   cat("\n Random number seed set to: \n")
@@ -72,14 +72,14 @@ if(inherits(x,"isoAssign")){
 # @export
 #summary <- function(x,...) UseMethod("summary")
 #' @export
-summary.estMigConnectivity <- function(x, ...)
+summary.estMigConnectivity <- function(object, ...)
 {
-  print.estMigConnectivity(x, ...)
+  print.estMigConnectivity(object, ...)
 }
 
 #' @export
-summary.intrinsicAssign<-function(x, ...){
-  print.intrinsicAssign(x,...)
+summary.intrinsicAssign<-function(object, ...){
+  print.intrinsicAssign(object,...)
 }
 
 #' basic plot function for the different isoAssign outputs
@@ -91,34 +91,34 @@ plot.intrinsicAssign <- function(x,map,...){
 plot.isoAssign <- function(x,map,...){
     if(!(map %in% c("probability","population","odds"))){
       stop("map must be either probability, population, or odds")}
-    op <- par(no.readonly = TRUE)
+    op <- graphics::par(no.readonly = TRUE)
     if(map == "population"){
       raster::plot(x$popassign,horiz = TRUE,...)
       }
     if(map == "probability"){
       for(i in 1:raster::nlayers(x$probassign)){
         raster::plot(x$probassign[[i]],horiz = TRUE,...)
-        par(ask = TRUE)
+        graphics::par(ask = TRUE)
       }
-    par(op)
+    graphics::par(op)
     }
     if(map == "odds"){
       for(i in 1:raster::nlayers(x$probassign)){
         raster::plot(x$oddsassign[[i]],horiz = TRUE,...)
-        par(ask = TRUE)
+        graphics::par(ask = TRUE)
       }
-    par(op)
+    graphics::par(op)
   }
-  on.exit(par(op))
+  on.exit(graphics::par(op))
   }
   }
  if(inherits(x,"weightAssign")){
-   par(bty = "L")
-   plot((x$performance$area/max(x$performance$area))~x$performance$error,
+   graphics::par(bty = "L")
+   graphics::plot((x$performance$area/max(x$performance$area))~x$performance$error,
         las = 1, ylab = "Assignment Area",
         xlab = "Error",pch = 19, cex = 1.25, col = "gray")
-   points((x$frontier$area/max(x$performance$area))~x$frontier$error, col = "red", pch = 19, cex = 1.25)
-   points((x$top$area/max(x$performance$area))~x$top$error, col = "blue", pch = 19, cex = 1.25)
+   graphics::points((x$frontier$area/max(x$performance$area))~x$frontier$error, col = "red", pch = 19, cex = 1.25)
+   graphics::points((x$top$area/max(x$performance$area))~x$top$error, col = "blue", pch = 19, cex = 1.25)
  }
 
 }

@@ -143,7 +143,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
     targetIntrinsic1 <- array(aperm(targetIntrinsic$SingleCell, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
 
     # project target points to WGS #
-    targetIntrinsic2 <- sp::SpatialPoints(targetIntrinsic1, proj4string = sp::CRS(projections$WGS84))
+    targetIntrinsic2 <- sp::SpatialPoints(targetIntrinsic1, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
   }
   else {
     nAnimals <- dim(targetIntrinsic$probassign)[3]
@@ -183,7 +183,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
   else {
     draws <- 0
     # Make sure targetSites are WGS84
-    targetSites <- sp::spTransform(targetSites, sp::CRS(projections$WGS84))
+    targetSites <- sp::spTransform(targetSites, sp::CRS(MigConnectivity::projections$WGS84))
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       if (!pointsAssigned) {
@@ -193,7 +193,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
           if (length(animals) > 0) {
             multidraw <- rmultinom(n = length(animals)*nSim, size = 1, prob = matvals[,i])
             point.sample <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
-            point.sample1 <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(projections$WGS84))
+            point.sample1 <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
             # Check which points are in target sites
             target.sample0 <- sp::over(point.sample1, y = targetSites)
             good.sample <- which(!is.na(target.sample0))

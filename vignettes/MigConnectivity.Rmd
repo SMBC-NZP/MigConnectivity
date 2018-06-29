@@ -559,7 +559,7 @@ data(OVENdata) # Ovenbird
 names(OVENdata)
 ```
 
-The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (*in press*) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
+The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r eval = FALSE}
 install.packages(c('rgeos', 'shape', 'raster', 'maptools', 'rgdal'))
@@ -772,7 +772,7 @@ str(sims)
 ### EXAMPLE 4
 Calculate migratory connectivity for a range of input values 
 
-Cohen et al. (*in press*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
+Cohen et al. (*2018*) used simulation to assess the influence of the three data inputs needed to calculate MC, including:  
   
 1. matrix of transition probabilities from breeding regions to non-breeding regions  
 1. matrices of distances between breeding regions and between non-breeding regions  
@@ -936,7 +936,7 @@ MC5[i, k] <- calcMC(originDist = sampleOriginDist[[j]],
 t(round(MC5, 4)) # breeding grid, winter linear arrangement
 ```
 
-###EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in press)
+###EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. 2018)
 
 Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:  
 
@@ -2037,7 +2037,7 @@ g.est
 
 Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals.  See Example 2 above and estMC help file.
 
-###EXAMPLE 13 (from process error simulation in Cohen et al. in press)
+###EXAMPLE 13 (from process error simulation in Cohen et al. 2018)
 
 `simMove` for measuring the influence of dispersal rates on MC
 

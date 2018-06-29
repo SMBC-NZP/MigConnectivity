@@ -89,7 +89,7 @@ waters into a 'tissuescape' using a user-provided intercept, slope and standard 
 \dontrun{
 OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 

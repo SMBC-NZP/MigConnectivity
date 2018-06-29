@@ -11,6 +11,8 @@ weightAssign(knownLocs, isovalues, isoSTD, intercept, slope, odds = 0.67,
   surface = FALSE, period = "Annual")
 }
 \arguments{
+\item{knownLocs}{matrix of capture locations of the same length as \code{isovalues}}
+
 \item{isovalues}{vector of tissue isotope values from known locations}
 
 \item{isoSTD}{standard deviation from calibration}
@@ -42,8 +44,6 @@ which returns the isotopes ratio found in precipitation.}
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
-
-\item{knownlocs}{matrix of capture locations of the same length as \code{isovalues}}
 }
 \value{
 returns an \code{weightAssign} object containing the following:
@@ -56,7 +56,7 @@ returns an \code{weightAssign} object containing the following:
 \description{
 The primary purpose of this function is to determine whether weighting likelihood based isotope assignments
 and prior information, such as relative abundance can improve the model performance compared to the
-isotope-only model. To do this, we raise the likelihood and prior values to powers from 10^−1
+isotope-only model. To do this, we raise the likelihood and prior values to powers from 0.1
 to 10 and measure model performance using the assignment error rate and assignment area. Weights < 1 flatten
 the likelihood/prior distributions (giving relatively more weight to smaller values) and weights > 1
 sharpen the distributions (giving relatively less weight to smaller values. The \code{weightAssign} function
@@ -64,7 +64,8 @@ generates origin assignments using stable-hydrogen isotopes in tissue. If first 
 a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample
 captured at a known location. Probabilistic assignments are constructed by first converting observed
 stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
-a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+a user-provided intercept, slope and standard deviation. See
+\href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}.
 }
 \details{
 See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 2017} for more information.
@@ -73,15 +74,15 @@ See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 
 \dontrun{
 OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 
 HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
 knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
 
-download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
-unzip("oven.zip")
+utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+utils::unzip("oven.zip")
 oven_dist <- raster::shapefile("ra06740.shp")
 
 # Empty raster with the same dimensions as isoscape and Ovenbird distribution

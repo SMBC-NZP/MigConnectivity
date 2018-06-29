@@ -54,7 +54,7 @@
 #' \dontrun{
 #' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #'
 #' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
@@ -145,7 +145,7 @@ isocut <- raster::cut(animap, breaks= seq(from = raster::cellStats(animap,min),
 
 # use those cuts to make polygons
 targetSites <- raster::rasterToPolygons(isocut, dissolve = TRUE)
-crs(targetSites) <- crs(isomap)
+raster::crs(targetSites) <- raster::crs(isomap)
 
 #if sppShapefile !NULL then clip targetSites to distribution
 if(!is.null(sppShapefile)){
@@ -253,7 +253,7 @@ pop_p <- step2[[aniPop]]
 POPs[[p]] <- sum(pop_p)
 POPSdf[[p]] <- data.frame(raster::rasterToPoints(POPs[[p]]))
 }
-SamplePop <- stack(POPs)
+SamplePop <- raster::stack(POPs)
 names(SamplePop)<-Pops
 SamplePopDF <- do.call('cbind',POPSdf)
 }
@@ -288,13 +288,13 @@ if(restrict2Likely){
  if(verbose>1){
     cat("\b\b\b\b\b\b");
     cat("\n      animal # ",sprintf("%3d",1),"\n");
-    flush.console()
+    utils::flush.console()
   }
 for(i in 1:ncol(matvals)) {
   if(verbose>1){
     cat("\b\b\b\b\b\b");
     cat(sprintf("%3d",i),"\n");
-    flush.console()
+    utils::flush.console()
   }
 
     multidraw <- rmultinom(n = nSamples+floor((nSamples/2)), size = 1, prob = matvals[,i])
@@ -411,13 +411,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
         tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
         # Download the file #
-        download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_H.zip",
+        utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_H.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
 
         # unzip the downloaded file #
-        unzip(zipfile = tf,
+        utils::unzip(zipfile = tf,
               files = NULL, list = FALSE, overwrite = TRUE,
               junkpaths = FALSE, exdir = getwd(), unzip = "internal",
               setTimes = FALSE)
@@ -439,13 +439,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
         tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
         # Download the file #
-        download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_O.zip",
+        utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_O.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
 
         # unzip the downloaded file #
-        unzip(zipfile = tf,
+        utils::unzip(zipfile = tf,
               files = NULL, list = FALSE, overwrite = TRUE,
               junkpaths = FALSE, exdir = getwd(), unzip = "internal",
               setTimes = FALSE)
@@ -469,13 +469,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualD.zip",
+      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualD.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
-      unzip(zipfile = tf,
+      utils::unzip(zipfile = tf,
             files = NULL, list = FALSE, overwrite = TRUE,
             junkpaths = FALSE, exdir = getwd(), unzip = "internal",
             setTimes = FALSE)
@@ -498,13 +498,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSD.zip",
+      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSD.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
-      unzip(zipfile = tf,
+      utils::unzip(zipfile = tf,
             files = NULL, list = FALSE, overwrite = TRUE,
             junkpaths = FALSE, exdir = getwd(), unzip = "internal",
             setTimes = FALSE)
@@ -527,13 +527,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualO.zip",
+      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualO.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
-      unzip(zipfile = tf,
+      utils::unzip(zipfile = tf,
             files = NULL, list = FALSE, overwrite = TRUE,
             junkpaths = FALSE, exdir = getwd(), unzip = "internal",
             setTimes = FALSE)
@@ -556,13 +556,13 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSO.zip",
+      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSO.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
-      unzip(zipfile = tf,
+      utils::unzip(zipfile = tf,
             files = NULL, list = FALSE, overwrite = TRUE,
             junkpaths = FALSE, exdir = getwd(), unzip = "internal",
             setTimes = FALSE)
@@ -586,7 +586,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' The primary purpose of this function is to determine whether weighting likelihood based isotope assignments
 #' and prior information, such as relative abundance can improve the model performance compared to the
-#' isotope-only model. To do this, we raise the likelihood and prior values to powers from 10^−1
+#' isotope-only model. To do this, we raise the likelihood and prior values to powers from 0.1
 #' to 10 and measure model performance using the assignment error rate and assignment area. Weights < 1 flatten
 #' the likelihood/prior distributions (giving relatively more weight to smaller values) and weights > 1
 #' sharpen the distributions (giving relatively less weight to smaller values. The \code{weightAssign} function
@@ -594,11 +594,12 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample
 #' captured at a known location. Probabilistic assignments are constructed by first converting observed
 #' stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
-#' a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+#' a user-provided intercept, slope and standard deviation. See
+#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}.
 #'
 #'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 2017} for more information.
 #'
-#' @param knownlocs matrix of capture locations of the same length as \code{isovalues}
+#' @param knownLocs matrix of capture locations of the same length as \code{isovalues}
 #' @param isovalues vector of tissue isotope values from known locations
 #' @param isoSTD standard deviation from calibration
 #' @param intercept intercept value from calibration
@@ -632,15 +633,15 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' \dontrun{
 #' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #'
 #' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
 #' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
 #' knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
 #'
-#' download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
-#' unzip("oven.zip")
+#' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+#' utils::unzip("oven.zip")
 #' oven_dist <- raster::shapefile("ra06740.shp")
 #'
 #' # Empty raster with the same dimensions as isoscape and Ovenbird distribution
@@ -759,10 +760,10 @@ for(i in 1:nrow(weights)){
 
     cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
 
-    step1 <- stack(raster::reclassify(tempAssign,cbind(0,cuts,0)))
-    step2 <- stack(raster::reclassify(step1,cbind(cuts,1,1)))
+    step1 <- raster::stack(raster::reclassify(tempAssign,cbind(0,cuts,0)))
+    step2 <- raster::stack(raster::reclassify(step1,cbind(cuts,1,1)))
 
-    correctAssign <- diag(extract(step2,knownLocs))
+    correctAssign <- diag(raster::extract(step2,knownLocs))
     errorRate <- 1-mean(correctAssign)
     areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
 
@@ -778,10 +779,10 @@ matvalsWeight <- raster::rasterToPoints(assignIsoprob)
 
 cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
 
-step1 <- stack(raster::reclassify(assignIsoprob,cbind(0,cuts,0)))
-step2 <- stack(raster::reclassify(step1,cbind(cuts,1,1)))
+step1 <- raster::stack(raster::reclassify(assignIsoprob,cbind(0,cuts,0)))
+step2 <- raster::stack(raster::reclassify(step1,cbind(cuts,1,1)))
 
-correctAssign <- diag(extract(step2,knownLocs))
+correctAssign <- diag(raster::extract(step2,knownLocs))
 errorRate <- 1-mean(correctAssign)
 areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
 

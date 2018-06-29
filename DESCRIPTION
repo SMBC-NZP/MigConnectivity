@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.2.5
-Date: 2018-01-30
+Version: 0.3.0
+Date: 2018-06-29
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
@@ -20,7 +20,7 @@ Description: Calculates and estimates the strength of migratory connectivity
     and the more traditional metric of migratory connectivity strength (Mantel
     correlation; rM) incorporating uncertainty from multiple sources of
     sampling error. Description of the metric can be found in Cohen et al.
-    (in press).
+    (2018).
 License: GPL (>=3)
 LazyData: true
 Depends:
