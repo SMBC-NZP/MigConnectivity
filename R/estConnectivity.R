@@ -325,12 +325,12 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 #
 #
 ###############################################################################
-estMCisotope <- function(targetDist,
+estMCisotope <- function(targetDist=NULL,
                          originRelAbund,
                          targetIntrinsic,
-                         targetSites,
+                         targetSites = NULL,
                          sampleSize = NULL,
-                         targetAssignment=NULL,
+                         # targetAssignment=NULL,
                          originPoints=NULL,
                          originSites=NULL,
                          originDist = NULL,
@@ -357,8 +357,15 @@ estMCisotope <- function(targetDist,
   if (calcCorr && is.null(originPoints)){
     stop('If calcCorr is TRUE, need to define originPoints')}
 
-  if ((is.null(targetIntrinsic) || is.null(targetSites)) && is.null(targetAssignment)){
-    stop("Need to define targetIntrinsic and either targetAssignment or targetSites")}
+  if (is.null(targetIntrinsic)){
+    stop("Need to define targetIntrinsic")}
+
+  if (is.null(targetSites))
+    targetSites <- targetIntrinsic$targetSites
+
+  if (is.null(targetDist))
+    targetDist <- distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
+
 
   if (!inherits(targetIntrinsic, 'isoAssign'))
     stop("targetIntrinsic should be output of isoAssign when isIntrinsic == TRUE")
@@ -376,7 +383,7 @@ estMCisotope <- function(targetDist,
   targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
 
   if (length(originAssignment)!=nAnimals)
-    stop("originAssignment/originPoints should be the same length as targetIntrinsic/targetAssignment (number of animals)")
+    stop("originAssignment/originPoints should be the same length as targetIntrinsic (number of animals)")
 
   pointsInSites <- FALSE
   if (pointsAssigned && !is.null(targetSites)) {
@@ -709,7 +716,7 @@ estMCisotope <- function(targetDist,
 #' @example inst/examples/estMCExamples.R
 #' @seealso \code{\link{calcMC}}, \code{\link{projections}}
 #' @export
-estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
+estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
                   originSites = NULL, targetSites = NULL,
                   originPoints = NULL, targetPoints = NULL,
@@ -728,7 +735,7 @@ estMC <- function(originDist, targetDist, originRelAbund, psi = NULL,
                          originRelAbund = originRelAbund,
                          targetIntrinsic = targetIntrinsic,
                          targetSites = targetSites, sampleSize = sampleSize,
-                         targetAssignment = targetAssignment,
+                         # targetAssignment = targetAssignment,
                          originPoints=originPoints, originSites=originSites,
                          originDist = originDist,
                          originAssignment = originAssignment,
