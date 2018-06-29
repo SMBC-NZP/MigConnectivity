@@ -2,7 +2,8 @@
 % Please edit documentation in R/instrinsicIsotopes.R
 \name{isoAssign}
 \alias{isoAssign}
-\title{isoAssign
+\title{Generate probabilitistic isotope assignments
+isoAssign
 The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
 Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
@@ -10,7 +11,7 @@ waters into a 'tissuescape' using a user-provided intercept, slope and standard 
 \usage{
 isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
-  relativeAbun = NULL, isoWght = NULL, abunWght = NULL,
+  relAbund = NULL, isoWeight = NULL, abunWeight = NULL,
   population = NULL, assignExtent = c(-179, -60, 15, 89),
   element = "Hydrogen", surface = FALSE, period = "Annual", seed = NULL,
   verbose = 1)
@@ -34,11 +35,11 @@ locations.}
 \item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
 areas.}
 
-\item{relativeAbun}{raster with relative abundance (must match extent of isotope assignment)}
+\item{relAbund}{raster with relative abundance (must match extent of isotope assignment)}
 
-\item{isoWght}{weighting value to apply to isotope assignment \see{weightAssign}}
+\item{isoWeight}{weighting value to apply to isotope assignment}
 
-\item{abunWght}{weighting value to apply to relative abundance prior \see{weightAssign}}
+\item{abunWeight}{weighting value to apply to relative abundance prior}
 
 \item{population}{vector identifying location where animal was captured. Same order as \code{isovalues}}
 
@@ -67,18 +68,47 @@ returns an \code{isoAssign} object containing the following:
   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
-  If \code{population} is vector then returns a raster stack for each unique \code{population} provided}
+  If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
   \item{\code{probDF}}{data.frame of individual probability surfaces}
   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
   \item{\code{popDF}}{data.frame of population level assignment}
   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
   \item{\code{targetSites}}{\code{SpatialPolygons} layer representing isotope bands equivilant to \code{isoSTD}}
+  \item{\code{RandomSeed}}{the RNG seed used when generating locations from the multinomial distribution}
   }
 }
 \description{
+Generate probabilitistic isotope assignments
 isoAssign
 The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
 Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
 waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+}
+\examples{
+\dontrun{
+OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+
+a <- Sys.time()
+b <- isoAssign(isovalues = OVENvals[,2],
+              isoSTD = 12,
+              intercept = -10,
+              slope = 0.8,
+              odds = NULL,
+              restrict2Likely = TRUE,
+              nSamples = 1000,
+              sppShapefile = OVENdist,
+              assignExtent = c(-179,-60,15,89),
+              element = "Hydrogen",
+              surface = FALSE,
+              period = "Annual")
+Sys.time()-a
+}
+}
+\seealso{
+{\code{\link{weightAssign}}}
 }

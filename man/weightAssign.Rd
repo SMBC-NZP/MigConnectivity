@@ -6,7 +6,7 @@
 weightAssign}
 \usage{
 weightAssign(knownLocs, isovalues, isoSTD, intercept, slope, odds = 0.67,
-  relativeAbundance, weightRange = c(-1, 1), sppShapefile = NULL,
+  relAbund, weightRange = c(-1, 1), sppShapefile = NULL,
   assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
   surface = FALSE, period = "Annual")
 }
@@ -21,7 +21,7 @@ weightAssign(knownLocs, isovalues, isoSTD, intercept, slope, odds = 0.67,
 
 \item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.67}
 
-\item{relativeAbundance}{raster layer of relative abundance that sums to 1.}
+\item{relAbund}{raster layer of relative abundance that sums to 1.}
 
 \item{weightRange}{vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 Default = c(-1,1)}
@@ -68,4 +68,41 @@ a user-provided intercept, slope and standard deviation. See \href{http://journa
 }
 \details{
 See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 2017} for more information.
+}
+\examples{
+\dontrun{
+OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+
+HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
+knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
+
+download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+unzip("oven.zip")
+oven_dist <- raster::shapefile("ra06740.shp")
+
+# Empty raster with the same dimensions as isoscape and Ovenbird distribution
+r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
+                    xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
+                    crs = MigConnectivity::projections$WGS84)
+
+relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
+relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
+
+                 isovalues = HBEFbirds[,2],
+                 isoSTD = 12,
+                 intercept = -10,
+                 slope = 0.8,
+                 odds = 0.67,
+                 relAbund = relativeAbund,
+                 weightRange = c(-1,1),
+                 sppShapefile = OVENdist,
+                 assignExtent = c(-179,-60,15,89),
+                 element = "Hydrogen",
+                 surface = FALSE,
+                 period = "Annual")
+}
 }

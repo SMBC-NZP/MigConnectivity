@@ -4,7 +4,7 @@
 \alias{plot.intrinsicAssign}
 \title{basic plot function for the different isoAssign outputs}
 \usage{
-\method{plot}{intrinsicAssign}(x, map, ...)
+plot.intrinsicAssign(x, map, ...)
 }
 \description{
 basic plot function for the different isoAssign outputs
