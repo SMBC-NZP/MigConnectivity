@@ -42,6 +42,7 @@
 #'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
 #'   \item{\code{popDF}}{data.frame of population level assignment}
 #'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
+#'   \item{\code{targetSites}}{\code{SpatialPolygons} layer representing isotope bands equivilant to \code{isoSTD}}
 #'   }
 #'
 #' @export
@@ -133,6 +134,23 @@ if(raster::cellStats(relativeAbun,sum)!=1){relativeAbun <- relativeAbun/raster::
 }
 # generate a 'feather'/animal isoscape
 animap <- raster::calc(isomap, function(x){y <- slope*x+intercept})
+
+# generate targetSites - seq from min to max values by isoSTD
+isocut <- cut(animap, breaks= seq(from = raster::cellStats(animap,min),
+                                  to = raster::cellStats(animap,max),
+                                  by = isoSTD))
+
+# use those cuts to make polygons
+targetSites <- raster::rasterToPolygons(isocut, dissolve = TRUE)
+crs(targetSites) <- crs(isomap)
+
+#if sppShapefile !NULL then clip targetSites to distribution
+if(!is.null(sppShapefile)){
+targetSites <- raster::intersect(targetSites,sppShapefile)
+}
+# rename the targetSites to simplify output
+targetSites<-targetSites[,1]
+names(targetSites) <- c("targetSite")
 
 # spatially explicit assignment
 assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
@@ -331,6 +349,7 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         oddsDF = step2DF,
                         popDF = SamplePopDF,
                         SingleCell = xysim,
+                        targetSites = targetSites,
                         RandomSeed = seed),
                         class = c("isoAssign", "intrinsicAssign"))
 
