@@ -595,9 +595,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' captured at a known location. Probabilistic assignments are constructed by first converting observed
 #' stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
 #' a user-provided intercept, slope and standard deviation. See
-#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}.
+#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
-#'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 2017} for more information.
+#'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 #'
 #' @param knownLocs matrix of capture locations of the same length as \code{isovalues}
 #' @param isovalues vector of tissue isotope values from known locations
