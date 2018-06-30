@@ -24,6 +24,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 }
 
 set.seed(75)
+\dontrun{
 nBreeding <- 100 # Number of populations
 nWintering <- 100 # Number of populations
 breedingPos <- matrix(c(rep(seq(-99,-81,2), each=sqrt(nBreeding)),
@@ -448,5 +449,5 @@ simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov) {
   }
   return(targetSample = target.sample, targetPointSample = target.point.sample)
 }
-
+}
 

@@ -94,6 +94,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 ###############################################################################
 # Parameters for simulations
 ###############################################################################
+\dontrun{
 nSeasons <- 2
 nYears <- 10
 nMonths <- 4 # Each season
@@ -492,4 +493,4 @@ rownames(compare16a) <- compare16$Scenario[2:7]
 round(compare16a, 3)
 round(compare16a, 2)
 write.csv(compare16, 'sampling_regions3.csv', row.names=F)
-
+}

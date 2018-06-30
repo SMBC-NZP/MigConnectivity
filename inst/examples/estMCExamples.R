@@ -1,12 +1,14 @@
+\dontrun{
 set.seed(101)
 # Uncertainty in detection with equal abundances
 # Number of resampling iterations for generating confidence intervals
+
 nSamplesCMR <- 100 #10000
 nSimulationsCMR <- 10 #100
-\dontrun{
-  nSamplesCMR <- 10000
-  nSimulationsCMR <- 100
-}
+#\dontrun{
+#  nSamplesCMR <- 10000
+#  nSimulationsCMR <- 100
+#}
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                         rep(seq(49, 31, -2), 10)), 100, 2)
 targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
@@ -64,13 +66,15 @@ mseCMR
 rmseCMR <- sqrt(mseCMR)
 rmseCMR
 
+
 # Simulation of BBS data to quantify uncertainty in relative abundance
+
 nSamplesAbund <- 700 #1700 are stored
 nSimulationsAbund <- 10 #length(abundExamples) is 100
-\dontrun{
-  nSamplesAbund <- 1700
-  nSimulationsAbund <- length(abundExamples)
-}
+#\dontrun{
+#  nSamplesAbund <- 1700
+#  nSimulationsAbund <- length(abundExamples)
+#}
 # Storage matrix for samples
 abundMCSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
 summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
@@ -108,11 +112,12 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
+
 nSamplesGLGPS <- 100 # Number of bootstrap iterations
-\dontrun{
-  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
-  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
-}
+#\dontrun{
+#  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+#  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
+#}
 
 # Estimate MC only, treat all data as geolocator
 GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
@@ -184,4 +189,63 @@ str(Combined)
 str(GL_mc)
 
 
-#
+# Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
+
+OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+
+b <- isoAssign(isovalues = OVENvals[,2],
+               isoSTD = 12,
+               intercept = -10,
+               slope = 0.8,
+               odds = NULL,
+               restrict2Likely = TRUE,
+               nSamples = 1000,
+               sppShapefile = OVENdist,
+               assignExtent = c(-179,-60,15,89),
+               element = "Hydrogen",
+               surface = FALSE,
+               period = "Annual",
+               seed = 12345,
+               verbose=1)
+
+
+# Identify weights to use for abundance and isotope values when making assignments
+
+OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+
+HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
+knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
+
+utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+utils::unzip("oven.zip")
+oven_dist <- raster::shapefile("ra06740.shp")
+
+# Empty raster with the same dimensions as isoscape and Ovenbird distribution
+r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
+                     xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
+                     crs = MigConnectivity::projections$WGS84)
+
+relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
+relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
+
+BE <- weightAssign(knownLocs = knownLocs,
+                  isovalues = HBEFbirds[,2],
+                  isoSTD = 12,
+                  intercept = -10,
+                  slope = 0.8,
+                  odds = 0.67,
+                  relAbund = relativeAbund,
+                  weightRange = c(-1,1),
+                  sppShapefile = OVENdist,
+                  assignExtent = c(-179,-60,15,89),
+                  element = "Hydrogen",
+                  surface = FALSE,
+                  period = "Annual")}

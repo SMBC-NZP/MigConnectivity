@@ -1,10 +1,11 @@
 # Uncertainty in detection with equal abundances
+\dontrun{
 nSamplesCMR <- 100 #10000 # Number of resampling iterations for generating confidence intervals
 nSimulationsCMR <- 10 #length(cmrExamples)
-\dontrun{
-  nSamplesCMR <- 10000 # Number of resampling iterations for generating confidence intervals
-  nSimulationsCMR <- length(cmrExamples)
-}
+#\dontrun{
+#  nSamplesCMR <- 10000 # Number of resampling iterations for generating confidence intervals
+#  nSimulationsCMR <- length(cmrExamples)
+#}
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                         rep(seq(49, 31, -2), 10)), 100, 2)
 targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
@@ -57,14 +58,15 @@ mseCMR <- mean((summaryCMR$estimate - trueMC)^2)
 mseCMR
 rmseCMR <- sqrt(mseCMR)
 rmseCMR
-
+}
 # Simulation of BBS data to quantify uncertainty in relative abundance
+\dontrun{
 nSamplesAbund <- 700 #1700 are stored
 nSimulationsAbund <- 10 #length(abundExamples) is 100
-\dontrun{
-  nSamplesAbund <- 1700
-  nSimulationsAbund <- length(abundExamples)
-}
+#\dontrun{
+#  nSamplesAbund <- 1700
+#  nSimulationsAbund <- length(abundExamples)
+#}
 # Storage matrix for samples
 abundMCSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
 summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
@@ -100,3 +102,4 @@ mseAbund <- mean((summaryAbund$estimate - trueMC)^2)
 mseAbund
 rmseAbund <- sqrt(mseAbund)
 rmseAbund
+}
