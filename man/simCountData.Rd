@@ -98,6 +98,7 @@ sim_out <- vector("list", nsims)
 
 
 # Simulation ---
+\dontrun{
 system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\\n")
 
@@ -143,4 +144,5 @@ rel_abund1 <- transform(rel_abund1,
                         ra4.cover = (ra4.low<=0.25 & ra4.high>=0.25))
 
 summary(rel_abund1)
+}
 }

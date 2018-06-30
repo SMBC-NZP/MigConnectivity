@@ -192,7 +192,7 @@ Drates <- c(0.04, 0.16)    #rates of dispersal, fewer for example speed
   nYears <- 15
   nMonths <- 4 # Each season
   Drates <- c(0.02, 0.04, 0.08, 0.16, 0.32, 0.64)    #rates of dispersal
-}
+
 birdLocDisp <- vector('list', length(Drates))
 Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
                        Rate=rep(Drates, each = nYears), MC = NA)
@@ -211,9 +211,7 @@ for(i in 1:length(Drates)){
 Disp.df$Year <- Disp.df$Year - 1 #just run once!
 data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
 
-\dontrun{
   write.csv(Disp.df, "../Disp.df.csv")
-}
 
 # Convert dispersal rates to probabilities of dispersing at least certain distance
 threshold <- 1000
@@ -224,7 +222,7 @@ for (i in 1:length(Drates)) {
   }
 }
 summary(probFarDisp)
-
+}
 
 
 #plot results
