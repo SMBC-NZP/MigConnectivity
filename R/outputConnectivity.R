@@ -82,9 +82,37 @@ summary.intrinsicAssign<-function(object, ...){
   print.intrinsicAssign(object,...)
 }
 
-#' basic plot function for the different isoAssign outputs
-# @export
-#plot <- function(x,...) UseMethod("plot")
+#' Basic plot function for the different isoAssign outputs
+#' @param x an isoAssign object
+#' @param map which \code{isoAssign} output to plot either 'probability', 'population' or 'odds'
+#' @param ... additional arguments passed to plot function
+#' @seealso{\code{isoAssign}}
+#' @return A basic plot of the isotope assignments. If \code{map = 'population'} returns a single map.
+#' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
+#' @examples
+#' \dontrun{
+#' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+#' raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#'
+#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#'
+#'b <- isoAssign(isovalues = OVENvals[,2],
+#'               isoSTD = 12,
+#'               intercept = -10,
+#'               slope = 0.8,
+#'               odds = NULL,
+#'               restrict2Likely = TRUE,
+#'               nSamples = 1000,
+#'               sppShapefile = OVENdist,
+#'               assignExtent = c(-179,-60,15,89),
+#'               element = "Hydrogen",
+#'               surface = FALSE,
+#'               period = "Annual")
+#'
+#'plot(b, map = "population")
+#'}
+#'
 #' @export
 plot.intrinsicAssign <- function(x,map,...){
   if(inherits(x,"isoAssign")){
