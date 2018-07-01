@@ -451,5 +451,5 @@ BE <- weightAssign(knownLocs = knownLocs,
                   period = "Annual")}
 }
 \seealso{
-\code{\link{calcMC}}, \code{\link{projections}}
+\code{\link{calcMC}}, \code{\link{projections}}, \code{\link{isoAssign}}
 }

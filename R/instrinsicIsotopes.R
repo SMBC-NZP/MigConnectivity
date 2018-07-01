@@ -1,9 +1,10 @@
 #' Generate probabilitistic isotope assignments
-#' isoAssign
+#'
 #' The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 #' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
 #' Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
-#' waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+#' waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation.
+#' See \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
 #'
 #' @param isovalues vector of tissue isotope values
@@ -18,7 +19,7 @@
 #'        areas.
 #' @param relAbund raster with relative abundance (must match extent of isotope assignment)
 #' @param isoWeight weighting value to apply to isotope assignment
-#' @param abunWeight weighting value to apply to relative abundance prior
+#' @param abundWeight weighting value to apply to relative abundance prior
 #' @param population vector identifying location where animal was captured. Same order as \code{isovalues}
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
@@ -84,7 +85,7 @@ isoAssign <- function(isovalues,
                       sppShapefile = NULL,
                       relAbund = NULL,
                       isoWeight = NULL,
-                      abunWeight = NULL,
+                      abundWeight = NULL,
                       population = NULL,
                       assignExtent = c(-179,-60,15,89),
                       element = "Hydrogen",
@@ -170,26 +171,26 @@ assignments <- raster::stack(assignments)
 assign2prob <- assignments/raster::cellStats(assignments, sum)
 
 # Weighted Assignments
-if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && is.null(abunWeight)){
+if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && is.null(abundWeight)){
   if(verbose>0){cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")}
 assign2prob <- assign2prob*relAbund
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
-if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && !is.null(abunWeight)){
+if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && !is.null(abundWeight)){
   if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
   isoWeight <- 10^isoWeight
-  abunWeight <- 10^abunWeight
-assign2prob <- (assign2prob^isoWeight)*(relAbund^abunWeight)
+  abundWeight <- 10^abundWeight
+assign2prob <- (assign2prob^isoWeight)*(relAbund^abundWeight)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
 
-if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && !is.null(abunWeight)){
+if(inherits(relAbund,"RasterLayer") && is.null(isoWeight) && !is.null(abundWeight)){
   if(verbose>0){cat("\n Creating posterior abundance weighted assignments \n")}
-  abunWeight <- 10^abunWeight
-assign2prob <- assign2prob*(relAbund^abunWeight)
+  abundWeight <- 10^abundWeight
+assign2prob <- assign2prob*(relAbund^abundWeight)
 assign2prob <- assign2prob/raster::cellStats(assign2prob,sum)
 }
-if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && is.null(abunWeight)){
+if(inherits(relAbund,"RasterLayer") && !is.null(isoWeight) && is.null(abundWeight)){
   if(verbose>0){cat("\n Creating posterior isotope weighted assignments \n")}
   isoWeight <- 10^isoWeight
 assign2prob <- (assign2prob^isoWeight)*relAbund
@@ -581,7 +582,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
 }
 
-#'Calculate Weights for Isotope Assignments
+#' Calculate Weights for Isotope Assignments
 #' weightAssign
 #'
 #' The primary purpose of this function is to determine whether weighting likelihood based isotope assignments
@@ -768,7 +769,7 @@ for(i in 1:nrow(weights)){
     areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
 
 sum_weights[[i]] <- data.frame(isoWeight=log(weights$iso_weight[i],base = 10),
-                              abunWeight=log(weights$abun_weight[i],base = 10),
+                              abundWeight=log(weights$abun_weight[i],base = 10),
                               error = errorRate,
                               area = mean(areaAssign))
 }
@@ -787,7 +788,7 @@ errorRate <- 1-mean(correctAssign)
 areaAssign <- raster::cellStats(raster::area(step2)*step2,sum)
 
 sum_weight <- data.frame(isoWeight=1,
-                         abunWeight=NA,
+                         abundWeight=NA,
                          error = errorRate,
                          area = mean(areaAssign))
 
@@ -800,7 +801,7 @@ pareto <- function(df){
   return(front)
 }
 top_assign <- function(front, df){
-  baseline <- df[is.na(df$abunWeight),]
+  baseline <- df[is.na(df$abundWeight),]
   error_base <- baseline$error
   area_base <- baseline$area_percent
   top <- front[(front$error < error_base  & front$area_percent < area_base),]

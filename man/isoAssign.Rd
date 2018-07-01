@@ -2,16 +2,11 @@
 % Please edit documentation in R/instrinsicIsotopes.R
 \name{isoAssign}
 \alias{isoAssign}
-\title{Generate probabilitistic isotope assignments
-isoAssign
-The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
-a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
-Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
-waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}}
+\title{Generate probabilitistic isotope assignments}
 \usage{
 isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
-  relAbund = NULL, isoWeight = NULL, abunWeight = NULL,
+  relAbund = NULL, isoWeight = NULL, abundWeight = NULL,
   population = NULL, assignExtent = c(-179, -60, 15, 89),
   element = "Hydrogen", surface = FALSE, period = "Annual", seed = NULL,
   verbose = 1)
@@ -39,7 +34,7 @@ areas.}
 
 \item{isoWeight}{weighting value to apply to isotope assignment}
 
-\item{abunWeight}{weighting value to apply to relative abundance prior}
+\item{abundWeight}{weighting value to apply to relative abundance prior}
 
 \item{population}{vector identifying location where animal was captured. Same order as \code{isovalues}}
 
@@ -78,12 +73,11 @@ returns an \code{isoAssign} object containing the following:
   }
 }
 \description{
-Generate probabilitistic isotope assignments
-isoAssign
 The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
 Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
-waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation. See \href{http://journals.plos.org.mutex.gmu.edu/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. 2012}
+waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation.
+See \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \examples{
 \dontrun{

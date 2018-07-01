@@ -715,7 +715,7 @@ estMCisotope <- function(targetDist=NULL,
 #'      main MC formula or that for MC(R).}
 #' }
 #' @example inst/examples/estMCExamples.R
-#' @seealso \code{\link{calcMC}}, \code{\link{projections}}
+#' @seealso \code{\link{calcMC}}, \code{\link{projections}}, \code{\link{isoAssign}}
 #' @export
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,

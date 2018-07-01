@@ -33,7 +33,7 @@ string variables (e.g., "Lambert," "WGS84") or a list variable (i.e.,
 2. Allow users to include relative abundance uncertainty with GL or GPS data as
 well as with CMR data or alone.  Status: Proposed
 3. Allow users to estimate MC (and rM) from intrinsic data types, like isotopes
-and morphometrics.  Status: Proposed
+and morphometrics.  Status: Done for isotopes (v0.3.0)
 4. Allow users to resample from transition matrix uncertainty from sources
 other than RMark.  Status: Proposed
 5. Line up estMC outputs and help file better (currently verbose works
@@ -43,7 +43,7 @@ Done (v0.2.4)
 represented each time, thus making sure the number of bootstraps inference is
 based on is the same as the input number of samples. Status: Done (v0.2.5)
 7. Create diffMC function to generate difference with SD and CI between two or
-more independent estimates of MC / rM. Status: Proposed
+more independent estimates of MC / rM. Status: Done (v0.3.0)
 8. Add calcMantel function, for consistency and ease of use. Not really needed.
 Status: Proposed
 9. Add warnings / while loop to estMC when resampling and assigning target
@@ -53,8 +53,8 @@ Status: Done (v0.2.5)
 
 Updates
 1. When manuscript is accepted, update references to it throughout
-documentation. Then again once in print. Status: All references currently are
-"in press."  Probably should add a few more references too.
+documentation. Then again once in print. Status: Done (v0.3.0)  Probably should
+add a few more references too.
 
 Bug Fixes
 1. in the estMC function if targetSites == SpatialPolygonDataFrame - you get an
