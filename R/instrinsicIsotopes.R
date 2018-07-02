@@ -637,6 +637,15 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'    \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
 #'    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
 #' }
+#'
+#' #' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#'
+#' Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
+#' abundance into spatial assignments on continuous surfaces. Ecology and Evolution
+#' 3:11, 3847-3855.
 #' @export
 #'
 #' @examples
