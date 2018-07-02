@@ -102,6 +102,16 @@ b <- isoAssign(isovalues = OVENvals[,2],
               period = "Annual")
 Sys.time()-a
 }
+
+}
+\references{
+Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+
+Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
+Linking hydrogen isotopes in feathers and precipitation: sources of
+variance and consequences for assignment to isoscapes. PLoS ONE 7: e35137.
 }
 \seealso{
 {\code{\link{weightAssign}}}

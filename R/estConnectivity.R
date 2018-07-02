@@ -717,6 +717,16 @@ estMCisotope <- function(targetDist=NULL,
 #' @example inst/examples/estMCExamples.R
 #' @seealso \code{\link{calcMC}}, \code{\link{projections}}, \code{\link{isoAssign}}
 #' @export
+#' @references
+#' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
+#' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
+#' Methods in Ecology and Evolution 9: 513 - 524.
+#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#'
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
                   originSites = NULL, targetSites = NULL,
@@ -844,6 +854,13 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  resampleProjection = raster::projection(OVENdata$targetSites))
 #' str(rM1)
 #' @seealso \code{\link{estMC}}
+#'
+#' @references
+#' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
+#' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
+#' Methods in Ecology and Evolution 9: 513 - 524.
+#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
@@ -1016,6 +1033,11 @@ getCMRexample <- function(number = 1) {
 #' }
 #' @export
 #'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#'
 # @examples
 diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
   nEst <- length(estimates)
@@ -1100,6 +1122,11 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
 #'      List of sampled values for each pairwise rM difference.}
 #' }
 #' @export
+#'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 # @examples
 diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {

@@ -51,3 +51,8 @@ uncertainty (SE and CI).  For those measures of uncertainty to be accurate,
 only apply this function to MC estimates where all data sources are
 independent (e.g., different species).
 }
+\references{
+Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+}

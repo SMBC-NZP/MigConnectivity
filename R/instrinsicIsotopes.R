@@ -74,6 +74,15 @@
 #'               period = "Annual")
 #'Sys.time()-a
 #'}
+#'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#'
+#' Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
+#' Linking hydrogen isotopes in feathers and precipitation: sources of
+#' variance and consequences for assignment to isoscapes. PLoS ONE 7: e35137.
 
 isoAssign <- function(isovalues,
                       isoSTD,
@@ -667,6 +676,19 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'                  surface = FALSE,
 #'                  period = "Annual")
 #'}
+#'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#'
+#' Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
+#' Linking hydrogen isotopes in feathers and precipitation: sources of
+#' variance and consequences for assignment to isoscapes. PLoS ONE 7: e35137.
+#'
+#' Rushing, C. S., P. P. Marra, and C. E. Studds. 2017. Incorporating breeding
+#' abundance into spatial assignments on continuous surfaces. Ecology and
+#' Evolution 7: 3847-3855.
 weightAssign <- function(knownLocs,
                          isovalues,
                          isoSTD,
