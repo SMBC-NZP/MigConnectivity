@@ -406,7 +406,7 @@ Florida <- rgeos::gUnaryUnion(Florida)
 Florida$NAME <- "Florida"
 
 originSites <- rbind(JAMrock,Florida)
-originDist <- originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 
 EVER <- length(grep(x=OVENvals$Sample,"EVER"))
 JAM <- length(grep(x=OVENvals$Sample,"JAM"))
