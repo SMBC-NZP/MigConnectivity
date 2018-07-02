@@ -51,6 +51,46 @@ uncertainty (SE and CI).  For those measures of uncertainty to be accurate,
 only apply this function to MC estimates where all data sources are
 independent (e.g., different species).
 }
+\examples{
+\dontrun{
+ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+                 geoBias = OVENdata$geo.bias, # Light-level GL location bias
+                 geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+                 targetDist = OVENdata$targetDist, # targetSites distance matrix
+                 originDist = OVENdata$originDist, # originSites distance matrix
+                 targetSites = OVENdata$targetSites, # Non-breeding target sites
+                 originSites = OVENdata$originSites, # Breeding origin sites
+                 originPoints = OVENdata$originPoints, # Capture Locations
+                 targetPoints = OVENdata$targetPoints, # Device target locations
+                 originRelAbund = OVENdata$originRelAbund,#Origin relative abund
+                 verbose = 1,   # output options
+                 calcCorr = FALSE, # do not estimate rM as well
+                 nSamples = 1000, # This is set low for example
+                 resampleProjection = raster::projection(OVENdata$targetSites))
+fm <- getCMRexample()
+originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
+                        rep(seq(49, 31, -2), 10)), 100, 2)
+targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
+                        rep(seq(9, -9, -2), 10)), 100, 2)
+originPosCMR <- rowsum(originPos13, c(rep(1:2, 5, each = 5),
+                                      rep(3:4, 5, each = 5))) / 25
+targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
+                                      rep(3:4, 5, each = 5))) / 25
+originDist <- distFromPos(originPosCMR, 'ellipsoid')
+targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
+originRelAbundTrue <- rep(0.25, 4)
+theorEst <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
+                  originDist = originDist, targetDist = targetDist,
+                  originSites = 5:8, targetSites = c(3,2,1,4),
+                  nSamples = 1000, verbose = 0,
+                  sampleSize = length(grep("[2-5]", fm$data$data$ch)))
+ovenEst
+theorEst
+diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
+                nSamples = 10000, returnSamples = TRUE)
+
+}
+}
 \references{
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
