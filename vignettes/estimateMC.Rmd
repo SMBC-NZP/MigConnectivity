@@ -360,19 +360,15 @@ text(-50,-95,paste0("y = ",round(coefficients(iso.fit)[2],2),"x + ",round(coeffi
 
 ```{r, eval = FALSE}
 a <- Sys.time()
-assignments <- isoAssign(isovalues = OVENvals[,2],
+b <- isoAssign(isovalues = OVENvals[,2],
                isoSTD = 13.73904, # from above
                intercept = -19.2703031,
                slope = 0.8079186,
-               oddsRatio = FALSE,
                odds = NULL,
-               SingleCellAssign = TRUE,
                restrict2Likely = TRUE,
                nSamples = 1000,
-               dataFrame = FALSE,
                sppShapefile = OVENdist,
                assignExtent = c(-179,-60,15,89),
-               return = "sim.cell",
                element = "Hydrogen",
                surface = FALSE,
                period = "Annual")
@@ -381,24 +377,6 @@ Sys.time()-a
 
 We can now estimate the strength of MC from stable-hydrogen isotopes using the 1000 probable locations for each individual. 
 ```{r, eval = FALSE}
-# 3 degree latitude target bands
-targetRange3 <- rasterToPolygons(raster(xmn = -180,xmx = -40, ymn = 20, ymx = 80, ncol = 1, nrow = 20))
-
-# set coordinate reference system
-crs(targetRange3) <-  sp::CRS(MigConnectivity::projections$WGS84)
-
-# save only those locations that correspond with the breeding range
-targetSites <- raster::intersect(OVENdist,targetRange3)
-
-# label the targetSites
-targetSites$layer <- 1:length(targetSites)
-
-# make sure they are spatial polygons
-targetSites <- as(targetSites,"SpatialPolygons")
-
-# Generate distances between the centroids
-targetDist <- distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
-
 # Make origin sites - birds were captured in Florida and Jamaica 
 Countries <- shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
 
@@ -434,7 +412,6 @@ originLongLat[grep(OVENiso[,1],pattern = "EVER"),]<-sample2@coords
 originPoints <- sp::SpatialPoints(originLongLat, proj4string = sp::CRS(originSites@proj4string@projargs))
 
 # Make sure all spatial layers have the same CRS (coordinate reference system)
-targetSites <- sp::spTransform(targetSites,sp::CRS(MigConnectivity::projections$WGS84))
 originSites <- sp::spTransform(originSites,sp::CRS(MigConnectivity::projections$WGS84))
 originPoints <- sp::spTransform(originPoints,sp::CRS(MigConnectivity::projections$WGS84))
 ```
@@ -443,9 +420,7 @@ originPoints <- sp::spTransform(originPoints,sp::CRS(MigConnectivity::projection
 Sys.time()
 a <- Sys.time()
 ovenMC <- estMC(originRelAbund = originRelAbund,
-              targetDist = targetDist,
-              targetPoints = assignments,
-              targetSites = targetSites,
+              targetIntrinsic = b,
               originPoints = originPoints,
               originSites = originSites,
               originDist = originDist,
@@ -454,8 +429,6 @@ ovenMC <- estMC(originRelAbund = originRelAbund,
               alpha = 0.05,
               approxSigTest = F,
               sigConst = 0,
-              resampleProjection = MigConnectivity::projections$EquidistConic,
-              maxTries = 300,
               isIntrinsic = TRUE) 
 Sys.time()-a
 Sys.time()
