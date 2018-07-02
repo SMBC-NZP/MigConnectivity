@@ -393,14 +393,42 @@ str(GL_mc)
 
 OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 
+world <- raster::shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
+states <- raster::shapefile("data-raw/Spatial_Layers/st99_d00.shp")
+
+JAMrock <- world[world$NAME=="Jamaica","NAME"]
+Florida <- states[states$NAME=="Florida","NAME"]
+Florida <- rgeos::gUnaryUnion(Florida)
+Florida$NAME <- "Florida"
+
+originSites <- rbind(JAMrock,Florida)
+originDist <- originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+
+EVER <- length(grep(x=OVENvals$Sample,"EVER"))
+JAM <- length(grep(x=OVENvals$Sample,"JAM"))
+
+originRelAbund <- matrix(c(EVER,JAM),nrow = 1,byrow = TRUE)
+originRelAbund <- prop.table(originRelAbund,1)
+
+op <- rgeos::gCentroid(originSites,byid = TRUE)
+
+originPoints <- array(NA,c(EVER+JAM,2))
+originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sp::coordinates(op[1])[,1]
+originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sp::coordinates(op[1])[,2]
+originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sp::coordinates(op[2])[,1]
+originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
+
+originPoints <- sp::SpatialPoints(originPoints)
+raster::crs(originPoints)<- MigConnectivity::projections$WGS84
+
 b <- isoAssign(isovalues = OVENvals[,2],
-               isoSTD = 12,
-               intercept = -10,
-               slope = 0.8,
+               isoSTD = 12,       # this value is for demonstration only
+               intercept = -10,   # this value is for demonstration only
+               slope = 0.8,       # this value is for demonstration only
                odds = NULL,
                restrict2Likely = TRUE,
                nSamples = 1000,
@@ -411,6 +439,19 @@ b <- isoAssign(isovalues = OVENvals[,2],
                period = "Annual",
                seed = 12345,
                verbose=1)
+
+simEst <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = b,
+                originPoints = originPoints,
+                originSites = originSites,
+                originDist = originDist,
+                nSamples = 5,
+                verbose=1,
+                calcCorr=TRUE,
+                alpha = 0.05,
+                approxSigTest = F,
+                sigConst = 0,
+                isIntrinsic = TRUE)
 
 
 # Identify weights to use for abundance and isotope values when making assignments
@@ -438,9 +479,9 @@ relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 
 BE <- weightAssign(knownLocs = knownLocs,
                   isovalues = HBEFbirds[,2],
-                  isoSTD = 12,
-                  intercept = -10,
-                  slope = 0.8,
+                  isoSTD = 12,     # this value is for demonstration only
+                  intercept = -10, # this value is for demonstration only
+                  slope = 0.8,     # this value is for demonstration only
                   odds = 0.67,
                   relAbund = relativeAbund,
                   weightRange = c(-1,1),

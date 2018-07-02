@@ -139,5 +139,5 @@ Methods in Ecology and Evolution 9: 513-524.
 \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 
 Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
-change with application to Cerulean Warblers. Ecology 83: 2832–2840.
+change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 }
