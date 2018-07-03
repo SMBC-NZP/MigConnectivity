@@ -215,12 +215,12 @@ getRDS <- function(speciesDist) {
   return(shp)
 }
 OVENdist <- getRDS("OVENdist")
-OVENdist <- OVENdist[OVENdist@ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
 OVENvals <- getCSV("deltaDvalues.csv")
+
+OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
 
 originSites <- getRDS("originSites")
 originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
@@ -270,3 +270,4 @@ ovenMC <- estMC(originRelAbund = originRelAbund,
                 isIntrinsic = TRUE)
 
 ovenMC
+}
