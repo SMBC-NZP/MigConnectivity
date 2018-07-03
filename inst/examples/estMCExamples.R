@@ -190,22 +190,39 @@ str(GL_mc)
 
 
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
+library(sp)
+getCSV <- function(filename) {
+  tmp <- tempdir()
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  csv <- read.csv(temp)
+  unlink(temp)
+  return(csv)
 
-OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
-OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+}
+getRDS <- function(speciesDist) {
+  tmp <- tempdir()
+  extension <- '.rds'
+  filename <- paste0(speciesDist, extension)
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/Spatial_Layers/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  shp <- readRDS(temp)
+  unlink(temp)
+  return(shp)
+}
+OVENdist <- getRDS("OVENdist")
+OVENdist <- OVENdist[OVENdist@ORIGIN==2,] # only breeding
+raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
 raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
-OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+OVENvals <- getCSV("deltaDvalues.csv")
 
-world <- raster::shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
-states <- raster::shapefile("data-raw/Spatial_Layers/st99_d00.shp")
-
-JAMrock <- world[world$NAME=="Jamaica","NAME"]
-Florida <- states[states$NAME=="Florida","NAME"]
-Florida <- rgeos::gUnaryUnion(Florida)
-Florida$NAME <- "Florida"
-
-originSites <- rbind(JAMrock,Florida)
+originSites <- getRDS("originSites")
 originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 
 EVER <- length(grep(x=OVENvals$Sample,"EVER"))
@@ -225,68 +242,31 @@ originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
 originPoints <- sp::SpatialPoints(originPoints)
 raster::crs(originPoints)<- MigConnectivity::projections$WGS84
 
-b <- isoAssign(isovalues = OVENvals[,2],
-               isoSTD = 12,       # this value is for demonstration only
-               intercept = -10,   # this value is for demonstration only
-               slope = 0.8,       # this value is for demonstration only
-               odds = NULL,
-               restrict2Likely = TRUE,
-               nSamples = 1000,
-               sppShapefile = OVENdist,
-               assignExtent = c(-179,-60,15,89),
-               element = "Hydrogen",
-               surface = FALSE,
-               period = "Annual",
-               seed = 12345,
-               verbose=1)
+iso <- isoAssign(isovalues = OVENvals[,2],
+                 isoSTD = 12,       # this value is for demonstration only
+                 intercept = -10,   # this value is for demonstration only
+                 slope = 0.8,       # this value is for demonstration only
+                 odds = NULL,
+                 restrict2Likely = TRUE,
+                 nSamples = 1000,
+                 sppShapefile = OVENdist,
+                 assignExtent = c(-179,-60,15,89),
+                 element = "Hydrogen",
+                 surface = FALSE,
+                 period = "Annual",
+                 seed = 12345,
+                 verbose=1)
 
-simEst <- estMC(originRelAbund = originRelAbund,
-                targetIntrinsic = b,
+ovenMC <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = iso,
                 originPoints = originPoints,
                 originSites = originSites,
                 originDist = originDist,
-                nSamples = 5,
-                verbose=1,
-                calcCorr=TRUE,
+                nSamples = 200,
+                verbose = 1,
+                calcCorr = TRUE,
                 alpha = 0.05,
-                approxSigTest = F,
-                sigConst = 0,
+                approxSigTest = FALSE,
                 isIntrinsic = TRUE)
 
-
-# Identify weights to use for abundance and isotope values when making assignments
-
-OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
-OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
-OVENvals <- read.csv("data-raw/deltaDvalues.csv")
-
-HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
-knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
-
-utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
-utils::unzip("oven.zip")
-oven_dist <- raster::shapefile("ra06740.shp")
-
-# Empty raster with the same dimensions as isoscape and Ovenbird distribution
-r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
-                     xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
-                     crs = MigConnectivity::projections$WGS84)
-
-relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
-relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
-
-BE <- weightAssign(knownLocs = knownLocs,
-                  isovalues = HBEFbirds[,2],
-                  isoSTD = 12,     # this value is for demonstration only
-                  intercept = -10, # this value is for demonstration only
-                  slope = 0.8,     # this value is for demonstration only
-                  odds = 0.67,
-                  relAbund = relativeAbund,
-                  weightRange = c(-1,1),
-                  sppShapefile = OVENdist,
-                  assignExtent = c(-179,-60,15,89),
-                  element = "Hydrogen",
-                  surface = FALSE,
-                  period = "Annual")}
+ovenMC
