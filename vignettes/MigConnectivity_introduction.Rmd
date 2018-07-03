@@ -1,5 +1,5 @@
 ---
-title: '''MigConnectivity'' package'
+title: '''MigConnectivity'' package: introduction'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
@@ -40,7 +40,7 @@ Three data inputs are needed to calculate MC, and one is optional:
 MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and approximates the correlation between individuals at those distances. Earlier methods (Mantel correlation; rM) used the correlation between two distance matrices of individual animals captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient approximation, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.  
 
 
-<a href="https://doi.org/10.1111/2041-210X.12916" target=blank>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. 2018. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution. 9(3) 513-524.</a> 
+<a href="https://doi.org/10.1111/2041-210X.12916">Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. 2018. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution. 9(3) 513-524.</a> 
 
 ### Overview of Functions  
 

@@ -1,5 +1,5 @@
 ---
-title: '''MigConnectivity'' package'
+title: '''MigConnectivity'' package: some estMC function examples'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
@@ -16,11 +16,11 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
 
 `estMC` estimates the strength of migratory connectivity (MC) with estimates of uncertainty. MC estimated either with transition probability estimates or individual assignments to regions from either tracking data or stable-isotopes. Uses re-sampling to measure MC uncertainty from RMark transition probability matrix estimates and/or JAGS relative abundance MCMC samples OR geolocator and/or GPS data OR stable-isotope assignments.  
 
-### `estMC` - Estimate strength of migratory connectivity incorporating location and other sampling uncertainty
+## `estMC` - Estimate strength of migratory connectivity incorporating location and other sampling uncertainty
 
 Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. 
 
-### Light-level geolocator / GPS 
+## Light-level geolocator / GPS 
 To estimate MC and include location uncertainty the following data are needed:  
 
 1. A logical vector indicating the type of device the location estimates were derived from (GPS = FALSE, Light-level geolocator = TRUE)    
@@ -281,7 +281,7 @@ box(which="plot")
 str(M)
 ```
 
-### Stable-hydrogen isotopes  
+## Stable-hydrogen isotopes  
 To estimate MC and include location uncertainty the following data are needed:  
 
 1. Distance matrix between breeding and non-breeding regions    
@@ -292,12 +292,14 @@ To estimate MC and include location uncertainty the following data are needed:
 Below is a repeatable example for how to make isotope assignments, generate random point locations based on the assignments and to estimate the strength of migratory connectivity.
 
 ```{r, eval = FALSE}
+# Load in projections
+data("projections")
 # Read in distribution for the Ovenbird
 OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
 # subset out only the breeding distribution
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
 # assign coordinate reference system
-crs(OVENdist) <- MigConnectivity::projections$WGS84
+crs(OVENdist) <- projections$WGS84
 
 # Read in stable-hydrogen isotope values 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
@@ -321,7 +323,7 @@ OVENknown <- read.csv("F:/IsotopeGLmanuscript/Feathers_for_Fractionation_Equatio
 head(OVENknown)
 ```
 
-## Get measured annual isotope values in precipitation 
+### Get measured annual isotope values in precipitation 
 ```{r, eval = FALSE}
 isomap <- getIsoMap(element = "Hydrogen",
                     period = "Annual")
@@ -394,8 +396,10 @@ originSites <- rbind(JAM,FL)
 originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 
 # Determine relative abundance based on number of birds captured
-ever <- length(grep(OVENiso[,1],pattern = "EVER"))/length(grep(OVENiso[,1],pattern = "NH", invert = TRUE))
-jam <- length(grep(OVENiso[,1],pattern = "JAM"))/length(grep(OVENiso[,1],pattern = "NH", invert = TRUE))
+ever <- length(grep(OVENiso[,1],pattern = "EVER"))/
+  length(grep(OVENiso[,1], pattern = "NH", invert = TRUE))
+jam <- length(grep(OVENiso[,1],pattern = "JAM"))/
+  length(grep(OVENiso[,1],pattern = "NH", invert = TRUE))
 
 
 originRelAbundance <- as.matrix(c(jam,ever))
@@ -404,16 +408,21 @@ originRelAbundance <- as.matrix(c(jam,ever))
 
 set.seed(12)
 originLongLat <- array(NA,c(length(grep(OVENiso[,1],pattern = "NH", invert = TRUE)),2))
-sample1 <- sp::spsample(originSites[1,],length(grep(OVENiso[,1],pattern = "JAM")),type = "random")
-sample2 <- sp::spsample(originSites[2,],length(grep(OVENiso[,1],pattern = "EVER")),type = "random")
+sample1 <- sp::spsample(originSites[1, ], 
+                        length(grep(OVENiso[, 1], pattern = "JAM")),
+                        type = "random")
+sample2 <- sp::spsample(originSites[2, ],
+                        length(grep(OVENiso[, 1],pattern = "EVER")),
+                        type = "random")
 originLongLat[grep(OVENiso[,1],pattern = "JAM"),]<-sample1@coords
 originLongLat[grep(OVENiso[,1],pattern = "EVER"),]<-sample2@coords
 
-originPoints <- sp::SpatialPoints(originLongLat, proj4string = sp::CRS(originSites@proj4string@projargs))
+originPoints <- sp::SpatialPoints(originLongLat, 
+                                  proj4string = sp::CRS(originSites@proj4string@projargs))
 
 # Make sure all spatial layers have the same CRS (coordinate reference system)
-originSites <- sp::spTransform(originSites,sp::CRS(MigConnectivity::projections$WGS84))
-originPoints <- sp::spTransform(originPoints,sp::CRS(MigConnectivity::projections$WGS84))
+originSites <- sp::spTransform(originSites,sp::CRS(projections$WGS84))
+originPoints <- sp::spTransform(originPoints,sp::CRS(projections$WGS84))
 ```
 
 ```{r, eval = FALSE}

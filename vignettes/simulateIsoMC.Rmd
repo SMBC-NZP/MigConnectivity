@@ -1,5 +1,5 @@
 ---
-title: '''MigConnectivity'' package'
+title: '''MigConnectivity'' package: isotope simulation'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
@@ -31,7 +31,8 @@ The following is a simulation that tests the how the spatial arrangement of targ
 Read in the Ovenbird distribution and create a species distribution map from the abundance data. 
 ```{r eval = FALSE}
 # read in raster layer
-download.file("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/Spatial_Layers/bbsoven.txt",
+download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+                     "/master/data-raw/Spatial_Layers/bbsoven.txt"),
               destfile = "bbsoven.txt")
 
 OVENabund <- raster::raster("bbsoven.txt")
@@ -41,17 +42,19 @@ OVENdist[OVENdist>0]<-1
 OVENdist[OVENdist==0]<-NA
 
 OVEN_single_poly <- raster::rasterToPolygons(OVENdist, dissolve = TRUE)
-raster::crs(OVEN_single_poly) <- raster::crs(OVENabund) <- MigConnectivity::projections$WGS84
+raster::crs(OVEN_single_poly) <- MigConnectivity::projections$WGS84
+raster::crs(OVENabund) <- MigConnectivity::projections$WGS84
 ```
 To complete the simulation we need a template to ensure the raster resolution is the same as the assignment raster. To do this, we use the isotope data as our template. We grab the isotope base-map using the <code>getIsoMap</code> function. 
-### get isotope raster for template
 ```{r eval = FALSE}
+### get isotope raster for template
 rasterTemplate <- MigConnectivity::getIsoMap()
 ```
 
-### crop template to distribution and mask with distribution
+### Crop template to distribution and mask with distribution
 ```{r eval = FALSE}
-rasterTemplate <- raster::mask(raster::crop(rasterTemplate,OVEN_single_poly),OVEN_single_poly)
+rasterTemplate <- raster::mask(raster::crop(rasterTemplate, OVEN_single_poly),
+                               OVEN_single_poly)
 
 # rasterize the distribution for relative abundance so that raster
 # dimensions and resolution match the isotope layer
@@ -126,7 +129,8 @@ featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
 iso_dat <- data.frame(Site = rep(1:3,each = 100),
                       xcoords = c(Site1@coords[,1],Site2@coords[,1],Site3@coords[,1]),
                       ycoords = c(Site1@coords[,2],Site2@coords[,2],Site3@coords[,2]),
-                      targetSite = over(rbind(Site1,Site2,Site3),targetRanges[[3]])$Target,
+                      targetSite = over(rbind(Site1,Site2,Site3),
+                                        targetRanges[[3]])$Target,
                       featherIso = extract(featherIso,rbind(Site1,Site2,Site3)))
 
 iso_dat <- iso_dat[complete.cases(iso_dat),]
@@ -139,11 +143,14 @@ for(i in 1:nrow(sim_psi)){
 }
 
 states <- raster::getData("GADM", country = "United States", level = 1)
-  originSites <- states[(states$NAME_1 %in% c("Texas","Louisiana","Florida")),]
-  originSites <- sp::spTransform(originSites, sp::CRS(MigConnectivity::projections$WGS84))
+originSites <- states[(states$NAME_1 %in% c("Texas","Louisiana","Florida")),]
+originSites <- sp::spTransform(originSites, 
+                               sp::CRS(MigConnectivity::projections$WGS84))
 
-  originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
-  targetDistMC <- MigConnectivity::distFromPos(rgeos::gCentroid(targetRanges[[3]], byid = TRUE)@coords)
+originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,
+                                                            byid = TRUE)@coords)
+targetDistMC <- MigConnectivity::distFromPos(rgeos::gCentroid(targetRanges[[3]], 
+                                                              byid = TRUE)@coords)
 ```
 
 ## Start of simulations
@@ -183,10 +190,10 @@ output.sims <- foreach(target=1:nTargetSetups,
                        .combine = rbind,
                        .export = ls(.GlobalEnv),
                        .packages = c("raster","sp","MigConnectivity")) %dopar% {
-set.seed(9001)
 #for(target in 1:nTargetSetups){
+  set.seed(9001)
   targetSites <- targetRanges[[target]]
-  targetDist <- MigConnectivity::distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
+  targetDist <- distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
   # Extract simulated data
   iso_dat <- data.frame(Site = rep(1:3,each = 100),
                         xcoords = c(Site1@coords[,1],Site2@coords[,1],Site3@coords[,1]),
@@ -197,121 +204,126 @@ set.seed(9001)
   iso_dat <- iso_dat[complete.cases(iso_dat),]
 
   # generate transition data from simulation
-  sim_psi <- prop.table(table(iso_dat$Site,factor(iso_dat$targetSite,1:nrow(targetSites))), 1)
+  sim_psi <- prop.table(table(iso_dat$Site,factor(iso_dat$targetSite,
+                                                  1:nrow(targetSites))), 1)
 
   MC.generated <- calcMC(originDist = originDist,
                           targetDist = targetDist,
                           originRelAbund = originRelAbund,
                           psi = sim_psi)
 
-for (sim in 1:nSims) {
-  cat("Simulation Run", sim, "of", nSims, "for target",target,"at", date(), "\n")
-  sim_move <- simMove(rep(100, nOriginSites), originDist, targetDist, sim_psi, 1, 1)
-  originAssignment <- sim_move$animalLoc[,1,1,1]
-  targetAssignment <- sim_move$animalLoc[,2,1,1]
-  for (i in 1:300) {
-    targetPoint1 <- spsample(targetSites[targetAssignment[i],], n= 1, type = "random", iter = 25)
-    targetPoints0[i,] <- targetPoint1@coords
+  for (sim in 1:nSims) {
+    cat("Simulation Run", sim, "of", nSims, "for target",target,"at", date(), "\n")
+    sim_move <- simMove(rep(100, nOriginSites), originDist, targetDist, sim_psi, 1, 1)
+    originAssignment <- sim_move$animalLoc[,1,1,1]
+    targetAssignment <- sim_move$animalLoc[,2,1,1]
+    for (i in 1:300) {
+      targetPoint1 <- spsample(targetSites[targetAssignment[i],], 
+                               n= 1, type = "random", iter = 25)
+      targetPoints0[i,] <- targetPoint1@coords
+    }
+    targetPoints <- SpatialPoints(targetPoints0, CRS(projections$WGS84))
+  
+    # Extract simulated data
+    iso_dat <- data.frame(Site = originAssignment,
+                          xcoords = targetPoints0[,1],
+                          ycoords = targetPoints0[,2],
+                          targetSite = over(targetPoints,targetSites)$Target,
+                          featherIso = extract(featherIso,targetPoints))
+  
+    iso_dat <- iso_dat[complete.cases(iso_dat),]
+  
+    # generate transition data from simulation
+    sim_psi0 <- table(iso_dat$Site,
+                      factor(iso_dat$targetSite,
+                             min(targetSites$Target):max(targetSites$Target)))
+    sim_psi_realized <- prop.table(sim_psi0, 1)
+  
+    # get points ready for analysis
+    nSite1 <- table(iso_dat$Site)[1]
+    nSite2 <- table(iso_dat$Site)[2]
+    nSite3 <- table(iso_dat$Site)[3]
+  
+    nTotal <- nSite1+nSite2+nSite3
+  
+    originCap <- array(NA, c(nTotal,2))
+  
+    wherecaught <- rep(paste0("Site", 1:3), c(nSite1, nSite2, nSite3))
+  
+    originCap[which(pmatch(wherecaught,"Site1",dup = TRUE)==1),1] <- capCoords[1,1]
+    originCap[which(pmatch(wherecaught,"Site1",dup = TRUE)==1),2] <- capCoords[1,2]
+  
+    originCap[which(pmatch(wherecaught,"Site2",dup = TRUE)==1),1] <- capCoords[2,1]
+    originCap[which(pmatch(wherecaught,"Site2",dup = TRUE)==1),2] <- capCoords[2,2]
+  
+    originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),1] <- capCoords[3,1]
+    originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),2] <- capCoords[3,2]
+  
+    originPoints <- SpatialPoints(originCap)
+    crs(originPoints) <- sp::CRS(MigConnectivity::projections$WGS84)
+  
+    MC.realized <- calcMC(originDist = originDist,
+                          targetDist = targetDist,
+                          originRelAbund = originRelAbund,
+                          psi = sim_psi_realized,
+                          sampleSize=nTotal)
+  
+  
+  
+    originPointDists <- distFromPos(originCap)
+    targetPointDists <- distFromPos(cbind(iso_dat$xcoords, iso_dat$ycoords))
+  
+  
+    simAssign <- isoAssign(isovalues = iso_dat$featherIso,
+                           isoSTD = 12,
+                           intercept = -17.57,
+                           slope = 0.95,
+                           odds = 0.67,
+                           restrict2Likely = FALSE,
+                           nSamples = 500,
+                           sppShapefile = OVEN_single_poly,
+                           relAbund = relativeAbund,
+                           verbose = 0,
+                           isoWeight = -0.7,
+                           abundWeight = 0,
+                           assignExtent = c(-179,-60,15,89),
+                           element = "Hydrogen",
+                           surface = FALSE,
+                           period = "GrowingSeason")
+  
+    simEst <- estMC(originRelAbund = originRelAbund,
+                    targetDist = targetDist,
+                    targetIntrinsic = simAssign,
+                    targetSites = targetSites,
+                    originPoints = originPoints,
+                    originSites = originSites,
+                    originDist = originDist,
+                    nSamples = 100,
+                    verbose = 0,
+                    calcCorr = TRUE,
+                    alpha = 0.05,
+                    approxSigTest = F,
+                    sigConst = 0,
+                    isIntrinsic = TRUE,
+                    nSim = 5)
+  
+    sim.output$targetSetup[sim] <- target
+    sim.output$sim[sim]<-sim
+    sim.output$MC.generated[sim] <- MC.generated
+    sim.output$MC.realized[sim] <- MC.realized
+    sim.output$MC.est[sim] <- simEst$meanMC
+    sim.output$MC.low[sim] <- simEst$bcCI[1]
+    sim.output$MC.high[sim] <- simEst$bcCI[2]
+    sim.output$rM.realized[sim] <- ncf::mantel.test(originPointDists, 
+                                                    targetPointDists,
+                                                    resamp=0, 
+                                                    quiet = TRUE)$correlation
+    sim.output$rM.est[sim] <- simEst$meanCorr
+    sim.output$rM.low[sim] <- simEst$bcCICorr[1]
+    sim.output$rM.high[sim] <- simEst$bcCICorr[2]
+  
   }
-  targetPoints <- SpatialPoints(targetPoints0, CRS(projections$WGS84))
-
-  # Extract simulated data
-  iso_dat <- data.frame(Site = originAssignment,
-                        xcoords = targetPoints0[,1],
-                        ycoords = targetPoints0[,2],
-                        targetSite = over(targetPoints,targetSites)$Target,
-                        featherIso = extract(featherIso,targetPoints))
-
-  iso_dat <- iso_dat[complete.cases(iso_dat),]
-
-  # generate transition data from simulation
-  sim_psi_realized <- prop.table(table(iso_dat$Site,
-                                       factor(iso_dat$targetSite,
-                                              min(targetSites$Target):max(targetSites$Target))), 1)
-
-  # get points ready for analysis
-  nSite1 <- table(iso_dat$Site)[1]
-  nSite2 <- table(iso_dat$Site)[2]
-  nSite3 <- table(iso_dat$Site)[3]
-
-  nTotal <- nSite1+nSite2+nSite3
-
-  originCap <- array(NA, c(nTotal,2))
-
-  wherecaught <- rep(paste0("Site", 1:3), c(nSite1, nSite2, nSite3))
-
-  originCap[which(pmatch(wherecaught,"Site1",dup = TRUE)==1),1] <- capCoords[1,1]
-  originCap[which(pmatch(wherecaught,"Site1",dup = TRUE)==1),2] <- capCoords[1,2]
-
-  originCap[which(pmatch(wherecaught,"Site2",dup = TRUE)==1),1] <- capCoords[2,1]
-  originCap[which(pmatch(wherecaught,"Site2",dup = TRUE)==1),2] <- capCoords[2,2]
-
-  originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),1] <- capCoords[3,1]
-  originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),2] <- capCoords[3,2]
-
-  originPoints <- SpatialPoints(originCap)
-  crs(originPoints) <- sp::CRS(MigConnectivity::projections$WGS84)
-
-  MC.realized <- calcMC(originDist = originDist,
-                        targetDist = targetDist,
-                        originRelAbund = originRelAbund,
-                        psi = sim_psi_realized,
-                        sampleSize=nTotal)
-
-
-
-  originPointDists <- distFromPos(originCap)
-  targetPointDists <- distFromPos(cbind(iso_dat$xcoords, iso_dat$ycoords))
-
-
-  simAssign <- isoAssign(isovalues = iso_dat$featherIso,
-                         isoSTD = 12,
-                         intercept = -17.57,
-                         slope = 0.95,
-                         odds = 0.67,
-                         restrict2Likely = FALSE,
-                         nSamples = 500,
-                         sppShapefile = OVEN_single_poly,
-                         relAbund = relativeAbund,
-                         verbose = 0,
-                         isoWeight = -0.7,
-                         abundWeight = 0,
-                         assignExtent = c(-179,-60,15,89),
-                         element = "Hydrogen",
-                         surface = FALSE,
-                         period = "GrowingSeason")
-
-  simEst <- estMC(originRelAbund = originRelAbund,
-                  targetDist = targetDist,
-                  targetIntrinsic = simAssign,
-                  targetSites = targetSites,
-                  originPoints = originPoints,
-                  originSites = originSites,
-                  originDist = originDist,
-                  nSamples = 100,
-                  verbose = 0,
-                  calcCorr = TRUE,
-                  alpha = 0.05,
-                  approxSigTest = F,
-                  sigConst = 0,
-                  isIntrinsic = TRUE,
-                  nSim = 5)
-
-  sim.output$targetSetup[sim] <- target
-  sim.output$sim[sim]<-sim
-  sim.output$MC.generated[sim] <- MC.generated
-  sim.output$MC.realized[sim] <- MC.realized
-  sim.output$MC.est[sim] <- simEst$meanMC
-  sim.output$MC.low[sim] <- simEst$bcCI[1]
-  sim.output$MC.high[sim] <- simEst$bcCI[2]
-  sim.output$rM.realized[sim] <- ncf::mantel.test(originPointDists, targetPointDists,
-                                                  resamp=0, quiet = TRUE)$correlation
-  sim.output$rM.est[sim] <- simEst$meanCorr
-  sim.output$rM.low[sim] <- simEst$bcCICorr[1]
-  sim.output$rM.high[sim] <- simEst$bcCICorr[2]
-
-}
-return(sim.output)
+  return(sim.output)
 }
 Sys.time()-a
 
@@ -321,10 +333,14 @@ Summarize the output
 
 ```{r, eval = FALSE}
 sim.output <- transform(output.sims,
-                        MC.generated.cover = as.integer((MC.low <= MC.generated & MC.high >= MC.generated)),
-                        MC.realized.cover = as.integer((MC.low <= MC.realized & MC.high >= MC.realized)),
-                        MC.generated.error = MC.est - MC.generated, MC.realized.error = MC.est - MC.realized,
-                        rM.cover = as.integer((rM.low <= rM.realized & rM.high >= rM.realized)),
+                        MC.generated.cover = as.integer((MC.low <= MC.generated & 
+                                                           MC.high >= MC.generated)),
+                        MC.realized.cover = as.integer((MC.low <= MC.realized & 
+                                                          MC.high >= MC.realized)),
+                        MC.generated.error = MC.est - MC.generated, 
+                        MC.realized.error = MC.est - MC.realized,
+                        rM.cover = as.integer((rM.low <= rM.realized & 
+                                                 rM.high >= rM.realized)),
                         rM.error = rM.est - rM.realized)
 
 summary(sim.output)
