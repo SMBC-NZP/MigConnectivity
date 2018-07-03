@@ -67,7 +67,7 @@
 #' @references
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
-#' Methods in Ecology and Evolution 9: 513 - 524.
+#' Methods in Ecology and Evolution 9: 513-524.
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
                     nYears = 10, nMonths = 3, winMoveRate = 0,
@@ -214,11 +214,11 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' @references
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
-#' Methods in Ecology and Evolution 9: 513 - 524.
+#' Methods in Ecology and Evolution 9: 513-524.
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
-#' change with application to Cerulean Warblers. Ecology 83: 2832–2840.
+#' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 
 simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear){
 
@@ -298,7 +298,7 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRout
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
-#' change with application to Cerulean Warblers. Ecology 83: 2832–2840.
+#' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 
 modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 3) {
   nPops <- length(unique(count_data$pop))
