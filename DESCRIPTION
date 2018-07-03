@@ -2,7 +2,7 @@ Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
 Version: 0.3.0
-Date: 2018-07-02
+Date: 2018-07-03
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
