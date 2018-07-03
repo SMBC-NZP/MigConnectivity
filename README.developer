@@ -53,8 +53,7 @@ Status: Done (v0.2.5)
 
 Updates
 1. When manuscript is accepted, update references to it throughout
-documentation. Then again once in print. Status: Done (v0.3.0)  Probably should
-add a few more references too.
+documentation. Then again once in print. Status: Done (v0.3.0)
 
 Bug Fixes
 1. in the estMC function if targetSites == SpatialPolygonDataFrame - you get an
