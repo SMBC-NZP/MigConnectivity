@@ -84,6 +84,7 @@ sim_out <- vector("list", nsims)
 
 
 # Simulation ---
+\dontrun{
 system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\\n")
 
@@ -129,4 +130,14 @@ rel_abund1 <- transform(rel_abund1,
                         ra4.cover = (ra4.low<=0.25 & ra4.high>=0.25))
 
 summary(rel_abund1)
+}
+}
+\references{
+Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
+and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
+Methods in Ecology and Evolution 9: 513-524.
+\href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+
+Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
+change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 }

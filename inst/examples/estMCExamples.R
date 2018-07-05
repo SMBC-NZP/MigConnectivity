@@ -1,12 +1,14 @@
+\dontrun{
 set.seed(101)
 # Uncertainty in detection with equal abundances
 # Number of resampling iterations for generating confidence intervals
+
 nSamplesCMR <- 100 #10000
 nSimulationsCMR <- 10 #100
-\dontrun{
-  nSamplesCMR <- 10000
-  nSimulationsCMR <- 100
-}
+#\dontrun{
+#  nSamplesCMR <- 10000
+#  nSimulationsCMR <- 100
+#}
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                         rep(seq(49, 31, -2), 10)), 100, 2)
 targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
@@ -64,13 +66,15 @@ mseCMR
 rmseCMR <- sqrt(mseCMR)
 rmseCMR
 
+
 # Simulation of BBS data to quantify uncertainty in relative abundance
+
 nSamplesAbund <- 700 #1700 are stored
 nSimulationsAbund <- 10 #length(abundExamples) is 100
-\dontrun{
-  nSamplesAbund <- 1700
-  nSimulationsAbund <- length(abundExamples)
-}
+#\dontrun{
+#  nSamplesAbund <- 1700
+#  nSimulationsAbund <- length(abundExamples)
+#}
 # Storage matrix for samples
 abundMCSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
 summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
@@ -108,11 +112,12 @@ rmseAbund <- sqrt(mseAbund)
 rmseAbund
 
 # Ovenbird example with GL and GPS data
+
 nSamplesGLGPS <- 100 # Number of bootstrap iterations
-\dontrun{
-  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
-  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
-}
+#\dontrun{
+#  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+#  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
+#}
 
 # Estimate MC only, treat all data as geolocator
 GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
@@ -182,3 +187,87 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
 str(GPS_mc)
 str(Combined)
 str(GL_mc)
+
+
+# Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
+library(sp)
+getCSV <- function(filename) {
+  tmp <- tempdir()
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  csv <- read.csv(temp)
+  unlink(temp)
+  return(csv)
+
+}
+getRDS <- function(speciesDist) {
+  tmp <- tempdir()
+  extension <- '.rds'
+  filename <- paste0(speciesDist, extension)
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/Spatial_Layers/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  shp <- readRDS(temp)
+  unlink(temp)
+  return(shp)
+}
+OVENdist <- getRDS("OVENdist")
+
+raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
+
+OVENvals <- getCSV("deltaDvalues.csv")
+
+OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
+
+originSites <- getRDS("originSites")
+originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+
+EVER <- length(grep(x=OVENvals$Sample,"EVER"))
+JAM <- length(grep(x=OVENvals$Sample,"JAM"))
+
+originRelAbund <- matrix(c(EVER,JAM),nrow = 1,byrow = TRUE)
+originRelAbund <- prop.table(originRelAbund,1)
+
+op <- rgeos::gCentroid(originSites,byid = TRUE)
+
+originPoints <- array(NA,c(EVER+JAM,2))
+originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sp::coordinates(op[1])[,1]
+originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sp::coordinates(op[1])[,2]
+originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sp::coordinates(op[2])[,1]
+originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
+
+originPoints <- sp::SpatialPoints(originPoints)
+raster::crs(originPoints)<- MigConnectivity::projections$WGS84
+
+iso <- isoAssign(isovalues = OVENvals[,2],
+                 isoSTD = 12,       # this value is for demonstration only
+                 intercept = -10,   # this value is for demonstration only
+                 slope = 0.8,       # this value is for demonstration only
+                 odds = NULL,
+                 restrict2Likely = TRUE,
+                 nSamples = 1000,
+                 sppShapefile = OVENdist,
+                 assignExtent = c(-179,-60,15,89),
+                 element = "Hydrogen",
+                 surface = FALSE,
+                 period = "Annual",
+                 seed = 12345,
+                 verbose=1)
+
+ovenMC <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = iso,
+                originPoints = originPoints,
+                originSites = originSites,
+                originDist = originDist,
+                nSamples = 200,
+                verbose = 1,
+                calcCorr = TRUE,
+                alpha = 0.05,
+                approxSigTest = FALSE,
+                isIntrinsic = TRUE)
+
+ovenMC
+}

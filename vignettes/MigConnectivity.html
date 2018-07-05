@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2018-01-30" />
+<meta name="date" content="2018-07-03" />
 
 <title>MigConnectivity package</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">‘MigConnectivity’ package</h1>
 <h4 class="author"><em>Jeffrey A. Hostetler, Michael T. Hallworth</em></h4>
-<h4 class="date"><em>2018-01-30</em></h4>
+<h4 class="date"><em>2018-07-03</em></h4>
 
 
 
@@ -85,7 +85,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <li><p>(Optional) Total sample size of animals used to estimate the transition probabilities.</p></li>
 </ol>
 <p>MC takes the distances between the regions within the seasonal range from which the transition probabilities originate (e.g. breeding) and the distances between the regions within the other seasonal range (e.g. non-breeding) and approximates the correlation between individuals at those distances. Earlier methods (Mantel correlation; rM) used the correlation between two distance matrices of individual animals captured during the breeding phase and recaptured during the non-breeding phase as a measure of the strength of migratory connectivity. Our method builds on this method with a distance-based correlation coefficient approximation, but is not specific to a data type and uses transition probabilities from discreet regions, as opposed to distance matrices between individuals. Further, we include relative abundance within one seasonal range to account for uneven sampling among regions.</p>
-<p>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. In press. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution.</p>
+<p>Cohen, E. B., J.A. Hostetler, M.T. Hallworth, C.S. Rushing, T.S. Sillett, P.P. Marra. 2018. Quantifying the strength of migratory connectivity. Methods in Ecology and Evolution. 9:3. 513-524.</p>
 <div id="overview-of-functions" class="section level3">
 <h3>Overview of Functions</h3>
 <ol style="list-style-type: decimal">
@@ -520,7 +520,7 @@ geo.vcov &lt;-<span class="st"> </span><span class="kw">vcov</span>(geo.error.mo
 <span class="co">#&gt;  [1] &quot;geo.bias&quot;       &quot;geo.vcov&quot;       &quot;isGL&quot;           &quot;targetPoints&quot;  </span>
 <span class="co">#&gt;  [5] &quot;originPoints&quot;   &quot;targetSites&quot;    &quot;originSites&quot;    &quot;originRelAbund&quot;</span>
 <span class="co">#&gt;  [9] &quot;originDist&quot;     &quot;targetDist&quot;</span></code></pre></div>
-<p>The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (<em>in press</em>) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.</p>
+<p>The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="kw">c</span>(<span class="st">'rgeos'</span>, <span class="st">'shape'</span>, <span class="st">'raster'</span>, <span class="st">'maptools'</span>, <span class="st">'rgdal'</span>))</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(rgeos)
 <span class="kw">library</span>(shape)
@@ -564,10 +564,10 @@ wrld_simple&lt;-sp<span class="op">::</span><span class="kw">spTransform</span>(
          <span class="dt">resampleProjection =</span> raster<span class="op">::</span><span class="kw">projection</span>(OVENdata<span class="op">$</span>targetPoints), 
          <span class="dt">verbose =</span> <span class="dv">0</span>,   <span class="co"># output options - see help ??estMC</span>
          <span class="dt">nSamples =</span> <span class="dv">10</span>) <span class="co"># This is set low for example </span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">str</span>(M)
-<span class="co">#&gt; List of 20</span>
-<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.717 0.476 0.635 0.576 0.473 ...</span>
+<span class="co">#&gt; List of 22</span>
+<span class="co">#&gt;  $ sampleMC       : num [1:10] 0.584 0.513 0.688 0.433 0.499 ...</span>
 <span class="co">#&gt;  $ samplePsi      : num [1:10, 1:2, 1:3] 0 0 0 0 0 0 0 0 0 0 ...</span>
 <span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 3</span>
 <span class="co">#&gt;   .. ..$ : chr [1:10] &quot;1&quot; &quot;2&quot; &quot;3&quot; &quot;4&quot; ...</span>
@@ -578,18 +578,12 @@ wrld_simple&lt;-sp<span class="op">::</span><span class="kw">spTransform</span>(
 <span class="co">#&gt;   .. ..$ : chr [1:2] &quot;NH&quot; &quot;MD&quot;</span>
 <span class="co">#&gt;   .. ..$ : chr [1:3] &quot;Florida&quot; &quot;Cuba&quot; &quot;Hisp&quot;</span>
 <span class="co">#&gt;  $ pointMC        : num 0.621</span>
-<span class="co">#&gt;  $ meanMC         : num 0.618</span>
-<span class="co">#&gt;  $ medianMC       : num 0.639</span>
-<span class="co">#&gt;  $ seMC           : num 0.108</span>
-<span class="co">#&gt;  $ simpleCI       : Named num [1:2] 0.473 0.756</span>
-<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;2.5%&quot; &quot;97.5%&quot;</span>
-<span class="co">#&gt;  $ bcCI           : Named num [1:2] 0.473 0.753</span>
-<span class="co">#&gt;   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;0.6819024%&quot; &quot;92.69256%&quot;</span>
-<span class="co">#&gt;  $ hpdCI          : num [1, 1:2] 0.473 0.756</span>
-<span class="co">#&gt;   ..- attr(*, &quot;dimnames&quot;)=List of 2</span>
-<span class="co">#&gt;   .. ..$ : chr &quot;var1&quot;</span>
-<span class="co">#&gt;   .. ..$ : chr [1:2] &quot;lower&quot; &quot;upper&quot;</span>
-<span class="co">#&gt;   ..- attr(*, &quot;Probability&quot;)= num 0.9</span>
+<span class="co">#&gt;  $ meanMC         : num 0.609</span>
+<span class="co">#&gt;  $ medianMC       : num 0.592</span>
+<span class="co">#&gt;  $ seMC           : num 0.127</span>
+<span class="co">#&gt;  $ simpleCI       : num [1:2] 0.433 0.881</span>
+<span class="co">#&gt;  $ bcCI           : num [1:2] 0.439 0.881</span>
+<span class="co">#&gt;  $ hpdCI          : num [1:2] 0.433 0.881</span>
 <span class="co">#&gt;  $ simpleP        : NULL</span>
 <span class="co">#&gt;  $ bcP            : NULL</span>
 <span class="co">#&gt;  $ sampleCorr     : logi [1:10] NA NA NA NA NA NA ...</span>
@@ -599,7 +593,10 @@ wrld_simple&lt;-sp<span class="op">::</span><span class="kw">spTransform</span>(
 <span class="co">#&gt;  $ seCorr         : NULL</span>
 <span class="co">#&gt;  $ simpleCICorr   : NULL</span>
 <span class="co">#&gt;  $ bcCICorr       : NULL</span>
-<span class="co">#&gt;  $ inputSampleSize: int 39</span></code></pre></div>
+<span class="co">#&gt;  $ inputSampleSize: int 39</span>
+<span class="co">#&gt;  $ alpha          : num 0.05</span>
+<span class="co">#&gt;  $ sigConst       : num 0</span>
+<span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:2] &quot;estMC&quot; &quot;estMigConnectivity&quot;</span></code></pre></div>
 </div>
 <div id="example-3" class="section level3">
 <h3>EXAMPLE 3</h3>
@@ -687,7 +684,7 @@ MC
 <div id="example-4" class="section level3">
 <h3>EXAMPLE 4</h3>
 <p>Calculate migratory connectivity for a range of input values</p>
-<p>Cohen et al. (<em>in press</em>) used simulation to assess the influence of the three data inputs needed to calculate MC, including:</p>
+<p>Cohen et al. (<em>2018</em>) used simulation to assess the influence of the three data inputs needed to calculate MC, including:</p>
 <ol style="list-style-type: decimal">
 <li>matrix of transition probabilities from breeding regions to non-breeding regions<br />
 </li>
@@ -941,8 +938,8 @@ MC5[i, k] &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span cla
 <span class="co">#&gt; D Doub              0.3419   0.1334</span>
 <span class="co">#&gt; D Half              0.0737   0.0647</span></code></pre></div>
 </div>
-<div id="examples-5-12-from-sampling-regime-simulations-in-cohen-et-al.-in-press" class="section level3">
-<h3>EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. in press)</h3>
+<div id="examples-5-12-from-sampling-regime-simulations-in-cohen-et-al.-2018" class="section level3">
+<h3>EXAMPLES 5-12 (from sampling regime simulations in Cohen et al. 2018)</h3>
 <p>Simulation was used to assess the influence of biased or incomplete sampling on the measurement of MC. Below, we measure the influence of several potential sources of sampling error:</p>
 <ol style="list-style-type: decimal">
 <li>Incorrect grouping of seasonal ranges into regions</li>
@@ -2020,8 +2017,8 @@ g.est</code></pre></div>
 <p><code>estMC</code> Estimate strength of migratory connectivity incorporating location uncertainty</p>
 <p>Estimates of MC may also be influenced by error in individual assignment to regions. Data types vary in location accuracy and precision, which are likely to influence the accuracy with which individuals are assigned to regions. We measured MC for bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices, and 3) light-level location uncertainty was applied to all individuals. See Example 2 above and estMC help file.</p>
 </div>
-<div id="example-13-from-process-error-simulation-in-cohen-et-al.-in-press" class="section level3">
-<h3>EXAMPLE 13 (from process error simulation in Cohen et al. in press)</h3>
+<div id="example-13-from-process-error-simulation-in-cohen-et-al.-2018" class="section level3">
+<h3>EXAMPLE 13 (from process error simulation in Cohen et al. 2018)</h3>
 <p><code>simMove</code> for measuring the influence of dispersal rates on MC</p>
 <p>Long-distance dispersal occurs when individuals that originate or breed in one population do not return to the same population to breed the next year. To quantify the sensitivity of MC to dispersal, we used simulations in which dispersal probability between breeding regions varied from low to high to measure the sensitivity of MC to dispersal.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Simulation ----

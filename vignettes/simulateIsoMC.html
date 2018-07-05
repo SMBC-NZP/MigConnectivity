@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
+
+<meta name="date" content="2018-07-03" />
+
+<title>MigConnectivity package: isotope simulation</title>
+
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+</style>
+
+
+
+<link href="data:text/css;charset=utf-8,body%20%7B%0Abackground%2Dcolor%3A%20%23fff%3B%0Amargin%3A%201em%20auto%3B%0Amax%2Dwidth%3A%20700px%3B%0Aoverflow%3A%20visible%3B%0Apadding%2Dleft%3A%202em%3B%0Apadding%2Dright%3A%202em%3B%0Afont%2Dfamily%3A%20%22Open%20Sans%22%2C%20%22Helvetica%20Neue%22%2C%20Helvetica%2C%20Arial%2C%20sans%2Dserif%3B%0Afont%2Dsize%3A%2014px%3B%0Aline%2Dheight%3A%201%2E35%3B%0A%7D%0A%23header%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0A%23TOC%20%7B%0Aclear%3A%20both%3B%0Amargin%3A%200%200%2010px%2010px%3B%0Apadding%3A%204px%3B%0Awidth%3A%20400px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Aborder%2Dradius%3A%205px%3B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Afont%2Dsize%3A%2013px%3B%0Aline%2Dheight%3A%201%2E3%3B%0A%7D%0A%23TOC%20%2Etoctitle%20%7B%0Afont%2Dweight%3A%20bold%3B%0Afont%2Dsize%3A%2015px%3B%0Amargin%2Dleft%3A%205px%3B%0A%7D%0A%23TOC%20ul%20%7B%0Apadding%2Dleft%3A%2040px%3B%0Amargin%2Dleft%3A%20%2D1%2E5em%3B%0Amargin%2Dtop%3A%205px%3B%0Amargin%2Dbottom%3A%205px%3B%0A%7D%0A%23TOC%20ul%20ul%20%7B%0Amargin%2Dleft%3A%20%2D2em%3B%0A%7D%0A%23TOC%20li%20%7B%0Aline%2Dheight%3A%2016px%3B%0A%7D%0Atable%20%7B%0Amargin%3A%201em%20auto%3B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dcolor%3A%20%23DDDDDD%3B%0Aborder%2Dstyle%3A%20outset%3B%0Aborder%2Dcollapse%3A%20collapse%3B%0A%7D%0Atable%20th%20%7B%0Aborder%2Dwidth%3A%202px%3B%0Apadding%3A%205px%3B%0Aborder%2Dstyle%3A%20inset%3B%0A%7D%0Atable%20td%20%7B%0Aborder%2Dwidth%3A%201px%3B%0Aborder%2Dstyle%3A%20inset%3B%0Aline%2Dheight%3A%2018px%3B%0Apadding%3A%205px%205px%3B%0A%7D%0Atable%2C%20table%20th%2C%20table%20td%20%7B%0Aborder%2Dleft%2Dstyle%3A%20none%3B%0Aborder%2Dright%2Dstyle%3A%20none%3B%0A%7D%0Atable%20thead%2C%20table%20tr%2Eeven%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Ap%20%7B%0Amargin%3A%200%2E5em%200%3B%0A%7D%0Ablockquote%20%7B%0Abackground%2Dcolor%3A%20%23f6f6f6%3B%0Apadding%3A%200%2E25em%200%2E75em%3B%0A%7D%0Ahr%20%7B%0Aborder%2Dstyle%3A%20solid%3B%0Aborder%3A%20none%3B%0Aborder%2Dtop%3A%201px%20solid%20%23777%3B%0Amargin%3A%2028px%200%3B%0A%7D%0Adl%20%7B%0Amargin%2Dleft%3A%200%3B%0A%7D%0Adl%20dd%20%7B%0Amargin%2Dbottom%3A%2013px%3B%0Amargin%2Dleft%3A%2013px%3B%0A%7D%0Adl%20dt%20%7B%0Afont%2Dweight%3A%20bold%3B%0A%7D%0Aul%20%7B%0Amargin%2Dtop%3A%200%3B%0A%7D%0Aul%20li%20%7B%0Alist%2Dstyle%3A%20circle%20outside%3B%0A%7D%0Aul%20ul%20%7B%0Amargin%2Dbottom%3A%200%3B%0A%7D%0Apre%2C%20code%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0Aborder%2Dradius%3A%203px%3B%0Acolor%3A%20%23333%3B%0Awhite%2Dspace%3A%20pre%2Dwrap%3B%20%0A%7D%0Apre%20%7B%0Aborder%2Dradius%3A%203px%3B%0Amargin%3A%205px%200px%2010px%200px%3B%0Apadding%3A%2010px%3B%0A%7D%0Apre%3Anot%28%5Bclass%5D%29%20%7B%0Abackground%2Dcolor%3A%20%23f7f7f7%3B%0A%7D%0Acode%20%7B%0Afont%2Dfamily%3A%20Consolas%2C%20Monaco%2C%20%27Courier%20New%27%2C%20monospace%3B%0Afont%2Dsize%3A%2085%25%3B%0A%7D%0Ap%20%3E%20code%2C%20li%20%3E%20code%20%7B%0Apadding%3A%202px%200px%3B%0A%7D%0Adiv%2Efigure%20%7B%0Atext%2Dalign%3A%20center%3B%0A%7D%0Aimg%20%7B%0Abackground%2Dcolor%3A%20%23FFFFFF%3B%0Apadding%3A%202px%3B%0Aborder%3A%201px%20solid%20%23DDDDDD%3B%0Aborder%2Dradius%3A%203px%3B%0Aborder%3A%201px%20solid%20%23CCCCCC%3B%0Amargin%3A%200%205px%3B%0A%7D%0Ah1%20%7B%0Amargin%2Dtop%3A%200%3B%0Afont%2Dsize%3A%2035px%3B%0Aline%2Dheight%3A%2040px%3B%0A%7D%0Ah2%20%7B%0Aborder%2Dbottom%3A%204px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Apadding%2Dbottom%3A%202px%3B%0Afont%2Dsize%3A%20145%25%3B%0A%7D%0Ah3%20%7B%0Aborder%2Dbottom%3A%202px%20solid%20%23f7f7f7%3B%0Apadding%2Dtop%3A%2010px%3B%0Afont%2Dsize%3A%20120%25%3B%0A%7D%0Ah4%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23f7f7f7%3B%0Amargin%2Dleft%3A%208px%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Ah5%2C%20h6%20%7B%0Aborder%2Dbottom%3A%201px%20solid%20%23ccc%3B%0Afont%2Dsize%3A%20105%25%3B%0A%7D%0Aa%20%7B%0Acolor%3A%20%230033dd%3B%0Atext%2Ddecoration%3A%20none%3B%0A%7D%0Aa%3Ahover%20%7B%0Acolor%3A%20%236666ff%3B%20%7D%0Aa%3Avisited%20%7B%0Acolor%3A%20%23800080%3B%20%7D%0Aa%3Avisited%3Ahover%20%7B%0Acolor%3A%20%23BB00BB%3B%20%7D%0Aa%5Bhref%5E%3D%22http%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0Aa%5Bhref%5E%3D%22https%3A%22%5D%20%7B%0Atext%2Ddecoration%3A%20underline%3B%20%7D%0A%0Acode%20%3E%20span%2Ekw%20%7B%20color%3A%20%23555%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Edt%20%7B%20color%3A%20%23902000%3B%20%7D%20%0Acode%20%3E%20span%2Edv%20%7B%20color%3A%20%2340a070%3B%20%7D%20%0Acode%20%3E%20span%2Ebn%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Efl%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Ech%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Est%20%7B%20color%3A%20%23d14%3B%20%7D%20%0Acode%20%3E%20span%2Eco%20%7B%20color%3A%20%23888888%3B%20font%2Dstyle%3A%20italic%3B%20%7D%20%0Acode%20%3E%20span%2Eot%20%7B%20color%3A%20%23007020%3B%20%7D%20%0Acode%20%3E%20span%2Eal%20%7B%20color%3A%20%23ff0000%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%0Acode%20%3E%20span%2Efu%20%7B%20color%3A%20%23900%3B%20font%2Dweight%3A%20bold%3B%20%7D%20%20code%20%3E%20span%2Eer%20%7B%20color%3A%20%23a61717%3B%20background%2Dcolor%3A%20%23e3d2d2%3B%20%7D%20%0A" rel="stylesheet" type="text/css" />
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">‘MigConnectivity’ package: isotope simulation</h1>
+<h4 class="author"><em>Jeffrey A. Hostetler, Michael T. Hallworth</em></h4>
+<h4 class="date"><em>2018-07-03</em></h4>
+
+
+
+<p>Load required packages</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(raster)
+<span class="kw">library</span>(MigConnectivity)
+<span class="kw">library</span>(rgeos)</code></pre></div>
+<p>The following is a simulation that tests the how the spatial arrangement of target sites influences MC from stable-hydrogen isotopes. The following simulation is run using data generated within the code but we use the Ovenbird as an example species.</p>
+<div id="ovenbird-distribution" class="section level3">
+<h3>Ovenbird distribution</h3>
+<p>Read in the Ovenbird distribution and create a species distribution map from the abundance data.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># read in raster layer</span>
+<span class="kw">download.file</span>(<span class="kw">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity&quot;</span>,
+                     <span class="st">&quot;/master/data-raw/Spatial_Layers/bbsoven.txt&quot;</span>),
+              <span class="dt">destfile =</span> <span class="st">&quot;bbsoven.txt&quot;</span>)
+
+OVENabund &lt;-<span class="st"> </span>raster<span class="op">::</span><span class="kw">raster</span>(<span class="st">&quot;bbsoven.txt&quot;</span>)
+
+OVENdist &lt;-<span class="st"> </span>OVENabund
+OVENdist[OVENdist<span class="op">&gt;</span><span class="dv">0</span>]&lt;-<span class="dv">1</span>
+OVENdist[OVENdist<span class="op">==</span><span class="dv">0</span>]&lt;-<span class="ot">NA</span>
+
+OVEN_single_poly &lt;-<span class="st"> </span>raster<span class="op">::</span><span class="kw">rasterToPolygons</span>(OVENdist, <span class="dt">dissolve =</span> <span class="ot">TRUE</span>)
+raster<span class="op">::</span><span class="kw">crs</span>(OVEN_single_poly) &lt;-<span class="st"> </span>MigConnectivity<span class="op">::</span>projections<span class="op">$</span>WGS84
+raster<span class="op">::</span><span class="kw">crs</span>(OVENabund) &lt;-<span class="st"> </span>MigConnectivity<span class="op">::</span>projections<span class="op">$</span>WGS84</code></pre></div>
+<p>To complete the simulation we need a template to ensure the raster resolution is the same as the assignment raster. To do this, we use the isotope data as our template. We grab the isotope base-map using the <code>getIsoMap</code> function.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">### get isotope raster for template
+rasterTemplate &lt;-<span class="st"> </span>MigConnectivity<span class="op">::</span><span class="kw">getIsoMap</span>()</code></pre></div>
+</div>
+<div id="crop-template-to-distribution-and-mask-with-distribution" class="section level3">
+<h3>Crop template to distribution and mask with distribution</h3>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">rasterTemplate &lt;-<span class="st"> </span>raster<span class="op">::</span><span class="kw">mask</span>(raster<span class="op">::</span><span class="kw">crop</span>(rasterTemplate, OVEN_single_poly),
+                               OVEN_single_poly)
+
+<span class="co"># rasterize the distribution for relative abundance so that raster</span>
+<span class="co"># dimensions and resolution match the isotope layer</span>
+relativeAbund &lt;-<span class="st"> </span><span class="kw">projectRaster</span>(OVENabund,rasterTemplate)
+relativeAbund  &lt;-<span class="st"> </span>relativeAbund<span class="op">/</span><span class="kw">cellStats</span>(relativeAbund,sum)</code></pre></div>
+</div>
+<div id="generate-target-sites" class="section level2">
+<h2>Generate target sites</h2>
+<p>The simulation is focused on the effect of target sites on MC when using stable-hydrogen isotopes. The following code generates various target site layers used in the simulation.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># generate target sites</span>
+targetRanges &lt;-<span class="st"> </span><span class="kw">vector</span>(<span class="st">'list'</span>,<span class="dv">5</span>)
+<span class="co"># 3' latitude</span>
+targetRanges[[<span class="dv">1</span>]] &lt;-<span class="st"> </span><span class="kw">rasterToPolygons</span>(<span class="kw">raster</span>(<span class="dt">xmn =</span> <span class="op">-</span><span class="dv">180</span>,
+                                         <span class="dt">xmx =</span> <span class="op">-</span><span class="dv">40</span>,
+                                         <span class="dt">ymn =</span> <span class="dv">25</span>,
+                                         <span class="dt">ymx =</span> <span class="dv">85</span>,
+                                         <span class="dt">res =</span> <span class="kw">c</span>(<span class="dv">140</span>,<span class="dv">3</span>)))
+
+<span class="co"># 5' latitude</span>
+targetRanges[[<span class="dv">2</span>]] &lt;-<span class="st"> </span><span class="kw">rasterToPolygons</span>(<span class="kw">raster</span>(<span class="dt">xmn =</span> <span class="op">-</span><span class="dv">180</span>,
+                                             <span class="dt">xmx =</span> <span class="op">-</span><span class="dv">40</span>,
+                                             <span class="dt">ymn =</span> <span class="dv">25</span>,
+                                             <span class="dt">ymx =</span> <span class="dv">85</span>,
+                                             <span class="dt">res =</span> <span class="kw">c</span>(<span class="dv">140</span>,<span class="dv">5</span>)))
+
+<span class="co"># 10' latitude</span>
+targetRanges[[<span class="dv">3</span>]] &lt;-<span class="st"> </span><span class="kw">rasterToPolygons</span>(<span class="kw">raster</span>(<span class="dt">xmn =</span> <span class="op">-</span><span class="dv">180</span>,
+                                         <span class="dt">xmx =</span> <span class="op">-</span><span class="dv">40</span>,
+                                         <span class="dt">ymn =</span> <span class="dv">25</span>,
+                                         <span class="dt">ymx =</span> <span class="dv">85</span>,
+                                         <span class="dt">res =</span> <span class="kw">c</span>(<span class="dv">140</span>,<span class="dv">10</span>)))
+
+<span class="co"># 12 isotope units</span>
+featherIso &lt;-<span class="st"> </span>(<span class="fl">0.95</span><span class="op">*</span><span class="kw">getIsoMap</span>(<span class="dt">period =</span> <span class="st">&quot;GrowingSeason&quot;</span>)<span class="op">+</span>(<span class="op">-</span><span class="fl">17.57</span>))
+iso &lt;-<span class="st"> </span><span class="kw">crop</span>(featherIso, <span class="kw">extent</span>(<span class="kw">c</span>(<span class="op">-</span><span class="dv">180</span>,<span class="op">-</span><span class="dv">40</span>,<span class="dv">25</span>,<span class="dv">85</span>)))
+isocut &lt;-<span class="st"> </span><span class="kw">cut</span>(iso, <span class="dt">breaks=</span> <span class="kw">seq</span>(<span class="kw">cellStats</span>(iso,min),<span class="kw">cellStats</span>(iso,max),<span class="dv">12</span>))
+targetRanges[[<span class="dv">4</span>]] &lt;-<span class="st"> </span><span class="kw">rasterToPolygons</span>(isocut, <span class="dt">dissolve =</span> T)
+
+
+<span class="co"># 12*2 isotope units</span>
+isocut &lt;-<span class="st"> </span><span class="kw">cut</span>(iso, <span class="dt">breaks=</span> <span class="kw">seq</span>(<span class="kw">cellStats</span>(iso,min),<span class="kw">cellStats</span>(iso,max),<span class="dv">24</span>))
+targetRanges[[<span class="dv">5</span>]] &lt;-<span class="st"> </span><span class="kw">rasterToPolygons</span>(isocut, <span class="dt">dissolve =</span> <span class="ot">TRUE</span>)
+
+
+
+<span class="co"># Keep only the targetSites that intersect with the OVEN polygon</span>
+targetRanges &lt;-<span class="st"> </span><span class="kw">lapply</span>(targetRanges,raster<span class="op">::</span>intersect,OVEN_single_poly)
+targetRanges &lt;-<span class="st"> </span><span class="kw">lapply</span>(targetRanges, sp<span class="op">::</span>spTransform,<span class="kw">CRS</span>(projections<span class="op">$</span>WGS84))
+
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">5</span>){
+targetRanges[[i]]<span class="op">$</span>Target &lt;-<span class="st"> </span><span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(targetRanges[[i]])
+}</code></pre></div>
+<div id="generate-simulated-data" class="section level4">
+<h4>Generate simulated data</h4>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co">#Generate random breeding locations using the 10' target sites</span>
+Site1 &lt;-<span class="st"> </span><span class="kw">spsample</span>(targetRanges[[<span class="dv">3</span>]][<span class="dv">1</span><span class="op">:</span><span class="dv">2</span>,],<span class="dt">n=</span><span class="dv">100</span>,<span class="dt">type =</span> <span class="st">&quot;random&quot;</span>)
+Site2 &lt;-<span class="st"> </span><span class="kw">spsample</span>(targetRanges[[<span class="dv">3</span>]][<span class="dv">2</span><span class="op">:</span><span class="dv">3</span>,],<span class="dt">n=</span><span class="dv">100</span>, <span class="dt">type =</span> <span class="st">&quot;random&quot;</span>)
+Site3 &lt;-<span class="st"> </span><span class="kw">spsample</span>(targetRanges[[<span class="dv">3</span>]][<span class="dv">2</span><span class="op">:</span><span class="dv">4</span>,], <span class="dt">n=</span> <span class="dv">100</span>, <span class="dt">type =</span> <span class="st">&quot;random&quot;</span>)
+
+<span class="co"># Capture coordinates</span>
+capCoords &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="ot">NA</span>,<span class="kw">c</span>(<span class="dv">3</span>,<span class="dv">2</span>))
+capCoords[<span class="dv">1</span>,] &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="op">-</span><span class="fl">98.17</span>,<span class="fl">28.76</span>)
+capCoords[<span class="dv">2</span>,] &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="op">-</span><span class="fl">93.70</span>,<span class="fl">29.77</span>)
+capCoords[<span class="dv">3</span>,] &lt;-<span class="st"> </span><span class="kw">cbind</span>(<span class="op">-</span><span class="fl">85.000</span>,<span class="fl">29.836</span>)
+
+featherIso &lt;-<span class="st"> </span>(<span class="fl">0.95</span><span class="op">*</span><span class="kw">getIsoMap</span>(<span class="dt">period =</span> <span class="st">&quot;GrowingSeason&quot;</span>)<span class="op">+</span>(<span class="op">-</span><span class="fl">17.57</span>))
+
+<span class="co"># Extract simulated data</span>
+iso_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Site =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>,<span class="dt">each =</span> <span class="dv">100</span>),
+                      <span class="dt">xcoords =</span> <span class="kw">c</span>(Site1<span class="op">@</span>coords[,<span class="dv">1</span>],Site2<span class="op">@</span>coords[,<span class="dv">1</span>],Site3<span class="op">@</span>coords[,<span class="dv">1</span>]),
+                      <span class="dt">ycoords =</span> <span class="kw">c</span>(Site1<span class="op">@</span>coords[,<span class="dv">2</span>],Site2<span class="op">@</span>coords[,<span class="dv">2</span>],Site3<span class="op">@</span>coords[,<span class="dv">2</span>]),
+                      <span class="dt">targetSite =</span> <span class="kw">over</span>(<span class="kw">rbind</span>(Site1,Site2,Site3),
+                                        targetRanges[[<span class="dv">3</span>]])<span class="op">$</span>Target,
+                      <span class="dt">featherIso =</span> <span class="kw">extract</span>(featherIso,<span class="kw">rbind</span>(Site1,Site2,Site3)))
+
+iso_dat &lt;-<span class="st"> </span>iso_dat[<span class="kw">complete.cases</span>(iso_dat),]
+
+<span class="co"># generate transition data from simulation</span>
+sim_psi &lt;-<span class="st"> </span><span class="kw">table</span>(iso_dat<span class="op">$</span>Site,iso_dat<span class="op">$</span>targetSite)
+
+<span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(sim_psi)){
+  sim_psi[i,]&lt;-sim_psi[i,]<span class="op">/</span><span class="kw">sum</span>(sim_psi[i,])
+}
+
+states &lt;-<span class="st"> </span>raster<span class="op">::</span><span class="kw">getData</span>(<span class="st">&quot;GADM&quot;</span>, <span class="dt">country =</span> <span class="st">&quot;United States&quot;</span>, <span class="dt">level =</span> <span class="dv">1</span>)
+originSites &lt;-<span class="st"> </span>states[(states<span class="op">$</span>NAME_<span class="dv">1</span> <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Texas&quot;</span>,<span class="st">&quot;Louisiana&quot;</span>,<span class="st">&quot;Florida&quot;</span>)),]
+originSites &lt;-<span class="st"> </span>sp<span class="op">::</span><span class="kw">spTransform</span>(originSites, 
+                               sp<span class="op">::</span><span class="kw">CRS</span>(MigConnectivity<span class="op">::</span>projections<span class="op">$</span>WGS84))
+
+originDist &lt;-<span class="st"> </span>MigConnectivity<span class="op">::</span><span class="kw">distFromPos</span>(rgeos<span class="op">::</span><span class="kw">gCentroid</span>(originSites,
+                                                            <span class="dt">byid =</span> <span class="ot">TRUE</span>)<span class="op">@</span>coords)
+targetDistMC &lt;-<span class="st"> </span>MigConnectivity<span class="op">::</span><span class="kw">distFromPos</span>(rgeos<span class="op">::</span><span class="kw">gCentroid</span>(targetRanges[[<span class="dv">3</span>]], 
+                                                              <span class="dt">byid =</span> <span class="ot">TRUE</span>)<span class="op">@</span>coords)</code></pre></div>
+</div>
+</div>
+<div id="start-of-simulations" class="section level2">
+<h2>Start of simulations</h2>
+<p><em>warning</em> this takes a long time to run.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">originRelAbund &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="dv">1</span><span class="op">/</span><span class="dv">3</span>, <span class="dv">3</span>)
+nTargetSetups &lt;-<span class="st"> </span><span class="dv">5</span>
+nSims &lt;-<span class="st"> </span><span class="dv">1</span>            <span class="co">#SET LOW FOR EXAMPLE</span>
+<span class="co"># nSims &lt;- 200        </span>
+nOriginSites =<span class="st"> </span><span class="dv">3</span>
+
+targetPoints0 &lt;-<span class="st"> </span><span class="kw">matrix</span>(<span class="ot">NA</span>, <span class="dv">300</span>, <span class="dv">2</span>)
+
+sim.output &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">targetSetup =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">sim =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">MC.generated =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">MC.realized =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">MC.est =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">MC.low =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">MC.high =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">rM.realized =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">rM.est =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">rM.low =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims),
+                         <span class="dt">rM.high =</span> <span class="kw">rep</span>(<span class="ot">NA</span>,nSims))
+
+
+<span class="kw">library</span>(doSNOW);<span class="kw">library</span>(foreach)
+cl &lt;-<span class="st"> </span>parallel<span class="op">::</span><span class="kw">makeCluster</span>(<span class="dv">5</span>)
+doSNOW<span class="op">::</span><span class="kw">registerDoSNOW</span>(cl)
+
+
+<span class="kw">Sys.time</span>()
+a &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()
+output.sims &lt;-<span class="st"> </span><span class="kw">foreach</span>(<span class="dt">target=</span><span class="dv">1</span><span class="op">:</span>nTargetSetups,
+                       <span class="dt">.combine =</span> rbind,
+                       <span class="dt">.export =</span> <span class="kw">ls</span>(.GlobalEnv),
+                       <span class="dt">.packages =</span> <span class="kw">c</span>(<span class="st">&quot;raster&quot;</span>,<span class="st">&quot;sp&quot;</span>,<span class="st">&quot;MigConnectivity&quot;</span>)) <span class="op">%dopar%</span><span class="st"> </span>{
+<span class="co">#for(target in 1:nTargetSetups){</span>
+  <span class="kw">set.seed</span>(<span class="dv">9001</span>)
+  targetSites &lt;-<span class="st"> </span>targetRanges[[target]]
+  targetDist &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(rgeos<span class="op">::</span><span class="kw">gCentroid</span>(targetSites, <span class="dt">byid =</span> <span class="ot">TRUE</span>)<span class="op">@</span>coords)
+  <span class="co"># Extract simulated data</span>
+  iso_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Site =</span> <span class="kw">rep</span>(<span class="dv">1</span><span class="op">:</span><span class="dv">3</span>,<span class="dt">each =</span> <span class="dv">100</span>),
+                        <span class="dt">xcoords =</span> <span class="kw">c</span>(Site1<span class="op">@</span>coords[,<span class="dv">1</span>],Site2<span class="op">@</span>coords[,<span class="dv">1</span>],Site3<span class="op">@</span>coords[,<span class="dv">1</span>]),
+                        <span class="dt">ycoords =</span> <span class="kw">c</span>(Site1<span class="op">@</span>coords[,<span class="dv">2</span>],Site2<span class="op">@</span>coords[,<span class="dv">2</span>],Site3<span class="op">@</span>coords[,<span class="dv">2</span>]),
+                        <span class="dt">targetSite =</span> <span class="kw">over</span>(<span class="kw">rbind</span>(Site1,Site2,Site3),targetSites)<span class="op">$</span>Target,
+                        <span class="dt">featherIso =</span> <span class="kw">extract</span>(featherIso,<span class="kw">rbind</span>(Site1,Site2,Site3)))
+
+  iso_dat &lt;-<span class="st"> </span>iso_dat[<span class="kw">complete.cases</span>(iso_dat),]
+
+  <span class="co"># generate transition data from simulation</span>
+  sim_psi &lt;-<span class="st"> </span><span class="kw">prop.table</span>(<span class="kw">table</span>(iso_dat<span class="op">$</span>Site,<span class="kw">factor</span>(iso_dat<span class="op">$</span>targetSite,
+                                                  <span class="dv">1</span><span class="op">:</span><span class="kw">nrow</span>(targetSites))), <span class="dv">1</span>)
+
+  MC.generated &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt">originDist =</span> originDist,
+                          <span class="dt">targetDist =</span> targetDist,
+                          <span class="dt">originRelAbund =</span> originRelAbund,
+                          <span class="dt">psi =</span> sim_psi)
+
+  <span class="cf">for</span> (sim <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span>nSims) {
+    <span class="kw">cat</span>(<span class="st">&quot;Simulation Run&quot;</span>, sim, <span class="st">&quot;of&quot;</span>, nSims, <span class="st">&quot;for target&quot;</span>,target,<span class="st">&quot;at&quot;</span>, <span class="kw">date</span>(), <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)
+    sim_move &lt;-<span class="st"> </span><span class="kw">simMove</span>(<span class="kw">rep</span>(<span class="dv">100</span>, nOriginSites), originDist, targetDist, sim_psi, <span class="dv">1</span>, <span class="dv">1</span>)
+    originAssignment &lt;-<span class="st"> </span>sim_move<span class="op">$</span>animalLoc[,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>]
+    targetAssignment &lt;-<span class="st"> </span>sim_move<span class="op">$</span>animalLoc[,<span class="dv">2</span>,<span class="dv">1</span>,<span class="dv">1</span>]
+    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="op">:</span><span class="dv">300</span>) {
+      targetPoint1 &lt;-<span class="st"> </span><span class="kw">spsample</span>(targetSites[targetAssignment[i],], 
+                               <span class="dt">n=</span> <span class="dv">1</span>, <span class="dt">type =</span> <span class="st">&quot;random&quot;</span>, <span class="dt">iter =</span> <span class="dv">25</span>)
+      targetPoints0[i,] &lt;-<span class="st"> </span>targetPoint1<span class="op">@</span>coords
+    }
+    targetPoints &lt;-<span class="st"> </span><span class="kw">SpatialPoints</span>(targetPoints0, <span class="kw">CRS</span>(projections<span class="op">$</span>WGS84))
+  
+    <span class="co"># Extract simulated data</span>
+    iso_dat &lt;-<span class="st"> </span><span class="kw">data.frame</span>(<span class="dt">Site =</span> originAssignment,
+                          <span class="dt">xcoords =</span> targetPoints0[,<span class="dv">1</span>],
+                          <span class="dt">ycoords =</span> targetPoints0[,<span class="dv">2</span>],
+                          <span class="dt">targetSite =</span> <span class="kw">over</span>(targetPoints,targetSites)<span class="op">$</span>Target,
+                          <span class="dt">featherIso =</span> <span class="kw">extract</span>(featherIso,targetPoints))
+  
+    iso_dat &lt;-<span class="st"> </span>iso_dat[<span class="kw">complete.cases</span>(iso_dat),]
+  
+    <span class="co"># generate transition data from simulation</span>
+    sim_psi0 &lt;-<span class="st"> </span><span class="kw">table</span>(iso_dat<span class="op">$</span>Site,
+                      <span class="kw">factor</span>(iso_dat<span class="op">$</span>targetSite,
+                             <span class="kw">min</span>(targetSites<span class="op">$</span>Target)<span class="op">:</span><span class="kw">max</span>(targetSites<span class="op">$</span>Target)))
+    sim_psi_realized &lt;-<span class="st"> </span><span class="kw">prop.table</span>(sim_psi0, <span class="dv">1</span>)
+  
+    <span class="co"># get points ready for analysis</span>
+    nSite1 &lt;-<span class="st"> </span><span class="kw">table</span>(iso_dat<span class="op">$</span>Site)[<span class="dv">1</span>]
+    nSite2 &lt;-<span class="st"> </span><span class="kw">table</span>(iso_dat<span class="op">$</span>Site)[<span class="dv">2</span>]
+    nSite3 &lt;-<span class="st"> </span><span class="kw">table</span>(iso_dat<span class="op">$</span>Site)[<span class="dv">3</span>]
+  
+    nTotal &lt;-<span class="st"> </span>nSite1<span class="op">+</span>nSite2<span class="op">+</span>nSite3
+  
+    originCap &lt;-<span class="st"> </span><span class="kw">array</span>(<span class="ot">NA</span>, <span class="kw">c</span>(nTotal,<span class="dv">2</span>))
+  
+    wherecaught &lt;-<span class="st"> </span><span class="kw">rep</span>(<span class="kw">paste0</span>(<span class="st">&quot;Site&quot;</span>, <span class="dv">1</span><span class="op">:</span><span class="dv">3</span>), <span class="kw">c</span>(nSite1, nSite2, nSite3))
+  
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site1&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">1</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">1</span>,<span class="dv">1</span>]
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site1&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">2</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">1</span>,<span class="dv">2</span>]
+  
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site2&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">1</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">2</span>,<span class="dv">1</span>]
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site2&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">2</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">2</span>,<span class="dv">2</span>]
+  
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site3&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">1</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">3</span>,<span class="dv">1</span>]
+    originCap[<span class="kw">which</span>(<span class="kw">pmatch</span>(wherecaught,<span class="st">&quot;Site3&quot;</span>,<span class="dt">dup =</span> <span class="ot">TRUE</span>)<span class="op">==</span><span class="dv">1</span>),<span class="dv">2</span>] &lt;-<span class="st"> </span>capCoords[<span class="dv">3</span>,<span class="dv">2</span>]
+  
+    originPoints &lt;-<span class="st"> </span><span class="kw">SpatialPoints</span>(originCap)
+    <span class="kw">crs</span>(originPoints) &lt;-<span class="st"> </span>sp<span class="op">::</span><span class="kw">CRS</span>(MigConnectivity<span class="op">::</span>projections<span class="op">$</span>WGS84)
+  
+    MC.realized &lt;-<span class="st"> </span><span class="kw">calcMC</span>(<span class="dt">originDist =</span> originDist,
+                          <span class="dt">targetDist =</span> targetDist,
+                          <span class="dt">originRelAbund =</span> originRelAbund,
+                          <span class="dt">psi =</span> sim_psi_realized,
+                          <span class="dt">sampleSize=</span>nTotal)
+  
+  
+  
+    originPointDists &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(originCap)
+    targetPointDists &lt;-<span class="st"> </span><span class="kw">distFromPos</span>(<span class="kw">cbind</span>(iso_dat<span class="op">$</span>xcoords, iso_dat<span class="op">$</span>ycoords))
+  
+  
+    simAssign &lt;-<span class="st"> </span><span class="kw">isoAssign</span>(<span class="dt">isovalues =</span> iso_dat<span class="op">$</span>featherIso,
+                           <span class="dt">isoSTD =</span> <span class="dv">12</span>,
+                           <span class="dt">intercept =</span> <span class="op">-</span><span class="fl">17.57</span>,
+                           <span class="dt">slope =</span> <span class="fl">0.95</span>,
+                           <span class="dt">odds =</span> <span class="fl">0.67</span>,
+                           <span class="dt">restrict2Likely =</span> <span class="ot">FALSE</span>,
+                           <span class="dt">nSamples =</span> <span class="dv">500</span>,
+                           <span class="dt">sppShapefile =</span> OVEN_single_poly,
+                           <span class="dt">relAbund =</span> relativeAbund,
+                           <span class="dt">verbose =</span> <span class="dv">0</span>,
+                           <span class="dt">isoWeight =</span> <span class="op">-</span><span class="fl">0.7</span>,
+                           <span class="dt">abundWeight =</span> <span class="dv">0</span>,
+                           <span class="dt">assignExtent =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">179</span>,<span class="op">-</span><span class="dv">60</span>,<span class="dv">15</span>,<span class="dv">89</span>),
+                           <span class="dt">element =</span> <span class="st">&quot;Hydrogen&quot;</span>,
+                           <span class="dt">surface =</span> <span class="ot">FALSE</span>,
+                           <span class="dt">period =</span> <span class="st">&quot;GrowingSeason&quot;</span>)
+  
+    simEst &lt;-<span class="st"> </span><span class="kw">estMC</span>(<span class="dt">originRelAbund =</span> originRelAbund,
+                    <span class="dt">targetDist =</span> targetDist,
+                    <span class="dt">targetIntrinsic =</span> simAssign,
+                    <span class="dt">targetSites =</span> targetSites,
+                    <span class="dt">originPoints =</span> originPoints,
+                    <span class="dt">originSites =</span> originSites,
+                    <span class="dt">originDist =</span> originDist,
+                    <span class="dt">nSamples =</span> <span class="dv">100</span>,
+                    <span class="dt">verbose =</span> <span class="dv">0</span>,
+                    <span class="dt">calcCorr =</span> <span class="ot">TRUE</span>,
+                    <span class="dt">alpha =</span> <span class="fl">0.05</span>,
+                    <span class="dt">approxSigTest =</span> F,
+                    <span class="dt">sigConst =</span> <span class="dv">0</span>,
+                    <span class="dt">isIntrinsic =</span> <span class="ot">TRUE</span>,
+                    <span class="dt">nSim =</span> <span class="dv">5</span>)
+  
+    sim.output<span class="op">$</span>targetSetup[sim] &lt;-<span class="st"> </span>target
+    sim.output<span class="op">$</span>sim[sim]&lt;-sim
+    sim.output<span class="op">$</span>MC.generated[sim] &lt;-<span class="st"> </span>MC.generated
+    sim.output<span class="op">$</span>MC.realized[sim] &lt;-<span class="st"> </span>MC.realized
+    sim.output<span class="op">$</span>MC.est[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>meanMC
+    sim.output<span class="op">$</span>MC.low[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>bcCI[<span class="dv">1</span>]
+    sim.output<span class="op">$</span>MC.high[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>bcCI[<span class="dv">2</span>]
+    sim.output<span class="op">$</span>rM.realized[sim] &lt;-<span class="st"> </span>ncf<span class="op">::</span><span class="kw">mantel.test</span>(originPointDists, 
+                                                    targetPointDists,
+                                                    <span class="dt">resamp=</span><span class="dv">0</span>, 
+                                                    <span class="dt">quiet =</span> <span class="ot">TRUE</span>)<span class="op">$</span>correlation
+    sim.output<span class="op">$</span>rM.est[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>meanCorr
+    sim.output<span class="op">$</span>rM.low[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>bcCICorr[<span class="dv">1</span>]
+    sim.output<span class="op">$</span>rM.high[sim] &lt;-<span class="st"> </span>simEst<span class="op">$</span>bcCICorr[<span class="dv">2</span>]
+  
+  }
+  <span class="kw">return</span>(sim.output)
+}
+<span class="kw">Sys.time</span>()<span class="op">-</span>a
+
+<span class="kw">stopCluster</span>(cl)</code></pre></div>
+<p>Summarize the output</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sim.output &lt;-<span class="st"> </span><span class="kw">transform</span>(output.sims,
+                        <span class="dt">MC.generated.cover =</span> <span class="kw">as.integer</span>((MC.low <span class="op">&lt;=</span><span class="st"> </span>MC.generated <span class="op">&amp;</span><span class="st"> </span>
+<span class="st">                                                           </span>MC.high <span class="op">&gt;=</span><span class="st"> </span>MC.generated)),
+                        <span class="dt">MC.realized.cover =</span> <span class="kw">as.integer</span>((MC.low <span class="op">&lt;=</span><span class="st"> </span>MC.realized <span class="op">&amp;</span><span class="st"> </span>
+<span class="st">                                                          </span>MC.high <span class="op">&gt;=</span><span class="st"> </span>MC.realized)),
+                        <span class="dt">MC.generated.error =</span> MC.est <span class="op">-</span><span class="st"> </span>MC.generated, 
+                        <span class="dt">MC.realized.error =</span> MC.est <span class="op">-</span><span class="st"> </span>MC.realized,
+                        <span class="dt">rM.cover =</span> <span class="kw">as.integer</span>((rM.low <span class="op">&lt;=</span><span class="st"> </span>rM.realized <span class="op">&amp;</span><span class="st"> </span>
+<span class="st">                                                 </span>rM.high <span class="op">&gt;=</span><span class="st"> </span>rM.realized)),
+                        <span class="dt">rM.error =</span> rM.est <span class="op">-</span><span class="st"> </span>rM.realized)
+
+<span class="kw">summary</span>(sim.output)
+<span class="co"># Examine results</span>
+<span class="kw">aggregate</span>(MC.generated.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(MC.generated.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, <span class="cf">function</span> (x) <span class="kw">mean</span>(<span class="kw">abs</span>(x)))
+<span class="kw">aggregate</span>(MC.generated.cover <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(MC.realized.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(MC.realized.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, <span class="cf">function</span> (x) <span class="kw">mean</span>(<span class="kw">abs</span>(x)))
+<span class="kw">aggregate</span>(MC.realized.cover <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(<span class="kw">I</span>(MC.realized <span class="op">-</span><span class="st"> </span>MC.generated) <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(rM.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(rM.error <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, <span class="cf">function</span> (x) <span class="kw">mean</span>(<span class="kw">abs</span>(x)))
+<span class="kw">aggregate</span>(rM.cover <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)
+<span class="kw">aggregate</span>(MC.est <span class="op">~</span><span class="st"> </span>targetSetup, sim.output, mean)</code></pre></div>
+</div>
+
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

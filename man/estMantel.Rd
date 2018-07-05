@@ -86,6 +86,12 @@ rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  resampleProjection = raster::projection(OVENdata$targetSites))
 str(rM1)
 }
+\references{
+Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
+and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
+Methods in Ecology and Evolution 9: 513 - 524.
+\href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+}
 \seealso{
 \code{\link{estMC}}
 }
