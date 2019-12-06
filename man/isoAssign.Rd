@@ -8,8 +8,8 @@ isoAssign(isovalues, isoSTD, intercept, slope, odds = 0.67,
   restrict2Likely = TRUE, nSamples = NULL, sppShapefile = NULL,
   relAbund = NULL, isoWeight = NULL, abundWeight = NULL,
   population = NULL, assignExtent = c(-179, -60, 15, 89),
-  element = "Hydrogen", surface = FALSE, period = "Annual", seed = NULL,
-  verbose = 1)
+  element = "Hydrogen", surface = FALSE, period = "Annual",
+  seed = NULL, verbose = 1)
 }
 \arguments{
 \item{isovalues}{vector of tissue isotope values}

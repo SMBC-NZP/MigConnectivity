@@ -10,8 +10,9 @@ estMC(originDist, targetDist = NULL, originRelAbund, psi = NULL,
   originPoints = NULL, targetPoints = NULL, originAssignment = NULL,
   targetAssignment = NULL, originNames = NULL, targetNames = NULL,
   nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000),
-  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0, verbose = 0,
-  calcCorr = FALSE, alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
+  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
+  verbose = 0, calcCorr = FALSE, alpha = 0.05,
+  approxSigTest = FALSE, sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
   maxTries = 300, targetIntrinsic = NULL, isIntrinsic = FALSE)
 }

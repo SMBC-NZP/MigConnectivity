@@ -6,7 +6,8 @@
 \usage{
 simMove(breedingAbund, breedingDist, winteringDist, psi, nYears = 10,
   nMonths = 3, winMoveRate = 0, sumMoveRate = 0, winDispRate = 0,
-  sumDispRate = 0, natalDispRate = 0, breedDispRate = 0, verbose = 0)
+  sumDispRate = 0, natalDispRate = 0, breedDispRate = 0,
+  verbose = 0)
 }
 \arguments{
 \item{breedingAbund}{Vector with number of birds to simulate starting at

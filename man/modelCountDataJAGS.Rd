@@ -4,7 +4,8 @@
 \alias{modelCountDataJAGS}
 \title{Estimates population-level relative abundance from count data}
 \usage{
-modelCountDataJAGS(count_data, ni = 20000, nt = 5, nb = 5000, nc = 3)
+modelCountDataJAGS(count_data, ni = 20000, nt = 5, nb = 5000,
+  nc = 3)
 }
 \arguments{
 \item{count_data}{List containing the following elements:

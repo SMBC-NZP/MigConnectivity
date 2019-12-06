@@ -4,7 +4,8 @@
 \alias{simCountData}
 \title{Simulates Breeding Bird Survey-style count data}
 \usage{
-simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear)
+simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute,
+  sdYear)
 }
 \arguments{
 \item{nPops}{Number of populations/regions}
