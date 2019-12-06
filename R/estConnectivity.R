@@ -903,10 +903,6 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
-    targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
-                                                    target.point.sample2[distIndices[,'col']])
-    targetDist1[lower.tri(targetDist1)] <- targetDist0
     corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),

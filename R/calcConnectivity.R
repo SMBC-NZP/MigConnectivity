@@ -134,15 +134,19 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' @param originPoints A \code{SpatialPoints} object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal.
 #' @param targetDist Distances between the target locations of the tracked
-#'    animals.  Symmetric matrix with number of animals rows and columns.
+#'    animals.  Symmetric matrix with number of animals rows and columns,
+#'    although really you only need the lower triangle filled in.
 #' @param originDist Distances between the origin locations of the tracked
-#'    animals.  Symmetric matrix with number of animals rows and columns.
+#'    animals.  Symmetric matrix with number of animals rows and columns,
+#'    although really you only need the lower triangle filled in.
 #'
 #' @return \code{calcMantel} returns a list with elements:
 #' \describe{
 #'   \item{\code{pointCorr}}{Simple point estimate of Mantel correlation.}
 #'   \item{\code{originDist, targetDist}}{Distances between each pair of
-#'   \code{originPoints} and each pair of \code{targetPoints}, respectively.}
+#'   \code{originPoints} and each pair of \code{targetPoints}, respectively.
+#'   If you used distances as inputs instead, then these are just what you fed
+#'   in.}
 #' }
 #' @export
 #'
@@ -150,13 +154,12 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
 #'                   targetPoints = OVENdata$targetPoints) # Target locations
 #' str(rM0)
-#' @seealso \code{\link{estMantel}}
+#' @seealso \code{\link{estMantel}}, \code{\link{calcMC}}, \code{\link{estMC}}
 #'
 #' @references
-#' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
-#' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
-#' Methods in Ecology and Evolution 9: 513 - 524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' Ambrosini, R., A. P. Møller, and N. Saino. 2009. A quantitative measure of
+#' migratory connectivity. Journal of Theoretical Biology 257:203–211.
+#' \href{https://doi.org/10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
 
 calcMantel <- function(targetPoints = NULL, originPoints = NULL,
                        targetDist = NULL, originDist = NULL) {
