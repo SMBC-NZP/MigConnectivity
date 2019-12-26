@@ -28,9 +28,9 @@ although really you only need the lower triangle filled in.}
 \describe{
   \item{\code{pointCorr}}{Simple point estimate of Mantel correlation.}
   \item{\code{originDist, targetDist}}{Distances between each pair of
-  \code{originPoints} and each pair of \code{targetPoints}, respectively.
-  If you used distances as inputs instead, then these are just what you fed
-  in.}
+  \code{originPoints} and each pair of \code{targetPoints}, respectively,
+  in meters. If you used distances as inputs instead, then these are just
+  what you fed in.}
 }
 }
 \description{
