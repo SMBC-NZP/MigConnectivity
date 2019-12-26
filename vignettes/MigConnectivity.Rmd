@@ -1860,16 +1860,13 @@ for (i in 13) { # only run one scenario
     target.point.sample2 <- sp::spTransform(target.point.sample,
                                             sp::CRS(projections$WGS84))
     
-    targetDist0 <- geosphere::distVincentyEllipsoid(
-                                     target.point.sample2[distIndices[,'row']],
+    targetDist0 <-geosphere::distGeo(target.point.sample2[distIndices[,'row']],
                                      target.point.sample2[distIndices[,'col']])
     
     targetDist1[lower.tri(targetDist1)] <- targetDist0
     
-    compare14.2.array[sim, 'Mantel'] <- ncf::mantel.test(originDist1, 
-                                                         targetDist1, 
-                                                         resamp=0, 
-                                                         quiet = T)$correlation
+    compare14.2.array[sim, 'Mantel'] <- calcMantel(originDist = originDist1, 
+                                                   targetDist = targetDist1)$pointCorr
   }
 })
 

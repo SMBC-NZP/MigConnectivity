@@ -278,8 +278,7 @@ distFromPos <- function(pos, surface = 'ellipsoid') {
   for (b1 in 2:nSites) {
     for (b2 in 1:(b1-1)) {
       if (surface == 'ellipsoid')
-        dist[b1, b2] <- geosphere::distVincentyEllipsoid(pos[b1, ],
-                                                         pos[b2, ]) / 1000
+        dist[b1, b2] <- geosphere::distGeo(pos[b1, ], pos[b2, ]) / 1000
       else if (surface == 'sphere')
         dist[b1, b2] <- geosphere::distVincentySphere(pos[b1, ],
                                                       pos[b2, ]) / 1000

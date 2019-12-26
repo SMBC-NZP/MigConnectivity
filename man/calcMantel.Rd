@@ -44,8 +44,8 @@ rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
 str(rM0)
 }
 \references{
-Ambrosini, R., A. P. Møller, and N. Saino. 2009. A quantitative measure of
-migratory connectivity. Journal of Theoretical Biology 257:203–211.
+Ambrosini, R., A. P. Moller, and N. Saino. 2009. A quantitative measure of
+migratory connectivity. Journal of Theoretical Biology 257:203-211.
 \href{https://doi.org/10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
 }
 \seealso{

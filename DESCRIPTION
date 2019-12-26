@@ -24,10 +24,10 @@ Description: Calculates and estimates the strength of migratory connectivity
 License: GPL (>=3)
 LazyData: true
 Depends:
-    R (>= 3.0.0)
+    R (>= 3.5.0)
 Imports:
     coda,
-    geosphere,
+    geosphere (>= 1.5),
     MASS,
     ncf,
     R2jags,
