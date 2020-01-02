@@ -127,9 +127,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")
-  if (length(geoBias)!=2 && (any(isGL) || calcCorr))
+  if (length(geoBias)!=2 && any(isGL))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && (any(isGL) || calcCorr))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
