@@ -4,7 +4,9 @@
 \name{abundExamples}
 \alias{abundExamples}
 \title{Example relative abundance estimates from simulated data}
-\format{A list with 100 mcmc (coda) estimates in it.}
+\format{
+A list with 100 mcmc (coda) estimates in it.
+}
 \usage{
 abundExamples
 }

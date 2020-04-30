@@ -86,7 +86,7 @@ sim_out <- vector("list", nsims)
 # Simulation ---
 \dontrun{
 system.time(for(s in 1:nsims){
-  cat("Simulation",s,"of",nsims,"\\n")
+  cat("Simulation",s,"of",nsims,"\n")
 
   # Simulate data
   sim_data <- simCountData(nPops = nPops., routePerPop = routePerPop.,

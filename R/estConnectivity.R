@@ -127,9 +127,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")
-  if (length(geoBias)!=2 && (any(isGL) || calcCorr))
+  if (length(geoBias)!=2 && any(isGL))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && (any(isGL) || calcCorr))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
@@ -174,8 +174,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     originNames <- names(originSites)
   if (is.null(sampleSize))
     sampleSize <- nAnimals
-  if (dim(originDist)!=rep(nOriginSites,2) ||
-      dim(targetDist)!=rep(nTargetSites,2))
+  if (!identical(dim(originDist),rep(nOriginSites,2)) ||
+      !identical(dim(targetDist),rep(nTargetSites,2)))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
@@ -201,27 +201,11 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                     sampleSize = sampleSize)
 
   if (calcCorr) {
-    targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-    targetDist1[lower.tri(targetDist1)] <- 1
-
-    distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
-
-    # project target points to WGS #
-    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-    targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
-
-    targetDist1[lower.tri(targetDist1)] <- targetDist0
-
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
-                                    nAnimals, nAnimals)
-
-    originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
-
-    pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+    pointMantel <- calcMantel(targetPoints = targetPoints,
+                              originPoints = originPoints)
+    targetDist1 <- pointMantel$targetDist
+    originDistStart <- pointMantel$originDist
+    pointCorr <- pointMantel$pointCorr
   }
 
   boot <- 1
@@ -263,11 +247,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
-      targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
-                                           target.point.sample2[distIndices[,'col']])
-      targetDist1[lower.tri(targetDist1)] <- targetDist0
-      corr[boot] <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+      corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
@@ -442,9 +422,17 @@ estMCisotope <- function(targetDist=NULL,
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
     originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    originDistStart <- matrix(NA, nAnimals, nAnimals)
 
-    originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
-                                    nAnimals, nAnimals)
+    originDistStart[lower.tri(originDistStart)] <- 1
+
+    distIndices <- which(!is.na(originDistStart), arr.ind = TRUE)
+    originDist0 <- geosphere::distGeo(originPoints2[distIndices[,'row'],],
+                                      originPoints2[distIndices[,'col'],])
+    originDistStart[lower.tri(originDistStart)] <- originDist0
+    diag(originDistStart) <- 0
+    originDistStart <- t(originDistStart)
+    originDistStart[lower.tri(originDistStart)] <- originDist0
 
   }
 
@@ -504,11 +492,7 @@ estMCisotope <- function(targetDist=NULL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
-      targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
-                                                      target.point.sample2[distIndices[,'col']])
-      targetDist1[lower.tri(targetDist1)] <- targetDist0
-      corr[boot] <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+      corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
@@ -895,27 +879,11 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
   corr <- rep(NA, nBoot)
 
-  targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-  targetDist1[lower.tri(targetDist1)] <- 1
-
-  distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
-
-  # project target points to WGS #
-  targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-  targetDist0 <- geosphere::distVincentyEllipsoid(targetPoints2[distIndices[,'row'],],targetPoints2[distIndices[,'col'],])
-
-  targetDist1[lower.tri(targetDist1)] <- targetDist0
-
-  originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
-
-  originDistStart <- matrix(geosphere::distVincentyEllipsoid(originPoints2[rep(1:nAnimals, nAnimals)], originPoints2[rep(1:nAnimals,each=nAnimals)]),
-                            nAnimals, nAnimals)
-
-  originDist1 <- originDistStart[1:nAnimals, 1:nAnimals]
-
-  pointCorr <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+  pointMantel <- calcMantel(targetPoints = targetPoints,
+                            originPoints = originPoints)
+  targetDist1 <- pointMantel$targetDist
+  originDistStart <- pointMantel$originDist
+  pointCorr <- pointMantel$pointCorr
 
   for (boot in 1:nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
@@ -935,11 +903,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
     target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-    target.point.sample2 <- sp::spTransform(target.point.sample,sp::CRS(MigConnectivity::projections$WGS84))
-    targetDist0 <- geosphere::distVincentyEllipsoid(target.point.sample2[distIndices[,'row']],
-                                                    target.point.sample2[distIndices[,'col']])
-    targetDist1[lower.tri(targetDist1)] <- targetDist0
-    corr[boot] <- ncf::mantel.test(originDist1, targetDist1, resamp=0, quiet = TRUE)$correlation
+    corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
           "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),

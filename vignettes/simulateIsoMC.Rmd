@@ -6,7 +6,7 @@ output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package}
+  %\VignetteIndexEntry{MigConnectivity package: isotope simulation}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 ---

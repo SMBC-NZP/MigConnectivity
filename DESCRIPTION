@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.3.0
-Date: 2018-07-05
+Version: 0.3.1
+Date: 2020-04-30
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
@@ -24,10 +24,10 @@ Description: Calculates and estimates the strength of migratory connectivity
 License: GPL (>=3)
 LazyData: true
 Depends:
-    R (>= 3.0.0)
+    R (>= 3.5.0)
 Imports:
     coda,
-    geosphere,
+    geosphere (>= 1.5),
     MASS,
     ncf,
     R2jags,
@@ -45,4 +45,5 @@ Suggests:
     shape,
     testthat
 VignetteBuilder: knitr
-RoxygenNote: 6.0.1
+RoxygenNote: 7.1.0
+Encoding: UTF-8

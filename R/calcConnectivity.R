@@ -122,6 +122,98 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
   return(MC)
 }
 
+#' Calculate Mantel correlation (rM) from points and/or distances.
+#'
+#' Calculation of rM from SpatialPoints geolocators and/or GPS
+#' data, not accounting for uncertainty. If you've already calculated
+#' distances between points, you can use those instead.
+#'
+#' @param targetPoints A \code{SpatialPoints} object, with length number of
+#'    animals tracked.  Each point indicates the point estimate location in
+#'    the non-release season.
+#' @param originPoints A \code{SpatialPoints} object, with length number of
+#'    animals tracked.  Each point indicates the release location of an animal.
+#' @param targetDist Distances between the target locations of the tracked
+#'    animals.  Symmetric matrix with number of animals rows and columns,
+#'    although really you only need the lower triangle filled in.
+#' @param originDist Distances between the origin locations of the tracked
+#'    animals.  Symmetric matrix with number of animals rows and columns,
+#'    although really you only need the lower triangle filled in.
+#'
+#' @return \code{calcMantel} returns a list with elements:
+#' \describe{
+#'   \item{\code{pointCorr}}{Simple point estimate of Mantel correlation.}
+#'   \item{\code{originDist, targetDist}}{Distances between each pair of
+#'   \code{originPoints} and each pair of \code{targetPoints}, respectively,
+#'   in meters. If you used distances as inputs instead, then these are just
+#'   what you fed in.}
+#' }
+#' @export
+#'
+#' @examples
+#' rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
+#'                   targetPoints = OVENdata$targetPoints) # Target locations
+#' str(rM0)
+#' @seealso \code{\link{estMantel}}, \code{\link{calcMC}}, \code{\link{estMC}}
+#'
+#' @references
+#' Ambrosini, R., A. P. Moller, and N. Saino. 2009. A quantitative measure of
+#' migratory connectivity. Journal of Theoretical Biology 257:203-211.
+#' \href{https://doi.org/10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
+
+calcMantel <- function(targetPoints = NULL, originPoints = NULL,
+                       targetDist = NULL, originDist = NULL) {
+
+  if (is.null(targetPoints) && is.null(targetDist)){
+    stop('Define either targetPoints or targetDist')
+  }
+  if (is.null(originPoints) && is.null(originDist)){
+    stop('Define either originPoints or originDist')
+  }
+  if (!is.null(targetDist))
+    nAnimals <- dim(targetDist)[1]
+  else {
+    nAnimals <- length(targetPoints)
+    if(is.na(raster::projection(targetPoints))){
+      stop('Coordinate system definition needed for targetPoints')
+    }
+    targetDist <- matrix(NA, nAnimals, nAnimals)
+
+    targetDist[lower.tri(targetDist)] <- 1
+
+    distIndices <- which(!is.na(targetDist), arr.ind = TRUE)
+
+    # project target points to WGS #
+    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    targetDist0 <- geosphere::distGeo(targetPoints2[distIndices[,'row'],],
+                                      targetPoints2[distIndices[,'col'],])
+
+    targetDist[lower.tri(targetDist)] <- targetDist0
+    diag(targetDist) <- 0
+    targetDist <- t(targetDist)
+    targetDist[lower.tri(targetDist)] <- targetDist0
+  }
+  if (is.null(originDist)) {
+    if(is.na(raster::projection(originPoints))) {
+      stop('Coordinate system definition needed for originPoints')
+    }
+    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    originDist <- matrix(NA, nAnimals, nAnimals)
+
+    originDist[lower.tri(originDist)] <- 1
+
+    distIndices <- which(!is.na(originDist), arr.ind = TRUE)
+    originDist0 <- geosphere::distGeo(originPoints2[distIndices[,'row'],],
+                                      originPoints2[distIndices[,'col'],])
+    originDist[lower.tri(originDist)] <- originDist0
+    diag(originDist) <- 0
+    originDist <- t(originDist)
+    originDist[lower.tri(originDist)] <- originDist0
+  }
+  pointCorr <- ncf::mantel.test(originDist, targetDist, resamp=0, quiet = TRUE)$correlation
+  return(list(pointCorr = pointCorr, originDist = originDist, targetDist = targetDist))
+}
+
 
 ###############################################################################
 # Mantel function for individuals

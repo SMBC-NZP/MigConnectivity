@@ -7,7 +7,8 @@
 \alias{sampleTargetPos}
 \alias{sampleTargetDist}
 \title{Example origin and target site positions and distances on a 2-D plane}
-\format{Each dataset is a named list with 12 matrices in it, representing 12
+\format{
+Each dataset is a named list with 12 matrices in it, representing 12
 scenarios. The position matrices each have 2 columns (x and y position) and
 4 rows (for each origin or target site).  The distance matrices are
 symmetrical and 4 x 4. The 12 scenarios are:
@@ -38,7 +39,14 @@ symmetrical and 4 x 4. The 12 scenarios are:
      equidistant
   \item B/NB Grid: Origin and target sites each arranged on a grid, both
      with all adjacent sites (excluding diagonals) equidistant
-}}
+}
+
+An object of class \code{list} of length 12.
+
+An object of class \code{list} of length 12.
+
+An object of class \code{list} of length 12.
+}
 \usage{
 sampleOriginPos
 

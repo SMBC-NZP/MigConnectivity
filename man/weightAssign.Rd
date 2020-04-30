@@ -5,10 +5,21 @@
 \title{Calculate Weights for Isotope Assignments
 weightAssign}
 \usage{
-weightAssign(knownLocs, isovalues, isoSTD, intercept, slope, odds = 0.67,
-  relAbund, weightRange = c(-1, 1), sppShapefile = NULL,
-  assignExtent = c(-179, -60, 15, 89), element = "Hydrogen",
-  surface = FALSE, period = "Annual")
+weightAssign(
+  knownLocs,
+  isovalues,
+  isoSTD,
+  intercept,
+  slope,
+  odds = 0.67,
+  relAbund,
+  weightRange = c(-1, 1),
+  sppShapefile = NULL,
+  assignExtent = c(-179, -60, 15, 89),
+  element = "Hydrogen",
+  surface = FALSE,
+  period = "Annual"
+)
 }
 \arguments{
 \item{knownLocs}{matrix of capture locations of the same length as \code{isovalues}}

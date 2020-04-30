@@ -4,11 +4,20 @@
 \alias{estMantel}
 \title{Estimate Mantel correlation (rM) from geolocator and/or GPS data.}
 \usage{
-estMantel(targetPoints, originPoints, isGL, geoBias = NULL, geoVCov = NULL,
-  targetSites = NULL, nBoot = 1000, nSim = 1000, verbose = 0,
+estMantel(
+  targetPoints,
+  originPoints,
+  isGL,
+  geoBias = NULL,
+  geoVCov = NULL,
+  targetSites = NULL,
+  nBoot = 1000,
+  nSim = 1000,
+  verbose = 0,
   alpha = 0.05,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300)
+  maxTries = 300
+)
 }
 \arguments{
 \item{targetPoints}{A \code{SpatialPoints} object, with length number of
