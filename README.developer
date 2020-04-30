@@ -1,14 +1,13 @@
 MigConnectivity Developers README file
 
 Steps for Making Future Updates
-1. In RStudio (or wherever), switch to a "develop" branch.  If that doesn't
-appear on your list of branches on the Git tab, choose More | Shell... then
-type "git checkout -b develop".
-2. Pull from the "develop" branch of our GitHub repository.  This push must be
-done through the shell: Git | More | Shell... then type "git pull origin develop".
+1. Make sure you are connected to the master branch, neither ahead of or behind
+the version of master on our GitHub repository.
+2. In RStudio (or wherever), create a new development branch. If you use an old
+branch name (such as "develop"), you may have to delete the old branch first.
 3. Make your changes, documenting and performing your own tests along the way.
-4. Commit and push to the "develop" branch of our GitHub repository as things
-progress.  This push must be done through the shell: Git | More | Shell...
+4. Commit and push to your development branch of our GitHub repository as things
+progress.  This push may have be done through the shell: Git | More | Shell...
 then type "git push origin develop".
 5. Run formal tests too: Build | Check.  Fix any errors and examine any notes.
 6. [With maintainer approval only] Pull latest develop version, update version
@@ -45,11 +44,11 @@ based on is the same as the input number of samples. Status: Done (v0.2.5)
 7. Create diffMC function to generate difference with SD and CI between two or
 more independent estimates of MC / rM. Status: Done (v0.3.0)
 8. Add calcMantel function, for consistency and ease of use. Not really needed.
-Status: Proposed
+Status: Done (v0.3.1)
 9. Add warnings / while loop to estMC when resampling and assigning target
 sites so that calculations don't run for days without ever producing results.
 Status: Done (v0.2.5)
-10. Break up vignette into more manageable parts.  Status: Proposed
+10. Break up vignette into more manageable parts.  Status: Done (v0.3.0)
 
 Updates
 1. When manuscript is accepted, update references to it throughout
