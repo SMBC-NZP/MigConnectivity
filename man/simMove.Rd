@@ -4,10 +4,21 @@
 \alias{simMove}
 \title{Simulates position of birds by individual, season, year, and month.}
 \usage{
-simMove(breedingAbund, breedingDist, winteringDist, psi, nYears = 10,
-  nMonths = 3, winMoveRate = 0, sumMoveRate = 0, winDispRate = 0,
-  sumDispRate = 0, natalDispRate = 0, breedDispRate = 0,
-  verbose = 0)
+simMove(
+  breedingAbund,
+  breedingDist,
+  winteringDist,
+  psi,
+  nYears = 10,
+  nMonths = 3,
+  winMoveRate = 0,
+  sumMoveRate = 0,
+  winDispRate = 0,
+  sumDispRate = 0,
+  natalDispRate = 0,
+  breedDispRate = 0,
+  verbose = 0
+)
 }
 \arguments{
 \item{breedingAbund}{Vector with number of birds to simulate starting at
@@ -125,7 +136,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
   nMonths <- dim(locations)[4]
   for (i in 1:nInd) {
     if (i \%\% 1000 == 0 && verbose) #
-      cat("Individual", i, "of", nInd, "\\n")
+      cat("Individual", i, "of", nInd, "\n")
     originMat <- locations[i, 1, years, months]
     targetMat <- locations[i, 2, years, months]
     bIndices <- which(!is.na(originMat))
@@ -198,11 +209,11 @@ birdLocDisp <- vector('list', length(Drates))
 Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
                        Rate=rep(Drates, each = nYears), MC = NA)
 for(i in 1:length(Drates)){
-  cat('Dispersal Rate', Drates[i], '\\n')
+  cat('Dispersal Rate', Drates[i], '\n')
   birdLocDisp[[i]] <- simMove(breedingN, breedDist, nonbreedDist, psi, nYears, nMonths,
                               sumDispRate = Drates[i])
   for(j in 1:nYears){
-    cat('\\tYear', j, '\\n')
+    cat('\tYear', j, '\n')
     temp.results <- calcPsiMC(breedDist, nonbreedDist, breedingRelN,
                                  birdLocDisp[[i]]$animalLoc, years = j)
     Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC

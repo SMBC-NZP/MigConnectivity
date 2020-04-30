@@ -5,7 +5,8 @@
 \alias{sampleOriginN}
 \alias{sampleOriginRelN}
 \title{Example origin site abundances and relative abundances}
-\format{Each dataset is a named list with 5 vectors in it. Each vector has
+\format{
+Each dataset is a named list with 5 vectors in it. Each vector has
 4 elements (for the 4 origin sites).  The relative abundance vectors each
 sum to 1. The 5 scenarios are:
 \itemize{
@@ -18,7 +19,10 @@ sum to 1. The 5 scenarios are:
      three sites
   \item D Half: The last origin site has half the abundance of the other
      three sites
-}}
+}
+
+An object of class \code{list} of length 5.
+}
 \usage{
 sampleOriginN
 

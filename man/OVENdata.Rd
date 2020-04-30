@@ -4,7 +4,8 @@
 \name{OVENdata}
 \alias{OVENdata}
 \title{Ovenbird light-level geolocator and GPS neccesary data}
-\format{A named list with the neccesary data to replicate the analyses
+\format{
+A named list with the neccesary data to replicate the analyses
 found in Cohen et al. (in press) with archival light-level geolocator and
 GPS data.
 The data contained in the list are:
@@ -58,7 +59,8 @@ The data contained in the list are:
   \item targetDist: The pairwise Great Circle Distance between the center of the polygons contained within
        \code{targetSites}. See "Ovenbird non-breeding distribution target sites" or \code{targetSites}.
        Format: square distance matrix
-}}
+}
+}
 \usage{
 OVENdata
 }

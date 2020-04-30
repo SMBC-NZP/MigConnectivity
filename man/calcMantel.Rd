@@ -4,8 +4,12 @@
 \alias{calcMantel}
 \title{Calculate Mantel correlation (rM) from points and/or distances.}
 \usage{
-calcMantel(targetPoints = NULL, originPoints = NULL,
-  targetDist = NULL, originDist = NULL)
+calcMantel(
+  targetPoints = NULL,
+  originPoints = NULL,
+  targetDist = NULL,
+  originDist = NULL
+)
 }
 \arguments{
 \item{targetPoints}{A \code{SpatialPoints} object, with length number of

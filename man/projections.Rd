@@ -4,7 +4,9 @@
 \name{projections}
 \alias{projections}
 \title{Map projections}
-\format{A named list of strings.}
+\format{
+A named list of strings.
+}
 \usage{
 projections
 }

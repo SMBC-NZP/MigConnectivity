@@ -4,8 +4,7 @@
 \alias{simCountData}
 \title{Simulates Breeding Bird Survey-style count data}
 \usage{
-simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute,
-  sdYear)
+simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear)
 }
 \arguments{
 \item{nPops}{Number of populations/regions}
@@ -101,7 +100,7 @@ sim_out <- vector("list", nsims)
 # Simulation ---
 \dontrun{
 system.time(for(s in 1:nsims){
-  cat("Simulation",s,"of",nsims,"\\n")
+  cat("Simulation",s,"of",nsims,"\n")
 
   # Simulate data
   sim_data <- simCountData(nPops = nPops., routePerPop = routePerPop.,

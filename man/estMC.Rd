@@ -5,16 +5,36 @@
 \title{Estimate MC from abundance and/or transition probability estimates OR
 geolocator and/or GPS data OR intrinsic markers.}
 \usage{
-estMC(originDist, targetDist = NULL, originRelAbund, psi = NULL,
-  sampleSize = NULL, originSites = NULL, targetSites = NULL,
-  originPoints = NULL, targetPoints = NULL, originAssignment = NULL,
-  targetAssignment = NULL, originNames = NULL, targetNames = NULL,
-  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000),
-  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
-  verbose = 0, calcCorr = FALSE, alpha = 0.05,
-  approxSigTest = FALSE, sigConst = 0,
+estMC(
+  originDist,
+  targetDist = NULL,
+  originRelAbund,
+  psi = NULL,
+  sampleSize = NULL,
+  originSites = NULL,
+  targetSites = NULL,
+  originPoints = NULL,
+  targetPoints = NULL,
+  originAssignment = NULL,
+  targetAssignment = NULL,
+  originNames = NULL,
+  targetNames = NULL,
+  nSamples = 1000,
+  nSim = ifelse(isTRUE(isIntrinsic), 10, 1000),
+  isGL = FALSE,
+  geoBias = NULL,
+  geoVCov = NULL,
+  row0 = 0,
+  verbose = 0,
+  calcCorr = FALSE,
+  alpha = 0.05,
+  approxSigTest = FALSE,
+  sigConst = 0,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300, targetIntrinsic = NULL, isIntrinsic = FALSE)
+  maxTries = 300,
+  targetIntrinsic = NULL,
+  isIntrinsic = FALSE
+)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
@@ -235,7 +255,7 @@ summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC,
                          estimate=NA, mean=NA, median=NA, se=NA, lcl.simple=NA,
                          ucl.simple=NA, lcl.BC=NA, ucl.BC=NA)
 for (r in 1:nSimulationsCMR) {
-  cat("Simulation",r,"of",nSimulationsCMR,"\\n")
+  cat("Simulation",r,"of",nSimulationsCMR,"\n")
   # Note: getCMRexample requires a valid internet connection and that GitHub is
   # accessible
   fm <- getCMRexample(r)
@@ -283,7 +303,7 @@ summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
                            lcl.simple = NA, ucl.simple = NA,
                            lcl.BC = NA, ucl.BC = NA, lclHPD = NA, uclHPD = NA)
 for (r in 1:nSimulationsAbund) {
-  cat("Simulation",r,"of",nSimulationsAbund,"\\n")
+  cat("Simulation",r,"of",nSimulationsAbund,"\n")
   row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
   results <- estMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
                    originDist = originDist, targetDist = targetDist,

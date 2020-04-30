@@ -4,7 +4,8 @@
 \name{samplePsis}
 \alias{samplePsis}
 \title{Example transition probabilities (psis) between origin and target sites}
-\format{A named list with 8 transition probability matrices in it. The
+\format{
+A named list with 8 transition probability matrices in it. The
 direction is from origin site (rows) to target sites (columns), so each
 row of each matrix sums to 1.  The psi matrices are:
 \itemize{
@@ -25,7 +26,8 @@ row of each matrix sums to 1.  The psi matrices are:
      site D only goes to target site 4
   \item Negative: Artificial transition probability scenario developed to
      produce a negative MC value under some circumstances
-}}
+}
+}
 \usage{
 samplePsis
 }

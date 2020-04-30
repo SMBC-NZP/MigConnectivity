@@ -174,8 +174,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     originNames <- names(originSites)
   if (is.null(sampleSize))
     sampleSize <- nAnimals
-  if (dim(originDist)!=rep(nOriginSites,2) ||
-      dim(targetDist)!=rep(nTargetSites,2))
+  if (!identical(dim(originDist),rep(nOriginSites,2)) ||
+      !identical(dim(targetDist),rep(nTargetSites,2)))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
