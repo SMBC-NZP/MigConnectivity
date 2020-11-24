@@ -25,19 +25,31 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   }
   if (is.matrix(psi)) {
     psiFixed <- TRUE
+    psiVCV <- NULL
     if (nrow(psi)!=nOrigin || ncol(psi)!=nTarget)
       stop('Size of psi matrix must be consistant with distance matrices')
     psiBase <- psi
   }
-  else {
+  else if (inherits(psi, "mark")) {
     psiFixed <- FALSE
     if (!is.numeric(originSites) || !is.numeric(targetSites))
       stop('Must specify which RMark Psi parameters represent origin and target sites')
+    psiVCV <- model$results$beta.vcv
     psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
                                                        se=TRUE))[originSites,
                                                               targetSites]
     if (any(diag(psi$results$beta.vcv) < 0))
       stop("Can't sample model, negative beta variances")
+  }
+  else if (is.array(psi)) {
+    if (length(dim(psi))!=3)
+      stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
+    psiFixed <- FALSE
+    if (dim(psi)[2]!=nOrigin || dim(psi)[3]!=nTarget)
+      stop('Size of psi array must be consistant with distance matrices')
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
   }
   pointMC <- ifelse(absAbund,
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
@@ -50,11 +62,10 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat("\tSample", i, "of", nSamples, "at", date(), "\n")
     # Generate random transition probability matrices
-    # resampling from each files, 1000 samples from each of the 100 files
-    # using the estimates of psi and uncertainty from the mark file to generate a new estimate of psi
-    # choose a random psi from that interval of the distribution
     if (psiFixed)
       psiNew <- psiBase
+    else if (is.null(psiVCV))
+      psiNew <- psi[psiSamples[i],,]
     else
       psiNew <- makePsiRand(psi, originSites, targetSites)
     psi.array[i, , ] <- psiNew
