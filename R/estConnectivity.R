@@ -719,7 +719,7 @@ estMCisotope <- function(targetDist=NULL,
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
@@ -1010,7 +1010,7 @@ getCMRexample <- function(number = 1) {
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 #' @examples
@@ -1139,7 +1139,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 # @examples
