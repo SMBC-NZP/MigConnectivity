@@ -256,12 +256,36 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                       n.chains = nc, n.thin = nt, n.iter = nb + nBoot,
                       n.burnin = nb, progress.bar = 'none', DIC = FALSE)
 
-  return(estMCCmrAbund(originDist = originDist, targetDist = targetDist,
-                       originRelAbund = originRelAbund,
-                       psi = out$BUGSoutput$sims.list$m,
-                       sampleSize = sampleSize, nSamples = nBoot,
-                       verbose = verbose, alpha = alpha,
-                       approxSigTest = approxSigTest, sigConst = sigConst))
+  result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
+                          originRelAbund = originRelAbund,
+                          psi = out$BUGSoutput$sims.list$m,
+                          sampleSize = sampleSize, nSamples = nBoot,
+                          verbose = verbose, alpha = alpha,
+                          approxSigTest = approxSigTest, sigConst = sigConst)
+
+  bcCIr <- array(NA, dim = c(2, nTargetSites),
+                 dimnames = list(NULL, targetNames))
+  for (j in 1:nTargetSites) {
+    psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
+                          out$BUGSoutput$mean$r[j], na.rm = T) /
+                      length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
+    bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
+                            pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                            na.rm=TRUE, type = 8, names = F)
+  }
+
+
+  result$reencounter <- list(sample = out$BUGSoutput$sims.list$r,
+                             mean = out$BUGSoutput$mean$r,
+                             median = out$BUGSoutput$median$r,
+                             point = out$BUGSoutput$mean$r,
+                             se = out$BUGSoutput$sd$r,
+                             simpleCI = apply(out$BUGSoutput$sims.list$r, 2,
+                                              quantile,
+                                              probs = c(alpha/2, 1-alpha/2),
+                                              type = 8),
+                             bcCI = bcCIr)
+  return(result)
 }
 
 
