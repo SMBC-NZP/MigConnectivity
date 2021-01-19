@@ -386,7 +386,7 @@ coverage(sapply(results14, function(x) x$simpleCI), 0.25)
 ###############################################################################
 # Try with location uncertainty (GL data)
 ###############################################################################
-
+data(OVENdata) # Ovenbird
 # Assign geolocator bias / variance co-variance matrix
 geoBias <- OVENdata$geo.bias
 geoVCov <- OVENdata$geo.vcov

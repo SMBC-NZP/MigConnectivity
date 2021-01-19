@@ -2,9 +2,9 @@ Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
 Version: 0.3.1.9000
-Date: 2020-11-24
+Date: 2021-1-5
 Authors@R: c(
-    person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
+    person("Jeffrey A.", "Hostetler", email = "jeffrey_hostetler@fws.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"))
@@ -26,6 +26,7 @@ LazyData: true
 Depends:
     R (>= 3.5.0)
 Imports:
+    birdring,
     coda,
     geosphere (>= 1.5),
     MASS,
@@ -45,5 +46,5 @@ Suggests:
     shape,
     testthat
 VignetteBuilder: knitr
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Encoding: UTF-8

@@ -151,6 +151,7 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' @export
 #'
 #' @examples
+#' data(OVENdata) # Ovenbird
 #' rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
 #'                   targetPoints = OVENdata$targetPoints) # Target locations
 #' str(rM0)

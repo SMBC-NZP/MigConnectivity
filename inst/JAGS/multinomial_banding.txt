@@ -1,0 +1,32 @@
+model{
+# model for recoveries with known number of ringed
+for (i in 1:npop){
+  for (j in 1:nages) {
+    for(k in 1:ndest){
+      p[i, j, k] <- m[i, k] * r[j, k]
+    }
+    p[i, j, (ndest+1)] <- 1 - sum(p[i, j, 1:ndest])
+  }
+}
+
+# likelihood
+for(i in 1:npop){
+  for (j in 1:nages) {
+    recmat[i, j, 1:(ndest+1)] ~ dmulti(p[i, j, 1:(ndest+1)], nreleased[i, j])
+  }
+}
+
+# priors
+for (j in 1:nages) {
+  for(k in 1:ndest) {
+    r[j, k] ~ dunif(0, 1)
+  }
+}
+
+for(i in 1:npop){
+  for(k in 1:ndest){
+    m0[i, k] ~ dbeta(1, 1)
+    m[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+  } #k
+}#i
+}

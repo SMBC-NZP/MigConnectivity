@@ -56,8 +56,8 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                            psi = psiBase, sampleSize = sampleSize),
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
                            psi = psiBase))
-  sampleMC <- vector('numeric', nSamples)
-  psi.array <- array(0, c(nSamples, nOrigin, nTarget))
+  sampleMC <- rep(NA, nSamples)
+  psi.array <- array(NA, c(nSamples, nOrigin, nTarget))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat("\tSample", i, "of", nSamples, "at", date(), "\n")
@@ -119,6 +119,152 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
               simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
               alpha = alpha, sigConst = sigConst))
 }
+
+estMCdc <- function (originDist, targetDist, originRelAbund, nReleased,
+                     recMatrix, sampleSize = NULL, alpha = 0.05, nBoot = 1000,
+                     verbose=0, originNames = NULL, targetNames = NULL,
+                     approxSigTest = F, sigConst = 0)
+{
+  if (is.null(originNames))
+    originNames <- 1:length(nReleased)
+  if (is.null(targetNames))
+    targetNames <- 1:ncol(recMatrix)
+  nTargetSites <- length(targetNames)
+  nOriginSites <- length(originNames)
+  nfound <- apply(recMatrix, 1, sum)
+  if (is.null(sampleSize))
+    sampleSize <- sum(nfound)
+  tmat <- cbind(nReleased - nfound, recMatrix)
+  pointDC <- birdring::dc(nReleased, recMatrix, originNames, targetNames)
+  pointPsi <- prop.table(pointDC$division.coef, 1)
+  pointRec <- pointDC$rec.probs
+  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+                    sampleSize = sampleSize)
+  dat <- data.frame(group = rep(originNames, nReleased),
+                    rec = rep(rep(c(0, targetNames), length(nReleased)),
+                              as.numeric(t(tmat))))
+  boot.rec.probs <- matrix(ncol = nTargetSites, nrow = nBoot,
+                           dimnames = list(NULL, targetNames))
+  psi.array <- array(dim = c(nBoot, nOriginSites, nTargetSites),
+                         dimnames = list(NULL, originNames, targetNames))
+  MC <- corr <- rep(NA, nBoot)
+  for (boot in 1:nBoot) {
+    if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
+      cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
+    dat.boot <- dat[sample(1:length(dat$group), replace = TRUE), ]
+    N.boot <- table(dat.boot$group)
+    recmat.boot <- table(dat.boot$group, dat.boot$rec)[,
+                                                       -1][, targetNames]
+    dc.boot <- birdring::dc(N.boot, recmat.boot, start = 1 / pointRec)
+    boot.rec.probs[boot, ] <- dc.boot$rec.probs
+    psi.array[boot, , ] <- prop.table(dc.boot$division.coef, 1)
+    MC[boot] <- calcMC(originDist, targetDist, originRelAbund,
+                       psi.array[boot, , ], sampleSize)
+    if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
+      cat(" MC mean:", mean(MC, na.rm=TRUE), "SD:", sd(MC, na.rm=TRUE),
+          "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
+          "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
+  }
+  simpleCIRec <- apply(boot.rec.probs, 2, quantile,
+                       probs = c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+  meanRec <- apply(boot.rec.probs, 2, mean, na.rm=TRUE)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  meanPsi <- apply(psi.array, 2:3, mean, na.rm=TRUE)
+  medianPsi <- apply(psi.array, 2:3, median, na.rm=TRUE)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  # rec.probs.lower[rec.probs.lower < 0] <- 0
+  # rec.probs.upper[rec.probs.upper > 1] <- 1
+  # div.coef.lower[div.coef.lower < 0] <- 0
+  # div.coef.upper[div.coef.upper > 1] <- 1
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
+  bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
+                   na.rm=TRUE, type = 8, names = F)
+  MC.mcmc <- coda::as.mcmc(MC) # Ha!
+  hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
+  if (!approxSigTest)
+    simpleP <- bcP <- NULL
+  else {
+    if (pointMC > sigConst)
+      simpleP <- sum(MC < sigConst) / nBoot
+    else
+      simpleP <- sum(MC > sigConst) / nBoot
+    if (simpleP == 0)
+      simpleP <- 0.5 / nBoot
+    bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
+    if (pointMC < sigConst)
+      bcP <- 1 - bcP
+  }
+  pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
+  return(list(samplePsi = psi.array,
+              meanPsi = meanPsi, medianPsi = medianPsi, pointPsi = pointPsi,
+              simpleCIPsi = simpleCIPsi, bcCIPsi = bcCIPsi,
+              sampleMC = MC, meanMC = mean(MC, na.rm=TRUE),
+              medianMC = median(MC, na.rm=TRUE), pointMC = pointMC,
+              seMC = sd(MC, na.rm=TRUE),
+              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                                  type = 8, names = F),
+              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
+              sampleCorr = corr, pointCorr = pointCorr,
+              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+              simpleCICorr = simpleCICorr, bcCICorr = bcCICorr,
+              sampleRec = boot.rec.probs, meanRec = meanRec,
+              simpleCIRec = simpleCIRec,
+              inputSampleSize = sampleSize,
+              alpha = alpha, sigConst = sigConst))
+}
+
+estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
+                            recMatrix, sampleSize = NULL, alpha = 0.05,
+                            nBoot = 1000, verbose=0, originNames = NULL,
+                            targetNames = NULL, approxSigTest = F, sigConst = 0,
+                            nt = 1, nb = 5000, nc = 3) {
+  if (is.null(originNames))
+    originNames <- 1:length(nReleased)
+  if (is.null(targetNames))
+    targetNames <- 1:ncol(recMatrix)
+  nTargetSites <- length(targetNames)
+  nOriginSites <- length(originNames)
+  nfound <- apply(recMatrix, 1, sum)
+  if (is.null(sampleSize))
+    sampleSize <- sum(nfound)
+  tmat <- cbind(recMatrix, nReleased - nfound)
+  nAges <- 1
+  # Initial values
+  jags.inits <- function()list()
+  # Parameters to monitor
+  params <- c("m", "r", "p")
+
+  # Data
+  jags.data <- list(recmat = tmat, npop = nOriginSites, #nages = nAges,
+                    ndest = nTargetSites, nreleased = nReleased)
+
+
+  out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
+                      "inst/JAGS/multinomial_banding_1age.txt",
+                      #paste0(find.package('MigConnectivity'), "/JAGS/multinomial_banding.txt"),
+                      n.chains = nc, n.thin = nt, n.iter = nb + nBoot,
+                      n.burnin = nb, progress.bar = 'none', DIC = FALSE)
+
+  return(estMCCmrAbund(originDist = originDist, targetDist = targetDist,
+                       originRelAbund = originRelAbund,
+                       psi = out$BUGSoutput$sims.list$m,
+                       sampleSize = sampleSize, nSamples = nBoot,
+                       verbose = verbose, alpha = alpha,
+                       approxSigTest = approxSigTest, sigConst = sigConst))
+}
+
+
 
 ###############################################################################
 # Resampling of uncertainty from geolocators and/or GPS data
@@ -838,6 +984,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' @export
 #'
 #' @examples
+#' data('OVENdata')
 #' rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
 #'                  geoBias = OVENdata$geo.bias, # Geolocator location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
@@ -1015,6 +1162,7 @@ getCMRexample <- function(number = 1) {
 #'
 #' @examples
 #' \dontrun{
+#' data('OVENdata')
 #' ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
 #'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
