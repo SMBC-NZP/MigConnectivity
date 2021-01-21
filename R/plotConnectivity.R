@@ -142,64 +142,64 @@
 # box(which="plot")
 # #
 
-library(ggplot2)
-mc.true <- calcMC(originDist = originDist, targetDist, rep(1/7, 7), psiDeal,
-                  sum(nReleased))
-
-psiDeal.df <- data.frame(Method = "True",
-                      Estimate = "psi",
-                      From = rep(LETTERS[1:nOriginSites], nTargetSites),
-                      To = rep(1:nTargetSites, each = nOriginSites),
-                      Mean = c(psiDeal),
-                      SD = 0,
-                      Lower = c(psiDeal),
-                      Upper = c(psiDeal))
-ests.df <- data.frame(Method = rep(c("DC", "Multinomial"),
-                                   each = nOriginSites*nTargetSites + 1),
-                      Estimate = rep(c("MC", "psi"),
-                                     c(1, nOriginSites*nTargetSites)),
-                      From = c(NA, rep(LETTERS[1:nOriginSites], nTargetSites)),
-                      To = c(NA, rep(1:nTargetSites, each = nOriginSites)),
-                      Mean = c(mc.dc$meanMC, mc.dc$meanPsi,
-                               mc.multi$meanMC,
-                               apply(mc.multi$samplePsi, 2:3, mean)),
-                      SD = c(mc.dc$seMC, apply(mc.dc$samplePsi, 2:3, sd),
-                             mc.multi$seMC, apply(mc.multi$samplePsi, 2:3, sd)),
-                      Lower = c(mc.dc$bcCI[1], mc.dc$bcCIPsi[1,,],
-                                mc.multi$bcCI[1],
-                                apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.025)),
-                      Upper = c(mc.dc$bcCI[2], mc.dc$bcCIPsi[2,,],
-                                mc.multi$bcCI[2],
-                                apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.975)))
-g.mc <- ggplot(subset(ests.df, Estimate=="MC"),
-               aes(x = Method, y = Mean, ymin = Lower, ymax = Upper)) +
-  geom_hline(yintercept = mc.true, color = "darkgreen") +
-  geom_pointrange() + theme_bw() + ylab("MC")
-g.mc
-
-g.psi <- ggplot(subset(ests.df, Estimate=="psi"),
-             aes(x = Method, y = Mean, ymin = Lower, ymax = Upper)) +
-  geom_hline(data = psiDeal.df, aes(yintercept = Mean), color = "darkgreen") +
-  geom_pointrange() + theme_bw() + ylab("psi") +
-  facet_grid(vars(From), vars(To))
-g.psi
-
-ests.df <- data.frame(Method = "Multinomial",
-                      Estimate = rep(c("MC", "psi"),
-                                     c(1, nOriginSites*nTargetSites)),
-                      From = c(NA, rep(LETTERS[1:nOriginSites], nTargetSites)),
-                      To = c(NA, rep(1:nTargetSites, each = nOriginSites)),
-                      Mean = c(mc.dc$meanMC, mc.dc$meanPsi,
-                               mc.multi$meanMC,
-                               apply(mc.multi$samplePsi, 2:3, mean)),
-                      SD = c(mc.dc$seMC, apply(mc.dc$samplePsi, 2:3, sd),
-                             mc.multi$seMC, apply(mc.multi$samplePsi, 2:3, sd)),
-                      Lower = c(mc.dc$bcCI[1], mc.dc$bcCIPsi[1,,],
-                                mc.multi$bcCI[1],
-                                apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.025)),
-                      Upper = c(mc.dc$bcCI[2], mc.dc$bcCIPsi[2,,],
-                                mc.multi$bcCI[2],
-                                apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.975)))
+# library(ggplot2)
+# mc.true <- calcMC(originDist = originDist, targetDist, rep(1/7, 7), psiDeal,
+#                   sum(nReleased))
+#
+# psiDeal.df <- data.frame(Method = "True",
+#                       Estimate = "psi",
+#                       From = rep(LETTERS[1:nOriginSites], nTargetSites),
+#                       To = rep(1:nTargetSites, each = nOriginSites),
+#                       Mean = c(psiDeal),
+#                       SD = 0,
+#                       Lower = c(psiDeal),
+#                       Upper = c(psiDeal))
+# ests.df <- data.frame(Method = rep(c("DC", "Multinomial"),
+#                                    each = nOriginSites*nTargetSites + 1),
+#                       Estimate = rep(c("MC", "psi"),
+#                                      c(1, nOriginSites*nTargetSites)),
+#                       From = c(NA, rep(LETTERS[1:nOriginSites], nTargetSites)),
+#                       To = c(NA, rep(1:nTargetSites, each = nOriginSites)),
+#                       Mean = c(mc.dc$meanMC, mc.dc$meanPsi,
+#                                mc.multi$meanMC,
+#                                apply(mc.multi$samplePsi, 2:3, mean)),
+#                       SD = c(mc.dc$seMC, apply(mc.dc$samplePsi, 2:3, sd),
+#                              mc.multi$seMC, apply(mc.multi$samplePsi, 2:3, sd)),
+#                       Lower = c(mc.dc$bcCI[1], mc.dc$bcCIPsi[1,,],
+#                                 mc.multi$bcCI[1],
+#                                 apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.025)),
+#                       Upper = c(mc.dc$bcCI[2], mc.dc$bcCIPsi[2,,],
+#                                 mc.multi$bcCI[2],
+#                                 apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.975)))
+# g.mc <- ggplot(subset(ests.df, Estimate=="MC"),
+#                aes(x = Method, y = Mean, ymin = Lower, ymax = Upper)) +
+#   geom_hline(yintercept = mc.true, color = "darkgreen") +
+#   geom_pointrange() + theme_bw() + ylab("MC")
+# g.mc
+#
+# g.psi <- ggplot(subset(ests.df, Estimate=="psi"),
+#              aes(x = Method, y = Mean, ymin = Lower, ymax = Upper)) +
+#   geom_hline(data = psiDeal.df, aes(yintercept = Mean), color = "darkgreen") +
+#   geom_pointrange() + theme_bw() + ylab("psi") +
+#   facet_grid(vars(From), vars(To))
+# g.psi
+#
+# ests.df <- data.frame(Method = "Multinomial",
+#                       Estimate = rep(c("MC", "psi"),
+#                                      c(1, nOriginSites*nTargetSites)),
+#                       From = c(NA, rep(LETTERS[1:nOriginSites], nTargetSites)),
+#                       To = c(NA, rep(1:nTargetSites, each = nOriginSites)),
+#                       Mean = c(mc.dc$meanMC, mc.dc$meanPsi,
+#                                mc.multi$meanMC,
+#                                apply(mc.multi$samplePsi, 2:3, mean)),
+#                       SD = c(mc.dc$seMC, apply(mc.dc$samplePsi, 2:3, sd),
+#                              mc.multi$seMC, apply(mc.multi$samplePsi, 2:3, sd)),
+#                       Lower = c(mc.dc$bcCI[1], mc.dc$bcCIPsi[1,,],
+#                                 mc.multi$bcCI[1],
+#                                 apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.025)),
+#                       Upper = c(mc.dc$bcCI[2], mc.dc$bcCIPsi[2,,],
+#                                 mc.multi$bcCI[2],
+#                                 apply(mc.multi$samplePsi, 2:3, quantile, probs = 0.975)))
 
 plot.estMigConnectivity <- function(x, plot.which = c("MC", "psi", "rM"),
                                     point = c("mean", "median", "point"),
