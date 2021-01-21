@@ -296,7 +296,8 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                             reencountered, sampleSize = NULL, alpha = 0.05,
                             nBoot = 1000, verbose=0, originNames = NULL,
                             targetNames = NULL, approxSigTest = F, sigConst = 0,
-                            nThin = 1, nBurnin = 5000, nChains = 3) {
+                            nThin = 1, nBurnin = 5000, nChains = 3,
+                            maintainLegacyOutput = FALSE) {
   if (is.null(originNames))
     originNames <- 1:length(nReleased)
   if (is.null(targetNames))
@@ -334,7 +335,8 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                           verbose = verbose, alpha = alpha,
                           approxSigTest = approxSigTest, sigConst = sigConst,
                           nReleased = nReleased, reencountered = reencountered,
-                          nThin = nThin, nBurnin = nBurnin, nChains = nChains)
+                          nThin = nThin, nBurnin = nBurnin, nChains = nChains,
+                          maintainLegacyOutput = maintainLegacyOutput)
 
   bcCIr <- array(NA, dim = c(2, nTargetSites),
                  dimnames = list(NULL, targetNames))
@@ -354,6 +356,7 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                    simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
                                     probs = c(alpha/2, 1-alpha/2), type = 8),
                    bcCI = bcCIr, median = out$BUGSoutput$median$r)
+  result$BUGSoutput <- out$BUGSoutput
   return(result)
 }
 
@@ -372,7 +375,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
-                       maxTries = 300) {
+                       maxTries = 300,
+                       maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -575,7 +579,8 @@ estMCisotope <- function(targetDist=NULL,
                          approxSigTest = F,
                          sigConst = 0,
                          resampleProjection = MigConnectivity::projections$WGS84,
-                         maxTries = 300) {
+                         maxTries = 300,
+                         maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3)){
@@ -990,7 +995,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                          nBoot = nSamples, verbose = verbose, nSim = nSim,
                          calcCorr=calcCorr, alpha = alpha,
                          approxSigTest = approxSigTest, sigConst = sigConst,
-                         maxTries = maxTries)
+                         maxTries = maxTries,
+                         maintainLegacyOutput = maintainLegacyOutput)
     }
     else if (is.null(nReleased)) {
       mc <- estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
@@ -1006,7 +1012,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                        nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                        approxSigTest = approxSigTest, sigConst = sigConst,
                        resampleProjection = resampleProjection,
-                       maxTries = maxTries)
+                       maxTries = maxTries,
+                       maintainLegacyOutput = maintainLegacyOutput)
     }
     else {
       mc <- estMCmultiJAGS(originDist = originDist, targetDist = targetDist,
@@ -1016,11 +1023,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                            nBoot = nSamples, verbose = verbose,
                            originNames = originNames, targetNames = targetNames,
                            approxSigTest = approxSigTest, sigConst = sigConst,
-<<<<<<< HEAD
-                           nBurnin = nBurnin, nThin = nThin, nChains = nChains)
-=======
-                           nBurnin = nBurnin, nt = nThin, nChains = nChains)
->>>>>>> 248460f719aaa5cbb05426aab431a1de7ca32bee
+                           nBurnin = nBurnin, nThin = nThin, nChains = nChains,
+                           maintainLegacyOutput = maintainLegacyOutput)
     }
   }
   else {
