@@ -296,7 +296,7 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                             reencountered, sampleSize = NULL, alpha = 0.05,
                             nBoot = 1000, verbose=0, originNames = NULL,
                             targetNames = NULL, approxSigTest = F, sigConst = 0,
-                            nThin = 1, nb = 5000, nc = 3) {
+                            nThin = 1, nBurnin = 5000, nChains = 3) {
   if (is.null(originNames))
     originNames <- 1:length(nReleased)
   if (is.null(targetNames))
@@ -322,9 +322,9 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                       #"inst/JAGS/multinomial_banding_1age.txt",
                       paste0(find.package('MigConnectivity'),
                              "/JAGS/multinomial_banding_1age.txt"),
-                      n.chains = nc, n.thin = nThin,
-                      n.iter = nb + nBoot * nThin,
-                      n.burnin = nb, DIC = FALSE,
+                      n.chains = nChains, n.thin = nThin,
+                      n.iter = nBurnin + nBoot * nThin,
+                      n.burnin = nBurnin, DIC = FALSE,
                       progress.bar = ifelse(verbose==0, 'none', 'text'))
 
   result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
@@ -1016,7 +1016,11 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                            nBoot = nSamples, verbose = verbose,
                            originNames = originNames, targetNames = targetNames,
                            approxSigTest = approxSigTest, sigConst = sigConst,
-                           nb = nBurnin, nThin = nThin, nc = nChains)
+<<<<<<< HEAD
+                           nBurnin = nBurnin, nThin = nThin, nChains = nChains)
+=======
+                           nBurnin = nBurnin, nt = nThin, nChains = nChains)
+>>>>>>> 248460f719aaa5cbb05426aab431a1de7ca32bee
     }
   }
   else {
