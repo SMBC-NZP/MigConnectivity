@@ -8,25 +8,29 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                           originSites=NULL, targetSites=NULL,
                           nSamples = 1000, row0 = 0, verbose=0,
                           alpha = 0.05,
-                          approxSigTest = F, sigConst = 0) {
-  nOrigin <- nrow(originDist)
-  nTarget <- nrow(targetDist)
+                          approxSigTest = FALSE, sigConst = 0,
+                          originNames = NULL, targetNames = NULL,
+                          nReleased = NULL, reencountered = NULL,
+                          nBurnin = NULL, nThin = NULL, nChains = NULL,
+                          maintainLegacyOutput = FALSE) {
+  nOriginSites <- nrow(originDist)
+  nTargetSites <- nrow(targetDist)
   absAbund <- !is.null(sampleSize)
   if (coda::is.mcmc(originRelAbund)) {
     abundFixed <- FALSE
-    abundParams <- paste('relN[', 1:nOrigin, ']', sep='')
+    abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
     abundBase <- colMeans(originRelAbund[row0 + 1:nSamples, abundParams])
   }
   else {
     abundFixed <- TRUE
-    if (length(originRelAbund)!=nOrigin)
+    if (length(originRelAbund)!=nOriginSites)
       stop('Number of origin sites must be constant between distance matrix and abundance')
     abundBase <- originRelAbund
   }
   if (is.matrix(psi)) {
     psiFixed <- TRUE
     psiVCV <- NULL
-    if (nrow(psi)!=nOrigin || ncol(psi)!=nTarget)
+    if (nrow(psi)!=nOriginSites || ncol(psi)!=nTargetSites)
       stop('Size of psi matrix must be consistant with distance matrices')
     psiBase <- psi
   }
@@ -45,7 +49,7 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
     if (length(dim(psi))!=3)
       stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
     psiFixed <- FALSE
-    if (dim(psi)[2]!=nOrigin || dim(psi)[3]!=nTarget)
+    if (dim(psi)[2]!=nOriginSites || dim(psi)[3]!=nTargetSites)
       stop('Size of psi array must be consistant with distance matrices')
     psiBase <- apply(psi, 2:3, mean)
     psiVCV <- NULL
@@ -57,7 +61,7 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
                            psi = psiBase))
   sampleMC <- rep(NA, nSamples)
-  psi.array <- array(NA, c(nSamples, nOrigin, nTarget))
+  psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat("\tSample", i, "of", nSamples, "at", date(), "\n")
@@ -110,32 +114,96 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
     if (pointMC < sigConst)
       bcP <- 1 - bcP
   }
-  return(list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
-              pointMC=pointMC, meanMC=meanMC,
-              medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
-              bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = NULL, pointCorr = NULL,
-              meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
-              simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  if (maintainLegacyOutput) {
+    return(list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
+                pointMC=pointMC, meanMC=meanMC,
+                medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
+                bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = NULL, pointCorr = NULL,
+                meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
+                simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = psiBase),
+                MC = list(sample = sampleMC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = NULL,
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund, psi = psi,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0,
+                             verbose = verbose, alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             nReleased = nReleased,
+                             reencountered = reencountered,
+                             nBurnin = nBurnin, nChains = nChains,
+                             nThin = nThin, maintainLegacyOutput = TRUE)))
+  }
+  else {
+    return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = psiBase),
+                MC = list(sample = sampleMC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = NULL,
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund, psi = psi,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0,
+                             verbose = verbose, alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             nReleased = nReleased,
+                             reencountered = reencountered,
+                             nBurnin = nBurnin, nChains = nChains,
+                             nThin = nThin, maintainLegacyOutput = FALSE)))
+  }
 }
 
 estMCdc <- function (originDist, targetDist, originRelAbund, nReleased,
-                     recMatrix, sampleSize = NULL, alpha = 0.05, nBoot = 1000,
+                     reencountered, sampleSize = NULL, alpha = 0.05, nBoot = 1000,
                      verbose=0, originNames = NULL, targetNames = NULL,
                      approxSigTest = F, sigConst = 0)
 {
   if (is.null(originNames))
     originNames <- 1:length(nReleased)
   if (is.null(targetNames))
-    targetNames <- 1:ncol(recMatrix)
+    targetNames <- 1:ncol(reencountered)
   nTargetSites <- length(targetNames)
   nOriginSites <- length(originNames)
-  nfound <- apply(recMatrix, 1, sum)
+  nfound <- apply(reencountered, 1, sum)
   if (is.null(sampleSize))
     sampleSize <- sum(nfound)
-  tmat <- cbind(nReleased - nfound, recMatrix)
-  pointDC <- birdring::dc(nReleased, recMatrix, originNames, targetNames)
+  tmat <- cbind(nReleased - nfound, reencountered)
+  pointDC <- birdring::dc(nReleased, reencountered, originNames, targetNames)
   pointPsi <- prop.table(pointDC$division.coef, 1)
   pointRec <- pointDC$rec.probs
   pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
@@ -225,20 +293,20 @@ estMCdc <- function (originDist, targetDist, originRelAbund, nReleased,
 }
 
 estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
-                            recMatrix, sampleSize = NULL, alpha = 0.05,
+                            reencountered, sampleSize = NULL, alpha = 0.05,
                             nBoot = 1000, verbose=0, originNames = NULL,
                             targetNames = NULL, approxSigTest = F, sigConst = 0,
-                            nt = 1, nb = 5000, nc = 3) {
+                            nThin = 1, nb = 5000, nc = 3) {
   if (is.null(originNames))
     originNames <- 1:length(nReleased)
   if (is.null(targetNames))
-    targetNames <- 1:ncol(recMatrix)
+    targetNames <- 1:ncol(reencountered)
   nTargetSites <- length(targetNames)
   nOriginSites <- length(originNames)
-  nfound <- apply(recMatrix, 1, sum)
+  nfound <- apply(reencountered, 1, sum)
   if (is.null(sampleSize))
     sampleSize <- sum(nfound)
-  tmat <- cbind(recMatrix, nReleased - nfound)
+  tmat <- cbind(reencountered, nReleased - nfound)
   nAges <- 1
   # Initial values
   jags.inits <- function()list()
@@ -251,17 +319,22 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
 
 
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
-                      "inst/JAGS/multinomial_banding_1age.txt",
-                      #paste0(find.package('MigConnectivity'), "/JAGS/multinomial_banding.txt"),
-                      n.chains = nc, n.thin = nt, n.iter = nb + nBoot,
-                      n.burnin = nb, progress.bar = 'none', DIC = FALSE)
+                      #"inst/JAGS/multinomial_banding_1age.txt",
+                      paste0(find.package('MigConnectivity'),
+                             "/JAGS/multinomial_banding_1age.txt"),
+                      n.chains = nc, n.thin = nThin,
+                      n.iter = nb + nBoot * nThin,
+                      n.burnin = nb, DIC = FALSE,
+                      progress.bar = ifelse(verbose==0, 'none', 'text'))
 
   result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
                           originRelAbund = originRelAbund,
                           psi = out$BUGSoutput$sims.list$m,
                           sampleSize = sampleSize, nSamples = nBoot,
                           verbose = verbose, alpha = alpha,
-                          approxSigTest = approxSigTest, sigConst = sigConst)
+                          approxSigTest = approxSigTest, sigConst = sigConst,
+                          nReleased = nReleased, reencountered = reencountered,
+                          nThin = nThin, nBurnin = nBurnin, nChains = nChains)
 
   bcCIr <- array(NA, dim = c(2, nTargetSites),
                  dimnames = list(NULL, targetNames))
@@ -275,16 +348,12 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
   }
 
 
-  result$reencounter <- list(sample = out$BUGSoutput$sims.list$r,
-                             mean = out$BUGSoutput$mean$r,
-                             median = out$BUGSoutput$median$r,
-                             point = out$BUGSoutput$mean$r,
-                             se = out$BUGSoutput$sd$r,
-                             simpleCI = apply(out$BUGSoutput$sims.list$r, 2,
-                                              quantile,
-                                              probs = c(alpha/2, 1-alpha/2),
-                                              type = 8),
-                             bcCI = bcCIr)
+  result$r <- list(sample = out$BUGSoutput$sims.list$r,
+                   mean = out$BUGSoutput$mean$r,
+                   se = out$BUGSoutput$sd$r,
+                   simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
+                                    probs = c(alpha/2, 1-alpha/2), type = 8),
+                   bcCI = bcCIr, median = out$BUGSoutput$median$r)
   return(result)
 }
 
@@ -904,7 +973,9 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   approxSigTest = FALSE, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
                   maxTries = 300, targetIntrinsic = NULL,
-                  isIntrinsic = FALSE) {
+                  isIntrinsic = FALSE, nReleased = NULL, reencountered = NULL,
+                  nBurnin = 5000, nChains = 3, nThin = 1,
+                  maintainLegacyOutput = FALSE) {
   if (is.null(psi)) {
     if(isIntrinsic) {
       mc <- estMCisotope(targetDist = targetDist,
@@ -921,7 +992,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                          approxSigTest = approxSigTest, sigConst = sigConst,
                          maxTries = maxTries)
     }
-    else {
+    else if (is.null(nReleased)) {
       mc <- estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                        originRelAbund=originRelAbund, sampleSize = sampleSize,
                        originDist=originDist,
@@ -937,6 +1008,16 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                        resampleProjection = resampleProjection,
                        maxTries = maxTries)
     }
+    else {
+      mc <- estMCmultiJAGS(originDist = originDist, targetDist = targetDist,
+                           originRelAbund = originRelAbund,
+                           nReleased = nReleased, reencountered = reencountered,
+                           sampleSize = sampleSize, alpha = alpha,
+                           nBoot = nSamples, verbose = verbose,
+                           originNames = originNames, targetNames = targetNames,
+                           approxSigTest = approxSigTest, sigConst = sigConst,
+                           nb = nBurnin, nThin = nThin, nc = nChains)
+    }
   }
   else {
     mc <- estMCCmrAbund(originRelAbund = originRelAbund,
@@ -945,7 +1026,9 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                         originSites=originSites, targetSites=targetSites,
                         nSamples = nSamples, row0 = row0, verbose=verbose,
                         alpha = alpha, approxSigTest = approxSigTest,
-                        sigConst = sigConst)
+                        sigConst = sigConst, originNames = originNames,
+                        targetNames = targetNames,
+                        maintainLegacyOutput = maintainLegacyOutput)
   }
   if (calcCorr & is.null(psi))
     class(mc) <- c("estMC", "estMantel", "estMigConnectivity")
