@@ -43,6 +43,7 @@ data, not accounting for uncertainty. If you've already calculated
 distances between points, you can use those instead.
 }
 \examples{
+data(OVENdata) # Ovenbird
 rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
                   targetPoints = OVENdata$targetPoints) # Target locations
 str(rM0)

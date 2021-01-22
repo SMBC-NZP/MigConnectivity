@@ -81,9 +81,10 @@ land on target sites from running indefinitely.}
 }
 \description{
 Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
-data.
+data. Wait what about intrinsic?
 }
 \examples{
+data('OVENdata')
 rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  geoBias = OVENdata$geo.bias, # Geolocator location bias
                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix

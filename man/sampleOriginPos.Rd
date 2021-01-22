@@ -58,7 +58,7 @@ sampleTargetDist
 }
 \description{
 \code{sampleOriginPos} is a dataset containing example origin site positions
-from 12 scenarios used in Cohen et al. (in press).  For the same 12
+from 12 scenarios used in Cohen et al. (2018).  For the same 12
 scenarios, \code{sampleOriginDist} contains the origin site distances,
 \code{sampleTargetPos} contains the target site positions, and
 \code{sampleTargetDist} contains the target site distances.

@@ -6,7 +6,7 @@
 \title{Ovenbird light-level geolocator and GPS neccesary data}
 \format{
 A named list with the neccesary data to replicate the analyses
-found in Cohen et al. (in press) with archival light-level geolocator and
+found in Cohen et al. (2018) with archival light-level geolocator and
 GPS data.
 The data contained in the list are:
 \itemize{
@@ -65,6 +65,6 @@ The data contained in the list are:
 OVENdata
 }
 \description{
-Ovenbird data from Cohen et al. (in press) and Hallworth and Marra (2015).
+Ovenbird data from Cohen et al. (2018) and Hallworth and Marra (2015).
 }
 \keyword{datasets}

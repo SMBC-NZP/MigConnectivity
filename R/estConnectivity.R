@@ -1101,12 +1101,12 @@ estMCisotope <- function(targetDist=NULL,
 #' @param nThin For band return data, \code{estMC} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the thinning rate.
 #'  Default 1.
-#' @param maintainLegacyOutput version 0.4.0 of \package{MigConnectivity}
+#' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
 #'  updated the structure of the estimates. If you have legacy code that refers
 #'  to elements within a \code{MigConnectivityEstimate} object, you can set this
 #'  to TRUE to also keep the old structure. Defaults to FALSE.
 #'
-#' @return NOTE: Starting with version 0.4.0 of \package{MigConnectivity}, we've
+#' @return NOTE: Starting with version 0.4.0 of \code{MigConnectivity}, we've
 #' updated the structure of \code{MigConnectivityEstimate} objects. Below we
 #' describe the updated structure. If parameter \code{maintainLegacyOutput} is
 #' set to TRUE, the list will start with the old structure (\code{sampleMC},
@@ -1115,82 +1115,90 @@ estMCisotope <- function(targetDist=NULL,
 #' \code{simpleP}, \code{bcP}, \code{sampleCorr}, \code{pointCorr},
 #' \code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr},
 #' \code{inputSampleSize}, \code{alpha}, and \code{sigConst}).
-#' \code{estMC} returns a list with elements:
+#'
+#' \code{estMC} returns a list with the elements:
 #' \describe{
 #'   \item{\code{psi}}{List containing estimates of transition probabilities:
-#'   \itemize {
-#'    \item{\code{sample}}{Array of sampled values for psi. \code{nSamples} x
+#'   \itemize{
+#'    \item{\code{sample}} Array of sampled values for psi. \code{nSamples} x
 #'      [number of origin sites] x [number of target sites]. Provided to allow
-#'      the user to compute own summary statistics.}
-#'    \item{\code{mean}}{Main estimate of psi matrix. [number of origin sites]
-#'      x [number of target sites].}
-#'    \item{\code{se}}{Standard error of psi, estimated from SD of
-#'      \code{psi$sample}.}
-#'    \item{\code{simpleCI}}{\code{1 - alpha} confidence interval for psi,
+#'      the user to compute own summary statistics.
+#'    \item{\code{mean}} Main estimate of psi matrix. [number of origin sites]
+#'      x [number of target sites].
+#'    \item{\code{se}} Standard error of psi, estimated from SD of
+#'      \code{psi$sample}.
+#'    \item{\code{simpleCI}} \code{1 - alpha} confidence interval for psi,
 #'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
-#'      \code{psi$sample}.}
-#'    \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
+#'      \code{psi$sample}.
+#'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
 #'      for psi.  Preferable to \code{simpleCI} when \code{mean} is the
 #'      best estimate of psi. \code{simpleCI} is preferred when
 #'      \code{median} is a better estimator. When \code{meanMC==medianMC},
 #'      these should be identical.  Estimated as the
 #'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
 #'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
-#'      where z0 is the proportion of \code{sample < mean}.}
-#'    \item{\code{point}}{Simple point estimate of psi matrix, not accounting
-#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
+#'      where z0 is the proportion of \code{sample < mean}.
+#'    \item{\code{median}} Median estimate of psi matrix.
+#'    \item{\code{point}} Simple point estimate of psi matrix, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.
 #'   }
 #'   }
-#'   \item{\code{sampleMC}}{\code{nSamples} sampled values for
-#'      MC. Provided to allow the user to compute own summary statistics.}
-#'
-#'   \item{\code{pointPsi}}{Simple point estimate of psi matrix, not accounting
-#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
-#'   \item{\code{pointMC}}{Simple point estimate of MC, using the point
+#'   \item{\code{MC}}{List containing estimates of migratory connectivity
+#'    strength:
+#'    \itemize{
+#'      \item{\code{sample}} \code{nSamples} sampled values for
+#'       MC. Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Mean of \code{MC$sample}. Main estimate of MC,
+#'       incorporating parametric uncertainty.
+#'      \item{\code{se}} Standard error of MC, estimated from SD of
+#'       \code{MC$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       MC, estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'       \code{MC$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'       for MC.  Preferable to \code{MC$simpleCI} when \code{MC$mean} is the
+#'       best estimate of MC. \code{MC$simpleCI} is preferred when
+#'       \code{MC$median} is a better estimator. When \code{MC$mean==MC$median},
+#'       these should be identical.  Estimated as the
+#'       \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{MC$sample},
+#'       where z0 is the proportion of \code{MC$sample < MC$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible interval for MC,
+#'       estimated using the highest posterior density (HPD) method.
+#'      \item{\code{median}} Median of MC, alternate estimator also including
+#'       parametric uncertainty.
+#'      \item{\code{point}} Simple point estimate of MC, using the point
 #'      estimates of \code{psi} and \code{originRelAbund}, not accounting
-#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
-#'   \item{\code{meanMC, medianMC}}{Mean and median of \code{sampleMC}.
-#'      Estimates of MC incorporating parametric uncertainty.}
-#'   \item{\code{seMC}}{Standard error of MC, estimated from SD of
-#'      \code{sampleMC}.}
-#'   \item{\code{simpleCI}}{\code{1 - alpha} confidence interval for MC,
-#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
-#'      \code{sampleMC}.}
-#'   \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
-#'      for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
-#'      best estimate of MC. \code{simpleCI} is preferred when
-#'      \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
-#'      these should be identical.  Estimated as the
-#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
-#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sampleMC},
-#'      where z0 is the proportion of \code{sampleMC < meanMC}.}
-#'   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
-#'      estimated using the highest posterior density (HPD) method.}
-#'   \item{\code{simpleP}}{Approximate p-value for MC, estimated as the
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.
+#'      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
 #'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
 #'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
 #'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
 #'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
-#'      \code{approxSigTest==FALSE}.}
-#'   \item{\code{bcP}}{Approximate bias-corrected p-value for MC, estimated as
+#'      \code{approxSigTest==FALSE}.
+#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
 #'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
 #'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
 #'      than \code{simpleP}, but many of the same limitations apply.  NULL when
-#'      \code{approxSigTest==FALSE}.}
-#'   \item{\code{sampleCorr}}{\code{nBoot} sampled values for continuous
+#'      \code{approxSigTest==FALSE}.
+#'    }
+#'   }
+#'   \item{\code{corr}}{List containing estimates of rM, an alternate measure of
+#'    migratory connectivity strength. NULL when \code{calcCorr==FALSE} or
+#'    \code{!is.null(psi)}:
+#'    \itemize{
+#'     \item{\code{sample}} \code{nBoot} sampled values for continuous
 #'      correlation. Provided to allow the user to compute own summary
-#'      statistics.  NULL when \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
-#'   \item{\code{pointCorr}}{Simple point estimate of continuous correlation,
-#'      using \code{originPoints} and \code{targetPoints}, not accounting
-#'      for sampling error. NULL when \code{calcCorr==FALSE} or
-#'      \code{!is.null(psi)} or \code{isIntrinsic == TRUE}.}
-#'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
-#'      statistics for continuous correlation bootstraps.  NULL when
-#'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
-#'   \item{\code{inputSampleSize}}{If \code{sampleSize} was provided, this is
-#'      that.  If not, it is either the calculated sample size (if that can be
-#'      done), or left at NULL.  Useful to determining whether calcMC used the
-#'      main MC formula or that for MC(R).}
+#'      statistics.
+#'     \item{\code{mean, se, simpleCI, bcCI, median, point}} Summary
+#'      statistics for continuous correlation bootstraps.
+#'    }
+#'   }
+#'   \item{\code{r}}{List containing estimates of reencounter probabilities at
+#'    each target site. NULL except when using direct band/ring reencounter
+#'    data.}
+#'   \item{\code{input}}{List containing the inputs to \code{estMC}, or at least
+#'    the relevant ones, such as sampleSize.}
 #' }
 #' @example inst/examples/estMCExamples.R
 #' @seealso \code{\link{calcMC}}, \code{\link{projections}}, \code{\link{isoAssign}}
@@ -1287,7 +1295,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' Estimate Mantel correlation (rM) from geolocator and/or GPS data.
 #'
 #' Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
-#' data.
+#' data. Wait what about intrinsic?
 #'
 #' @param targetPoints A \code{SpatialPoints} object, with length number of
 #'    animals tracked.  Each point indicates the point estimate location in
