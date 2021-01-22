@@ -8,7 +8,7 @@ is.estMC <- function(x) inherits(x, "estMC")
 #' @export
 print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
-  cat("Migratory Connectivity Estimate(s)\n")
+  cat("Migratory Connectivity Estimates\n")
   if (inherits(x, "estMC")) {
     if (is.null(x$psi)) {
       x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
@@ -17,28 +17,46 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
                                      probs = c(alpha/2, 1-alpha/2),
                                      na.rm=TRUE, type = 8, names = F))
       x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
-      x$input <- list(alpha = x$alpha,
-                      originNames = ifelse(is.null(dimnames(x$samplePsi)[2]),
-                                           LETTERS[1:dim(x$samplePsi)[2]],
-                                           dimnames(x$samplePsi)[2]),
-                      targetNames = ifelse(is.null(dimnames(x$samplePsi)[3]),
-                                           1:dim(x$samplePsi)[3],
-                                           dimnames(x$samplePsi)[3]))
+      x$input <- list(alpha = x$alpha)
+      if (is.null(dimnames(x$samplePsi)[2])){
+        x$input$originNames <- LETTERS[1:dim(x$samplePsi)[2]]
+        originNamesFilled <- TRUE
+      }
+      else {
+        x$input$originNames <- dimnames(x$samplePsi)[[2]]
+        originNamesFilled <- FALSE
+      }
+      if (is.null(dimnames(x$samplePsi)[3])){
+        x$input$targetNames <- 1:dim(x$samplePsi)[3]
+        targetNamesFilled <- TRUE
+      }
+      else {
+        x$input$targetNames <- dimnames(x$samplePsi)[[3]]
+        targetNamesFilled <- FALSE
+      }
     }
-    cat("Transition probability (psi) estimates (mean):\n")
-    print(x$psi$mean)
-    cat("   se:\n")
-    print(x$psi$se)
-    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence interval (simple quantile):\n")
+    else {
+      originNamesFilled <- targetNamesFilled <- FALSE
+    }
+    dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
+                                                       x$input$targetNames)
+    cat("\nTransition probability (psi) estimates (mean):",
+        ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
+        ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
+        "\n")
+    print(x$psi$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$psi$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
     print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
                       format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
                       sep = ' - '), dim = dim(x$psi$mean),
                 dimnames = list(x$input$originNames, x$input$targetNames)),
           quote = FALSE)
-    cat("MC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
+    cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
         format(x$MC$se, digits = digits), '\n')
-    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
         "% confidence interval (simple quantile): ",
         paste(format(x$MC$simpleCI, digits = digits, trim = TRUE),
               collapse = ' - '), '\n', sep = "")
@@ -61,9 +79,9 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
                      simpleCI = x$simpleCICorr)
       x$input <- list(alpha = x$alpha)
     }
-    cat("rM estimate (mean):", format(x$corr$mean, digits = digits), "+/- (SE)",
+    cat("\nrM estimate (mean):", format(x$corr$mean, digits = digits), "+/- (SE)",
         format(x$corr$se, digits = digits), '\n')
-    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
         "% confidence interval (simple quantile): ",
         paste(format(x$corr$simpleCI, digits = digits, trim = TRUE),
               collapse = ' - '), '\n', sep = "")
@@ -76,7 +94,7 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #   cat("   point calculation (not considering error):",
     #       format(x$pointCorr, digits = digits), '\n')
   }
-  cat("This is a subset of what's available inside MigConnectivity outputs.\n")
+  cat("\nThis is a subset of what's available inside MigConnectivity outputs.\n")
   cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
 }
 

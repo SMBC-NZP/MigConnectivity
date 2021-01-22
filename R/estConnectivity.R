@@ -61,7 +61,8 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
                            psi = psiBase))
   sampleMC <- rep(NA, nSamples)
-  psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites))
+  psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+                     dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat("\tSample", i, "of", nSamples, "at", date(), "\n")
@@ -141,10 +142,10 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                 alpha = alpha, sigConst = sigConst,
                 psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = psiBase),
+                           median = medianPsi, point = psiBase),
                 MC = list(sample = sampleMC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = NULL,
                 r = NULL,
@@ -165,10 +166,10 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   else {
     return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = psiBase),
+                           median = medianPsi, point = psiBase),
                 MC = list(sample = sampleMC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = NULL,
                 r = NULL,
@@ -188,109 +189,109 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
   }
 }
 
-estMCdc <- function (originDist, targetDist, originRelAbund, nReleased,
-                     reencountered, sampleSize = NULL, alpha = 0.05, nBoot = 1000,
-                     verbose=0, originNames = NULL, targetNames = NULL,
-                     approxSigTest = F, sigConst = 0)
-{
-  if (is.null(originNames))
-    originNames <- 1:length(nReleased)
-  if (is.null(targetNames))
-    targetNames <- 1:ncol(reencountered)
-  nTargetSites <- length(targetNames)
-  nOriginSites <- length(originNames)
-  nfound <- apply(reencountered, 1, sum)
-  if (is.null(sampleSize))
-    sampleSize <- sum(nfound)
-  tmat <- cbind(nReleased - nfound, reencountered)
-  pointDC <- birdring::dc(nReleased, reencountered, originNames, targetNames)
-  pointPsi <- prop.table(pointDC$division.coef, 1)
-  pointRec <- pointDC$rec.probs
-  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
-                    sampleSize = sampleSize)
-  dat <- data.frame(group = rep(originNames, nReleased),
-                    rec = rep(rep(c(0, targetNames), length(nReleased)),
-                              as.numeric(t(tmat))))
-  boot.rec.probs <- matrix(ncol = nTargetSites, nrow = nBoot,
-                           dimnames = list(NULL, targetNames))
-  psi.array <- array(dim = c(nBoot, nOriginSites, nTargetSites),
-                         dimnames = list(NULL, originNames, targetNames))
-  MC <- corr <- rep(NA, nBoot)
-  for (boot in 1:nBoot) {
-    if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
-      cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
-    dat.boot <- dat[sample(1:length(dat$group), replace = TRUE), ]
-    N.boot <- table(dat.boot$group)
-    recmat.boot <- table(dat.boot$group, dat.boot$rec)[,
-                                                       -1][, targetNames]
-    dc.boot <- birdring::dc(N.boot, recmat.boot, start = 1 / pointRec)
-    boot.rec.probs[boot, ] <- dc.boot$rec.probs
-    psi.array[boot, , ] <- prop.table(dc.boot$division.coef, 1)
-    MC[boot] <- calcMC(originDist, targetDist, originRelAbund,
-                       psi.array[boot, , ], sampleSize)
-    if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
-      cat(" MC mean:", mean(MC, na.rm=TRUE), "SD:", sd(MC, na.rm=TRUE),
-          "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
-          "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
-  }
-  simpleCIRec <- apply(boot.rec.probs, 2, quantile,
-                       probs = c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
-  meanRec <- apply(boot.rec.probs, 2, mean, na.rm=TRUE)
-  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
-  meanPsi <- apply(psi.array, 2:3, mean, na.rm=TRUE)
-  medianPsi <- apply(psi.array, 2:3, median, na.rm=TRUE)
-  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
-                   dimnames = list(NULL, originNames, targetNames))
-  for (i in 1:nOriginSites) {
-    for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
-                        length(which(!is.na(psi.array[, i, j]))))
-      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
-                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
-    }
-  }
-  # rec.probs.lower[rec.probs.lower < 0] <- 0
-  # rec.probs.upper[rec.probs.upper > 1] <- 1
-  # div.coef.lower[div.coef.lower < 0] <- 0
-  # div.coef.upper[div.coef.upper > 1] <- 1
-  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
-  bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                   na.rm=TRUE, type = 8, names = F)
-  MC.mcmc <- coda::as.mcmc(MC) # Ha!
-  hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
-  if (!approxSigTest)
-    simpleP <- bcP <- NULL
-  else {
-    if (pointMC > sigConst)
-      simpleP <- sum(MC < sigConst) / nBoot
-    else
-      simpleP <- sum(MC > sigConst) / nBoot
-    if (simpleP == 0)
-      simpleP <- 0.5 / nBoot
-    bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
-    if (pointMC < sigConst)
-      bcP <- 1 - bcP
-  }
-  pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
-  return(list(samplePsi = psi.array,
-              meanPsi = meanPsi, medianPsi = medianPsi, pointPsi = pointPsi,
-              simpleCIPsi = simpleCIPsi, bcCIPsi = bcCIPsi,
-              sampleMC = MC, meanMC = mean(MC, na.rm=TRUE),
-              medianMC = median(MC, na.rm=TRUE), pointMC = pointMC,
-              seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                                  type = 8, names = F),
-              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = pointCorr,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr = simpleCICorr, bcCICorr = bcCICorr,
-              sampleRec = boot.rec.probs, meanRec = meanRec,
-              simpleCIRec = simpleCIRec,
-              inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
-}
+# estMCdc <- function (originDist, targetDist, originRelAbund, nReleased,
+#                      reencountered, sampleSize = NULL, alpha = 0.05, nBoot = 1000,
+#                      verbose=0, originNames = NULL, targetNames = NULL,
+#                      approxSigTest = F, sigConst = 0)
+# {
+#   if (is.null(originNames))
+#     originNames <- 1:length(nReleased)
+#   if (is.null(targetNames))
+#     targetNames <- 1:ncol(reencountered)
+#   nTargetSites <- length(targetNames)
+#   nOriginSites <- length(originNames)
+#   nfound <- apply(reencountered, 1, sum)
+#   if (is.null(sampleSize))
+#     sampleSize <- sum(nfound)
+#   tmat <- cbind(nReleased - nfound, reencountered)
+#   pointDC <- birdring::dc(nReleased, reencountered, originNames, targetNames)
+#   pointPsi <- prop.table(pointDC$division.coef, 1)
+#   pointRec <- pointDC$rec.probs
+#   pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+#                     sampleSize = sampleSize)
+#   dat <- data.frame(group = rep(originNames, nReleased),
+#                     rec = rep(rep(c(0, targetNames), length(nReleased)),
+#                               as.numeric(t(tmat))))
+#   boot.rec.probs <- matrix(ncol = nTargetSites, nrow = nBoot,
+#                            dimnames = list(NULL, targetNames))
+#   psi.array <- array(dim = c(nBoot, nOriginSites, nTargetSites),
+#                          dimnames = list(NULL, originNames, targetNames))
+#   MC <- corr <- rep(NA, nBoot)
+#   for (boot in 1:nBoot) {
+#     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
+#       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
+#     dat.boot <- dat[sample(1:length(dat$group), replace = TRUE), ]
+#     N.boot <- table(dat.boot$group)
+#     recmat.boot <- table(dat.boot$group, dat.boot$rec)[,
+#                                                        -1][, targetNames]
+#     dc.boot <- birdring::dc(N.boot, recmat.boot, start = 1 / pointRec)
+#     boot.rec.probs[boot, ] <- dc.boot$rec.probs
+#     psi.array[boot, , ] <- prop.table(dc.boot$division.coef, 1)
+#     MC[boot] <- calcMC(originDist, targetDist, originRelAbund,
+#                        psi.array[boot, , ], sampleSize)
+#     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
+#       cat(" MC mean:", mean(MC, na.rm=TRUE), "SD:", sd(MC, na.rm=TRUE),
+#           "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
+#           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
+#   }
+#   simpleCIRec <- apply(boot.rec.probs, 2, quantile,
+#                        probs = c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8)
+#   meanRec <- apply(boot.rec.probs, 2, mean, na.rm=TRUE)
+#   simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+#                        na.rm=TRUE, type = 8, names = F)
+#   meanPsi <- apply(psi.array, 2:3, mean, na.rm=TRUE)
+#   medianPsi <- apply(psi.array, 2:3, median, na.rm=TRUE)
+#   bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+#                    dimnames = list(NULL, originNames, targetNames))
+#   for (i in 1:nOriginSites) {
+#     for (j in 1:nTargetSites) {
+#       psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+#                         length(which(!is.na(psi.array[, i, j]))))
+#       bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+#                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+#                                    na.rm=TRUE, type = 8, names = F)
+#     }
+#   }
+#   # rec.probs.lower[rec.probs.lower < 0] <- 0
+#   # rec.probs.upper[rec.probs.upper > 1] <- 1
+#   # div.coef.lower[div.coef.lower < 0] <- 0
+#   # div.coef.upper[div.coef.upper > 1] <- 1
+#   MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
+#   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
+#                    na.rm=TRUE, type = 8, names = F)
+#   MC.mcmc <- coda::as.mcmc(MC) # Ha!
+#   hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
+#   if (!approxSigTest)
+#     simpleP <- bcP <- NULL
+#   else {
+#     if (pointMC > sigConst)
+#       simpleP <- sum(MC < sigConst) / nBoot
+#     else
+#       simpleP <- sum(MC > sigConst) / nBoot
+#     if (simpleP == 0)
+#       simpleP <- 0.5 / nBoot
+#     bcP <- pnorm(qnorm(simpleP) - 2 * MC.z0)
+#     if (pointMC < sigConst)
+#       bcP <- 1 - bcP
+#   }
+#   pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
+#   return(list(samplePsi = psi.array,
+#               meanPsi = meanPsi, medianPsi = medianPsi, pointPsi = pointPsi,
+#               simpleCIPsi = simpleCIPsi, bcCIPsi = bcCIPsi,
+#               sampleMC = MC, meanMC = mean(MC, na.rm=TRUE),
+#               medianMC = median(MC, na.rm=TRUE), pointMC = pointMC,
+#               seMC = sd(MC, na.rm=TRUE),
+#               simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+#                                   type = 8, names = F),
+#               bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
+#               sampleCorr = corr, pointCorr = pointCorr,
+#               meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+#               simpleCICorr = simpleCICorr, bcCICorr = bcCICorr,
+#               sampleRec = boot.rec.probs, meanRec = meanRec,
+#               simpleCIRec = simpleCIRec,
+#               inputSampleSize = sampleSize,
+#               alpha = alpha, sigConst = sigConst))
+# }
 
 estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                             reencountered, sampleSize = NULL, alpha = 0.05,
@@ -299,11 +300,17 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                             nThin = 1, nBurnin = 5000, nChains = 3,
                             maintainLegacyOutput = FALSE) {
   if (is.null(originNames))
-    originNames <- 1:length(nReleased)
+    originNames <- dimnames(reencountered)[[1]]
   if (is.null(targetNames))
-    targetNames <- 1:ncol(reencountered)
-  nTargetSites <- length(targetNames)
-  nOriginSites <- length(originNames)
+    targetNames <- dimnames(reencountered)[[2]]
+  nTargetSites <- dim(targetDist)[1]
+  nOriginSites <- dim(originDist)[2]
+  if (length(originRelAbund)!=nOriginSites)
+    stop('Number of origin sites must be constant between distance matrix and abundance')
+  if (length(nReleased)!=nOriginSites)
+    stop('Number of origin sites must be constant between distance matrix and nReleased')
+  if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[2]!=nTargetSites)
+    stop('Number of sites must be constant between distance matrices and reencountered')
   nfound <- apply(reencountered, 1, sum)
   if (is.null(sampleSize))
     sampleSize <- sum(nfound)
@@ -335,14 +342,17 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
     else
       cat("**WARNING** Rhat values indicate convergence failure.\n")
   }
+  psi <- out$BUGSoutput$sims.list$m
+  dimnames(psi) <- list(NULL, originNames, targetNames)
   result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
                           originRelAbund = originRelAbund,
-                          psi = out$BUGSoutput$sims.list$m,
+                          psi = psi,
                           sampleSize = sampleSize, nSamples = nBoot,
                           verbose = verbose, alpha = alpha,
                           approxSigTest = approxSigTest, sigConst = sigConst,
                           nReleased = nReleased, reencountered = reencountered,
                           nThin = nThin, nBurnin = nBurnin, nChains = nChains,
+                          originNames = originNames, targetNames = targetNames,
                           maintainLegacyOutput = maintainLegacyOutput)
 
   bcCIr <- array(NA, dim = c(2, nTargetSites),
@@ -579,14 +589,14 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                 alpha = alpha, sigConst = sigConst,
                 psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = pointPsi),
+                           median = medianPsi, point = pointPsi),
                 MC = list(sample = MC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
-                            point = pointCorr),
+                            median = medianCorr, point = pointCorr),
                 r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
@@ -610,14 +620,14 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   else {
     return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = pointPsi),
+                           median = medianPsi, point = pointPsi),
                 MC = list(sample = MC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
-                            point = pointCorr),
+                            median = medianCorr, point = pointCorr),
                 r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
@@ -906,14 +916,14 @@ estMCisotope <- function(targetDist=NULL,
                 alpha = alpha, sigConst = sigConst,
                 psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = pointPsi),
+                           median = medianPsi, point = pointPsi),
                 MC = list(sample = MC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
-                            point = pointCorr),
+                            median = medianCorr, point = pointCorr),
                 r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
@@ -940,14 +950,14 @@ estMCisotope <- function(targetDist=NULL,
   else {
     return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                           point = pointPsi),
+                           median = medianPsi, point = pointPsi),
                 MC = list(sample = MC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
-                          point = pointMC,
+                          median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
-                            point = pointCorr),
+                            median = medianCorr, point = pointCorr),
                 r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
@@ -974,12 +984,13 @@ estMCisotope <- function(targetDist=NULL,
 }
 
 ###############################################################################
-#' Estimate MC from abundance and/or transition probability estimates OR
-#' geolocator and/or GPS data OR intrinsic markers.
+#' Estimate migratory connectivity
 #'
-#' Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
+#' Resampling of uncertainty for MC (migratory connectivity strength)
+#' and psi (transition probabilities) from RMark psi matrix estimates or
+#' samples of psi and/or JAGS
 #' relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
-#' data OR intrinsic markers such as isotopes.
+#' data OR intrinsic markers such as isotopes OR band/ring reencounter data.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
 #'  matrix.
@@ -991,14 +1002,16 @@ estMCisotope <- function(targetDist=NULL,
 #'  Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
 #'  data.
 #' @param psi Transition probabilities between B origin and W target sites.
-#'  Either a matrix with B rows and W columns where rows sum to 1 or a MARK
-#'  object with estimates of transition probabilities.  If you are estimating
-#'  MC from GPS, geolocator, or intrinsic data, leave this as NULL.
-#' @param sampleSize Total sample size of animals that psi will be estimated from.
-#'    Should be the number of animals released in one of the origin sites and
-#'    observed in one of the target sites.  Optional, but recommended, unless
-#'    you are estimating MC from GPS, geolocator, or intrinsic data (in which
-#'    case the function can calculate it for you).
+#'  Either a matrix with B rows and W columns where rows sum to 1, an array with
+#'  dimensions x, B, and W (with x samples of the transition probability matrix
+#'  from another model), or a MARK object with estimates of transition
+#'  probabilities.  If you are estimating MC from GPS, geolocator, or intrinsic
+#'  data, leave this as NULL.
+#' @param sampleSize Total sample size of animals that psi will be estimated
+#'  from. Should be the number of animals released in one of the origin sites
+#'  and observed in one of the target sites.  Optional, but recommended, unless
+#'  you are estimating MC from GPS, geolocator, intrinsic, or direct band return
+#'  data (in which case the function can calculate it for you).
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are origin.  If using GPS, geolocator, or
 #'  intrinsic data, this can be the geographic definition of sites in the
@@ -1024,10 +1037,11 @@ estMCisotope <- function(targetDist=NULL,
 #' @param targetNames Optional. Vector of names for the non-release season
 #'    sites.
 #' @param nSamples Number of times to resample \code{psi} and/or
-#'    \code{originRelAbund} OR number of times to resample \code{targetPoints}
-#'    for intrinsic data OR number of bootstrap runs for GL or GPS data. In
-#'    the last two cases, animals are sampled with replacement for each. For all,
-#'    the purpose is to estimate sampling uncertainty.
+#'  \code{originRelAbund} OR number of post-burn-in MCMC samples to store (band
+#'  data) OR number of times to resample \code{targetPoints}
+#'  for intrinsic data OR number of bootstrap runs for GL or GPS data. In
+#'  the last two cases, animals are sampled with replacement for each. For all,
+#'  the purpose is to estimate sampling uncertainty.
 #' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
 #'    speed; 1000 seems to work well with our GL data and 10 for our intrinsic
 #'    data, but your results may vary.  Should be integer > 0.
@@ -1069,17 +1083,67 @@ estMCisotope <- function(targetDist=NULL,
 #' @param targetIntrinsic For intrinsic tracking data, the results of
 #'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}.
 #' @param isIntrinsic Logical indicating whether the animals are tracked via
-#'    intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
-#'    connectivity for all intrinsically marked animals or all extrinsic (e.g.,
-#'    bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.
+#'  intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
+#'  connectivity for all intrinsically marked animals or all extrinsic (e.g.,
+#'  bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.
+#' @param nReleased For band return data, a vector of the number of released
+#'  animals from each origin site (including those never reencountered in a
+#'  target site).
+#' @param reencountered For band return data, a matrix with B rows and W
+#'  columns. Number of animals reencountered on each target site by origin site
+#'  they came from.
+#' @param nBurnin For band return data, \code{estMC} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of burn-in
+#'  samples before beginning to store results. Default 5000.
+#' @param nChains For band return data, \code{estMC} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of MCMC
+#'  chains (to test for convergence). Default 3.
+#' @param nThin For band return data, \code{estMC} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the thinning rate.
+#'  Default 1.
+#' @param maintainLegacyOutput version 0.4.0 of \package{MigConnectivity}
+#'  updated the structure of the estimates. If you have legacy code that refers
+#'  to elements within a \code{MigConnectivityEstimate} object, you can set this
+#'  to TRUE to also keep the old structure. Defaults to FALSE.
 #'
-#' @return \code{estMC} returns a list with elements:
+#' @return NOTE: Starting with version 0.4.0 of \package{MigConnectivity}, we've
+#' updated the structure of \code{MigConnectivityEstimate} objects. Below we
+#' describe the updated structure. If parameter \code{maintainLegacyOutput} is
+#' set to TRUE, the list will start with the old structure (\code{sampleMC},
+#' \code{samplePsi}, \code{pointPsi}, \code{pointMC}, \code{meanMC},
+#' \code{medianMC}, \code{seMC}, \code{simpleCI}, \code{bcCI}, \code{hpdCI},
+#' \code{simpleP}, \code{bcP}, \code{sampleCorr}, \code{pointCorr},
+#' \code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr},
+#' \code{inputSampleSize}, \code{alpha}, and \code{sigConst}).
+#' \code{estMC} returns a list with elements:
 #' \describe{
-#'   \item{\code{sampleMC}}{\code{nSamples} sampled values for
-#'      MC. Provided to allow the user to compute own summary statistics.}
-#'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nSamples} x
+#'   \item{\code{psi}}{List containing estimates of transition probabilities:
+#'   \itemize {
+#'    \item{\code{sample}}{Array of sampled values for psi. \code{nSamples} x
 #'      [number of origin sites] x [number of target sites]. Provided to allow
 #'      the user to compute own summary statistics.}
+#'    \item{\code{mean}}{Main estimate of psi matrix. [number of origin sites]
+#'      x [number of target sites].}
+#'    \item{\code{se}}{Standard error of psi, estimated from SD of
+#'      \code{psi$sample}.}
+#'    \item{\code{simpleCI}}{\code{1 - alpha} confidence interval for psi,
+#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'      \code{psi$sample}.}
+#'    \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
+#'      for psi.  Preferable to \code{simpleCI} when \code{mean} is the
+#'      best estimate of psi. \code{simpleCI} is preferred when
+#'      \code{median} is a better estimator. When \code{meanMC==medianMC},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
+#'      where z0 is the proportion of \code{sample < mean}.}
+#'    \item{\code{point}}{Simple point estimate of psi matrix, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
+#'   }
+#'   }
+#'   \item{\code{sampleMC}}{\code{nSamples} sampled values for
+#'      MC. Provided to allow the user to compute own summary statistics.}
+#'
 #'   \item{\code{pointPsi}}{Simple point estimate of psi matrix, not accounting
 #'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
 #'   \item{\code{pointMC}}{Simple point estimate of MC, using the point
