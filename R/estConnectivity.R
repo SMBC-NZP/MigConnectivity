@@ -324,10 +324,17 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                       paste0(find.package('MigConnectivity'),
                              "/JAGS/multinomial_banding_1age.txt"),
                       n.chains = nChains, n.thin = nThin,
-                      n.iter = nBurnin + nBoot * nThin,
+                      n.iter = nBurnin + ceiling(nBoot * nThin / nChains),
                       n.burnin = nBurnin, DIC = FALSE,
                       progress.bar = ifelse(verbose==0, 'none', 'text'))
 
+  if (verbose > 0 && nChains > 1) {
+    maxRhat <- max(out$BUGSoutput$summary[, "Rhat"], na.rm = TRUE)
+    if (maxRhat < 1.1)
+      cat("Successful convergence based on Rhat values (all < 1.1).\n")
+    else
+      cat("**WARNING** Rhat values indicate convergence failure.\n")
+  }
   result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
                           originRelAbund = originRelAbund,
                           psi = out$BUGSoutput$sims.list$m,
@@ -539,17 +546,99 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                            na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
-  return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
-              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                                  type = 8, names = F),
-              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = pointCorr,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  meanMC <- mean(MC, na.rm=TRUE)
+  medianMC <- median(MC, na.rm=TRUE)
+  seMC <- sd(MC, na.rm=TRUE)
+  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = F)
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  if (maintainLegacyOutput) {
+    return(list(sampleMC=MC, samplePsi = psi.array, pointPsi = pointPsi,
+                pointMC=pointMC, meanMC=meanMC,
+                medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
+                bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = corr, pointCorr = pointCorr,
+                meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+                simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+                inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            point = pointCorr),
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries, maintainLegacyOutput = TRUE)))
+  }
+  else {
+    return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            point = pointCorr),
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             maintainLegacyOutput = FALSE)))
+  }
 }
 
 ###############################################################################
@@ -972,9 +1061,9 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   originPoints = NULL, targetPoints = NULL,
                   originAssignment = NULL, targetAssignment = NULL,
                   originNames = NULL, targetNames = NULL,
-                  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000), isGL = FALSE,
-                  geoBias = NULL, geoVCov = NULL, row0 = 0,
-                  verbose = 0,  calcCorr = FALSE, alpha = 0.05,
+                  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000),
+                  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
+                  verbose = 0, calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
             resampleProjection = MigConnectivity::projections$EquidistConic,
                   maxTries = 300, targetIntrinsic = NULL,
