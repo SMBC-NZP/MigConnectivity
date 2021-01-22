@@ -1064,7 +1064,7 @@ estMCisotope <- function(targetDist=NULL,
 #'    of \code{targetSites}.  Ignored unless data are geolocator or GPS.
 #' @param maxTries Maximum number of times to run a single GL/intrinsic
 #'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
-#'    never stop.  Thisparameter was added to prevent GL setups where some
+#'    never stop.  This parameter was added to prevent GL setups where some
 #'    sample points never land on target sites from running indefinitely.
 #' @param targetIntrinsic For intrinsic tracking data, the results of
 #'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}.

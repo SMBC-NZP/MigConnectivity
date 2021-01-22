@@ -8,43 +8,76 @@ is.estMC <- function(x) inherits(x, "estMC")
 #' @export
 print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
-  cat("Migratory Connectivity Strength Estimate(s)\n")
+  cat("Migratory Connectivity Estimate(s)\n")
   if (inherits(x, "estMC")) {
-    cat("MC estimate (mean):", format(x$meanMC, digits = digits), "+/- (SE)",
-        format(x$seMC, digits = digits), '\n')
-    cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
+    if (is.null(x$psi)) {
+      x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
+                    se = apply(x$samplePsi, 2:3, sd),
+                    simpleCI = apply(x$samplePsi, 2:3, quantile,
+                                     probs = c(alpha/2, 1-alpha/2),
+                                     na.rm=TRUE, type = 8, names = F))
+      x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
+      x$input <- list(alpha = x$alpha,
+                      originNames = ifelse(is.null(dimnames(x$samplePsi)[2]),
+                                           LETTERS[1:dim(x$samplePsi)[2]],
+                                           dimnames(x$samplePsi)[2]),
+                      targetNames = ifelse(is.null(dimnames(x$samplePsi)[3]),
+                                           1:dim(x$samplePsi)[3],
+                                           dimnames(x$samplePsi)[3]))
+    }
+    cat("Transition probability (psi) estimates (mean):\n")
+    print(x$psi$mean)
+    cat("   se:\n")
+    print(x$psi$se)
+    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n")
+    print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$psi$mean),
+                dimnames = list(x$input$originNames, x$input$targetNames)),
+          quote = FALSE)
+    cat("MC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
+        format(x$MC$se, digits = digits), '\n')
+    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
         "% confidence interval (simple quantile): ",
-        paste(format(x$simpleCI, digits = digits, trim = TRUE),
+        paste(format(x$MC$simpleCI, digits = digits, trim = TRUE),
               collapse = ' - '), '\n', sep = "")
-    cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-        "% confidence interval (bias-corrected): ",
-        paste(format(x$bcCI, digits = digits, trim = TRUE), collapse = ' - '),
-        '\n', sep = "")
-    cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-        "% credible interval (highest posterior density): ",
-        paste(format(x$hpdCI, digits = digits, trim = TRUE), collapse = ' - '),
-        '\n', sep = "")
-    cat("   median:", format(x$medianMC, digits = digits), '\n')
-    if (!is.na(x$pointMC))
-      cat("   point calculation (not considering error):",
-          format(x$pointMC, digits = digits), '\n')
+    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
+    #     "% confidence interval (bias-corrected): ",
+    #     paste(format(x$bcCI, digits = digits, trim = TRUE), collapse = ' - '),
+    #     '\n', sep = "")
+    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
+    #     "% credible interval (highest posterior density): ",
+    #     paste(format(x$hpdCI, digits = digits, trim = TRUE), collapse = ' - '),
+    #     '\n', sep = "")
+    # cat("   median:", format(x$medianMC, digits = digits), '\n')
+    # if (!is.na(x$pointMC))
+    #   cat("   point calculation (not considering error):",
+    #       format(x$pointMC, digits = digits), '\n')
   }
   if (inherits(x, "estMantel")) {
-    cat("rM estimate (mean):", format(x$meanCorr, digits = digits), "+/- (SE)",
-        format(x$seCorr, digits = digits), '\n')
-    cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
+    if (is.null(x$corr)) {
+      x$corr <- list(mean = x$meanCorr, se = x$seCorr,
+                     simpleCI = x$simpleCICorr)
+      x$input <- list(alpha = x$alpha)
+    }
+    cat("rM estimate (mean):", format(x$corr$mean, digits = digits), "+/- (SE)",
+        format(x$corr$se, digits = digits), '\n')
+    cat("   ", ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
         "% confidence interval (simple quantile): ",
-        paste(format(x$simpleCICorr, digits = digits, trim = TRUE),
+        paste(format(x$corr$simpleCI, digits = digits, trim = TRUE),
               collapse = ' - '), '\n', sep = "")
-    cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-        "% confidence interval (bias-corrected): ",
-        paste(format(x$bcCICorr, digits = digits, trim = TRUE), collapse = ' - '),
-        '\n', sep = "")
-    cat("   median:", format(x$medianCorr, digits = digits), '\n')
-    if (!is.na(x$pointCorr))
-      cat("   point calculation (not considering error):",
-          format(x$pointCorr, digits = digits), '\n')
+    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
+    #     "% confidence interval (bias-corrected): ",
+    #     paste(format(x$bcCICorr, digits = digits, trim = TRUE), collapse = ' - '),
+    #     '\n', sep = "")
+    # cat("   median:", format(x$medianCorr, digits = digits), '\n')
+    # if (!is.na(x$pointCorr))
+    #   cat("   point calculation (not considering error):",
+    #       format(x$pointCorr, digits = digits), '\n')
   }
+  cat("This is a subset of what's available inside MigConnectivity outputs.\n")
+  cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
 }
 
 #' @export
