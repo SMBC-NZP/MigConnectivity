@@ -653,7 +653,6 @@ estMCisotope <- function(targetDist=NULL,
                          targetIntrinsic,
                          targetSites = NULL,
                          sampleSize = NULL,
-                         # targetAssignment=NULL,
                          originPoints=NULL,
                          originSites=NULL,
                          originDist = NULL,
@@ -874,17 +873,104 @@ estMCisotope <- function(targetDist=NULL,
                          na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
-  return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = NA, pointMC = NA, meanMC = mean(MC, na.rm=TRUE),
-              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                                  type = 8, names = F),
-              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = NA,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  meanMC <- mean(MC, na.rm=TRUE)
+  medianMC <- median(MC, na.rm=TRUE)
+  seMC <- sd(MC, na.rm=TRUE)
+  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = F)
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  if (maintainLegacyOutput) {
+    return(list(sampleMC=MC, samplePsi = psi.array, pointPsi = pointPsi,
+                pointMC=pointMC, meanMC=meanMC,
+                medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
+                bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = corr, pointCorr = pointCorr,
+                meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+                simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+                inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            point = pointCorr),
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             targetIntrinsic = targetIntrinsic,
+                             isIntrinsic = TRUE,
+                             maintainLegacyOutput = TRUE)))
+  }
+  else {
+    return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            point = pointCorr),
+                r = NULL,
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             targetIntrinsic = targetIntrinsic,
+                             isIntrinsic = TRUE,
+                             maintainLegacyOutput = FALSE)))
+  }
 }
 
 ###############################################################################
