@@ -202,3 +202,166 @@ plot.isoAssign <- function(x,map,...){
 
 }
 
+# @export
+#plot <- function(x,...) UseMethod("plot")
+#' @export
+plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
+                                    point = c("mean", "median", "point"),
+                                    range = c("simpleCI", "bcCI", "se"),
+                                    ylab = plot.which,
+                                    originNames = NULL, targetNames = NULL,
+                                    col.range = NULL, pch.range = NULL,
+                                    map = FALSE, ...) {
+  if (map) {
+    warning("Map plotting not yet available")
+  }
+  plot.which <- match.arg(plot.which)
+  point <- match.arg(point)
+  range <- match.arg(range)
+  if (inherits(x, "estMC")) {
+    if (is.null(x$psi)) {
+      bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                         dimnames = list(NULL, originNames, targetNames))
+      for (i in 1:nOriginSites) {
+        for (j in 1:nTargetSites) {
+          psi.z0 <- qnorm(sum(x$samplePsi[, i, j] < mean(x$samplePsi[, i, j],
+                                                         na.rm = T)) /
+                            length(which(!is.na(x$samplePsi[, i, j]))))
+          bcCIPsi[ , i, j] <- quantile(x$samplePsi[, i, j],
+                                       pnorm(2 * psi.z0 +
+                                               qnorm(c(x$alpha/2,1-x$alpha/2))),
+                                       na.rm=TRUE, type = 8, names = F)
+        }
+      }
+      x$psi <- list(sample = x$samplePsi,
+                    mean = apply(x$samplePsi, 2:3, mean),
+                    se = apply(x$samplePsi, 2:3, sd),
+                    simpleCI = apply(x$samplePsi, 2:3, quantile,
+                                     probs = c(alpha/2, 1-alpha/2),
+                                     na.rm=TRUE, type = 8, names = F),
+                    bcCI = bcCIPsi,
+                    median = apply(x$samplePsi, 2:3, median),
+                    point = x$pointPsi)
+      x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI,
+                   bcCI = x$bcCI, median = x$medianMC, point = x$pointMC)
+    }
+  }
+  else if (plot.which != "rM")
+    stop("This estimate does not include psi or MC - try setting plot.which to rM")
+  if (inherits(x, "estMantel")) {
+    if (is.null(x$corr)) {
+      x$corr <- list(sample = x$sampleCorr,
+                     mean = x$meanCorr,
+                     se = x$seCorr,
+                     simpleCI = x$simpleCICorr,
+                     bcCI = x$bcCICorr,
+                     median = x$medianCorr,
+                     point = x$pointCorr)
+    }
+  }
+  else if (plot.which == "rM")
+    stop("This estimate does not include rM - try setting plot.which to MC or psi")
+  if (is.null(originNames)) {
+    if (is.null(x$input$originNames)) {
+      if (is.null(dimnames(x$psi$sample)[2])) {
+        originNames <- LETTERS[1:dim(x$psi$sample)[2]]
+      }
+      else {
+        originNames <- dimnames(x$psi$sample)[2]
+      }
+    }
+    else
+      originNames <- x$input$originNames
+  }
+  if (is.null(targetNames)) {
+    if (is.null(x$input$targetNames)) {
+      if (is.null(dimnames(x$psi$sample)[3])) {
+        targetNames <- 1:dim(x$psi$sample)[3]
+      }
+      else {
+        targetNames <- dimnames(x$psi$sample)[3]
+      }
+    }
+    else
+      targetNames <- x$input$targetNames
+  }
+  nTargetSites <- length(targetNames)
+  nOriginSites <- length(originNames)
+  if (plot.which=="MC") {
+    y <- ifelse(point == "mean", x$MC$mean,
+                ifelse(point == "median", x$MC$median, x$MC$point))
+    ests.df <- data.frame(y = y,
+                          lower = ifelse(range == "bcCI", x$MC$bcCI[1],
+                                         ifelse(range == "simpleCI",
+                                                x$MC$simpleCI[1],
+                                                y - x$MC$se)),
+                          upper = ifelse(range == "bcCI", x$MC$bcCI[2],
+                                         ifelse(range == "simpleCI",
+                                                x$MC$simpleCI[2],
+                                                y + x$MC$se)))
+  }
+  else if (plot.which == "rM") {
+    y <- ifelse(point == "mean", x$corr$mean,
+                ifelse(point == "median", x$corr$median, x$corr$point))
+    ests.df <- data.frame(y = y,
+                          lower = ifelse(range == "bcCI", x$corr$bcCI[1],
+                                         ifelse(range == "simpleCI",
+                                                x$corr$simpleCI[1],
+                                                y - x$corr$se)),
+                          upper = ifelse(range == "bcCI", x$corr$bcCI[2],
+                                         ifelse(range == "simpleCI",
+                                                x$corr$simpleCI[2],
+                                                y + x$corr$se)))
+  }
+  else if (plot.which == "psi") {
+    y <- switch(point,
+                mean = x$psi$mean,
+                median = x$psi$median,
+                point = x$psi$point)
+    yrange <- switch(range,
+                     bcCI = x$psi$bcCI,
+                     simpleCI = x$psi$simpleCI,
+                     se = aperm(array(c(y - x$psi$se, y + x$psi$se),
+                                      c(dim(y), 2)), c(3, 1, 2)))
+    ests.df <- data.frame(y = c(y),
+                          From = rep(originNames, length(targetNames)),
+                          To = rep(targetNames, each = length(originNames)),
+                          FromTo = paste(rep(originNames, length(targetNames)),
+                                         rep(targetNames,
+                                             each = length(originNames)),
+                                         sep = "-"),
+                          lower = c(yrange[1,,]),
+                          upper = c(yrange[2,,]),
+                          stringsAsFactors = TRUE)
+  }
+  if (plot.which=="psi") {
+    if (is.null(col.range)) {
+      col.range <- 1:nOriginSites
+    }
+    if (is.null(pch.range)) {
+      if (nOriginSites > 6)
+        pch.range <- c(20:25, 0:(nOriginSites - 7))
+      else
+        pch.range <- 19 + 1:nOriginSites
+    }
+    gplots::plotCI(as.integer(ests.df$FromTo), ests.df$y, li = ests.df$lower,
+                   ui = ests.df$upper,
+                   pch = pch.range[as.integer(ests.df$From)],
+                   col = col.range[as.integer(ests.df$From)],
+                   ylab = ylab, ...)
+  }
+  else {
+    if (is.null(col.range)) {
+      col.range <- "black"
+    }
+    if (is.null(pch.range)) {
+      pch.range <- 20
+    }
+    gplots::plotCI(0, ests.df$y, li = ests.df$lower,
+                   ui = ests.df$upper,
+                   pch = pch.range[1],
+                   col = col.range[1],
+                   ylab = ylab, xaxt = "n", xlab = "", ...)
+  }
+}
+
