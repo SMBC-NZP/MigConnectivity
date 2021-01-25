@@ -220,10 +220,10 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
     if (is.null(x$psi)) {
-      bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+      bcCIPsi <- array(NA, dim = c(2, dim(x$samplePsi)[2], dim(x$samplePsi)[3]),
                          dimnames = list(NULL, originNames, targetNames))
-      for (i in 1:nOriginSites) {
-        for (j in 1:nTargetSites) {
+      for (i in 1:dim(x$samplePsi)[2]) {
+        for (j in 1:dim(x$samplePsi)[3]) {
           psi.z0 <- qnorm(sum(x$samplePsi[, i, j] < mean(x$samplePsi[, i, j],
                                                          na.rm = T)) /
                             length(which(!is.na(x$samplePsi[, i, j]))))
@@ -237,13 +237,15 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
                     mean = apply(x$samplePsi, 2:3, mean),
                     se = apply(x$samplePsi, 2:3, sd),
                     simpleCI = apply(x$samplePsi, 2:3, quantile,
-                                     probs = c(alpha/2, 1-alpha/2),
+                                     probs = c(x$alpha/2, 1-x$alpha/2),
                                      na.rm=TRUE, type = 8, names = F),
                     bcCI = bcCIPsi,
                     median = apply(x$samplePsi, 2:3, median),
                     point = x$pointPsi)
       x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI,
                    bcCI = x$bcCI, median = x$medianMC, point = x$pointMC)
+      x$input <- list(originNames = dimnames(x$samplePsi)[[2]],
+                      targetNames = dimnames(x$samplePsi)[[3]])
     }
   }
   else if (plot.which != "rM")
@@ -257,36 +259,11 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
                      bcCI = x$bcCICorr,
                      median = x$medianCorr,
                      point = x$pointCorr)
+      x$input <- list(alpha = x$alpha)
     }
   }
   else if (plot.which == "rM")
     stop("This estimate does not include rM - try setting plot.which to MC or psi")
-  if (is.null(originNames)) {
-    if (is.null(x$input$originNames)) {
-      if (is.null(dimnames(x$psi$sample)[2])) {
-        originNames <- LETTERS[1:dim(x$psi$sample)[2]]
-      }
-      else {
-        originNames <- dimnames(x$psi$sample)[2]
-      }
-    }
-    else
-      originNames <- x$input$originNames
-  }
-  if (is.null(targetNames)) {
-    if (is.null(x$input$targetNames)) {
-      if (is.null(dimnames(x$psi$sample)[3])) {
-        targetNames <- 1:dim(x$psi$sample)[3]
-      }
-      else {
-        targetNames <- dimnames(x$psi$sample)[3]
-      }
-    }
-    else
-      targetNames <- x$input$targetNames
-  }
-  nTargetSites <- length(targetNames)
-  nOriginSites <- length(originNames)
   if (plot.which=="MC") {
     y <- ifelse(point == "mean", x$MC$mean,
                 ifelse(point == "median", x$MC$median, x$MC$point))
@@ -314,6 +291,32 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
                                                 y + x$corr$se)))
   }
   else if (plot.which == "psi") {
+    if (is.null(originNames)) {
+      if (is.null(x$input$originNames)) {
+        if (is.null(dimnames(x$psi$sample)[2])) {
+          originNames <- LETTERS[1:dim(x$psi$sample)[2]]
+        }
+        else {
+          originNames <- dimnames(x$psi$sample)[2]
+        }
+      }
+      else
+        originNames <- x$input$originNames
+    }
+    if (is.null(targetNames)) {
+      if (is.null(x$input$targetNames)) {
+        if (is.null(dimnames(x$psi$sample)[3])) {
+          targetNames <- 1:dim(x$psi$sample)[3]
+        }
+        else {
+          targetNames <- dimnames(x$psi$sample)[3]
+        }
+      }
+      else
+        targetNames <- x$input$targetNames
+    }
+    nTargetSites <- length(targetNames)
+    nOriginSites <- length(originNames)
     y <- switch(point,
                 mean = x$psi$mean,
                 median = x$psi$median,
@@ -324,31 +327,36 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
                      se = aperm(array(c(y - x$psi$se, y + x$psi$se),
                                       c(dim(y), 2)), c(3, 1, 2)))
     ests.df <- data.frame(y = c(y),
-                          From = rep(originNames, length(targetNames)),
-                          To = rep(targetNames, each = length(originNames)),
-                          FromTo = paste(rep(originNames, length(targetNames)),
-                                         rep(targetNames,
-                                             each = length(originNames)),
-                                         sep = "-"),
+                          From = factor(rep(originNames, nTargetSites),
+                                        levels = originNames),
+                          To = factor(rep(targetNames, each = nOriginSites),
+                                      levels = targetNames),
+                          FromTo = rep(1:nOriginSites, nTargetSites) +
+                            rep(1:nTargetSites, each = nOriginSites) /
+                            (nTargetSites * 2) - 0.3,
                           lower = c(yrange[1,,]),
-                          upper = c(yrange[2,,]),
-                          stringsAsFactors = TRUE)
+                          upper = c(yrange[2,,]))
   }
   if (plot.which=="psi") {
     if (is.null(col.range)) {
-      col.range <- 1:nOriginSites
+      col.range <- 1:nTargetSites
     }
     if (is.null(pch.range)) {
-      if (nOriginSites > 6)
-        pch.range <- c(20:25, 0:(nOriginSites - 7))
+      if (nTargetSites > 6)
+        pch.range <- c(20:25, 0:(nTargetSites - 7))
       else
-        pch.range <- 19 + 1:nOriginSites
+        pch.range <- 19 + 1:nTargetSites
     }
-    gplots::plotCI(as.integer(ests.df$FromTo), ests.df$y, li = ests.df$lower,
+    gplots::plotCI(ests.df$FromTo, ests.df$y, li = ests.df$lower,
                    ui = ests.df$upper,
-                   pch = pch.range[as.integer(ests.df$From)],
-                   col = col.range[as.integer(ests.df$From)],
-                   ylab = ylab, ...)
+                   pch = pch.range[as.integer(ests.df$To)],
+                   col = col.range[as.integer(ests.df$To)],
+                   pt.bg = col.range[as.integer(ests.df$To)],
+                   ylab = ylab, xaxt = "n", xlab = "From", ...)
+    axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
+         labels = originNames)
+    legend("top", legend = targetNames, col = col.range, pch = pch.range,
+           pt.bg = col.range)
   }
   else {
     if (is.null(col.range)) {
