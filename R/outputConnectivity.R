@@ -205,7 +205,10 @@ plot.isoAssign <- function(x,map,...){
 # @export
 #plot <- function(x,...) UseMethod("plot")
 #' @export
-plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
+plot.estMigConnectivity <- function(x,
+                                    plot.which = ifelse(inherits(x, "estMC"),
+                                                        c("psi", "MC", "rM"),
+                                                        c("rM", "psi", "MC")),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
                                     ylab = plot.which,
@@ -220,8 +223,7 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
     if (is.null(x$psi)) {
-      bcCIPsi <- array(NA, dim = c(2, dim(x$samplePsi)[2], dim(x$samplePsi)[3]),
-                         dimnames = list(NULL, originNames, targetNames))
+      bcCIPsi <- array(NA, dim = c(2, dim(x$samplePsi)[2], dim(x$samplePsi)[3]))
       for (i in 1:dim(x$samplePsi)[2]) {
         for (j in 1:dim(x$samplePsi)[3]) {
           psi.z0 <- qnorm(sum(x$samplePsi[, i, j] < mean(x$samplePsi[, i, j],
@@ -297,7 +299,7 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
           originNames <- LETTERS[1:dim(x$psi$sample)[2]]
         }
         else {
-          originNames <- dimnames(x$psi$sample)[2]
+          originNames <- dimnames(x$psi$sample)[[2]]
         }
       }
       else
@@ -309,7 +311,7 @@ plot.estMigConnectivity <- function(x, plot.which = c("psi", "MC", "rM"),
           targetNames <- 1:dim(x$psi$sample)[3]
         }
         else {
-          targetNames <- dimnames(x$psi$sample)[3]
+          targetNames <- dimnames(x$psi$sample)[[3]]
         }
       }
       else
