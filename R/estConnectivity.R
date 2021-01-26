@@ -1356,7 +1356,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
 #'                  resampleProjection = raster::projection(OVENdata$targetSites))
-#' str(rM1)
+#' str(rM1, max.level = 2)
 #' @seealso \code{\link{estMC}}
 #'
 #' @references
@@ -1369,7 +1369,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
             resampleProjection = MigConnectivity::projections$EquidistConic,
-            maxTries = 300) {
+                      maxTries = 300, maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -1437,11 +1437,40 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F)
-  return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
-                        meanCorr = meanCorr, medianCorr = medianCorr,
-                        seCorr=seCorr, simpleCICorr=simpleCICorr,
-                        bcCICorr=bcCICorr, alpha = alpha),
-                   class = c("estMantel", "estMigConnectivity")))
+  if (maintainLegacyOutput)
+    return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
+                          meanCorr = meanCorr, medianCorr = medianCorr,
+                          seCorr=seCorr, simpleCICorr=simpleCICorr,
+                          bcCICorr=bcCICorr, alpha = alpha,
+                          corr = list(sample = corr, mean = meanCorr,
+                                      se = seCorr, simpleCI = simpleCICorr,
+                                      bcCI = bcCICorr, median = medianCorr,
+                                      point = pointCorr),
+                          input = list(targetPoints = targetPoints,
+                                       originPoints = originPoints, isGL = isGL,
+                                       geoBias = geoBias, geoVCov = geoVCov,
+                                       targetSites = targetSites, nBoot = nBoot,
+                                       nSim = nSim, verbose = verbose,
+                                       alpha = alpha,
+                                       resampleProjection = resampleProjection,
+                                       maxTries = maxTries,
+                                       maintainLegacyOutput = TRUE)),
+                     class = c("estMantel", "estMigConnectivity")))
+  else
+    return(structure(list(corr = list(sample = corr, mean = meanCorr,
+                                      se = seCorr, simpleCI = simpleCICorr,
+                                      bcCI = bcCICorr, median = medianCorr,
+                                      point = pointCorr),
+                          input = list(targetPoints = targetPoints,
+                                       originPoints = originPoints, isGL = isGL,
+                                       geoBias = geoBias, geoVCov = geoVCov,
+                                       targetSites = targetSites, nBoot = nBoot,
+                                       nSim = nSim, verbose = verbose,
+                                       alpha = alpha,
+                                       resampleProjection = resampleProjection,
+                                       maxTries = maxTries,
+                                       maintainLegacyOutput = FALSE)),
+                     class = c("estMantel", "estMigConnectivity")))
 }
 
 ###############################################################################
@@ -1563,32 +1592,41 @@ getCMRexample <- function(number = 1) {
 #'                 nSamples = 10000, returnSamples = TRUE)
 #'
 #'}
-diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
+diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
+                   returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
-  nSamplesEst <- sapply(estimates, function(x) length(x$sampleMC))
+  for (i in 1:nEst)
+    if (is.null(estimates[[i]]$MC))
+      estimates[[i]]$MC <- list(sample = estimates[[i]]$sampleMC)
+  nSamplesEst <- sapply(estimates, function(x) length(x$MC$sample))
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
-  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
   for (i in 1:nComparisons) {
     if (is.null(nSamples))
-      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleMC, times = nSamplesEst[comparisons[i, 2]]) -
-        rep(estimates[[comparisons[i, 2]]]$sampleMC, each = nSamplesEst[comparisons[i, 1]])
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$MC$sample,
+                              times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$MC$sample,
+            each = nSamplesEst[comparisons[i, 1]])
     else
-      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleMC, nSamples, replace = T) -
-        sample(estimates[[comparisons[i, 2]]]$sampleMC, nSamples, replace = T)
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$MC$sample,
+                                 nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$MC$sample, nSamples, replace = T)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
                      type = 8, names = F)
-  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+  diff.z0 <- sapply(diffSamples,
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T),
+                                           na.rm = T)/length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0)
+    quantile(MC, pnorm(2*z0+ qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
-  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
-  #hpdCI <- sapply(diff.mcmc, function(MC) as.vector(coda::HPDinterval(MC, 1-alpha)))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
@@ -1596,7 +1634,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        sampleDiff = sampleDiff, alpha = alpha),#hpdCI = hpdCI,
+                        sampleDiff = sampleDiff, alpha = alpha),
                    class = c('diffMC', 'diffMigConnectivity')))
 }
 
@@ -1653,36 +1691,46 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 # @examples
-diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
+diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
+                       returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
-  nSamplesEst <- sapply(estimates, function(x) length(x$sampleCorr))
+  for (i in 1:nEst)
+    if (is.null(estimates[[i]]$corr))
+      estimates[[i]]$corr <- list(sample = estimates[[i]]$sampleCorr)
+  nSamplesEst <- sapply(estimates, function(x) length(x$corr$sample))
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
-  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
   for (i in 1:nComparisons) {
     if (is.null(nSamples))
-      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleCorr, times = nSamplesEst[comparisons[i, 2]]) -
-        rep(estimates[[comparisons[i, 2]]]$sampleCorr, each = nSamplesEst[comparisons[i, 1]])
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$corr$sample,
+                              times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$corr$sample,
+            each = nSamplesEst[comparisons[i, 1]])
     else
-      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleCorr, nSamples, replace = T) -
-        sample(estimates[[comparisons[i, 2]]]$sampleCorr, nSamples, replace = T)
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$corr$sample,
+                                 nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$corr$sample, nSamples,
+               replace = T)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
                      type = 8, names = F)
-  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+  diff.z0 <- sapply(diffSamples,
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/
+                                         length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0) quantile(MC,
+                                           pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
-  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
-  #hpdCI <- sapply(diff.mcmc, function(MC) as.vector(coda::HPDinterval(MC, 1-alpha)))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
-  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples) #colnames(hpdCI) <-
+  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples)
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
