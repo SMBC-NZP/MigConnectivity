@@ -674,7 +674,7 @@ box(which="plot")
 ```
 
 ```{r}
-str(M)
+str(M, max.level = 2)
 ```
 
 ### EXAMPLE 3

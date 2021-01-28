@@ -94,8 +94,11 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #   cat("   point calculation (not considering error):",
     #       format(x$pointCorr, digits = digits), '\n')
   }
-  cat("\nThis is a subset of what's available inside MigConnectivity outputs.\n")
-  cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
+  cat("\nThis is a subset of what's available inside estMigConnectivity outputs.\n")
+  if (inherits(x, "estMC"))
+    cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
+  else
+    cat("For more info, try ?estMantel or str(obj_name, max.levels = 2).\n")
 }
 
 #' @export

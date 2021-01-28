@@ -76,18 +76,21 @@ to TRUE to also keep the old structure. Defaults to FALSE}
 \value{
 \code{estMantel} returns a list with elements:
 \describe{
-  \item{\code{sampleCorr}}{\code{nBoot} sampled values for Mantel
+  \item{\code{corr}}{List containing estimates of rM:
+   \itemize{
+    \item{\code{sample}} \code{nBoot} sampled values for Mantel
      correlation. Provided to allow the user to compute own summary
-     statistics.}
-  \item{\code{pointCorr}}{Simple point estimate of Mantel correlation,
-     using \code{originPoints} and \code{targetPoints}.}
-  \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
-     statistics for Mantel correlation bootstraps.}
+     statistics.
+    \item{\code{mean, se, simpleCI, bcCI, median, point}} Summary
+     statistics for Mantel correlation bootstraps.
+   }
+  }
+  \item{\code{input}}{List containing the inputs to \code{estMantel}}
 }
 }
 \description{
 Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
-data. Wait what about intrinsic?
+data.
 }
 \examples{
 data('OVENdata')
@@ -100,6 +103,7 @@ rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  verbose = 1,   # output options
                  nBoot = 100, # This is set low for example
                  resampleProjection = raster::projection(OVENdata$targetSites))
+rM1
 str(rM1, max.level = 2)
 }
 \references{
