@@ -202,8 +202,43 @@ plot.isoAssign <- function(x,map,...){
 
 }
 
-# @export
 #plot <- function(x,...) UseMethod("plot")
+#' Basic plot function for estMigConnectivity objects
+#'
+#' @param x an estMigConnectivity object (output of estMC or estMantel)
+#' @param plot.which which parameter (psi, MC, or rM) to graph. Defaults to psi
+#'   for estMC objects, to rM (Mantel correlation) otherwise
+#' @param point points on graph can represent mean, median, or point estimates
+#'   (not considering error). Defaults to mean, the standard estimate from
+#'   resampling.
+#' @param range lines / error bars drawn around points can represent simple
+#'   quantile-based confidence intervals (simpleCI), bias-corrected quantile-
+#'   based confidence intervals (bcCI), or +- standard error (se). Defaults to
+#'   simpleCI
+#' @param ylab label for the y-axis. Defaults to the parameter being plotted
+#' @param originNames names of the origin sites (for plotting psi). If left
+#'   NULL, the function attempts to get these from the estimate
+#' @param targetNames names of the target sites (for plotting psi). If left
+#'   NULL, the function attempts to get these from the estimate
+#' @param col.range colors to use for labeling transition probabilities for
+#'   different target sites. If left NULL, defaults to 1:nTargetSites
+#' @param pch.range symbols to use for labeling transition probabilities for
+#'   different target sites. If left NULL, defaults to 21:25, then
+#'   0:(nTargetSites-5)
+#' @param gap space left between the center of the error bar and the lines
+#'   marking the error bar in units of the height (width) of the letter "O".
+#'   Defaults to 0
+#' @param sfrac width of "crossbar" at the end of error bar as a fraction of the
+#'   x plotting region. Defaults to 0
+#' @param legend leave as FALSE to not print a legend (for psi only). Otherwise
+#'   the position of the legend (one of "bottomright", "bottom", "bottomleft",
+#'   "left", "topleft", "top", "topright", "right", or "center")
+#' @param map placeholder for eventually allowing users to plot psi estimates
+#'   on a map
+#' @param ... Additional parameters passed to \code{\link{plotCI}}
+#'
+#' @seealso \code{\link{estMC}}, \code{\link{estMantel}}
+#'
 #' @export
 plot.estMigConnectivity <- function(x,
                                     plot.which = ifelse(inherits(x, "estMC"),
@@ -214,7 +249,8 @@ plot.estMigConnectivity <- function(x,
                                     ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
                                     col.range = NULL, pch.range = NULL,
-                                    map = FALSE, ...) {
+                                    gap = 0, sfrac = 0,
+                                    legend = FALSE, map = FALSE, ...) {
   if (map) {
     warning("Map plotting not yet available")
   }
@@ -344,21 +380,23 @@ plot.estMigConnectivity <- function(x,
       col.range <- 1:nTargetSites
     }
     if (is.null(pch.range)) {
-      if (nTargetSites > 6)
-        pch.range <- c(20:25, 0:(nTargetSites - 7))
+      if (nTargetSites > 5)
+        pch.range <- c(21:25, 0:(nTargetSites - 6))
       else
-        pch.range <- 19 + 1:nTargetSites
+        pch.range <- 20 + 1:nTargetSites
     }
     gplots::plotCI(ests.df$FromTo, ests.df$y, li = ests.df$lower,
                    ui = ests.df$upper,
                    pch = pch.range[as.integer(ests.df$To)],
                    col = col.range[as.integer(ests.df$To)],
                    pt.bg = col.range[as.integer(ests.df$To)],
-                   ylab = ylab, xaxt = "n", xlab = "From", ...)
+                   ylab = ylab, xaxt = "n", xlab = "From", gap = gap,
+                   sfrac = sfrac, ...)
     axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
          labels = originNames)
-    legend("top", legend = targetNames, col = col.range, pch = pch.range,
-           pt.bg = col.range)
+    if (!isFALSE(legend))
+      legend(legend, legend = targetNames, col = col.range, pch = pch.range,
+             pt.bg = col.range)
   }
   else {
     if (is.null(col.range)) {
@@ -370,7 +408,7 @@ plot.estMigConnectivity <- function(x,
     gplots::plotCI(0, ests.df$y, li = ests.df$lower,
                    ui = ests.df$upper,
                    pch = pch.range[1],
-                   col = col.range[1],
+                   col = col.range[1], gap = gap, sfrac = sfrac,
                    ylab = ylab, xaxt = "n", xlab = "", ...)
   }
 }

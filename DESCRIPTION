@@ -28,6 +28,7 @@ Depends:
 Imports:
     coda,
     geosphere (>= 1.5),
+    gplots,
     MASS,
     ncf,
     R2jags,

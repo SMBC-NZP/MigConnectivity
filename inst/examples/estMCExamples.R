@@ -3,8 +3,8 @@ set.seed(101)
 # Uncertainty in detection with equal abundances
 # Number of resampling iterations for generating confidence intervals
 
-nSamplesCMR <- 100 #10000
-nSimulationsCMR <- 10 #100
+nSamplesCMR <- 100
+nSimulationsCMR <- 10
 #\dontrun{
 #  nSamplesCMR <- 10000
 #  nSimulationsCMR <- 100
@@ -135,8 +135,6 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
              nSamples = nSamplesGLGPS,# This is set low for example
              resampleProjection = raster::projection(OVENdata$targetSites))
 
-str(GL_mc)
-
 # Estimate MC and rM, treat all data as is
 Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
                 geoBias = OVENdata$geo.bias, # Light-level GL location bias
@@ -153,6 +151,8 @@ Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
                 nSamples = nSamplesGLGPS, # This is set low for example
                 approxSigTest = TRUE,
                 resampleProjection = raster::projection(OVENdata$targetSites))
+
+print(Combined)
 
 # For treating all data as GPS,
 # Move the latitude of birds with locations that fall off shore - only change
@@ -185,9 +185,13 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
               verbose = 1,   # output options
               nSamples = nSamplesGLGPS) # This is set low for example
 
-str(GPS_mc)
-str(Combined)
-str(GL_mc)
+str(GPS_mc, max.level = 2)
+str(Combined, max.level = 2)
+str(GL_mc, max.level = 2)
+print(Combined)
+install.packages(c('RColorBrewer'))
+plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top")
+
 
 
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)

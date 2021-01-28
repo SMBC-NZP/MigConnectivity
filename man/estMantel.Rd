@@ -16,43 +16,44 @@ estMantel(
   verbose = 0,
   alpha = 0.05,
   resampleProjection = MigConnectivity::projections$EquidistConic,
-  maxTries = 300
+  maxTries = 300,
+  maintainLegacyOutput = FALSE
 )
 }
 \arguments{
 \item{targetPoints}{A \code{SpatialPoints} object, with length number of
 animals tracked.  Each point indicates the point estimate location in
-the non-release season.}
+the non-release season}
 
 \item{originPoints}{A \code{SpatialPoints} object, with length number of
-animals tracked.  Each point indicates the release location of an animal.}
+animals tracked.  Each point indicates the release location of an animal}
 
-\item{isGL}{Indicates whether or which animals were tracked with geolocators.
+\item{isGL}{Indicates whether or which animals were tracked with geolocators
 Should be either single TRUE or FALSE value, or vector with length of
 number of animals tracked, with TRUE for animals in
 \code{targetPoints} with geolocators and FALSE for animals with GPS.}
 
 \item{geoBias}{For GL data, vector of length 2 indicating expected bias
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters).}
+\code{resampleProjection} units (default meters)}
 
 \item{geoVCov}{For GL data, 2x2 matrix with expected variance/covariance
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters).}
+\code{resampleProjection} units (default meters)}
 
 \item{targetSites}{A \code{SpatialPolygons} or \code{SpatialPolygonsDataFrame}
 object indicating valid target location(s).  Not needed unless you want
-to mask out certain areas (e.g. water).}
+to mask out certain areas (e.g. water)}
 
 \item{nBoot}{Number of bootstrap runs. Animals are sampled with replacement for each,
-to estimate sampling uncertainty.}
+to estimate sampling uncertainty}
 
 \item{nSim}{Tuning parameter for GL data. Affects only the speed; 1000 seems
-to work well with our data.  Should be integer > 0.}
+to work well with our data.  Should be integer > 0}
 
 \item{verbose}{0 (default) to 3. 0 prints no output during run. 1 prints
 a line every 100 bootstraps.  2 prints a line every bootstrap.
-3 also prints the number of draws (for tuning nSim for GL data only).}
+3 also prints the number of draws (for tuning nSim for GL data only)}
 
 \item{alpha}{Level for confidence/credible intervals provided.}
 
@@ -60,12 +61,17 @@ a line every 100 bootstraps.  2 prints a line every bootstrap.
 bias/error. This projection needs units = m. Default is Equidistant
 Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
-of \code{targetSites}.}
+of \code{targetSites}}
 
 \item{maxTries}{Maximum number of times to run a single GL bootstrap before
 exiting with an error.  Default is 300.  Set to NULL to never stop.  This
 parameter was added to prevent GL setups where some sample points never
-land on target sites from running indefinitely.}
+land on target sites from running indefinitely}
+
+\item{maintainLegacyOutput}{version 0.4.0 of \code{MigConnectivity}
+updated the structure of the estimates. If you have legacy code that refers
+to elements within a \code{estMigConnectivity} object, you can set this
+to TRUE to also keep the old structure. Defaults to FALSE}
 }
 \value{
 \code{estMantel} returns a list with elements:
@@ -94,7 +100,7 @@ rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  verbose = 1,   # output options
                  nBoot = 100, # This is set low for example
                  resampleProjection = raster::projection(OVENdata$targetSites))
-str(rM1)
+str(rM1, max.level = 2)
 }
 \references{
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
