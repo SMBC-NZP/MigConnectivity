@@ -232,7 +232,8 @@ plot.isoAssign <- function(x,map,...){
 #'   marking the error bar in units of the height (width) of the letter "O".
 #'   Defaults to 0
 #' @param sfrac width of "crossbar" at the end of error bar as a fraction of the
-#'   x plotting region. Defaults to 0
+#'   x plotting region. Defaults to 0, unless range is set to "se", in which
+#'   case it defaults to 0.01.
 #' @param legend leave as FALSE to not print a legend (for psi only). Otherwise
 #'   the position of the legend (one of "bottomright", "bottom", "bottomleft",
 #'   "left", "topleft", "top", "topright", "right", or "center")
@@ -252,7 +253,8 @@ plot.estMigConnectivity <- function(x,
                                     ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
                                     col.range = NULL, pch.range = NULL,
-                                    gap = 0, sfrac = 0,
+                                    gap = 0,
+                                    sfrac = ifelse(range=="se", 0.01, 0),
                                     legend = FALSE, map = FALSE, ...) {
   if (map) {
     warning("Map plotting not yet available")

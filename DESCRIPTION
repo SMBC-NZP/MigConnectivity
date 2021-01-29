@@ -2,9 +2,10 @@ Package: MigConnectivity
 Type: Package
 Title: Estimate Strength of Migratory Connectivity for Migratory Animals
 Version: 0.3.1.9000
-Date: 2021-1-5
+Date: 2021-1-29
 Authors@R: c(
-    person("Jeffrey A.", "Hostetler", email = "jeffrey_hostetler@fws.gov", role = c("cre", "aut")),
+    person("Jeffrey A.", "Hostetler", email = "jeffrey_hostetler@fws.gov", 
+           role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"))
@@ -19,8 +20,9 @@ Description: Calculates and estimates the strength of migratory connectivity
     into regional populations. The package includes functions to estimate MC
     and the more traditional metric of migratory connectivity strength (Mantel
     correlation; rM) incorporating uncertainty from multiple sources of
-    sampling error. Description of the metric can be found in Cohen et al.
-    (2018).
+    sampling error. The function that estimates MC also estimates population 
+    transition probabilities. Description of the metric can be found in Cohen et
+    al. (2018).
 License: GPL (>=3)
 LazyData: true
 Depends:
