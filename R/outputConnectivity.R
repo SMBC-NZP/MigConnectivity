@@ -94,7 +94,7 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #   cat("   point calculation (not considering error):",
     #       format(x$pointCorr, digits = digits), '\n')
   }
-  cat("\nThis is a subset of what's available inside estMigConnectivity outputs.\n")
+  cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estMC"))
     cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
   else
@@ -395,7 +395,7 @@ plot.estMigConnectivity <- function(x,
                    pch = pch.range[as.integer(ests.df$To)],
                    col = col.range[as.integer(ests.df$To)],
                    pt.bg = col.range[as.integer(ests.df$To)],
-                   ylab = ylab, xaxt = "n", xlab = "From", gap = gap,
+                   ylab = ylab, xaxt = "n", xlab = "Origin", gap = gap,
                    sfrac = sfrac, ...)
     axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
          labels = originNames)

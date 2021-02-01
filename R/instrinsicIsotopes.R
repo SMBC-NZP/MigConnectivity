@@ -639,14 +639,15 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
 #' }
 #'
-#' #' @references
+#' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of migratory
+#' connectivity for birds en route to breeding through the Gulf of Mexico.
+#' Ecography 42: 658-669.
 #'
 #' Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
-#' abundance into spatial assignments on continuous surfaces. Ecology and Evolution
-#' 3:11, 3847-3855.
+#' abundance into spatial assignments on continuous surfaces. Ecology and
+#' Evolution 3: 3847-3855.
 #' @export
 #'
 #' @examples

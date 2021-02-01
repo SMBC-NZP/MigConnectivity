@@ -240,7 +240,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 
 #' Distance matrix from position matrix
 #'
-#' @param pos Number of sites by 2 matrix with postions of each site.  If
+#' @param pos Number of sites by 2 matrix with positions of each site.  If
 #'    \code{surface} is 'ellipsoid' or 'sphere', then column 1 should be
 #'    longitude and column 2 should be latitude.  If \code{surface} is 'plane',
 #'    column 1 can be x-position and column 2 y-position.

@@ -53,7 +53,10 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
       stop('Size of psi array must be consistant with distance matrices')
     psiBase <- apply(psi, 2:3, mean)
     psiVCV <- NULL
-    psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- 1:nSamples
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
   }
   pointMC <- ifelse(absAbund,
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
@@ -319,7 +322,7 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
   # Initial values
   jags.inits <- function()list()
   # Parameters to monitor
-  params <- c("m", "r", "p")
+  params <- c("psi", "r")
 
   # Data
   jags.data <- list(recmat = tmat, npop = nOriginSites, #nages = nAges,
@@ -335,14 +338,14 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                       n.burnin = nBurnin, DIC = FALSE,
                       progress.bar = ifelse(verbose==0, 'none', 'text'))
 
-  if (verbose > 0 && nChains > 1) {
+  if (nChains > 1) {
     maxRhat <- max(out$BUGSoutput$summary[, "Rhat"], na.rm = TRUE)
     if (maxRhat < 1.1)
       cat("Successful convergence based on Rhat values (all < 1.1).\n")
     else
       cat("**WARNING** Rhat values indicate convergence failure.\n")
   }
-  psi <- out$BUGSoutput$sims.list$m
+  psi <- out$BUGSoutput$sims.list$psi
   dimnames(psi) <- list(NULL, originNames, targetNames)
   result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
                           originRelAbund = originRelAbund,
@@ -1199,6 +1202,8 @@ estMCisotope <- function(targetDist=NULL,
 #'    data.}
 #'   \item{\code{input}}{List containing the inputs to \code{estMC}, or at least
 #'    the relevant ones, such as sampleSize.}
+#'   \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
+#'    when using direct band/ring reencounter data.}
 #' }
 #' @example inst/examples/estMCExamples.R
 #' @seealso \code{\link{calcMC}}, \code{\link{projections}},

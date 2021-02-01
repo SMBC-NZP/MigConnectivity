@@ -283,6 +283,8 @@ set to TRUE, the list will start with the old structure (\code{sampleMC},
    data.}
   \item{\code{input}}{List containing the inputs to \code{estMC}, or at least
    the relevant ones, such as sampleSize.}
+  \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
+   when using direct band/ring reencounter data.}
 }
 }
 \description{
