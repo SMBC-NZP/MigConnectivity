@@ -6,14 +6,15 @@
 \usage{
 \method{plot}{estMigConnectivity}(
   x,
-  plot.which = ifelse(inherits(x, "estMC"), c("psi", "MC", "rM"), c("rM", "psi", "MC")),
+  plot.which = ifelse(inherits(x, "estMC"), "psi", "rM"),
   point = c("mean", "median", "point"),
   range = c("simpleCI", "bcCI", "se"),
+  xlab = NULL,
   ylab = plot.which,
   originNames = NULL,
   targetNames = NULL,
-  col.range = NULL,
-  pch.range = NULL,
+  col = NULL,
+  pch = NULL,
   gap = 0,
   sfrac = ifelse(range == "se", 0.01, 0),
   legend = FALSE,
@@ -24,32 +25,34 @@
 \arguments{
 \item{x}{an estMigConnectivity object (output of estMC or estMantel)}
 
-\item{plot.which}{which parameter (psi, MC, or rM) to graph. Defaults to psi
-for estMC objects, to rM (Mantel correlation) otherwise}
+\item{plot.which}{which parameter (psi, MC, rM, or r) to graph. Defaults to
+psi for estMC objects, to rM (Mantel correlation) otherwise}
 
 \item{point}{points on graph can represent mean, median, or point estimates
 (not considering error). Defaults to mean, the standard estimate from
-resampling.}
+resampling}
 
 \item{range}{lines / error bars drawn around points can represent simple
 quantile-based confidence intervals (simpleCI), bias-corrected quantile-
 based confidence intervals (bcCI), or +- standard error (se). Defaults to
 simpleCI}
 
+\item{xlab}{label for the x-axis. Defaults to "Origin" for psi, otherwise ""}
+
 \item{ylab}{label for the y-axis. Defaults to the parameter being plotted}
 
 \item{originNames}{names of the origin sites (for plotting psi). If left
 NULL, the function attempts to get these from the estimate}
 
-\item{targetNames}{names of the target sites (for plotting psi). If left
+\item{targetNames}{names of the target sites (for plotting psi or r). If left
 NULL, the function attempts to get these from the estimate}
 
-\item{col.range}{colors to use for labeling transition probabilities for
+\item{col}{colors to use for labeling transition probabilities for
 different target sites. If left NULL, defaults to 1:nTargetSites}
 
-\item{pch.range}{symbols to use for labeling transition probabilities for
+\item{pch}{symbols to use for labeling transition probabilities for
 different target sites. If left NULL, defaults to 21:25, then
-0:(nTargetSites-5)}
+0:([number of target sites]-5)}
 
 \item{gap}{space left between the center of the error bar and the lines
 marking the error bar in units of the height (width) of the letter "O".
@@ -57,10 +60,10 @@ Defaults to 0}
 
 \item{sfrac}{width of "crossbar" at the end of error bar as a fraction of the
 x plotting region. Defaults to 0, unless range is set to "se", in which
-case it defaults to 0.01.}
+case it defaults to 0.01}
 
-\item{legend}{leave as FALSE to not print a legend (for psi only). Otherwise
-the position of the legend (one of "bottomright", "bottom", "bottomleft",
+\item{legend}{leave as FALSE to not print a legend. Otherwise the position
+of the legend (for psi only; one of "bottomright", "bottom", "bottomleft",
 "left", "topleft", "top", "topright", "right", or "center")}
 
 \item{map}{placeholder for eventually allowing users to plot psi estimates

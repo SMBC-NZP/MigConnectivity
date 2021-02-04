@@ -209,33 +209,34 @@ plot.isoAssign <- function(x,map,...){
 #' Basic plot function for estMigConnectivity objects
 #'
 #' @param x an estMigConnectivity object (output of estMC or estMantel)
-#' @param plot.which which parameter (psi, MC, or rM) to graph. Defaults to psi
-#'   for estMC objects, to rM (Mantel correlation) otherwise
+#' @param plot.which which parameter (psi, MC, rM, or r) to graph. Defaults to
+#'   psi for estMC objects, to rM (Mantel correlation) otherwise
 #' @param point points on graph can represent mean, median, or point estimates
 #'   (not considering error). Defaults to mean, the standard estimate from
-#'   resampling.
+#'   resampling
 #' @param range lines / error bars drawn around points can represent simple
 #'   quantile-based confidence intervals (simpleCI), bias-corrected quantile-
 #'   based confidence intervals (bcCI), or +- standard error (se). Defaults to
 #'   simpleCI
+#' @param xlab label for the x-axis. Defaults to "Origin" for psi, otherwise ""
 #' @param ylab label for the y-axis. Defaults to the parameter being plotted
 #' @param originNames names of the origin sites (for plotting psi). If left
 #'   NULL, the function attempts to get these from the estimate
-#' @param targetNames names of the target sites (for plotting psi). If left
+#' @param targetNames names of the target sites (for plotting psi or r). If left
 #'   NULL, the function attempts to get these from the estimate
-#' @param col.range colors to use for labeling transition probabilities for
+#' @param col colors to use for labeling transition probabilities for
 #'   different target sites. If left NULL, defaults to 1:nTargetSites
-#' @param pch.range symbols to use for labeling transition probabilities for
+#' @param pch symbols to use for labeling transition probabilities for
 #'   different target sites. If left NULL, defaults to 21:25, then
-#'   0:(nTargetSites-5)
+#'   0:([number of target sites]-5)
 #' @param gap space left between the center of the error bar and the lines
 #'   marking the error bar in units of the height (width) of the letter "O".
 #'   Defaults to 0
 #' @param sfrac width of "crossbar" at the end of error bar as a fraction of the
 #'   x plotting region. Defaults to 0, unless range is set to "se", in which
-#'   case it defaults to 0.01.
-#' @param legend leave as FALSE to not print a legend (for psi only). Otherwise
-#'   the position of the legend (one of "bottomright", "bottom", "bottomleft",
+#'   case it defaults to 0.01
+#' @param legend leave as FALSE to not print a legend. Otherwise the position
+#'   of the legend (for psi only; one of "bottomright", "bottom", "bottomleft",
 #'   "left", "topleft", "top", "topright", "right", or "center")
 #' @param map placeholder for eventually allowing users to plot psi estimates
 #'   on a map
@@ -246,20 +247,23 @@ plot.isoAssign <- function(x,map,...){
 #' @export
 plot.estMigConnectivity <- function(x,
                                     plot.which = ifelse(inherits(x, "estMC"),
-                                                        c("psi", "MC", "rM"),
-                                                        c("rM", "psi", "MC")),
+                                                        "psi",
+                                                        "rM"),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
-                                    ylab = plot.which,
+                                    xlab = NULL, ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
-                                    col.range = NULL, pch.range = NULL,
+                                    col = NULL, pch = NULL,
                                     gap = 0,
                                     sfrac = ifelse(range=="se", 0.01, 0),
                                     legend = FALSE, map = FALSE, ...) {
   if (map) {
     warning("Map plotting not yet available")
   }
-  plot.which <- match.arg(plot.which)
+  if ((plot.which %in% c("corr", "Mantel")))
+    plot.which <- "rM"
+  if (!(plot.which %in% c("psi", "MC", "rM", "r")))
+    stop("Set plot.which to psi, MC, rM, or r")
   point <- match.arg(point)
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
@@ -380,41 +384,95 @@ plot.estMigConnectivity <- function(x,
                           lower = c(yrange[1,,]),
                           upper = c(yrange[2,,]))
   }
-  if (plot.which=="psi") {
-    if (is.null(col.range)) {
-      col.range <- 1:nTargetSites
-    }
-    if (is.null(pch.range)) {
-      if (nTargetSites > 5)
-        pch.range <- c(21:25, 0:(nTargetSites - 6))
+  else if (plot.which == "r") {
+    if (is.null(targetNames)) {
+      if (is.null(x$input$targetNames)) {
+        if (is.null(dimnames(x$psi$sample)[3])) {
+          targetNames <- 1:dim(x$psi$sample)[3]
+        }
+        else {
+          targetNames <- dimnames(x$psi$sample)[[3]]
+        }
+      }
       else
-        pch.range <- 20 + 1:nTargetSites
+        targetNames <- x$input$targetNames
     }
+    nTargetSites <- length(targetNames)
+    y <- switch(point,
+                mean = x$r$mean,
+                median = x$r$median)
+    yrange <- switch(range,
+                     bcCI = x$r$bcCI,
+                     simpleCI = x$r$simpleCI,
+                     se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                      c(length(y), 2)), c(2, 1)))
+    ests.df <- data.frame(y = y,
+                          To = 1:nTargetSites,
+                          lower = c(yrange[1,]),
+                          upper = c(yrange[2,]))
+  }
+  if (plot.which=="psi") {
+    if (is.null(col)) {
+      col <- 1:nTargetSites
+    }
+    else if (length(col) < nTargetSites)
+      col <- rep_len(col, nTargetSites)
+    if (is.null(pch)) {
+      if (nTargetSites > 5)
+        pch <- c(21:25, 0:(nTargetSites - 6))
+      else
+        pch <- 20 + 1:nTargetSites
+    }
+    else if (length(pch) < nTargetSites)
+      pch <- rep_len(pch, nTargetSites)
+    if (is.null(xlab))
+      xlab <- "Origin"
     gplots::plotCI(ests.df$FromTo, ests.df$y, li = ests.df$lower,
                    ui = ests.df$upper,
-                   pch = pch.range[as.integer(ests.df$To)],
-                   col = col.range[as.integer(ests.df$To)],
-                   pt.bg = col.range[as.integer(ests.df$To)],
-                   ylab = ylab, xaxt = "n", xlab = "Origin", gap = gap,
+                   pch = pch[as.integer(ests.df$To)],
+                   col = col[as.integer(ests.df$To)],
+                   pt.bg = col[as.integer(ests.df$To)],
+                   ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
                    sfrac = sfrac, ...)
     axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
          labels = originNames)
     if (!isFALSE(legend))
-      legend(legend, legend = targetNames, col = col.range, pch = pch.range,
-             pt.bg = col.range)
+      legend(legend, legend = targetNames, col = col, pch = pch,
+             pt.bg = col)
+  }
+  else if (plot.which=="r") {
+    if (is.null(col)) {
+      col <- "black"
+    }
+    if (is.null(pch)) {
+      pch <- 20
+    }
+    if (is.null(xlab))
+      xlab <- "Target"
+    gplots::plotCI(ests.df$To, ests.df$y, li = ests.df$lower,
+                   ui = ests.df$upper,
+                   pch = pch,
+                   col = col,
+                   pt.bg = col,
+                   ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
+                   sfrac = sfrac, ...)
+    axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
+         labels = targetNames)
   }
   else {
-    if (is.null(col.range)) {
-      col.range <- "black"
+    if (is.null(col)) {
+      col <- "black"
     }
-    if (is.null(pch.range)) {
-      pch.range <- 20
+    if (is.null(pch)) {
+      pch <- 20
     }
+    if (is.null(xlab))
+      xlab <- ""
     gplots::plotCI(0, ests.df$y, li = ests.df$lower,
                    ui = ests.df$upper,
-                   pch = pch.range[1],
-                   col = col.range[1], gap = gap, sfrac = sfrac,
-                   ylab = ylab, xaxt = "n", xlab = "", ...)
+                   pch = pch[1],
+                   col = col[1], gap = gap, sfrac = sfrac,
+                   ylab = ylab, xaxt = "n", xlab = xlab, ...)
   }
 }
 

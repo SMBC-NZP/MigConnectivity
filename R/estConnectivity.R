@@ -369,7 +369,9 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                             na.rm=TRUE, type = 8, names = F)
   }
 
-
+  colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
+    names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
+    targetNames
   result$r <- list(sample = out$BUGSoutput$sims.list$r,
                    mean = out$BUGSoutput$mean$r,
                    se = out$BUGSoutput$sd$r,
