@@ -224,8 +224,10 @@ plot.isoAssign <- function(x,map,...){
 #'   NULL, the function attempts to get these from the estimate
 #' @param targetNames names of the target sites (for plotting psi or r). If left
 #'   NULL, the function attempts to get these from the estimate
+#' @param ageNames names of the age classes (for plotting r with more than one
+#'   age). If left NULL, the function uses 1:[number of ages]
 #' @param col colors to use for labeling transition probabilities for
-#'   different target sites. If left NULL, defaults to 1:nTargetSites
+#'   different target sites. If left NULL, defaults to 1:[number of target sites]
 #' @param pch symbols to use for labeling transition probabilities for
 #'   different target sites. If left NULL, defaults to 21:25, then
 #'   0:([number of target sites]-5)
@@ -236,8 +238,9 @@ plot.isoAssign <- function(x,map,...){
 #'   x plotting region. Defaults to 0, unless range is set to "se", in which
 #'   case it defaults to 0.01
 #' @param legend leave as FALSE to not print a legend. Otherwise the position
-#'   of the legend (for psi only; one of "bottomright", "bottom", "bottomleft",
-#'   "left", "topleft", "top", "topright", "right", or "center")
+#'   of the legend (for psi or r (multi-age) only; one of "bottomright",
+#'   "bottom", "bottomleft", "left", "topleft", "top", "topright", "right", or
+#'   "center")
 #' @param map placeholder for eventually allowing users to plot psi estimates
 #'   on a map
 #' @param ... Additional parameters passed to \code{\link{plotCI}}
@@ -253,6 +256,7 @@ plot.estMigConnectivity <- function(x,
                                     range = c("simpleCI", "bcCI", "se"),
                                     xlab = NULL, ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
+                                    ageNames = NULL,
                                     col = NULL, pch = NULL,
                                     gap = 0,
                                     sfrac = ifelse(range=="se", 0.01, 0),
@@ -401,15 +405,36 @@ plot.estMigConnectivity <- function(x,
     y <- switch(point,
                 mean = x$r$mean,
                 median = x$r$median)
-    yrange <- switch(range,
-                     bcCI = x$r$bcCI,
-                     simpleCI = x$r$simpleCI,
-                     se = aperm(array(c(y - x$r$se, y + x$r$se),
-                                      c(length(y), 2)), c(2, 1)))
-    ests.df <- data.frame(y = y,
-                          To = 1:nTargetSites,
-                          lower = c(yrange[1,]),
-                          upper = c(yrange[2,]))
+    if (length(dim(y)) < 2){
+      nAges <- 1
+      yrange <- switch(range,
+                       bcCI = x$r$bcCI,
+                       simpleCI = x$r$simpleCI,
+                       se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                        c(length(y), 2)), c(2, 1)))
+      ests.df <- data.frame(y = c(y),
+                            To = 1:nTargetSites,
+                            lower = c(yrange[1,]),
+                            upper = c(yrange[2,]))
+    }
+    else{
+      nAges <- dim(y)[1]
+      if (is.null(ageNames))
+        ageNames <- 1:nAges
+      yrange <- switch(range,
+                       bcCI = x$r$bcCI,
+                       simpleCI = x$r$simpleCI,
+                       se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            Age = rep(1:nAges, nTargetSites),
+                            To = rep(1:nTargetSites, each = nAges),
+                            AgeTo = rep(1:nAges, nTargetSites) +
+                              rep(1:nTargetSites, each = nAges) /
+                              (nTargetSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+    }
   }
   if (plot.which=="psi") {
     if (is.null(col)) {
@@ -441,23 +466,53 @@ plot.estMigConnectivity <- function(x,
              pt.bg = col)
   }
   else if (plot.which=="r") {
-    if (is.null(col)) {
-      col <- "black"
+    if (nAges == 1) {
+      if (is.null(col)) {
+        col <- "black"
+      }
+      if (is.null(pch)) {
+        pch <- 20
+      }
+      if (is.null(xlab))
+        xlab <- "Target"
+      gplots::plotCI(ests.df$To, ests.df$y, li = ests.df$lower,
+                     ui = ests.df$upper,
+                     pch = pch,
+                     col = col,
+                     pt.bg = col,
+                     ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
+                     sfrac = sfrac, ...)
+      axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
+           labels = targetNames)
     }
-    if (is.null(pch)) {
-      pch <- 20
+    else {
+      if (is.null(col)) {
+        col <- 1:nTargetSites
+      }
+      else if (length(col) < nTargetSites)
+        col <- rep_len(col, nTargetSites)
+      if (is.null(pch)) {
+        if (nTargetSites > 5)
+          pch <- c(21:25, 0:(nTargetSites - 6))
+        else
+          pch <- 20 + 1:nTargetSites
+      }
+      else if (length(pch) < nTargetSites)
+        pch <- rep_len(pch, nTargetSites)
+      if (is.null(xlab))
+        xlab <- "Age"
+      gplots::plotCI(ests.df$AgeTo, ests.df$y, li = ests.df$lower,
+                     ui = ests.df$upper,
+                     pch = pch[as.integer(ests.df$To)],
+                     col = col[as.integer(ests.df$To)],
+                     pt.bg = col[as.integer(ests.df$To)],
+                     ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
+                     sfrac = sfrac, ...)
+      axis(1, at = 1:nAges, labels = ageNames)
+      if (!isFALSE(legend))
+        legend(legend, legend = targetNames, col = col, pch = pch,
+               pt.bg = col)
     }
-    if (is.null(xlab))
-      xlab <- "Target"
-    gplots::plotCI(ests.df$To, ests.df$y, li = ests.df$lower,
-                   ui = ests.df$upper,
-                   pch = pch,
-                   col = col,
-                   pt.bg = col,
-                   ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
-                   sfrac = sfrac, ...)
-    axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
-         labels = targetNames)
   }
   else {
     if (is.null(col)) {

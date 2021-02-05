@@ -188,12 +188,21 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
 str(GPS_mc, max.level = 2)
 str(Combined, max.level = 2)
 str(GL_mc, max.level = 2)
-print(Combined)
-install.packages(c('RColorBrewer'))
-plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top")
+if (length(find.package("RColorBrewer", quiet = T))==0)
+  install.packages(c('RColorBrewer'))
+plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
+     main = "Ovenbird GL and GPS")
 
-
-
+Combo <- estMC(targetDist = OVENdata$targetDist, # targetSites distance matrix
+               originDist = OVENdata$originDist, # originSites distance matrix
+               targetSites = OVENdata$targetSites, # Non-breeding target sites
+               originSites = OVENdata$originSites, # Breeding origin sites
+               psi = Combined$psi$sample,
+               originRelAbund = OVENdata$originRelAbund,
+               nSamples = nSamplesGLGPS * 2,
+               sampleSize = length(OVENdata$targetPoints))
+Combo
+Combined
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
 library(sp)
 getCSV <- function(filename) {

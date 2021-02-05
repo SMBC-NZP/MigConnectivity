@@ -3,7 +3,7 @@ model{
 for (i in 1:npop){
   for (j in 1:nages) {
     for(k in 1:ndest){
-      p[i, j, k] <- m[i, k] * r[j, k]
+      p[i, j, k] <- psi[i, k] * r[j, k]
     }
     p[i, j, (ndest+1)] <- 1 - sum(p[i, j, 1:ndest])
   }
@@ -26,7 +26,7 @@ for (j in 1:nages) {
 for(i in 1:npop){
   for(k in 1:ndest){
     m0[i, k] ~ dbeta(1, 1)
-    m[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+    psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
   } #k
 }#i
 }

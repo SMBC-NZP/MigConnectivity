@@ -13,6 +13,7 @@
   ylab = plot.which,
   originNames = NULL,
   targetNames = NULL,
+  ageNames = NULL,
   col = NULL,
   pch = NULL,
   gap = 0,
@@ -47,8 +48,11 @@ NULL, the function attempts to get these from the estimate}
 \item{targetNames}{names of the target sites (for plotting psi or r). If left
 NULL, the function attempts to get these from the estimate}
 
+\item{ageNames}{names of the age classes (for plotting r with more than one
+age). If left NULL, the function uses 1:[number of ages]}
+
 \item{col}{colors to use for labeling transition probabilities for
-different target sites. If left NULL, defaults to 1:nTargetSites}
+different target sites. If left NULL, defaults to 1:[number of target sites]}
 
 \item{pch}{symbols to use for labeling transition probabilities for
 different target sites. If left NULL, defaults to 21:25, then
@@ -63,8 +67,9 @@ x plotting region. Defaults to 0, unless range is set to "se", in which
 case it defaults to 0.01}
 
 \item{legend}{leave as FALSE to not print a legend. Otherwise the position
-of the legend (for psi only; one of "bottomright", "bottom", "bottomleft",
-"left", "topleft", "top", "topright", "right", or "center")}
+of the legend (for psi or r (multi-age) only; one of "bottomright",
+"bottom", "bottomleft", "left", "topleft", "top", "topright", "right", or
+"center")}
 
 \item{map}{placeholder for eventually allowing users to plot psi estimates
 on a map}

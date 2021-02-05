@@ -43,162 +43,164 @@ estMC(
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B
-matrix.}
+matrix}
 
 \item{targetDist}{Distances between the W target sites.  Symmetric W by W
-matrix.  Optional for intrinsic data.}
+matrix.  Optional for intrinsic data}
 
 \item{originRelAbund}{Relative abundance estimates at B origin sites. Either
 a numeric vector of length B that sums to 1 or an mcmc object with
 \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
-data.}
+data}
 
 \item{psi}{Transition probabilities between B origin and W target sites.
 Either a matrix with B rows and W columns where rows sum to 1, an array with
 dimensions x, B, and W (with x samples of the transition probability matrix
 from another model), or a MARK object with estimates of transition
 probabilities.  If you are estimating MC from GPS, geolocator, or intrinsic
-data, leave this as NULL.}
+data, leave this as NULL}
 
 \item{sampleSize}{Total sample size of animals that psi will be estimated
 from. Should be the number of animals released in one of the origin sites
 and observed in one of the target sites.  Optional, but recommended, unless
 you are estimating MC from GPS, geolocator, intrinsic, or direct band return
-data (in which case the function can calculate it for you).}
+data (in which case the function can calculate it for you)}
 
 \item{originSites}{If \code{psi} is a MARK object, this must be a numeric
 vector indicating which sites are origin.  If using GPS, geolocator, or
 intrinsic data, this can be the geographic definition of sites in the
-release season.}
+release season}
 
 \item{targetSites}{If \code{psi} is a MARK object, this must be a numeric
 vector indicating which sites are target.  If using GPS, geolocator, or
 intrinsic data, this must be the geographic definition of sites in the
 non-release season.  Optional for intrinsic data; if left out, the function
-will use the \code{targetSites} defined in \code{targetIntrinsic}.}
+will use the \code{targetSites} defined in \code{targetIntrinsic}}
 
 \item{originPoints}{A \code{SpatialPoints} object, with length number of
-animals tracked.  Each point indicates the release location of an animal.}
+animals tracked.  Each point indicates the release location of an animal}
 
 \item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} object, with
 length number ofanimals tracked.  Each point indicates the point estimate
-location in the non-release season.}
+location in the non-release season}
 
 \item{originAssignment}{Assignment of \code{originPoints} to release season
 sites. Integer vector with length number of animals tracked. Optional,
 but if using GL or GPS data, either \code{originAssignment} or
-\code{originSites} and \code{originPoints} should be defined.}
+\code{originSites} and \code{originPoints} should be defined}
 
 \item{targetAssignment}{Optional. Point estimate assignment of
 \code{targetPoints} to non-release season sites. Integer vector with
-length number of animals tracked.}
+length number of animals tracked}
 
-\item{originNames}{Optional. Vector of names for the release season sites.}
+\item{originNames}{Optional. Vector of names for the release season sites}
 
 \item{targetNames}{Optional. Vector of names for the non-release season
-sites.}
+sites}
 
 \item{nSamples}{Number of times to resample \code{psi} and/or
 \code{originRelAbund} OR number of post-burn-in MCMC samples to store (band
 data) OR number of times to resample \code{targetPoints}
 for intrinsic data OR number of bootstrap runs for GL or GPS data. In
 the last two cases, animals are sampled with replacement for each. For all,
-the purpose is to estimate sampling uncertainty.}
+the purpose is to estimate sampling uncertainty}
 
 \item{nSim}{Tuning parameter for GL or intrinsic data. Affects only the
 speed; 1000 seems to work well with our GL data and 10 for our intrinsic
-data, but your results may vary.  Should be integer > 0.}
+data, but your results may vary.  Should be integer > 0}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators.
 Should be either single TRUE or FALSE value, or vector with length of
 number of animals tracked, with TRUE for animals in
-\code{targetPoints} with geolocators and FALSE for animals with GPS.}
+\code{targetPoints} with geolocators and FALSE for animals with GPS}
 
 \item{geoBias}{For GL data, vector of length 2 indicating expected bias
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters).}
+\code{resampleProjection} units (default meters)}
 
 \item{geoVCov}{For GL data, 2x2 matrix with expected variance/covariance
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters).}
+\code{resampleProjection} units (default meters)}
 
 \item{row0}{If \code{originRelAbund} is an mcmc object, this can be set
 to 0 (default) or any greater integer to specify where to stop ignoring
-samples ("burn-in").}
+samples ("burn-in")}
 
 \item{verbose}{0 (default) to 3. 0 prints no output during run. 1 prints
 a line every 100 samples or bootstraps and a summary every 10.  2 prints a
 line and summary every sample or bootstrap. 3 also prints the number of
-draws (for tuning nSim for GL/intrinsic data only).}
+draws (for tuning nSim for GL/intrinsic data only)}
 
 \item{calcCorr}{In addition to MC, should function also estimate Mantel
 correlation between release and non-release locations (GPS or GL data
-only)?  Default is FALSE.}
+only)?  Default is FALSE}
 
-\item{alpha}{Level for confidence/credible intervals provided.}
+\item{alpha}{Level for confidence/credible intervals provided}
 
 \item{approxSigTest}{Should function compute approximate one-sided
 significance tests (p-values) for MC from the bootstrap?  Default is
-FALSE.}
+FALSE}
 
 \item{sigConst}{Value to compare MC to in significance test.
-Default is 0.}
+Default is 0}
 
 \item{resampleProjection}{Projection when sampling from geolocator
 bias/error. This projection needs units = m. Default is Equidistant
 Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
-of \code{targetSites}.  Ignored unless data are geolocator or GPS.}
+of \code{targetSites}.  Ignored unless data are geolocator or GPS}
 
 \item{maxTries}{Maximum number of times to run a single GL/intrinsic
 bootstrap before exiting with an error.  Default is 300.  Set to NULL to
 never stop.  This parameter was added to prevent GL setups where some
-sample points never land on target sites from running indefinitely.}
+sample points never land on target sites from running indefinitely}
 
 \item{targetIntrinsic}{For intrinsic tracking data, the results of
-\code{isoAssign} or a similar function, of class \code{intrinsicAssign}.}
+\code{isoAssign} or a similar function, of class \code{intrinsicAssign}}
 
 \item{isIntrinsic}{Logical indicating whether the animals are tracked via
 intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 connectivity for all intrinsically marked animals or all extrinsic (e.g.,
-bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.}
+bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE}
 
-\item{nReleased}{For band return data, a vector of the number of released
-animals from each origin site (including those never reencountered in a
-target site).}
+\item{nReleased}{For band return data, a vector or matrix of the number of
+released animals from each origin site (including those never reencountered
+in a target site). If a matrix, the second dimension is taken as the number
+of age classes of released animals; the model estimates reencounter
+probability by age class but assumes transition probabilities are the same}
 
-\item{reencountered}{For band return data, a matrix with B rows and W
-columns. Number of animals reencountered on each target site by origin site
-they came from.}
+\item{reencountered}{For band return data, either a matrix with B rows and W
+columns or a B x [number of ages] x W array. Number of animals reencountered
+on each target site (by age class banded as) by origin site they came from}
 
 \item{nBurnin}{For band return data, \code{estMC} runs a \code{JAGS}
 multinomial non-Markovian model, for which it needs the number of burn-in
-samples before beginning to store results. Default 5000.}
+samples before beginning to store results. Default 5000}
 
 \item{nChains}{For band return data, \code{estMC} runs a \code{JAGS}
 multinomial non-Markovian model, for which it needs the number of MCMC
-chains (to test for convergence). Default 3.}
+chains (to test for convergence). Default 3}
 
 \item{nThin}{For band return data, \code{estMC} runs a \code{JAGS}
 multinomial non-Markovian model, for which it needs the thinning rate.
-Default 1.}
+Default 1}
 
 \item{maintainLegacyOutput}{version 0.4.0 of \code{MigConnectivity}
 updated the structure of the estimates. If you have legacy code that refers
 to elements within a \code{estMigConnectivity} object, you can set this
-to TRUE to also keep the old structure. Defaults to FALSE.}
+to TRUE to also keep the old structure. Defaults to FALSE}
 }
 \value{
 NOTE: Starting with version 0.4.0 of \code{MigConnectivity}, we've
 updated the structure of \code{MigConnectivityEstimate} objects. Below we
 describe the updated structure. If parameter \code{maintainLegacyOutput} is
-set to TRUE, the list will start with the old structure (\code{sampleMC},
+set to TRUE, the list will start with the old structure: \code{sampleMC},
 \code{samplePsi}, \code{pointPsi}, \code{pointMC}, \code{meanMC},
 \code{medianMC}, \code{seMC}, \code{simpleCI}, \code{bcCI}, \code{hpdCI},
 \code{simpleP}, \code{bcP}, \code{sampleCorr}, \code{pointCorr},
 \code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr},
-\code{inputSampleSize}, \code{alpha}, and \code{sigConst}).
+\code{inputSampleSize}, \code{alpha}, and \code{sigConst}.
 
 \code{estMC} returns a list with the elements:
 \describe{
@@ -485,12 +487,21 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
 str(GPS_mc, max.level = 2)
 str(Combined, max.level = 2)
 str(GL_mc, max.level = 2)
-print(Combined)
-install.packages(c('RColorBrewer'))
-plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top")
+if (length(find.package("RColorBrewer", quiet = T))==0)
+  install.packages(c('RColorBrewer'))
+plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
+     main = "Ovenbird GL and GPS")
 
-
-
+Combo <- estMC(targetDist = OVENdata$targetDist, # targetSites distance matrix
+               originDist = OVENdata$originDist, # originSites distance matrix
+               targetSites = OVENdata$targetSites, # Non-breeding target sites
+               originSites = OVENdata$originSites, # Breeding origin sites
+               psi = Combined$psi$sample,
+               originRelAbund = OVENdata$originRelAbund,
+               nSamples = nSamplesGLGPS * 2,
+               sampleSize = length(OVENdata$targetPoints))
+Combo
+Combined
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
 library(sp)
 getCSV <- function(filename) {

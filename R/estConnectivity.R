@@ -310,29 +310,52 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
   nOriginSites <- dim(originDist)[2]
   if (length(originRelAbund)!=nOriginSites)
     stop('Number of origin sites must be constant between distance matrix and abundance')
-  if (length(nReleased)!=nOriginSites)
-    stop('Number of origin sites must be constant between distance matrix and nReleased')
-  if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[2]!=nTargetSites)
-    stop('Number of sites must be constant between distance matrices and reencountered')
-  nfound <- apply(reencountered, 1, sum)
-  if (is.null(sampleSize))
-    sampleSize <- sum(nfound)
-  tmat <- cbind(reencountered, nReleased - nfound)
-  nAges <- 1
+  if (length(dim(nReleased))< 2) {
+    nAges <- 1
+    if (length(nReleased)!=nOriginSites)
+      stop('Number of origin sites must be constant between distance matrix and nReleased')
+    if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[2]!=nTargetSites)
+      stop('Number of sites must be constant between distance matrices and reencountered')
+    nfound <- apply(reencountered, 1, sum)
+    if (is.null(sampleSize))
+      sampleSize <- sum(nfound)
+    tmat <- cbind(reencountered, nReleased - nfound)
+    # Data
+    jags.data <- list(recmat = tmat, npop = nOriginSites,
+                      ndest = nTargetSites, nreleased = nReleased)
+  }
+  else {
+    nAges <- dim(nReleased)[2]
+    if (dim(nReleased)[1]!=nOriginSites)
+      stop('Number of origin sites must be consistant between distance matrix and nReleased')
+    if (dim(reencountered)[2]!=nAges)
+      stop('Number of ages must be consistant between nReleased and reencountered')
+    if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[3]!=nTargetSites)
+      stop('Number of sites must be consistant between distance matrices and reencountered')
+    nfound <- apply(reencountered, 1:2, sum)
+    if (is.null(sampleSize))
+      sampleSize <- sum(nfound)
+    tmat <- array(NA, c(nOriginSites, nAges, nTargetSites + 1))
+    tmat[ , , 1:nTargetSites] <- reencountered
+    tmat[ , , 1 + nTargetSites] <- nReleased - nfound
+    # Data
+    jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
+                      ndest = nTargetSites, nreleased = nReleased)
+  }
   # Initial values
   jags.inits <- function()list()
   # Parameters to monitor
   params <- c("psi", "r")
-
-  # Data
-  jags.data <- list(recmat = tmat, npop = nOriginSites, #nages = nAges,
-                    ndest = nTargetSites, nreleased = nReleased)
-
-
+  print(paste0(find.package('MigConnectivity'),
+               ifelse(nAges == 1,
+                      "/JAGS/multinomial_banding_1age.txt",
+                      "/JAGS/multinomial_banding.txt")))
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
                       #"inst/JAGS/multinomial_banding_1age.txt",
                       paste0(find.package('MigConnectivity'),
-                             "/JAGS/multinomial_banding_1age.txt"),
+                             ifelse(nAges == 1,
+                                    "/JAGS/multinomial_banding_1age.txt",
+                                    "/JAGS/multinomial_banding.txt")),
                       n.chains = nChains, n.thin = nThin,
                       n.iter = nBurnin + ceiling(nBoot * nThin / nChains),
                       n.burnin = nBurnin, DIC = FALSE,
@@ -357,27 +380,51 @@ estMCmultiJAGS <- function (originDist, targetDist, originRelAbund, nReleased,
                           nThin = nThin, nBurnin = nBurnin, nChains = nChains,
                           originNames = originNames, targetNames = targetNames,
                           maintainLegacyOutput = maintainLegacyOutput)
+  if (nAges == 1) {
+    bcCIr <- array(NA, dim = c(2, nTargetSites),
+                   dimnames = list(NULL, targetNames))
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
+                            out$BUGSoutput$mean$r[j], na.rm = T) /
+                        length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
+      bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
+                              pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                              na.rm=TRUE, type = 8, names = F)
+    }
 
-  bcCIr <- array(NA, dim = c(2, nTargetSites),
-                 dimnames = list(NULL, targetNames))
-  for (j in 1:nTargetSites) {
-    psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
-                          out$BUGSoutput$mean$r[j], na.rm = T) /
-                      length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
-    bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
-                            pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                            na.rm=TRUE, type = 8, names = F)
+    colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
+      names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
+      targetNames
+    result$r <- list(sample = out$BUGSoutput$sims.list$r,
+                     mean = out$BUGSoutput$mean$r,
+                     se = out$BUGSoutput$sd$r,
+                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
+                                      probs = c(alpha/2, 1-alpha/2), type = 8),
+                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
   }
-
-  colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
-    names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
-    targetNames
-  result$r <- list(sample = out$BUGSoutput$sims.list$r,
-                   mean = out$BUGSoutput$mean$r,
-                   se = out$BUGSoutput$sd$r,
-                   simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
-                                    probs = c(alpha/2, 1-alpha/2), type = 8),
-                   bcCI = bcCIr, median = out$BUGSoutput$median$r)
+  else {
+    bcCIr <- array(NA, dim = c(2, nAges, nTargetSites),
+                   dimnames = list(NULL, NULL, targetNames))
+    for (i in 1:nAges) {
+      for (j in 1:nTargetSites) {
+        psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ , i, j] <
+                            out$BUGSoutput$mean$r[i, j], na.rm = T) /
+                        length(which(!is.na(out$BUGSoutput$sims.list$r[,i,j]))))
+        bcCIr[,i,j] <- quantile(out$BUGSoutput$sims.list$r[ , i, j],
+                                pnorm(2 * psi.z0 + qnorm(c(alpha/2,1-alpha/2))),
+                                na.rm=TRUE, type = 8, names = F)
+      }
+    }
+    dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
+      colnames(out$BUGSoutput$sd$r) <- colnames(out$BUGSoutput$median$r) <-
+      targetNames
+    result$r <- list(sample = out$BUGSoutput$sims.list$r,
+                     mean = out$BUGSoutput$mean$r,
+                     se = out$BUGSoutput$sd$r,
+                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2:3, quantile,
+                                      probs = c(alpha/2, 1-alpha/2), type = 8),
+                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
+  }
   result$BUGSoutput <- out$BUGSoutput
   return(result)
 }
@@ -998,128 +1045,130 @@ estMCisotope <- function(targetDist=NULL,
 #' data OR intrinsic markers such as isotopes OR band/ring reencounter data.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
-#'  matrix.
+#'  matrix
 #' @param targetDist Distances between the W target sites.  Symmetric W by W
-#'  matrix.  Optional for intrinsic data.
+#'  matrix.  Optional for intrinsic data
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
 #'  a numeric vector of length B that sums to 1 or an mcmc object with
 #'  \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 #'  Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
-#'  data.
+#'  data
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1, an array with
 #'  dimensions x, B, and W (with x samples of the transition probability matrix
 #'  from another model), or a MARK object with estimates of transition
 #'  probabilities.  If you are estimating MC from GPS, geolocator, or intrinsic
-#'  data, leave this as NULL.
+#'  data, leave this as NULL
 #' @param sampleSize Total sample size of animals that psi will be estimated
 #'  from. Should be the number of animals released in one of the origin sites
 #'  and observed in one of the target sites.  Optional, but recommended, unless
 #'  you are estimating MC from GPS, geolocator, intrinsic, or direct band return
-#'  data (in which case the function can calculate it for you).
+#'  data (in which case the function can calculate it for you)
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are origin.  If using GPS, geolocator, or
 #'  intrinsic data, this can be the geographic definition of sites in the
-#'  release season.
+#'  release season
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are target.  If using GPS, geolocator, or
 #'  intrinsic data, this must be the geographic definition of sites in the
 #'  non-release season.  Optional for intrinsic data; if left out, the function
-#'  will use the \code{targetSites} defined in \code{targetIntrinsic}.
+#'  will use the \code{targetSites} defined in \code{targetIntrinsic}
 #' @param originPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the release location of an animal.
+#'    animals tracked.  Each point indicates the release location of an animal
 #' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
 #'    length number ofanimals tracked.  Each point indicates the point estimate
-#'    location in the non-release season.
+#'    location in the non-release season
 #' @param originAssignment Assignment of \code{originPoints} to release season
 #'    sites. Integer vector with length number of animals tracked. Optional,
 #'    but if using GL or GPS data, either \code{originAssignment} or
-#'    \code{originSites} and \code{originPoints} should be defined.
+#'    \code{originSites} and \code{originPoints} should be defined
 #' @param targetAssignment Optional. Point estimate assignment of
 #'    \code{targetPoints} to non-release season sites. Integer vector with
-#'    length number of animals tracked.
-#' @param originNames Optional. Vector of names for the release season sites.
+#'    length number of animals tracked
+#' @param originNames Optional. Vector of names for the release season sites
 #' @param targetNames Optional. Vector of names for the non-release season
-#'    sites.
+#'    sites
 #' @param nSamples Number of times to resample \code{psi} and/or
 #'  \code{originRelAbund} OR number of post-burn-in MCMC samples to store (band
 #'  data) OR number of times to resample \code{targetPoints}
 #'  for intrinsic data OR number of bootstrap runs for GL or GPS data. In
 #'  the last two cases, animals are sampled with replacement for each. For all,
-#'  the purpose is to estimate sampling uncertainty.
+#'  the purpose is to estimate sampling uncertainty
 #' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
 #'    speed; 1000 seems to work well with our GL data and 10 for our intrinsic
-#'    data, but your results may vary.  Should be integer > 0.
+#'    data, but your results may vary.  Should be integer > 0
 #' @param isGL Indicates whether or which animals were tracked with geolocators.
 #'    Should be either single TRUE or FALSE value, or vector with length of
 #'    number of animals tracked, with TRUE for animals in
-#'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
+#'    \code{targetPoints} with geolocators and FALSE for animals with GPS
 #' @param geoBias For GL data, vector of length 2 indicating expected bias
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
+#'    \code{resampleProjection} units (default meters)
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
+#'    \code{resampleProjection} units (default meters)
 #' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
 #'  to 0 (default) or any greater integer to specify where to stop ignoring
-#'  samples ("burn-in").
+#'  samples ("burn-in")
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
 #'  a line every 100 samples or bootstraps and a summary every 10.  2 prints a
 #'  line and summary every sample or bootstrap. 3 also prints the number of
-#'  draws (for tuning nSim for GL/intrinsic data only).
+#'  draws (for tuning nSim for GL/intrinsic data only)
 #' @param calcCorr In addition to MC, should function also estimate Mantel
 #'    correlation between release and non-release locations (GPS or GL data
-#'    only)?  Default is FALSE.
-#' @param alpha Level for confidence/credible intervals provided.
+#'    only)?  Default is FALSE
+#' @param alpha Level for confidence/credible intervals provided
 #' @param approxSigTest Should function compute approximate one-sided
 #'    significance tests (p-values) for MC from the bootstrap?  Default is
-#'    FALSE.
+#'    FALSE
 #' @param sigConst Value to compare MC to in significance test.
-#'    Default is 0.
+#'    Default is 0
 #' @param resampleProjection Projection when sampling from geolocator
 #'    bias/error. This projection needs units = m. Default is Equidistant
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
-#'    of \code{targetSites}.  Ignored unless data are geolocator or GPS.
+#'    of \code{targetSites}.  Ignored unless data are geolocator or GPS
 #' @param maxTries Maximum number of times to run a single GL/intrinsic
 #'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
 #'    never stop.  This parameter was added to prevent GL setups where some
-#'    sample points never land on target sites from running indefinitely.
+#'    sample points never land on target sites from running indefinitely
 #' @param targetIntrinsic For intrinsic tracking data, the results of
-#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}.
+#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}
 #' @param isIntrinsic Logical indicating whether the animals are tracked via
 #'  intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 #'  connectivity for all intrinsically marked animals or all extrinsic (e.g.,
-#'  bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.
-#' @param nReleased For band return data, a vector of the number of released
-#'  animals from each origin site (including those never reencountered in a
-#'  target site).
-#' @param reencountered For band return data, a matrix with B rows and W
-#'  columns. Number of animals reencountered on each target site by origin site
-#'  they came from.
+#'  bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE
+#' @param nReleased For band return data, a vector or matrix of the number of
+#'  released animals from each origin site (including those never reencountered
+#'  in a target site). If a matrix, the second dimension is taken as the number
+#'  of age classes of released animals; the model estimates reencounter
+#'  probability by age class but assumes transition probabilities are the same
+#' @param reencountered For band return data, either a matrix with B rows and W
+#'  columns or a B x [number of ages] x W array. Number of animals reencountered
+#'  on each target site (by age class banded as) by origin site they came from
 #' @param nBurnin For band return data, \code{estMC} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the number of burn-in
-#'  samples before beginning to store results. Default 5000.
+#'  samples before beginning to store results. Default 5000
 #' @param nChains For band return data, \code{estMC} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the number of MCMC
-#'  chains (to test for convergence). Default 3.
+#'  chains (to test for convergence). Default 3
 #' @param nThin For band return data, \code{estMC} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the thinning rate.
-#'  Default 1.
+#'  Default 1
 #' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
 #'  updated the structure of the estimates. If you have legacy code that refers
 #'  to elements within a \code{estMigConnectivity} object, you can set this
-#'  to TRUE to also keep the old structure. Defaults to FALSE.
+#'  to TRUE to also keep the old structure. Defaults to FALSE
 #'
 #' @return NOTE: Starting with version 0.4.0 of \code{MigConnectivity}, we've
 #' updated the structure of \code{MigConnectivityEstimate} objects. Below we
 #' describe the updated structure. If parameter \code{maintainLegacyOutput} is
-#' set to TRUE, the list will start with the old structure (\code{sampleMC},
+#' set to TRUE, the list will start with the old structure: \code{sampleMC},
 #' \code{samplePsi}, \code{pointPsi}, \code{pointMC}, \code{meanMC},
 #' \code{medianMC}, \code{seMC}, \code{simpleCI}, \code{bcCI}, \code{hpdCI},
 #' \code{simpleP}, \code{bcP}, \code{sampleCorr}, \code{pointCorr},
 #' \code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr},
-#' \code{inputSampleSize}, \code{alpha}, and \code{sigConst}).
+#' \code{inputSampleSize}, \code{alpha}, and \code{sigConst}.
 #'
 #' \code{estMC} returns a list with the elements:
 #' \describe{
