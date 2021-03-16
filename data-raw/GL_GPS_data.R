@@ -20,15 +20,49 @@ library(maptools)
 library(shape)
 library(ade4)
 
+
 ###################################################################
 #
 # geoVcov & geoBias
 #
 ###################################################################
 
-WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
-EquidistConic <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+# WGS84<-"+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+# Lambert<-"+proj=aea +lat_1=20 +lat_2=60 +lat_0=40 +lon_0=-96 +x_0=0 +y_0=0 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+# EquidistConic <- "+proj=eqc +lat_ts=0 +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +a=6371007 +b=6371007 +units=m +no_defs"
+
+WGS84 <- "+init=epsg:4326"
+Lambert <- 'PROJCS["North_America_Albers_Equal_Area_Conic",
+            GEOGCS["GCS_North_American_1983",
+            DATUM["North_American_Datum_1983",
+            SPHEROID["GRS_1980",6378137,298.257222101]],
+            PRIMEM["Greenwich",0],
+            UNIT["Degree",0.017453292519943295]],
+            PROJECTION["Albers_Conic_Equal_Area"],
+            PARAMETER["False_Easting",0],
+            PARAMETER["False_Northing",0],
+            PARAMETER["longitude_of_center",-96],
+            PARAMETER["Standard_Parallel_1",20],
+            PARAMETER["Standard_Parallel_2",60],
+            PARAMETER["latitude_of_center",40],
+            UNIT["Meter",1],
+            AUTHORITY["EPSG","102008"]]'
+
+EquidistConic <- 'PROJCS["North_America_Equidistant_Conic",
+                  GEOGCS["GCS_North_American_1983",
+				  DATUM["North_American_Datum_1983",
+				  SPHEROID["GRS_1980",6378137,298.257222101]],
+				  PRIMEM["Greenwich",0],
+				  UNIT["Degree",0.017453292519943295]],
+				  PROJECTION["Equidistant_Conic"],
+				  PARAMETER["False_Easting",0],
+				  PARAMETER["False_Northing",0],
+				  PARAMETER["Longitude_Of_Center",-96],
+				  PARAMETER["Standard_Parallel_1",20],
+				  PARAMETER["Standard_Parallel_2",60],
+				  PARAMETER["Latitude_Of_Center",40],
+				  UNIT["Meter",1],
+				  AUTHORITY["EPSG","102010"]]'
 
 # Define capture locations in the winter #
 
@@ -195,6 +229,7 @@ originPoints<-spTransform(Origin,CRS(EquidistConic))
 #
 ###################################################################
 World<-shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
+crs(World) <- WGS84
 World<-spTransform(World,CRS(EquidistConic))
 States<-shapefile("data-raw/Spatial_Layers/st99_d00.shp")
 States<-spTransform(States,CRS(EquidistConic))
@@ -211,8 +246,8 @@ Florida<-spChFIDs(Florida,"Florida")
 Hisp<-spChFIDs(Hisp,"Hisp")
 
 #Combine into a single SpatialPolygon
-WinterRegion1 <- spRbind(Florida,Cuba)
-WinterRegions<-spRbind(WinterRegion1,Hisp)
+WinterRegion1 <- suppressWarnings(spRbind(Florida,Cuba))
+WinterRegions <- suppressWarnings(spRbind(WinterRegion1,Hisp))
 
 targetSites<-WinterRegions
 
@@ -234,9 +269,9 @@ NHbreedPoly<-SpatialPolygons(list(Polygons(list(nhbp),ID=1)))
 NHbreedPoly<-spChFIDs(NHbreedPoly,"NH")
 MDbreedPoly<-spChFIDs(MDbreedPoly,"MD")
 
-crs(NHbreedPoly) <- crs(MDbreedPoly) <- Lambert
+crs(NHbreedPoly) <- crs(MDbreedPoly) <- sp::CRS(Lambert)
 
-originSites<-spRbind(NHbreedPoly,MDbreedPoly)
+originSites<-suppressWarnings(spRbind(NHbreedPoly,MDbreedPoly))
 crs(originSites)<-Lambert
 
 originSites <- spTransform(originSites,CRS(EquidistConic))
@@ -329,7 +364,7 @@ OVENdata[[9]]<-originDist
 OVENdata[[10]]<-targetDist
 
 # Save to data folder
-devtools::use_data(OVENdata, overwrite = T)
+usethis::use_data(OVENdata, overwrite = T)
 
 
 
