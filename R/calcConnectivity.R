@@ -260,3 +260,15 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
   return(list(psi=psiMat, MC=MC))
 }
 
+reversePsiRelAbund <- function(psi, originRelAbund) {
+  if (is.matrix(psi) && is.numeric(originRelAbund)) {
+    nOriginSites <- nrow(psi)
+    if (length(originRelAbund) != nOriginSites ||
+        !isTRUE(all.equal(sum(originRelAbund), 1, tolerance = 1e-6)))
+      stop('originRelAbund must be a vector with [number of origin sites/number of rows in psi] values that sum to 1.')
+    return(list(gamma = t(proportions(sweep(psi, 1, originRelAbund, "*"), 2)),
+                targetRelAbund = colSums(apply(psi, 2, "*", originRelAbund))))
+  }
+  else
+    return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund))
+}

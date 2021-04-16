@@ -330,3 +330,78 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 
   return(coda::as.mcmc(out))
 }
+
+simGL <- function(psi, originRelAbund, sampleSize,
+                  originSites = NULL, targetSites = NULL, releasedOrigin=TRUE,
+                  geoBias = NULL, geoVCov = NULL,
+                  geoBiasReverse=NULL, geoVCovReverse=NULL) {
+  nOriginSites <- nrow(psi)
+  nTargetSites <- ncol(psi)
+  rev <- reversePsiRelAbund(psi, originRelAbund)
+  gamma <- rev$gamma
+  targetRelAbund <- rev$targetRelAbund
+  if (length(sampleSize)==1){
+    nAnimals <- sampleSize
+    # if (all(releasedOrigin))
+    #   sampleSize <- stats::rmultinom(1, nAnimals, rep(1/nOriginSites, nOriginSites)) # sample.int(nOriginSites, nAnimals, replace = TRUE)
+    # else if (all(!releasedOrigin))
+    #   sampleSize <- stats::rmultinom(1, nAnimals, rep(1/nTargetSites, nTargetSites)) # sample.int(nOriginSites, nAnimals, replace = TRUE)
+  }
+  else
+    nAnimals <- sum(sampleSize)
+  if (length(releasedOrigin)==1)
+    releasedOrigin <- rep(releasedOrigin, nAnimals)
+  targetAssignment <- rep(NA, nAnimals)
+  originAssignment <- rep(NA, nAnimals)
+
+  for (a in 1:nAnimals) {
+    if (releasedOrigin[a]) {
+      originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+      targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+    }
+    else {
+      targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+      originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+    }
+  }
+  originPointsTrue <- raster::bind(mapply(sp::spsample,
+                                          x = slot(originSites, "polygons")[originAssignment],
+                                          n = 1,
+                                          type = "random", SIMPLIFY = TRUE))
+  targetPointsTrue <- raster::bind(mapply(sp::spsample,
+                                          x = slot(targetSites, "polygons")[targetAssignment],
+                                          n = 1,
+                                          type = "random"))
+  crs(originPointsTrue) <- crs(originSites)
+  crs(targetPointsTrue) <- crs(targetSites)
+  originPointsObs <- originPointsTrue
+  targetPointsObs <- targetPointsTrue
+  if (any(releasedOrigin)) {
+    geoBias2 <- array(rep(geoBias, sum(releasedOrigin)), c(2, sum(releasedOrigin)))
+    point.sample <- array(apply(targetPointsTrue@coords[releasedOrigin, , drop = FALSE], 1,
+                                MASS::mvrnorm, n=1, Sigma=geoVCov),
+                          c(2, sum(releasedOrigin))) + geoBias2
+    targetPointsObs@coords[releasedOrigin,] <- t(point.sample)
+  }
+  if (any(!releasedOrigin)) {
+    geoBias2 <- array(rep(geoBiasReverse, sum(!releasedOrigin)),
+                      c(2, sum(!releasedOrigin)))
+    point.sample <- array(apply(originPointsTrue@coords[!releasedOrigin, , drop = FALSE], 1,
+                                MASS::mvrnorm, n=1, Sigma=geoVCovReverse),
+                          c(2, sum(!releasedOrigin))) + geoBias2
+    originPointsObs@coords[!releasedOrigin, ] <- t(point.sample)
+  }
+  return(list(originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              originPointsTrue = originPointsTrue,
+              targetPointsTrue = targetPointsTrue,
+              originPointsObs = originPointsObs,
+              targetPointsObs = targetPointsObs,
+              input = list(psi = psi, originRelAbund = originRelAbund,
+                           originSites = originSites,
+                           targetSites = targetSites,
+                           releasedOrigin = releasedOrigin,
+                           geoBias = geoBias, geoVCov = geoVCov,
+                           geoBiasReverse = geoBiasReverse,
+                           geoVCovReverse = geoVCovReverse)))
+}

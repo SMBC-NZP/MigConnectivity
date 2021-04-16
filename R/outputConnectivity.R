@@ -9,8 +9,23 @@ is.estMC <- function(x) inherits(x, "estMC")
 print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("Migratory Connectivity Estimates\n")
+  if (inherits(x, "estPsi")) {
+    dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
+                                                       x$input$targetNames)
+    cat("\nTransition probability (psi) estimates (mean):\n")
+    print(x$psi$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$psi$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$psi$mean),
+                dimnames = list(x$input$originNames, x$input$targetNames)),
+          quote = FALSE)
+  }
   if (inherits(x, "estMC")) {
-    if (is.null(x$psi)) {
+    if (is.null(x$psi) && !is.null(x$samplePsi)) {
       x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
                     se = apply(x$samplePsi, 2:3, sd),
                     simpleCI = apply(x$samplePsi, 2:3, quantile,
@@ -38,40 +53,30 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     else {
       originNamesFilled <- targetNamesFilled <- FALSE
     }
-    dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
-                                                       x$input$targetNames)
-    cat("\nTransition probability (psi) estimates (mean):",
-        ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
-        ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
-        "\n")
-    print(x$psi$mean, digits = digits)
-    cat("+/- SE:\n")
-    print(x$psi$se, digits = digits)
-    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence interval (simple quantile):\n", sep = "")
-    print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
-                      format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
-                      sep = ' - '), dim = dim(x$psi$mean),
-                dimnames = list(x$input$originNames, x$input$targetNames)),
-          quote = FALSE)
+    if (!is.null(x$psi)) {
+      dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
+                                                         x$input$targetNames)
+      cat("\nTransition probability (psi) estimates (mean):",
+          ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
+          ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
+          "\n")
+      print(x$psi$mean, digits = digits)
+      cat("+/- SE:\n")
+      print(x$psi$se, digits = digits)
+      cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+          "% confidence interval (simple quantile):\n", sep = "")
+      print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
+                        format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
+                        sep = ' - '), dim = dim(x$psi$mean),
+                  dimnames = list(x$input$originNames, x$input$targetNames)),
+            quote = FALSE)
+    }
     cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
         format(x$MC$se, digits = digits), '\n')
     cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
         "% confidence interval (simple quantile): ",
         paste(format(x$MC$simpleCI, digits = digits, trim = TRUE),
               collapse = ' - '), '\n', sep = "")
-    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-    #     "% confidence interval (bias-corrected): ",
-    #     paste(format(x$bcCI, digits = digits, trim = TRUE), collapse = ' - '),
-    #     '\n', sep = "")
-    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-    #     "% credible interval (highest posterior density): ",
-    #     paste(format(x$hpdCI, digits = digits, trim = TRUE), collapse = ' - '),
-    #     '\n', sep = "")
-    # cat("   median:", format(x$medianMC, digits = digits), '\n')
-    # if (!is.na(x$pointMC))
-    #   cat("   point calculation (not considering error):",
-    #       format(x$pointMC, digits = digits), '\n')
   }
   if (inherits(x, "estMantel")) {
     if (is.null(x$corr)) {
@@ -95,8 +100,10 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #       format(x$pointCorr, digits = digits), '\n')
   }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
-  if (inherits(x, "estMC"))
-    cat("For more info, try ?estMC or str(obj_name, max.levels = 2).\n")
+  if (inherits(x, "estPsi"))
+    cat("For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).\n")
+  else if (inherits(x, "estMC"))
+    cat("For more info, try ?estStrength or ?estMC or str(obj_name, max.levels = 2).\n")
   else
     cat("For more info, try ?estMantel or str(obj_name, max.levels = 2).\n")
 }
@@ -208,7 +215,8 @@ plot.isoAssign <- function(x,map,...){
 #plot <- function(x,...) UseMethod("plot")
 #' Basic plot function for estMigConnectivity objects
 #'
-#' @param x an estMigConnectivity object (output of estMC or estMantel)
+#' @param x an estMigConnectivity object (output of estTransition, estStrength,
+#'   estMC, or estMantel)
 #' @param plot.which which parameter (psi, MC, rM, or r) to graph. Defaults to
 #'   psi for estMC objects, to rM (Mantel correlation) otherwise
 #' @param point points on graph can represent mean, median, or point estimates
@@ -249,9 +257,11 @@ plot.isoAssign <- function(x,map,...){
 #'
 #' @export
 plot.estMigConnectivity <- function(x,
-                                    plot.which = ifelse(inherits(x, "estMC"),
+                                    plot.which = ifelse(inherits(x, "estPsi"),
                                                         "psi",
-                                                        "rM"),
+                                                        ifelse(inherits(x, "estMC"),
+                                                               "MC",
+                                                               "rM")),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
                                     xlab = NULL, ylab = plot.which,
@@ -266,6 +276,10 @@ plot.estMigConnectivity <- function(x,
   }
   if ((plot.which %in% c("corr", "Mantel")))
     plot.which <- "rM"
+  if ((plot.which %in% c("transition", "Transition")))
+    plot.which <- "psi"
+  if ((plot.which %in% c("strength", "Strength")))
+    plot.which <- "MC"
   if (!(plot.which %in% c("psi", "MC", "rM", "r")))
     stop("Set plot.which to psi, MC, rM, or r")
   point <- match.arg(point)
@@ -299,7 +313,7 @@ plot.estMigConnectivity <- function(x,
                       targetNames = dimnames(x$samplePsi)[[3]])
     }
   }
-  else if (plot.which != "rM")
+  else if (plot.which != "rM" && !inherits(x, "estPsi"))
     stop("This estimate does not include psi or MC - try setting plot.which to rM")
   if (inherits(x, "estMantel")) {
     if (is.null(x$corr)) {

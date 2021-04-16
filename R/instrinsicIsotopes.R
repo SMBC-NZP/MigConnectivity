@@ -399,7 +399,7 @@ return(isoAssignReturn)
 #' @export
 #' @examples
 #' \dontrun{
-#' getIsoMap(element = "Hydrogen", period = "Annual")
+#' map <- getIsoMap(element = "Hydrogen", period = "Annual")
 #' }
 
 getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
@@ -673,7 +673,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
 #' relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 #'
-#BE <- weightAssign(knownLocs = knownLocs,
+#' BE <- weightAssign(knownLocs = knownLocs,
 #'                  isovalues = HBEFbirds[,2],
 #'                  isoSTD = 12,
 #'                  intercept = -10,
