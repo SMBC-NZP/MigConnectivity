@@ -362,18 +362,17 @@ locSample <- function(isGL,
       }
     }
     if (any(!isProb & !isGL & isRaster & toSampleBool)){
-       if (any(!is.na(good.sample2[!(which(isRaster) %in% which(isProb | isGL))]))){
-          site.sample[which(!isProb & !isGL & isRaster & toSampleBool)] <-
-            apply(site.sample2[, !(which(isRaster & toSampleBool) %in% which(isProb | isGL)),
-                               drop = FALSE],
-                  2,
-                  function(x) x[!is.na(x)][1])
-          # Fill in target points of valid sampled points
-          point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
-            t(mapply(x = good.sample12[!is.na(good.sample12)],
-                     y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2)))],
-                     FUN = function(x, y) sf::st_coordinates(y[x,])))
-        }
+     if (any(!is.na(good.sample2[!(which(isRaster) %in% which(isProb | isGL))]))){
+        site.sample[which(!isProb & !isGL & isRaster & toSampleBool)] <-
+          apply(site.sample2[, !(which(isRaster & toSampleBool) %in% which(isProb | isGL)),
+                             drop = FALSE],
+                2,
+                function(x) x[!is.na(x)][1])
+        # Fill in target points of valid sampled points
+        point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
+          t(mapply(x = good.sample12[!is.na(good.sample12)],
+                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2)))],
+                   FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
     if (any(isProb & !isGL & isRaster & toSampleBool)){
