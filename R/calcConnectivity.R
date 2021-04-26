@@ -174,10 +174,17 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
   if (!is.null(targetDist))
     nAnimals <- dim(targetDist)[1]
   else {
-    nAnimals <- length(targetPoints)
+    nAnimals <- nrow(targetPoints)
     if(is.na(raster::projection(targetPoints))){
       stop('Coordinate system definition needed for targetPoints')
     }
+    # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
+    # are sf objects
+    if(!("sf" %in% class(targetPoints))){
+     targetPoints <- sf::st_as_sf(targetPoints)}
+    if(!("sf" %in% class(originPoints))){
+     originPoints <- sf::st_as_sf(originPoints)}
+
     targetDist <- matrix(NA, nAnimals, nAnimals)
 
     targetDist[lower.tri(targetDist)] <- 1
@@ -185,9 +192,9 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     distIndices <- which(!is.na(targetDist), arr.ind = TRUE)
 
     # project target points to WGS #
-    targetPoints2 <- sp::spTransform(targetPoints, sp::CRS(MigConnectivity::projections$WGS84))
-    targetDist0 <- geosphere::distGeo(targetPoints2[distIndices[,'row'],],
-                                      targetPoints2[distIndices[,'col'],])
+    targetPoints2 <- sf::st_transform(targetPoints,4326)
+    targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
+                                      sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
 
     targetDist[lower.tri(targetDist)] <- targetDist0
     diag(targetDist) <- 0
@@ -198,14 +205,14 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     if(is.na(raster::projection(originPoints))) {
       stop('Coordinate system definition needed for originPoints')
     }
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    originPoints2 <- sf::st_transform(originPoints, 4326)
     originDist <- matrix(NA, nAnimals, nAnimals)
 
     originDist[lower.tri(originDist)] <- 1
 
     distIndices <- which(!is.na(originDist), arr.ind = TRUE)
-    originDist0 <- geosphere::distGeo(originPoints2[distIndices[,'row'],],
-                                      originPoints2[distIndices[,'col'],])
+    originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
+                                      sf::st_coordinates(originPoints2[distIndices[,'col'],]))
     originDist[lower.tri(originDist)] <- originDist0
     diag(originDist) <- 0
     originDist <- t(originDist)
