@@ -110,12 +110,17 @@ targetAssignment
 isProb
 originPoints <- rbind(OVENdata$originPoints,
                       OVENdata$originPoints[34:39,])
+
 originPoints <- sf::st_transform(originPoints, crs = resampleProjection)
 originSites <- sf::st_transform(OVENdata$originSites, crs = resampleProjection)
+
 assignment1 <- unclass(sf::st_intersects(x = originPoints, y = originSites,
                                          sparse = TRUE))
 assignment1[sapply(assignment1, function(x) length(x)==0)] <- 0
 assignment1 <- array(unlist(assignment1), nAnimals)
+
+nOriginSites <- nrow(originSites)
+
 originAssignment <- array(0, dim = c(nAnimals, nOriginSites),
                           dimnames = list(NULL, originNames))
 for (ani in 1:40) {
@@ -147,6 +152,9 @@ system.time(test3 <-
                                               verbose = 3,
                                               nSamples = 100))
 test3
+
+nNonBreeding <- nrow(OVENdata$targetSites)
+
 plot(test3, legend = "top",
      main = paste(sum(isGL & !isProb), "GL,",
                   sum(!isGL & isProb & captured == "origin"), "prob,",

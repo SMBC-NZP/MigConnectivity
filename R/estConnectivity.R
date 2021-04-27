@@ -1,4 +1,4 @@
-#' @import stats
+
 
 ###############################################################################
 # Estimate MC from abundance and transition probability estimates.
@@ -366,21 +366,37 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
   return(result)
 }
 
-estTransitionBoot <- function(originSites = NULL, targetSites = NULL,
-                              originPoints = NULL, targetPoints = NULL,
-                              originAssignment = NULL, targetAssignment = NULL,
-                              originNames = NULL, targetNames = NULL,
+estTransitionBoot <- function(originSites = NULL,
+                              targetSites = NULL,
+                              originPoints = NULL,
+                              targetPoints = NULL,
+                              originAssignment = NULL,
+                              targetAssignment = NULL,
+                              originNames = NULL,
+                              targetNames = NULL,
                               nBoot = 1000,
-                              isGL = FALSE, isTelemetry = FALSE,
-                              isRaster = FALSE, isProb = FALSE,
+                              isGL = FALSE,
+                              isTelemetry = FALSE,
+                              isRaster = FALSE,
+                              isProb = FALSE,
                               captured = "origin",
-                              geoBias = NULL, geoVCov = NULL,
-                              geoBiasOrigin = NULL, geoVCovOrigin = NULL,
-                              targetRaster = NULL, originRaster = NULL,
-                              verbose = 0, alpha = 0.05,
+                              geoBias = NULL,
+                              geoVCov = NULL,
+                              geoBiasOrigin = NULL,
+                              geoVCovOrigin = NULL,
+                              targetRaster = NULL,
+                              originRaster = NULL,
+                              verbose = 0,
+                              alpha = 0.05,
                               resampleProjection = MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300) {
+
+  # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
+  # CONTINAS- isotope assignment
+  # COULD ALSO BE A GENETIC RASTER OR A COMBINATION #
+
+  # ORIGIN RASTER NEEDS WORK
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither"))
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")
@@ -432,15 +448,41 @@ estTransitionBoot <- function(originSites = NULL, targetSites = NULL,
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
   if(inherits(targetSites,"SpatialPolygonsDataFrame")){
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
+
+  # IF originAssignment is NULL - we need to generate originAssignments from
+  # the data provided
   if (is.null(originAssignment)){
+    # if geolocator, telemetry and captured in origin then simply get the origin site
     if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints))
       originAssignment <- array(unlist(unclass(sf::st_intersects(x = originPoints,
                                                           y = originSites,
                                                           sparse = TRUE))))
+    # if raster and not captured in origin sites then determine the origin site
     else if (all(isRaster & captured != "origin"))
-      originAssignment <- what # need point assignment for raster (mean location?)
+      # if isRaster == TRUE and captured != origin
+      # WEIGHTED XY COORDIANTES FROM THE RASTER
+      # get geographically weighted median value
+      origRastXYZ <- raster::rasterToPoints(originRaster)
+      xyOriginRast <- apply(origRastXYZ[,3:ncol(origRastXYZ)],
+                            MARGIN = 2,
+                            FUN = function(x){
+                        xy <-cbind(Hmisc::wtd.quantile(origRastXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
+                                   Hmisc::wtd.quantile(origRastXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                        return(xy)})
+      # returns a point estimate for each bird - turn it into a sf object
+      xyOriginRast <- t(xyOriginRast)
+      colnames(xyOriginRast) <- c("x","y")
+      # right now the assignment CRS is WGS84 - should be the same as the origin raster
+      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
+      originAssignment <- array(unlist(unclass(sf::st_intersects(x = originAssignRast,
+                                                                 y = originSites,
+                                                                 sparse = TRUE))))
+     # originAssignment <- what # need point assignment for raster (mean location?)
     else
-      originAssignment <- what # points over where we have them, raster assignment otherwise
+      # originAssignment <- what # points over where we have them, raster assignment otherwise
+      originAssignment <- array(unlist(unclass(sf::st_intersects(x = originPoints,
+                                                                 y = originSites,
+                                                                sparse = TRUE))))
   }
   if (is.null(targetAssignment)){
     if (all(isGL | isTelemetry | captured != "origin"))
@@ -539,6 +581,7 @@ estTransitionBoot <- function(originSites = NULL, targetSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
+      # DOUBLE CHECK ARGUMENTS MATCH CURRENTY LOCSAMPLE
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),

@@ -164,6 +164,8 @@ locSample <- function(isGL,
   nAnimals <- length(isGL)
   if (!is.null(singleCell)) {
     # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
+
+    # How does targetIntrinsic make it into this function?
     nrandomDraws <- dim(targetIntrinsic$SingleCell)[1]
 
     # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
@@ -272,15 +274,24 @@ locSample <- function(isGL,
                             1, sample.int, n = ncol(assignment), size = nSim,
                             replace = TRUE)
     }
+# IF ALL THE POINTS ARE WITHIN SITES #
+    # walk throught this section #
     if (any(isRaster & toSampleBool)) {
       if (pointsInSites && !any(isRaster & toSampleBool & (isGL | isProb))) {
-        samp <- sample.int(nrandomDraws, size = sum(isRaster & toSampleBool),
+        samp <- sample.int(nrandomDraws,
+                           size = sum(isRaster & toSampleBool),
                            replace = T)
+ # some raster -
+      # GRAB LOCATIONS FROM RASTER #
         samp2 <- samp + (toSample - 1) * nrandomDraws
+
         point.sample2 <- intrinsic2[samp2, ]
         # Changed to make sure x,y coords stack correctly
         # target.point.sample[toSample,1]<- point.sample@coords[,1]
         # target.point.sample[toSample,2]<- point.sample@coords[,2]
+
+# ANIMALS WITHIN samp2 that don't have raster
+# We ULTIMATELY NEED POINTS BECAUSE THEY ONLY HAVE RASTER DATA
         if (!is.null(overlap1))
           # Grab the relevant sites
           site.sample2 <- overlap1[samp2]
@@ -291,10 +302,16 @@ locSample <- function(isGL,
         for(i in 3:ncol(matvals)) {
           animals <- which(toSample == i - 2)
           if (length(animals) > 0) {
-            multidraw <- rmultinom(n = length(animals)*nSim, size = 1, prob = matvals[,i])
+            multidraw <- rmultinom(n = length(animals)*nSim,
+                                   size = 1,
+                                   prob = matvals[,i])
+            # save the xy coordinates of the 'possible' locations #
             point.sample2a <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
+
+            # turn into an sf object with WGS
             point.sample2b <- sf::st_as_sf(as.data.frame(point.sample2a),
                                            crs = MigConnectivity::projections$WGS84)
+
             # Check which points are in target sites
             if (!is.null(sites)) {
               site.sample2a <- sf::st_intersects(point.sample2b, y = sites)
@@ -311,9 +328,12 @@ locSample <- function(isGL,
       }
       else {
         # Select nSim points for each animal still to be sampled
-        samp <- sample.int(nrandomDraws, size = sum(isRaster & toSampleBool) * nSim,
-                           replace = T)
+        samp <- sample.int(nrandomDraws,
+                           size = sum(isRaster & toSampleBool) * nSim,
+                           replace = TRUE)
+
         samp2 <- samp + rep(toSample - 1, each = nSim) * nrandomDraws
+
         point.sample2a <- intrinsic2[samp2, ]
         # Check which points are in target sites
         site.sample2a <- sf::st_intersects(point.sample, y = targetSites)
@@ -411,10 +431,17 @@ locSample <- function(isGL,
           # 1) Randomly choose between first GL and first raster point
           # 2) Take point halfway between them, unless that's not in site, then do 1
           # 3) Something more clever?
-          point.sample[which(!isProb & isGL & isRaster & toSampleBool)[which(!is.na(good.sample02))], ]<-
-            t(mapply(x = good.sample02[!is.na(good.sample02)],
-                     y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & isGL))[which(!is.na(good.sample02))]],
-                     FUN = function(x, y) sf::st_coordinates(y[x,])))
+          point.sample[which(!isProb &
+                               isGL &
+                               isRaster &
+                               toSampleBool)[which(!is.na(good.sample02))],] <-
+            t(mapply(
+              x = good.sample02[!is.na(good.sample02)],
+              y = point.sample2[which(which(isRaster & toSampleBool) %in%
+                                        which(!isProb &isGL))[which(!is.na(good.sample02))]],
+              FUN = function(x, y)
+                sf::st_coordinates(y[x, ])
+            ))
         }
       }
     }
@@ -472,6 +499,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 
     # project target points to WGS #
     targetIntrinsic2 <- sp::SpatialPoints(targetIntrinsic1, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
+
   }
   else {
     nAnimals <- dim(targetIntrinsic$probassign)[3]
