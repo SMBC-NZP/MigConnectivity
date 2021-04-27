@@ -490,9 +490,27 @@ estTransitionBoot <- function(originSites = NULL,
                                                           y = targetSites,
                                                           sparse = TRUE)))
     else if (all(isRaster & captured != "target"))
-      targetAssignment <- what # need point assignment for raster (mean location?)
+      #targetAssignment <- what # need point assignment for raster (mean location?)
+      tarRastXYZ <- raster::rasterToPoints(targetRaster)
+      xyTargetRast <- apply(tarRastXYZ[,3:ncol(tarRastXYZ)],
+                          MARGIN = 2,
+                          FUN = function(x){
+                            xy <-cbind(Hmisc::wtd.quantile(tarRastXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
+                                       Hmisc::wtd.quantile(tarRastXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                            return(xy)})
+    # returns a point estimate for each bird - turn it into a sf object
+    xyTargetRast <- t(xyTargetRast)
+    colnames(xyTargetRast) <- c("x","y")
+    # right now the assignment CRS is WGS84 - should be the same as the origin raster
+    targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+    targetAssignment <- array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+                                                               y = targetSites,
+                                                               sparse = TRUE))))
     else
-      targetAssignment <- what # points over where we have them, raster assignment otherwise
+   #   targetAssignment <- what # points over where we have them, raster assignment otherwise
+    targetAssignment <- array(unclass(sf::st_intersects(x = targetPoints,
+                                                        y = targetSites,
+                                                        sparse = TRUE)))
   }
   nOriginSites <- ifelse(is.null(originSites), ncol(originAssignment), nrow(originSites))
   nTargetSites <- ifelse(is.null(targetSites), ncol(targetAssignment), nrow(targetSites))
