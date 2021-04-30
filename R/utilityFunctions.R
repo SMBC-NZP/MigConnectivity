@@ -160,7 +160,7 @@ locSample <- function(isGL,
                       geoBias = NULL,
                       geoVCov = NULL,
                       points = NULL,
-                      raster1 = NULL,
+                      matvals = NULL,
                       singleCell = NULL,
                       pointsInSites = FALSE,
                       overlap1 = NULL,
@@ -186,9 +186,6 @@ locSample <- function(isGL,
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
                                crs = MigConnectivity::projections$WGS84)
   }
-  if (!pointsInSites & !is.null(raster1))
-    # converts raster to matrix of XY then probs
-    matvals <- raster::rasterToPoints(raster1)
 
   if (is.null(assignment)) {
     if (!is.null(sites)){
@@ -303,7 +300,7 @@ locSample <- function(isGL,
 # We ULTIMATELY NEED POINTS BECAUSE THEY ONLY HAVE RASTER DATA
         if (!is.null(overlap1))
           # Grab the relevant sites
-          site.sample2 <- matrix(overlap1[samp2], 1)
+          site.sample2 <- overlap1[1, samp2, drop = FALSE]
         good.sample2 <- rep(1, sum(isRaster & toSampleBool))
       }
       else if (is.null(singleCell)) {

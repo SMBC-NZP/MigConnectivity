@@ -168,5 +168,108 @@ MC3 <- MigConnectivity:::estStrength(OVENdata$originDist, OVENdata$targetDist,
 MC3
 
 ###############################################################################
-# Example 3
+# Example 3 (all raster, from our OVEN example)
 ###############################################################################
+getCSV <- function(filename) {
+  tmp <- tempdir()
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  csv <- read.csv(temp)
+  unlink(temp)
+  return(csv)
+
+}
+getRDS <- function(speciesDist) {
+  tmp <- tempdir()
+  extension <- '.rds'
+  filename <- paste0(speciesDist, extension)
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/Spatial_Layers/',
+                 filename, '?raw=true')
+  temp <- paste(tmp, filename, sep = '/')
+  utils::download.file(url1, temp, mode = 'wb')
+  shp <- readRDS(temp)
+  unlink(temp)
+  return(shp)
+}
+OVENdist <- getRDS("OVENdist")
+
+raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
+
+OVENvals <- getCSV("deltaDvalues.csv")
+
+OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
+
+originSites <- getRDS("originSites")
+originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+originSites <- sf::st_as_sf(originSites)
+
+EVER <- length(grep(x=OVENvals$Sample,"EVER"))
+JAM <- length(grep(x=OVENvals$Sample,"JAM"))
+
+originRelAbund <- matrix(c(EVER,JAM),nrow = 1,byrow = TRUE)
+originRelAbund <- prop.table(originRelAbund,1)
+
+op <- rgeos::gCentroid(originSites,byid = TRUE)
+
+originPoints <- array(NA,c(EVER+JAM,2), list(NULL, c("x","y")))
+originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sp::coordinates(op[1])[,1]
+originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sp::coordinates(op[1])[,2]
+originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sp::coordinates(op[2])[,1]
+originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
+
+originPoints <- sf::st_as_sf(data.frame(originPoints),
+                             coords = c("x", "y"),
+                             crs = MigConnectivity::projections$WGS84)
+iso <- isoAssign(isovalues = OVENvals[,2],
+                 isoSTD = 12,       # this value is for demonstration only
+                 intercept = -10,   # this value is for demonstration only
+                 slope = 0.8,       # this value is for demonstration only
+                 odds = NULL,
+                 restrict2Likely = TRUE,
+                 nSamples = 1000,
+                 sppShapefile = OVENdist,
+                 assignExtent = c(-179,-60,15,89),
+                 element = "Hydrogen",
+                 surface = FALSE,
+                 period = "Annual",
+                 seed = 12345,
+                 verbose=1)
+nAnimals <- dim(iso$probassign)[3]
+isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
+isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
+ovenMC <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = iso,
+                originPoints = originPoints,
+                originSites = originSites,
+                originDist = originDist,
+                nSamples = 200,
+                verbose = 1,
+                calcCorr = TRUE,
+                alpha = 0.05,
+                approxSigTest = FALSE,
+                isIntrinsic = TRUE)
+
+ovenMC
+system.time(test4 <-
+              MigConnectivity:::estTransition(isGL = isGL, isRaster = isRaster,
+                                              isProb = isProb,
+                                              isTelemetry = isTelemetry,
+                                              geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                                              geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                                              #targetPoints = targetPoints,
+                                              #targetAssignment = targetAssignment,
+                                              targetSites = sf::st_as_sf(iso$targetSites),
+                                              resampleProjection = resampleProjection,
+                                              targetRaster = iso,
+                                              #nSim = 5000, maxTries = 300,
+                                              originSites = originSites,
+                                              originPoints = originPoints,
+                                              #originAssignment = originAssignment,
+                                              captured = rep("origin", nAnimals),
+                                              #originNames = OVENdata$originNames,
+                                              #targetNames = OVENdata$targetNames,
+                                              verbose = 3,
+                                              nSamples = 100))
+test3
