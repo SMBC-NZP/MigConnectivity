@@ -180,9 +180,9 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     }
     # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
     # are sf objects
-    if(!("sf" %in% class(targetPoints))){
+    if(!is.null(targetPoints) & !("sf" %in% class(targetPoints))){
      targetPoints <- sf::st_as_sf(targetPoints)}
-    if(!("sf" %in% class(originPoints))){
+    if(!is.null(originPoints) & !("sf" %in% class(originPoints))){
      originPoints <- sf::st_as_sf(originPoints)}
 
     targetDist <- matrix(NA, nAnimals, nAnimals)

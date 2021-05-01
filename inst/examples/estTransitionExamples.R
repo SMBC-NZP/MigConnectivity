@@ -211,17 +211,18 @@ JAM <- length(grep(x=OVENvals$Sample,"JAM"))
 originRelAbund <- matrix(c(EVER,JAM),nrow = 1,byrow = TRUE)
 originRelAbund <- prop.table(originRelAbund,1)
 
-op <- rgeos::gCentroid(originSites,byid = TRUE)
+op <- sf::st_centroid(originSites)
 
 originPoints <- array(NA,c(EVER+JAM,2), list(NULL, c("x","y")))
-originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sp::coordinates(op[1])[,1]
-originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sp::coordinates(op[1])[,2]
-originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sp::coordinates(op[2])[,1]
-originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
+originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sf::st_coordinates(op)[1,1]
+originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sf::st_coordinates(op)[1,2]
+originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sf::st_coordinates(op)[2,1]
+originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sf::st_coordinates(op)[2,2]
 
 originPoints <- sf::st_as_sf(data.frame(originPoints),
                              coords = c("x", "y"),
-                             crs = MigConnectivity::projections$WGS84)
+                             crs = 4326)
+
 iso <- isoAssign(isovalues = OVENvals[,2],
                  isoSTD = 12,       # this value is for demonstration only
                  intercept = -10,   # this value is for demonstration only
@@ -236,6 +237,7 @@ iso <- isoAssign(isovalues = OVENvals[,2],
                  period = "Annual",
                  seed = 12345,
                  verbose=1)
+
 nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
 isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)

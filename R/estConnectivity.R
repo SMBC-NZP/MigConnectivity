@@ -494,9 +494,9 @@ estTransitionBoot <- function(originSites = NULL,
   if (is.null(originAssignment)){
     # if geolocator, telemetry and captured in origin then simply get the origin site
     if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints))
-      originAssignment <- array(unlist(unclass(sf::st_intersects(x = originPoints,
+      originAssignment <- suppressMessage(array(unlist(unclass(sf::st_intersects(x = originPoints,
                                                           y = originSites,
-                                                          sparse = TRUE))))
+                                                          sparse = TRUE)))))
     # if raster and not captured in origin sites then determine the origin site
     else if (all(isRaster & captured != "origin")) {
       # if isRaster == TRUE and captured != origin
@@ -513,15 +513,15 @@ estTransitionBoot <- function(originSites = NULL,
       colnames(xyOriginRast) <- c("x","y")
       # right now the assignment CRS is WGS84 - should be the same as the origin raster
       originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
-      originAssignment <- array(unlist(unclass(sf::st_intersects(x = originAssignRast,
+      originAssignment <- suppressMessage(array(unlist(unclass(sf::st_intersects(x = originAssignRast,
                                                                  y = originSites,
-                                                                 sparse = TRUE))))
+                                                                 sparse = TRUE)))))
     }   # originAssignment <- what # need point assignment for raster (mean location?)
     else
       # originAssignment <- what # points over where we have them, raster assignment otherwise
-      originAssignment <- array(unlist(unclass(sf::st_intersects(x = originPoints,
+      originAssignment <- suppressMessage(array(unlist(unclass(sf::st_intersects(x = originPoints,
                                                                  y = originSites,
-                                                                sparse = TRUE))))
+                                                                sparse = TRUE)))))
   }
   if (is.null(targetAssignment)){
     if (all(isGL | isTelemetry | captured != "origin"))
@@ -541,15 +541,15 @@ estTransitionBoot <- function(originSites = NULL,
     colnames(xyTargetRast) <- c("x","y")
     # right now the assignment CRS is WGS84 - should be the same as the origin raster
     targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
-    targetAssignment <- array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+    targetAssignment <- suppressMessage(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
                                                                y = targetSites,
-                                                               sparse = TRUE))))
+                                                               sparse = TRUE)))))
    }
    else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
-    targetAssignment <- array(unclass(sf::st_intersects(x = targetPoints,
+    targetAssignment <- suppressMessage(array(unclass(sf::st_intersects(x = targetPoints,
                                                         y = targetSites,
-                                                        sparse = TRUE)))
+                                                        sparse = TRUE))))
   }
   nOriginSites <- ifelse(is.null(originSites), ncol(originAssignment), nrow(originSites))
   nTargetSites <- ifelse(is.null(targetSites), ncol(targetAssignment), nrow(targetSites))
@@ -587,8 +587,8 @@ estTransitionBoot <- function(originSites = NULL,
     }
 
     targetCon <- sapply(targetPointSample2, FUN = function(z){
-      as.numeric(unclass(sf::st_intersects(x = z, y = targetSites,
-                                           sparse = TRUE)))})
+      suppressMessage(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites,
+                                           sparse = TRUE))))})
 
     if (!any(is.na(targetCon)))
       pointsInSites <- TRUE
@@ -615,8 +615,8 @@ estTransitionBoot <- function(originSites = NULL,
     }
 
     originCon <- sapply(originPointSample2, FUN = function(z){
-      as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
-                                           sparse = TRUE)))})
+      suppressMessage(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
+                                           sparse = TRUE))))})
 
     if (!any(is.na(originCon)))
       pointsInSites <- TRUE
@@ -1157,9 +1157,13 @@ estMCisotope <- function(targetDist=NULL,
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
+     if(class(targetSites)=="SpatialPolygonsDataFrame"){
+       targetSites <- rgeos::gUnaryUnion(targetSites, id = targetSites$targetSite)
+       targetSites <- sf::st_as_sf(targetSites)
+     }
 
   if (is.null(targetDist))
-    targetDist <- distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
+    targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites)))
 
 
   if (!inherits(targetIntrinsic, 'isoAssign'))
@@ -1167,15 +1171,16 @@ estMCisotope <- function(targetDist=NULL,
 
   pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
 
-  if(class(originSites)=="SpatialPolygonsDataFrame"){
+  if(class(originSites) %in% "SpatialPolygonsDataFrame"){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(class(targetSites)=="SpatialPolygonsDataFrame"){
+  if(class(targetSites) %in% "SpatialPolygonsDataFrame"){
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
-    originAssignment <- sp::over(originPoints, originSites)
+
+    originAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = originPoints, y = originSites, sparse = TRUE))))
 
   nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
-  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+  targetSites <- sf::st_transform(targetSites, resampleProjection)
 
   if (length(originAssignment)!=nAnimals)
     stop("originAssignment/originPoints should be the same length as targetIntrinsic (number of animals)")
@@ -1184,11 +1189,15 @@ estMCisotope <- function(targetDist=NULL,
   if (pointsAssigned && !is.null(targetSites)) {
     nSamples <- dim(targetIntrinsic$SingleCell)[1]
     targCon <- array(NA, c(nSamples, nAnimals))
+
     for(i in 1:nSamples) {
-      targCon[i, ] <- sp::over(sp::SpatialPoints(t(targetIntrinsic$SingleCell[i, , ]),
-                                         proj4string = sp::CRS(targetSites@proj4string@projargs)),
-                           targetSites)
+      temptargCon <- sf::st_as_sf(data.frame(t(targetIntrinsic$SingleCell[i,,])),
+                                  coords = c("Longitude","Latitude"),
+                                  crs = sf::st_crs(targetSites))
+
+      targCon[i, ] <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = temptargCon, y = targetSites, sparse = TRUE))))
     }
+
     if (!any(is.na(targCon)))
       pointsInSites <- TRUE
     else if (verbose > 0)
@@ -1199,7 +1208,7 @@ estMCisotope <- function(targetDist=NULL,
     targCon <- NULL
 
   nOriginSites <- length(unique(originAssignment))
-  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
 
 
   if (any(is.na(originAssignment)))
@@ -1216,10 +1225,12 @@ estMCisotope <- function(targetDist=NULL,
 
 
   if (is.null(targetNames))
-    targetNames <- names(targetSites)
+    # Need to be able to conserve the names from input
+    targetNames <- 1:nrow(targetSites)
 
   if (is.null(originNames))
-    originNames <- names(originSites)
+    # need to conserve names from inputs
+    originNames <- 1:nrow(originSites)
 
   if (is.null(sampleSize))
     sampleSize <- nAnimals
@@ -1236,7 +1247,7 @@ estMCisotope <- function(targetDist=NULL,
 
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    originPoints2 <- sf::st_coordinates(sf::st_transform(originPoints, 4326))
     originDistStart <- matrix(NA, nAnimals, nAnimals)
 
     originDistStart[lower.tri(originDistStart)] <- 1
@@ -1272,7 +1283,7 @@ estMCisotope <- function(targetDist=NULL,
       animal.sample <- sample.int(nAnimals, replace=TRUE)
       # Get origin points for those animals
       if (calcCorr)
-        origin.point.sample <- originPoints[animal.sample]
+        origin.point.sample <- originPoints[animal.sample,]
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
@@ -1306,7 +1317,10 @@ estMCisotope <- function(targetDist=NULL,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+      colnames(target.point.sample) <- c("x","y")
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
+      #target.point.sample <- sf::st_sfc(t.p.s.geom, crs = resampleProjection)
+      #target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
       corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),

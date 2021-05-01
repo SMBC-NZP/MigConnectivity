@@ -67,7 +67,7 @@ targetSample <- function(isGL,
     if (!is.null(targetSites)){
       #Use the provided spatial layers to create targetAssignment
       if(!st_crs(targetSites)==st_crs(targetPoints)){targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)}
-      targetAssignment <- as.numeric(unclass(sf::st_intersects(x = targetPoints, y = targetSites, sparse = TRUE)))
+      targetAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = targetPoints, y = targetSites, sparse = TRUE))))
       #if targetAssignment is NA - convert to 0
       targetAssignment[is.na(targetAssignment)] <- 0
     }else
@@ -120,7 +120,7 @@ targetSample <- function(isGL,
       # Find out which sampled points are in a target site
       if(!st_crs(targetSites)==st_crs(point.sample)){targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
 
-      target.sample0 <- sapply(point.sample, FUN = function(z){as.numeric(unclass(sf::st_intersects(x = z, y = targetSites, sparse = TRUE)))})
+      target.sample0 <- sapply(point.sample, FUN = function(z){suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites, sparse = TRUE))))})
 
       # Identify which animals have at least one valid sample point. good.sample
       # will be NA for those that don't.  For those that do, it will location in
@@ -193,8 +193,8 @@ locSample <- function(isGL,
       if(!sf::st_crs(sites)==sf::st_crs(points)){
         points <- sf::st_transform(points, crs = resampleProjection)
       }
-      assignment <- unclass(sf::st_intersects(x = points, y = sites,
-                                                    sparse = TRUE))
+      assignment <- suppressMessages(unclass(sf::st_intersects(x = points, y = sites,
+                                                    sparse = TRUE)))
       #if assignment is not there - convert to 0
       assignment[sapply(assignment, function(x) length(x)==0)] <- 0
       assignment <- array(unlist(assignment), nAnimals)
@@ -266,8 +266,8 @@ locSample <- function(isGL,
       }
 
       site.sample0 <- sapply(point.sample0, FUN = function(z){
-        as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-                                             sparse = TRUE)))})
+        suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
+                                             sparse = TRUE))))})
 
       # Identify which animals have at least one valid sample point. good.sample0
       # will be NA for those that don't.  For those that do, it will location in
@@ -323,8 +323,8 @@ locSample <- function(isGL,
         }
 
         site.sample2 <- sapply(point.sample2, FUN = function(z){
-          as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-                                               sparse = TRUE)))})
+          suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
+                                               sparse = TRUE))))})
 
         # Identify which animals have at least one valid sample point. good.sample2
         # will be NA for those that don't.  For those that do, it will location in
@@ -342,7 +342,7 @@ locSample <- function(isGL,
 
         point.sample2a <- intrinsic2[samp2, ]
         # Check which points are in target sites
-        site.sample2a <- sf::st_intersects(point.sample, y = targetSites)
+        site.sample2a <- suppressMessages(sf::st_intersects(point.sample, y = targetSites))
         # Organize into matrix (separate by animal)
         site.sample2b <- matrix(site.sample2a, nSim, sum(isRaster & toSampleBool))
         # Identify which animals have a valid point (inside a site).
@@ -500,10 +500,13 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
     nrandomDraws <- dim(targetIntrinsic$SingleCell)[1]
 
     # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
-    targetIntrinsic1 <- array(aperm(targetIntrinsic$SingleCell, c(1, 3, 2)), dim = c(nAnimals * nrandomDraws, 2))
+    targetIntrinsic1 <- array(aperm(targetIntrinsic$SingleCell, c(1, 3, 2)),
+                              dim = c(nAnimals * nrandomDraws, 2),
+                              dimnames = list(NULL, c("x","y")))
 
     # project target points to WGS #
-    targetIntrinsic2 <- sp::SpatialPoints(targetIntrinsic1, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
+    targetIntrinsic2 <- sf::st_as_sf(as.data.frame(targetIntrinsic1), coords = c("x", "y"),
+                                     crs = MigConnectivity::projections$WGS84)
 
   }
   else {
@@ -544,7 +547,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
   else {
     draws <- 0
     # Make sure targetSites are WGS84
-    targetSites <- sp::spTransform(targetSites, sp::CRS(MigConnectivity::projections$WGS84))
+    targetSites <- sf::st_transform(targetSites, 4326)
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       if (!pointsAssigned) {
@@ -571,9 +574,11 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
         # Select nSim points for each animal still to be sampled
         samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
         samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
-        point.sample <- targetIntrinsic2[samp2]
+        point.sample <- targetIntrinsic2[samp2,]
         # Check which points are in target sites
-        target.sample0 <- sp::over(point.sample, y = targetSites)
+        target.sample0 <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = point.sample,
+                                             y = targetSites,
+                                             sparse = TRUE))))
         # Organize into matrix (separate by animal)
         target.sample1 <- matrix(target.sample0, nSim, length(toSample))
         # Identify which animals have a valid point (inside a target site).
@@ -585,8 +590,8 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
         target.sample[toSample] <- apply(target.sample1, 2, function(x) x[!is.na(x)][1])
         # Put in target points of animals with valid points sampled
         if (any(!is.na(good.sample))) {
-          target.point.sample[toSample[!is.na(good.sample)],1]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,1]
-          target.point.sample[toSample[!is.na(good.sample)],2]<- point.sample[good.sample[!is.na(good.sample)]]@coords[,2]
+          target.point.sample[toSample[!is.na(good.sample)],1]<- sf::st_coordinates(point.sample[good.sample[!is.na(good.sample)],])[,1]
+          target.point.sample[toSample[!is.na(good.sample)],2]<- sf::st_coordinates(point.sample[good.sample[!is.na(good.sample)],])[,2]
         }
       }
       toSample <- which(is.na(target.sample))
