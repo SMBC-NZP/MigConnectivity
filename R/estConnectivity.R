@@ -559,20 +559,40 @@ estTransitionBoot <- function(originSites = NULL,
   #   stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
   # if (any(is.na(originAssignment)))
   #   stop("NAs in origin sites (make sure all points fall within polygons)")
-  if(!is.null(originPoints))
-    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
-      stop('Coordinate system definition needed for originSites & originPoints')
-    }
-  if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
-    stop('Coordinate system definition needed for targetSites & targetPoints')
+  if(!is.null(originPoints) && is.na(raster::projection(originPoints)))
+    stop('Coordinate system definition needed for originPoints')
+  if(!is.null(originSites) && is.na(raster::projection(originSites)))
+    stop('Coordinate system definition needed for originSites')
+  if(!is.null(targetPoints) && is.na(raster::projection(targetPoints))){
+    stop('Coordinate system definition needed for targetPoints')
   }
-  targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
-  targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
-  if (is.null(targetNames))
-    targetNames <- names(targetSites)
-  if (is.null(originNames))
-    originNames <- names(originSites)
-
+  if(!is.null(targetSites) && is.na(raster::projection(targetSites))){
+    stop('Coordinate system definition needed for targetSites')
+  }
+  if(!is.null(targetPoints))
+    targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
+  if(!is.null(targetSites))
+    targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
+  if(!is.null(originPoints))
+    originPoints <- sf::st_transform(originPoints, crs = resampleProjection)
+  if(!is.null(originSites))
+    originSites <- sf::st_transform(originSites, crs = resampleProjection)
+  if (is.null(targetNames)){
+    if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]]))
+      targetNames <- as.character(1:nTargetSites)
+    else
+      targetNames <- targetSites[[1]]
+  }
+  if (is.null(originNames)){
+    if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
+      if (nOriginSites > 26)
+        originNames <- 1:nOriginSites
+      else
+        originNames <- LETTERS[1:nOriginSites]
+    }
+    else
+      originNames <- originSites[[1]]
+  }
   targetPointsInSites <- FALSE
   if (targetPointsAssigned && !is.null(targetSites)) {
     if (verbose > 0)

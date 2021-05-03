@@ -241,19 +241,19 @@ iso <- isoAssign(isovalues = OVENvals[,2],
 nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
 isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
-ovenMC <- estMC(originRelAbund = originRelAbund,
-                targetIntrinsic = iso,
-                originPoints = originPoints,
-                originSites = originSites,
-                originDist = originDist,
-                nSamples = 200,
-                verbose = 1,
-                calcCorr = TRUE,
-                alpha = 0.05,
-                approxSigTest = FALSE,
-                isIntrinsic = TRUE)
+# ovenMC <- estMC(originRelAbund = originRelAbund,
+#                 targetIntrinsic = iso,
+#                 originPoints = originPoints,
+#                 originSites = originSites,
+#                 originDist = originDist,
+#                 nSamples = 200,
+#                 verbose = 1,
+#                 calcCorr = TRUE,
+#                 alpha = 0.05,
+#                 approxSigTest = FALSE,
+#                 isIntrinsic = TRUE)
 
-ovenMC
+targetSites <- sf::st_as_sf(iso$targetSites)
 system.time(test4 <-
               MigConnectivity:::estTransition(isGL = isGL, isRaster = isRaster,
                                               isProb = isProb,
@@ -262,7 +262,7 @@ system.time(test4 <-
                                               geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
                                               #targetPoints = targetPoints,
                                               #targetAssignment = targetAssignment,
-                                              targetSites = sf::st_as_sf(iso$targetSites),
+                                              targetSites = targetSites,
                                               resampleProjection = resampleProjection,
                                               targetRaster = iso,
                                               #nSim = 5000, maxTries = 300,
@@ -274,4 +274,4 @@ system.time(test4 <-
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
                                               nSamples = 100))
-test3
+test4
