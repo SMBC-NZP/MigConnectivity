@@ -367,7 +367,7 @@ locSample <- function(isGL,
           # Fill in target points of valid sampled points
           point.sample[which(isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample01))], ]<-
             t(mapply(x = good.sample01[!is.na(good.sample01)],
-                     y = point.sample0[which(which(isGL & toSampleBool) %in% which(isProb & !isRaster))[which(!is.na(good.sample01))], ],
+                     y = point.sample0[which(which(isGL & toSampleBool) %in% which(isProb & !isRaster))[which(!is.na(good.sample01))]],
                      FUN = function(x, y) sf::st_coordinates(y[x,])))
         }
       }
@@ -384,7 +384,7 @@ locSample <- function(isGL,
         # Fill in target points of valid sampled points
         point.sample[which(!isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample0[!(which(isGL & toSampleBool) %in% which(isProb | isRaster))]))], ]<-
           t(mapply(x = good.sample0[!is.na(good.sample0) & !(which(isGL & toSampleBool) %in% which(isProb | isRaster))],
-                   y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0))), ],
+                   y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0)))],
                    FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
@@ -398,7 +398,7 @@ locSample <- function(isGL,
         # Fill in target points of valid sampled points
         point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
           t(mapply(x = good.sample12[!is.na(good.sample12)],
-                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))), ],
+                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2)))],
                    FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
@@ -443,7 +443,7 @@ locSample <- function(isGL,
             t(mapply(
               x = good.sample02[!is.na(good.sample02)],
               y = point.sample0[which(which(isGL & toSampleBool) %in%
-                                        which(!isProb & isRaster))[which(!is.na(good.sample02))], ],
+                                        which(!isProb & isRaster))[which(!is.na(good.sample02))]],
               FUN = function(x, y)
                 sf::st_coordinates(y[x, ])
             ))
@@ -468,9 +468,9 @@ locSample <- function(isGL,
                            which(which(isRaster & toSampleBool) %in% which(isProb & isGL))[col]]
           # This one might not matter (not planning to include isProb in
           # estMantel or look at points in estTransition).
-          point.sample[which(isProb & isGL & isRaster & toSampleBool)[which(!is.na(good.sample012))], ]<-
+          point.sample[which(isProb & isGL & isRaster & toSampleBool)[which(!is.na(good.sample012))]]<-
             t(mapply(x = good.sample012[!is.na(good.sample012)],
-                     y = point.sample0[which(which(isGL & toSampleBool) %in% which(isProb & isRaster))[which(!is.na(good.sample012))], ],
+                     y = point.sample0[which(which(isGL & toSampleBool) %in% which(isProb & isRaster))[which(!is.na(good.sample012))]],
                      FUN = function(x, y) sf::st_coordinates(y[x,])))
         }
       }
