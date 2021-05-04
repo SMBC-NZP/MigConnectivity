@@ -497,8 +497,11 @@ estTransitionBoot <- function(originSites = NULL,
       xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
                             MARGIN = 2,
                             FUN = function(x){
-                        xy <-cbind(weighted.mean(originRasterXYZ[,1], w = x, na.rm = TRUE),
-                                   weighted.mean(originRasterXYZ[,2], w = x, na.rm = TRUE))
+                        # xy <-cbind(weighted.mean(originRasterXYZ[,1], w = x, na.rm = TRUE),
+                        #           weighted.mean(originRasterXYZ[,2], w = x, na.rm = TRUE))
+                  #select the cell with the highest posterior probability #
+                              xy <- cbind(originRasterXYZ[which.max(x)[1],1],
+                                          originRasterXYZ[which.max(x)[1],2])
                         return(xy)})
       # returns a point estimate for each bird - turn it into a sf object
       xyOriginRast <- t(xyOriginRast)
@@ -531,8 +534,11 @@ estTransitionBoot <- function(originSites = NULL,
                           FUN = function(x){
                             #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
                             #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
-                            xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
-                                        weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
+                            #xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
+                            #            weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
+                  # Select cell with the maximum posterior probability #
+                            xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
+                                  targetRasterXYZ[which.max(x)[1],2])
                             return(xy)})
     # returns a point estimate for each bird - turn it into a sf object
     xyTargetRast <- t(xyTargetRast)
@@ -551,6 +557,7 @@ estTransitionBoot <- function(originSites = NULL,
                                                         y = targetSites,
                                                         sparse = TRUE))))
   }
+
   nOriginSites <- ifelse(is.null(originSites), ncol(originAssignment), nrow(originSites))
   nTargetSites <- ifelse(is.null(targetSites), ncol(targetAssignment), nrow(targetSites))
   # if (length(targetPoints)!=nAnimals &&
@@ -569,33 +576,36 @@ estTransitionBoot <- function(originSites = NULL,
   if(!is.null(targetSites) && is.na(raster::projection(targetSites))){
     stop('Coordinate system definition needed for targetSites')
   }
-  if(!is.null(targetPoints))
-    targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
-  if(!is.null(targetSites))
-    targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
-  if(!is.null(originPoints))
-    originPoints <- sf::st_transform(originPoints, crs = resampleProjection)
-  if(!is.null(originSites))
-    originSites <- sf::st_transform(originSites, crs = resampleProjection)
+  if(!is.null(targetPoints)){
+    targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)}
+  if(!is.null(targetSites)){
+    targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
+  if(!is.null(originPoints)){
+    originPoints <- sf::st_transform(originPoints, crs = resampleProjection)}
+  if(!is.null(originSites)){
+    originSites <- sf::st_transform(originSites, crs = resampleProjection)}
+  # Names - this isn't going to work as currently written for sf objects #
   if (is.null(targetNames)){
-    if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]]))
-      targetNames <- as.character(1:nTargetSites)
-    else
-      targetNames <- targetSites[[1]]
+    if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]])){
+      targetNames <- as.character(1:nTargetSites)}else{
+      targetNames <- targetSites[[1]]}
   }
+
   if (is.null(originNames)){
     if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
       if (nOriginSites > 26){
         originNames <- 1:nOriginSites
-      }else
-        originNames <- LETTERS[1:nOriginSites]
-    }else
-      originNames <- originSites[[1]]
+      }else{
+        originNames <- LETTERS[1:nOriginSites]}
+    }else{
+      originNames <- originSites[[1]]}
   }
+
   targetPointsInSites <- FALSE
+
   if (targetPointsAssigned && !is.null(targetSites)) {
-    if (verbose > 0)
-      cat('Checking if single cell target points in targetSites, may take a moment\n')
+    if (verbose > 0){
+      cat('Checking if single cell target points in targetSites, may take a moment\n')}
     targetPointSample2 <- apply(targetSingleCell,
                                 FUN = function(x){sf::st_as_sf(data.frame(x),
                                                                coords = c("Longitude", "Latitude"),
@@ -614,9 +624,7 @@ estTransitionBoot <- function(originSites = NULL,
     else if (verbose > 0)
       cat('Single cell target points supplied, but some points (proportion',
           format(sum(is.na(targetCon))/length(targetCon), digits = 2), ') not in targetSites\n')
-  }
-  else
-    targetCon <- NULL
+  }else {targetCon <- NULL}
 
   originPointsInSites <- FALSE
   if (originPointsAssigned && !is.null(originSites)) {
@@ -643,15 +651,15 @@ estTransitionBoot <- function(originSites = NULL,
       cat('Single cell origin points supplied, but some points (proportion',
           sum(is.na(originCon))/length(originCon), ') not in originSites\n')
     }
-  }
-  else{
+  }else{
     originCon <- NULL
   }
 
 
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
-                                                    targetNames))
+                                                    #targetNames))
+                                                    NULL))
   if (is.null(dim(originAssignment))){
     originAssignment <- array(originAssignment)}
   if (is.null(dim(targetAssignment))){
