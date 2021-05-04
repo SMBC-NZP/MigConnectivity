@@ -253,9 +253,13 @@ isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
 #                 approxSigTest = FALSE,
 #                 isIntrinsic = TRUE)
 
-targetSites <- sf::st_as_sf(iso$targetSites)
+targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSite)
+targetSites <- sf::st_as_sf(targetSites)
+
+
 system.time(test4 <-
-              MigConnectivity:::estTransition(isGL = isGL, isRaster = isRaster,
+              MigConnectivity:::estTransition(isGL = isGL,
+                                              isRaster = isRaster,
                                               isProb = isProb,
                                               isTelemetry = isTelemetry,
                                               geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]

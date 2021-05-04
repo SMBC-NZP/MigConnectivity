@@ -391,68 +391,60 @@ estTransitionBoot <- function(originSites = NULL,
                               resampleProjection = MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300) {
-
   # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
   # CONTINAS- isotope assignment
   # COULD ALSO BE A GENETIC RASTER OR A COMBINATION #
 
   # ORIGIN RASTER NEEDS WORK
   # Input checking and assignment
-  if (any(captured != "origin" & captured != "target" & captured != "neither"))
-    stop("captured should be 'origin', 'target', 'neither', or a vector of those options")
-  if (!(verbose %in% 0:3))
-    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")
-  if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither")))
-    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) &&
-      any(isGL & (captured == "origin" | captured == "neither")))
-    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
-  if ((is.null(originPoints) && is.null(originRaster) || is.null(originSites)) &&
-      is.null(originAssignment))
-    stop("Need to define either originAssignment or originSites and originRaster or originPoints")
-  if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) &&
-      is.null(targetAssignment))
-    stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")
-  if (any(isProb & (captured != "target")) &&
-      (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
-
+  if (any(captured != "origin" & captured != "target" & captured != "neither")){
+    stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
+  if (!(verbose %in% 0:3)){
+    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
+  if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if ((is.null(originPoints) && is.null(originRaster) || is.null(originSites)) && is.null(originAssignment)){
+    stop("Need to define either originAssignment or originSites and originRaster or originPoints")}
+  if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) && is.null(targetAssignment)){
+    stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")}
+  if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
     stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
-  if (any(isProb & captured != "origin") && (is.null(originAssignment) ||
-                                       length(dim(originAssignment))!=2))
-    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")
+  if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
+
+# if targetRaster is NULL #
   if (is.null(targetRaster)){
     targetPointsAssigned <- FALSE
     targetSingleCell <- NULL
     targetRasterXYZ <- NULL
-  }
-  else {
+  }else{
     if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
       targetRasterXYZ <- raster::rasterToPoints(targetRaster)
       targetSingleCell <- NULL
       targetPointsAssigned <- FALSE
-    }
-    else if (inherits(targetRaster, "isoAssign")) {
+    }else{if (inherits(targetRaster, "isoAssign")) {
       targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
                                   is.na(targetRaster$SingleCell))
       targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
       targetSingleCell <- targetRaster$SingleCell
-    }
-    else {
+    }else {
       stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
     }
   }
+
   if (is.null(originRaster)){
     originPointsAssigned <- FALSE
     originSingleCell <- NULL
     originRasterXYZ <- NULL
-  }
-  else {
+  }else {
     if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
       originRasterXYZ <- raster::rasterToPoints(originRaster)
       originSingleCell <- NULL
       originPointsAssigned <- FALSE
-    }
-    else if (inherits(originRaster, "isoAssign")) {
+    }else { if (inherits(originRaster, "isoAssign")) {
       originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
                                   is.na(originRaster$SingleCell))
       originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
@@ -460,8 +452,10 @@ estTransitionBoot <- function(originSites = NULL,
     }
     else {
       stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
     }
   }
+
   nAnimals <- max(length(targetPoints), length(originPoints), length(isGL),
                   length(isTelemetry), length(isRaster), length(isProb),
                   min(length(targetAssignment), dim(targetAssignment)[1]),
@@ -473,20 +467,18 @@ estTransitionBoot <- function(originSites = NULL,
                          ifelse(originPointsAssigned, dim(originSingleCell)[3],
                                 dim(originRasterXYZ)[2] - 2)),
                   length(captured))
-  if (length(isGL)==1)
-    isGL <- rep(isGL, nAnimals)
-  if (length(isTelemetry)==1)
-    isTelemetry <- rep(isTelemetry, nAnimals)
-  if (length(isRaster)==1)
-    isRaster <- rep(isRaster, nAnimals)
-  if (length(isProb)==1)
-    isProb <- rep(isProb, nAnimals)
-  if (length(captured)==1)
-    captured <- rep(captured, nAnimals)
+
+  if (length(isGL)==1){isGL <- rep(isGL, nAnimals)}
+  if (length(isTelemetry)==1){isTelemetry <- rep(isTelemetry, nAnimals)}
+  if (length(isRaster)==1){isRaster <- rep(isRaster, nAnimals)}
+  if (length(isProb)==1){isProb <- rep(isProb, nAnimals)}
+  if (length(captured)==1){captured <- rep(captured, nAnimals)}
   if(inherits(originSites,"SpatialPolygonsDataFrame")){
-    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
+    originSites <- sf::st_as_sf(originSites)}
+    #originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
   if(inherits(targetSites,"SpatialPolygonsDataFrame")){
-    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
+    targetSites <- sf::st_as_sf(targetSites)}
+    #targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
 
 
   # IF originAssignment is NULL - we need to generate originAssignments from
@@ -505,14 +497,16 @@ estTransitionBoot <- function(originSites = NULL,
       xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
                             MARGIN = 2,
                             FUN = function(x){
-                        xy <-cbind(Hmisc::wtd.quantile(originRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
-                                   Hmisc::wtd.quantile(originRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                        xy <-cbind(weighted.mean(originRasterXYZ[,1], w = x, na.rm = TRUE),
+                                   weighted.mean(originRasterXYZ[,2], w = x, na.rm = TRUE))
                         return(xy)})
       # returns a point estimate for each bird - turn it into a sf object
       xyOriginRast <- t(xyOriginRast)
       colnames(xyOriginRast) <- c("x","y")
       # right now the assignment CRS is WGS84 - should be the same as the origin raster
       originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
+      # transform to match originSites
+      originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
       originAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = originAssignRast,
                                                                  y = originSites,
                                                                  sparse = TRUE)))))
@@ -523,6 +517,8 @@ estTransitionBoot <- function(originSites = NULL,
                                                                  y = originSites,
                                                                 sparse = TRUE)))))
   }
+
+
   if (is.null(targetAssignment)){
     if (all(isGL | isTelemetry | captured != "origin"))
       targetAssignment <- array(unclass(sf::st_intersects(x = targetPoints,
@@ -533,19 +529,23 @@ estTransitionBoot <- function(originSites = NULL,
       xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
                           MARGIN = 2,
                           FUN = function(x){
-                            xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
-                                       Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                            #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
+                            #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                            xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
+                                        weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
                             return(xy)})
     # returns a point estimate for each bird - turn it into a sf object
     xyTargetRast <- t(xyTargetRast)
     colnames(xyTargetRast) <- c("x","y")
     # right now the assignment CRS is WGS84 - should be the same as the origin raster
     targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+    # transform to match originSites
+    targetSites_wgs <- sf::st_transform(targetSites, 4326)
+    #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
     targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
-                                                               y = targetSites,
+                                                               y = targetSites_wgs,
                                                                sparse = TRUE)))))
-   }
-   else
+   }else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
     targetAssignment <- suppressMessages(array(unclass(sf::st_intersects(x = targetPoints,
                                                         y = targetSites,
@@ -585,12 +585,11 @@ estTransitionBoot <- function(originSites = NULL,
   }
   if (is.null(originNames)){
     if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
-      if (nOriginSites > 26)
+      if (nOriginSites > 26){
         originNames <- 1:nOriginSites
-      else
+      }else
         originNames <- LETTERS[1:nOriginSites]
-    }
-    else
+    }else
       originNames <- originSites[[1]]
   }
   targetPointsInSites <- FALSE
@@ -640,33 +639,29 @@ estTransitionBoot <- function(originSites = NULL,
 
     if (!any(is.na(originCon)))
       pointsInSites <- TRUE
-    else if (verbose > 0)
+    else{if (verbose > 0){
       cat('Single cell origin points supplied, but some points (proportion',
-          sum(is.na(originCon))/length(originCon), ') not in originSites\n')
-  }
-  else
-    originCon <- NULL
+          sum(is.na(originCon))/length(originCon), ') not in originSites\n')}
+  }else{originCon <- NULL}
+    }
 
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
-  if (is.null(dim(originAssignment)))
-    originAssignment <- array(originAssignment)
-  if (is.null(dim(targetAssignment)))
-    targetAssignment <- array(targetAssignment)
+  if (is.null(dim(originAssignment))){
+    originAssignment <- array(originAssignment)}
+  if (is.null(dim(targetAssignment))){
+    targetAssignment <- array(targetAssignment)}
 
 
 
+  if (length(dim(originAssignment))==2){
+    pointOriginAssignment <- apply(originAssignment, 1, which.max)}
+  else{pointOriginAssignment <- originAssignment}
 
-  if (length(dim(originAssignment))==2)
-    pointOriginAssignment <- apply(originAssignment, 1, which.max)
-  else
-    pointOriginAssignment <- originAssignment
-
-  if (length(dim(targetAssignment))==2)
+  if (length(dim(targetAssignment))==2){
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
-  else
-    pointTargetAssignment <- targetAssignment
+    }else{pointTargetAssignment <- targetAssignment}
 
   pointSites <- table(pointOriginAssignment, pointTargetAssignment)
 

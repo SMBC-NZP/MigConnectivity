@@ -130,8 +130,8 @@ if(verbose>0){cat("\n Restricting possible assignments to species distribution \
 sppShapefile$INOUT<-1
 
 # mask the isomap to sppShapefile
-isomap <- raster::mask(isomap, sppShapefile)
 isomap <- raster::crop(isomap, sppShapefile)
+isomap <- raster::mask(isomap, sppShapefile)
 }
 if(!is.null(relAbund) && !inherits(relAbund,"RasterLayer")){stop("relAbund should be a raster layer")}
 if(!is.null(relAbund) && inherits(relAbund,"RasterLayer")){
@@ -165,7 +165,7 @@ targetSites <- raster::intersect(targetSites,sppShapefile)
 # rename the targetSites to simplify output
 targetSites<-targetSites[,1]
 names(targetSites) <- c("targetSite")
-
+#targetSites <- rgeos::gUnaryUnion(targetSites, id=targetSites$targetSite)
 # spatially explicit assignment
 assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
 
