@@ -262,8 +262,8 @@ system.time(test4 <-
                                               isRaster = isRaster,
                                               isProb = isProb,
                                               isTelemetry = isTelemetry,
-                                              geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                              geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                                              #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                                              #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
                                               #targetPoints = targetPoints,
                                               #targetAssignment = targetAssignment,
                                               targetSites = targetSites,
