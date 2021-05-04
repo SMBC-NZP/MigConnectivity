@@ -175,14 +175,14 @@ locSample <- function(isGL,
     # DETERMINE THE NUMBER OF RANDOM DRAWS FROM ISOSCAPE used in isoAssign
 
     # How does targetIntrinsic make it into this function?
-    nrandomDraws <- dim(targetIntrinsic$SingleCell)[1]
+    nrandomDraws <- dim(singleCell)[1]
 
     # Stack 3D array into 2D, to make it easier to get different random point samples for each animal
     intrinsic1 <- array(aperm(singleCell, c(1, 3, 2)),
                         dim = c(nAnimals * nrandomDraws, 2),
                         dimnames = list(NULL, c("x", "y")))
 
-    # project target points to WGS #
+    # project points to WGS #
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
                                crs = MigConnectivity::projections$WGS84)
   }
@@ -340,15 +340,18 @@ locSample <- function(isGL,
 
         samp2 <- samp + rep((1:nAnimals)[toSampleBool & isRaster] - 1, each = nSim) * nrandomDraws
 
-        point.sample2a <- intrinsic2[samp2, ]
+        point.sample2 <- intrinsic2[samp2, ]
+        if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
+          point.sample2 <- sf::st_transform(point.sample2, crs = resampleProjection)
+        }
         # Check which points are in target sites
-        site.sample2a <- suppressMessages(sf::st_intersects(point.sample, y = targetSites))
+        site.sample2 <- suppressMessages(sf::st_intersects(point.sample2, y = sites))
         # Organize into matrix (separate by animal)
-        site.sample2b <- matrix(site.sample2a, nSim, sum(isRaster & toSampleBool))
+        site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
         # Identify which animals have a valid point (inside a site).
         # good.sample2, for those that don't, will be NA. For those that do, it
         # will be location in point.sample where first valid point is.
-        good.sample2 <- apply(site.sample2b, 2, function(x) which(!is.na(x))[1]) +
+        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1]) +
           seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
       }
     }
@@ -397,8 +400,8 @@ locSample <- function(isGL,
                 function(x) x[!is.na(x)][1])
         # Fill in target points of valid sampled points
         point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
-          t(mapply(x = good.sample12[!is.na(good.sample12)],
-                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2)))],
+          t(mapply(x = good.sample2[!is.na(good.sample2)],
+                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
                    FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }

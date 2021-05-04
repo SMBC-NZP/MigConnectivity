@@ -667,9 +667,9 @@ estTransitionBoot <- function(originSites = NULL,
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
     }else{pointTargetAssignment <- targetAssignment}
 
-  pointSites <- table(pointOriginAssignment, pointTargetAssignment)
-
-  pointPsi <- prop.table(pointSites, 1)
+  # pointSites <- table(pointOriginAssignment, pointTargetAssignment)
+  #
+  # pointPsi <- prop.table(pointSites, 1)
 
   boot <- 1
   while (boot <= nBoot) {
