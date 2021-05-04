@@ -639,11 +639,15 @@ estTransitionBoot <- function(originSites = NULL,
 
     if (!any(is.na(originCon)))
       pointsInSites <- TRUE
-    else{if (verbose > 0){
+    else if (verbose > 0){
       cat('Single cell origin points supplied, but some points (proportion',
-          sum(is.na(originCon))/length(originCon), ') not in originSites\n')}
-  }else{originCon <- NULL}
+          sum(is.na(originCon))/length(originCon), ') not in originSites\n')
     }
+  }
+  else{
+    originCon <- NULL
+  }
+
 
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
