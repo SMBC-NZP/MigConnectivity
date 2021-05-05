@@ -346,12 +346,24 @@ locSample <- function(isGL,
         }
         # Check which points are in target sites
         site.sample2 <- suppressMessages(sf::st_intersects(point.sample2, y = sites))
+
+        # Give values without intersection an NA
+        len_intersect <- lengths(site.sample2)
+        # quick check to ensure that all the points fall exactly in one targetSite #
+        if(any(len_intersect)>1){stop("Overlapping targetSites not allowed \n")}
+
+        tf_intersect <- lengths(site.sample2)>0
+
+        site.sample2 <- unlist(as.numeric(site.sample2))
+        site.sample2[site.sample2==0] <- NA
+
         # Organize into matrix (separate by animal)
         site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
         # Identify which animals have a valid point (inside a site).
         # good.sample2, for those that don't, will be NA. For those that do, it
         # will be location in point.sample where first valid point is.
-        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1]) +
+
+        good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]}) +
           seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
       }
     }
@@ -398,10 +410,11 @@ locSample <- function(isGL,
                              drop = FALSE],
                 2,
                 function(x) x[!is.na(x)][1])
+        good.sample2
         # Fill in target points of valid sampled points
         point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
           t(mapply(x = good.sample2[!is.na(good.sample2)],
-                   y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
+                   y = point.sample2,#which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
                    FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
