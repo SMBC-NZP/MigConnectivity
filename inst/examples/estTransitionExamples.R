@@ -265,7 +265,7 @@ system.time(test4 <-
                                               #originNames = OVENdata$originNames,
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
-                                              nSamples = 200))
+                                              nSamples = 1000))
 test4
 
 ovenMC <- estMC(originRelAbund = originRelAbund,
@@ -321,7 +321,26 @@ system.time(test5 <-
                                               #originNames = OVENdata$originNames,
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
-                                              nSamples = 200))
+                                              nSamples = 1000))
 test5$psi$mean
 test4$psi$mean - test5$psi$mean
 test4$psi$se - test5$psi$se
+
+# Don't run, only works if you've run a bunch of stuff from within functions
+ts <- sf::st_transform(targetSites, resampleProjection)
+ps2 <- lapply(point.sample2, sf::st_transform, crs = resampleProjection)
+tar <- sf::st_transform(targetAssignRast, resampleProjection)
+
+plot(ts)
+for(i in 2) {
+  plot(ps2[[i]], col = RColorBrewer::brewer.pal(7, "Dark2")[i], add = T)
+}
+plot(tar[1:7, ], col = RColorBrewer::brewer.pal(7, "Dark2"), add = T, pch = 19)
+sc1 <- sf::st_as_sf(as.data.frame(iso$SingleCell[,,1]), coords = c("Longitude", "Latitude"),
+                    crs = MigConnectivity::projections$WGS84)
+sc1 <- sf::st_transform(sc1, resampleProjection)
+plot(sc1, col = RColorBrewer::brewer.pal(7, "Dark2")[1], add = T, pch = 5)
+sc2 <- sf::st_as_sf(as.data.frame(iso$SingleCell[,,2]), coords = c("Longitude", "Latitude"),
+                    crs = MigConnectivity::projections$WGS84)
+sc2 <- sf::st_transform(sc2, resampleProjection)
+plot(sc2, col = RColorBrewer::brewer.pal(7, "Dark2")[2], add = T, pch = 5, alpha = 0.5)
