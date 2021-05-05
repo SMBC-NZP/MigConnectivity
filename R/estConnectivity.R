@@ -534,11 +534,11 @@ estTransitionBoot <- function(originSites = NULL,
                           FUN = function(x){
                             #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
                             #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
-                            #xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
+                            # xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
                             #            weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
                   # Select cell with the maximum posterior probability #
                             xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
-                                  targetRasterXYZ[which.max(x)[1],2])
+                                        targetRasterXYZ[which.max(x)[1],2])
                             return(xy)})
     # returns a point estimate for each bird - turn it into a sf object
     xyTargetRast <- t(xyTargetRast)
@@ -551,6 +551,15 @@ estTransitionBoot <- function(originSites = NULL,
     targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
                                                                y = targetSites_wgs,
                                                                sparse = TRUE)))))
+    # targetAssignmentMean <- unclass(sf::st_intersects(x = targetAssignRast,
+    #                                                  y = targetSites_wgs,
+    #                                                  sparse = TRUE))
+    # badMean <- sapply(targetAssignmentMean, function(x) length(x)<1)
+    # targetAssignmentMax <- unclass(sf::st_intersects(x = targetAssignRast,
+    #                                y = targetSites_wgs,
+    #                                sparse = TRUE))
+    # badMax <- sapply(targetAssignmentMax, function(x) length(x)<1)
+    # which(badMax & badMean)
    }else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
     targetAssignment <- suppressMessages(array(unclass(sf::st_intersects(x = targetPoints,
@@ -668,12 +677,18 @@ estTransitionBoot <- function(originSites = NULL,
 
 
   if (length(dim(originAssignment))==2){
-    pointOriginAssignment <- apply(originAssignment, 1, which.max)}
-  else{pointOriginAssignment <- originAssignment}
+    pointOriginAssignment <- apply(originAssignment, 1, which.max)
+  }
+  else{
+    pointOriginAssignment <- as.vector(originAssignment)
+  }
 
   if (length(dim(targetAssignment))==2){
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
-    }else{pointTargetAssignment <- targetAssignment}
+  }
+  else{
+    pointTargetAssignment <- as.vector(targetAssignment)
+  }
 
    pointSites <- table(pointOriginAssignment, pointTargetAssignment)
 
