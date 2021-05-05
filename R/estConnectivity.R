@@ -548,9 +548,25 @@ estTransitionBoot <- function(originSites = NULL,
     # transform to match originSites
     targetSites_wgs <- sf::st_transform(targetSites, 4326)
     #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
-    targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
-                                                               y = targetSites_wgs,
-                                                               sparse = TRUE)))))
+    #targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+    #                                                           y = targetSites_wgs,
+    #                                                           sparse = TRUE)))))
+    # Check which points are in target sites
+    ta_assign <- suppressMessages(sf::st_intersects(x = targetAssignRast,
+                                                    y = targetSites_wgs,
+                                                    sparse = TRUE))
+
+    # Give values without intersection an NA
+    ta_intersect <- lengths(ta_assign)
+    # quick check to ensure that all the points fall exactly in one targetSite #
+    if(any(ta_intersect)>1){stop("Overlapping targetSites not allowed \n")}
+
+    ta_bool_intersect <- lengths(ta_intersect)>0
+
+    targetAssignment <- unlist(as.numeric(ta_assign))
+
+    # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
+    # IF INTERSECTS IS (empty)
    }else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
     targetAssignment <- suppressMessages(array(unclass(sf::st_intersects(x = targetPoints,
@@ -588,7 +604,7 @@ estTransitionBoot <- function(originSites = NULL,
   if (is.null(targetNames)){
     if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]])){
       targetNames <- as.character(1:nTargetSites)}else{
-      targetNames <- targetSites[[1]]}
+      targetNames <- as.character(1:nTargetSites)}
   }
 
   if (is.null(originNames)){
@@ -598,7 +614,7 @@ estTransitionBoot <- function(originSites = NULL,
       }else{
         originNames <- LETTERS[1:nOriginSites]}
     }else{
-      originNames <- originSites[[1]]}
+      originNames <- 1:nOriginSites}
   }
 
   targetPointsInSites <- FALSE
@@ -668,8 +684,8 @@ estTransitionBoot <- function(originSites = NULL,
 
 
   if (length(dim(originAssignment))==2){
-    pointOriginAssignment <- apply(originAssignment, 1, which.max)}
-  else{pointOriginAssignment <- originAssignment}
+    pointOriginAssignment <- apply(originAssignment, 1, which.max)} else
+      {pointOriginAssignment <- originAssignment}
 
   if (length(dim(targetAssignment))==2){
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
