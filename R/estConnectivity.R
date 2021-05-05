@@ -602,19 +602,20 @@ estTransitionBoot <- function(originSites = NULL,
     originSites <- sf::st_transform(originSites, crs = resampleProjection)}
   # Names - this isn't going to work as currently written for sf objects #
   if (is.null(targetNames)){
-    if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]])){
-      targetNames <- as.character(1:nTargetSites)}else{
-      targetNames <- as.character(1:nTargetSites)}
+    # if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]])){
+    #   targetNames <- as.character(1:nTargetSites)}else{
+    targetNames <- as.character(1:nTargetSites)
   }
 
   if (is.null(originNames)){
-    if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
-      if (nOriginSites > 26){
-        originNames <- 1:nOriginSites
-      }else{
-        originNames <- LETTERS[1:nOriginSites]}
+#    if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
+    if (nOriginSites > 26){
+      originNames <- as.character(1:nOriginSites)
     }else{
-      originNames <- 1:nOriginSites}
+      originNames <- LETTERS[1:nOriginSites]}
+    # }else{
+    #   originNames <- 1:nOriginSites
+    # }
   }
 
   targetPointsInSites <- FALSE
@@ -684,17 +685,11 @@ estTransitionBoot <- function(originSites = NULL,
 
 
   if (length(dim(originAssignment))==2){
-<<<<<<< HEAD
     pointOriginAssignment <- apply(originAssignment, 1, which.max)
   }
   else{
     pointOriginAssignment <- as.vector(originAssignment)
   }
-=======
-    pointOriginAssignment <- apply(originAssignment, 1, which.max)} else
-      {pointOriginAssignment <- originAssignment}
->>>>>>> fa6ae80274d3cd394b9cc3eb2c15f112de887c0c
-
   if (length(dim(targetAssignment))==2){
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
   }
@@ -1231,7 +1226,7 @@ estMCisotope <- function(targetDist=NULL,
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
 
-    originAssignment <- suppressMessagess(as.numeric(unclass(sf::st_intersects(x = originPoints, y = originSites, sparse = TRUE))))
+    originAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = originPoints, y = originSites, sparse = TRUE))))
 
   nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
   targetSites <- sf::st_transform(targetSites, resampleProjection)
@@ -1249,7 +1244,7 @@ estMCisotope <- function(targetDist=NULL,
                                   coords = c("Longitude","Latitude"),
                                   crs = sf::st_crs(targetSites))
 
-      targCon[i, ] <- suppressMessagess(as.numeric(unclass(sf::st_intersects(x = temptargCon, y = targetSites, sparse = TRUE))))
+      targCon[i, ] <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = temptargCon, y = targetSites, sparse = TRUE))))
     }
 
     if (!any(is.na(targCon)))

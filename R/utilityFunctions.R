@@ -143,7 +143,7 @@ targetSample <- function(isGL,
               draws = draws))
 }
 
-randomPoints <- function(probs, xy, nSim, sites = NULL) {
+randomPoints <- function(probs, xy, nSim) {
   multidraw <- rmultinom(n = nSim,
                          size = 1,
                          prob = probs)
@@ -304,22 +304,31 @@ locSample <- function(isGL,
         good.sample2 <- rep(1, sum(isRaster & toSampleBool))
       }
       else if (is.null(singleCell)) {
-        point.sample2 <- apply(matvals[ , (1:nAnimals)[toSampleBool & isRaster] + 2, drop = FALSE],
-                               2, randomPoints, xy = matvals[, 1:2],
-                               nSim = nSim, sites = sites)
-        dimnames(point.sample2)[[2]] <- c("x","y")
+        multidraw <- apply(matvals[ , (1:nAnimals)[toSampleBool & isRaster] + 2, drop = FALSE],
+                           2, function(x) (rmultinom(prob = x, n = nSim, size = 1)))
+        multidraw <- array(multidraw, c(nrow(matvals), nSim,
+                                        sum(toSampleBool & isRaster)))
+        #point.sample2 <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
+        point.sample2 <- apply(multidraw, c(2:3), function(x) which(x==1))
+        point.sample2 <- array(matvals[point.sample2, 1:2],
+                               c(nSim, sum(toSampleBool & isRaster), 2),
+                               list(NULL, NULL, c("x","y")))
+        #dimnames(point.sample2)[[2]] <- c("x","y")
 
         # Convert those to SpatialPoints
 
         point.sample2 <- apply(point.sample2,
-                               FUN = function(x){sf::st_as_sf(data.frame(x),
-                                                              coords = c("x","y"),
-                                                              crs = resampleProjection)},
-                               MARGIN = 3)
+                               FUN = function(x){
+                                 sf::st_as_sf(data.frame(x),
+                                              coords = c("x","y"),
+                                    crs = MigConnectivity::projections$WGS84)},
+                               MARGIN = 2)
         #point.sample <- lapply(point.sample1, st_as_sf)
         # Find out which sampled points are in a target site
         if(!sf::st_crs(sites)==sf::st_crs(point.sample2[[1]])){
           sites <- sf::st_transform(sites, crs = resampleProjection)
+          point.sample2 <- lapply(point.sample2, sf::st_transform,
+                                  crs = resampleProjection)
         }
 
         site.sample2 <- sapply(point.sample2, FUN = function(z){
@@ -349,8 +358,10 @@ locSample <- function(isGL,
 
         # Give values without intersection an NA
         len_intersect <- lengths(site.sample2)
-        # quick check to ensure that all the points fall exactly in one targetSite #
-        if(any(len_intersect)>1){stop("Overlapping targetSites not allowed \n")}
+        # quick check to ensure that all the points fall exactly in one site #
+        if(any(len_intersect)>1){
+          stop("Overlapping targetSites or originSites not allowed \n")
+        }
 
         tf_intersect <- lengths(site.sample2)>0
 

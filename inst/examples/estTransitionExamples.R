@@ -241,18 +241,6 @@ iso <- isoAssign(isovalues = OVENvals[,2],
 nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
 isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
-# ovenMC <- estMC(originRelAbund = originRelAbund,
-#                 targetIntrinsic = iso,
-#                 originPoints = originPoints,
-#                 originSites = originSites,
-#                 originDist = originDist,
-#                 nSamples = 200,
-#                 verbose = 1,
-#                 calcCorr = TRUE,
-#                 alpha = 0.05,
-#                 approxSigTest = FALSE,
-#                 isIntrinsic = TRUE)
-
 targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSite)
 targetSites <- sf::st_as_sf(targetSites)
 
@@ -277,5 +265,63 @@ system.time(test4 <-
                                               #originNames = OVENdata$originNames,
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
-                                              nSamples = 100))
+                                              nSamples = 200))
 test4
+
+ovenMC <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = iso,
+                originPoints = originPoints,
+                originSites = originSites,
+                targetSites = targetSites,
+                originDist = originDist,
+                nSamples = 200,
+                verbose = 1,
+                calcCorr = TRUE,
+                alpha = 0.05,
+                approxSigTest = FALSE,
+                isIntrinsic = TRUE)
+ovenMC
+
+test4$psi$mean - ovenMC$psi$mean
+test4$psi$se - ovenMC$psi$se
+
+iso2 <- iso
+iso2$SingleCell <- NULL
+something <- MigConnectivity:::locSample(isGL = isGL,
+                                             isRaster = isRaster,
+                                             isProb = isProb,
+                                             isTelemetry = isTelemetry,
+                                             #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                                             #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                                             #targetPoints = targetPoints,
+                                             #targetAssignment = targetAssignment,
+                                             sites = targetSites,
+                                             resampleProjection = resampleProjection,
+                                             matvals = raster::rasterToPoints(iso2$probassign),
+                                            nSim = 10, maxTries = 300,
+                                         assignment = targetAssignment)
+
+system.time(test5 <-
+              MigConnectivity:::estTransition(isGL = isGL,
+                                              isRaster = isRaster,
+                                              isProb = isProb,
+                                              isTelemetry = isTelemetry,
+                                              #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                                              #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                                              #targetPoints = targetPoints,
+                                              #targetAssignment = targetAssignment,
+                                              targetSites = targetSites,
+                                              resampleProjection = resampleProjection,
+                                              targetRaster = iso2,
+                                              #nSim = 5000, maxTries = 300,
+                                              originSites = originSites,
+                                              originPoints = originPoints,
+                                              #originAssignment = originAssignment,
+                                              captured = rep("origin", nAnimals),
+                                              #originNames = OVENdata$originNames,
+                                              #targetNames = OVENdata$targetNames,
+                                              verbose = 3,
+                                              nSamples = 200))
+test5$psi$mean
+test4$psi$mean - test5$psi$mean
+test4$psi$se - test5$psi$se
