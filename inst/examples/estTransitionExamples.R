@@ -326,6 +326,9 @@ test5$psi$mean
 test4$psi$mean - test5$psi$mean
 test4$psi$se - test5$psi$se
 
+
+
+
 # Don't run, only works if you've run a bunch of stuff from within functions
 ts <- sf::st_transform(targetSites, resampleProjection)
 ps2 <- lapply(point.sample2, sf::st_transform, crs = resampleProjection)
@@ -344,3 +347,60 @@ sc2 <- sf::st_as_sf(as.data.frame(iso$SingleCell[,,2]), coords = c("Longitude", 
                     crs = MigConnectivity::projections$WGS84)
 sc2 <- sf::st_transform(sc2, resampleProjection)
 plot(sc2, col = RColorBrewer::brewer.pal(7, "Dark2")[2], add = T, pch = 5, alpha = 0.5)
+
+###############################################################################
+# Example 4 (raster plus prob tables)
+###############################################################################
+isProb <- rep(c(F, T), c(20, nAnimals - 20))
+targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
+xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
+                      MARGIN = 2,
+                      FUN = function(x){
+                        #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
+                        #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                        # xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
+                        #            weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
+                        # Select cell with the maximum posterior probability #
+                        xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
+                                    targetRasterXYZ[which.max(x)[1],2])
+                        return(xy)})
+# returns a point estimate for each bird - turn it into a sf object
+xyTargetRast <- t(xyTargetRast)
+colnames(xyTargetRast) <- c("x","y")
+# right now the assignment CRS is WGS84 - should be the same as the origin raster
+targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+# transform to match originSites
+targetSites_wgs <- sf::st_transform(targetSites, 4326)
+#targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
+#targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+#                                                           y = targetSites_wgs,
+#                                                           sparse = TRUE)))))
+# Check which points are in target sites
+ta_assign <- suppressMessages(sf::st_intersects(x = targetAssignRast,
+                                                y = targetSites_wgs,
+                                                sparse = TRUE))
+
+# Give values without intersection an NA
+ta_intersect <- lengths(ta_assign)
+# quick check to ensure that all the points fall exactly in one targetSite #
+if(any(ta_intersect)>1){stop("Overlapping targetSites not allowed \n")}
+
+ta_bool_intersect <- lengths(ta_intersect)>0
+
+targetAssignment <- unlist(as.numeric(ta_assign))
+
+
+assignment0 <- unclass(sf::st_intersects(x = targetPoints, y = targetSites,
+                                         sparse = TRUE))
+assignment0[sapply(assignment0, function(x) length(x)==0)] <- 0
+assignment0 <- array(unlist(assignment0), nAnimals)
+for (ani in 1:nAnimals) {
+  if (assignment0[ani]>0)
+    targetAssignment[ani, assignment0[ani]] <- 1
+  else{
+    targetAssignment[ani, ] <- rdiric(1, c(15, 1, 1))
+    isProb[ani] <- TRUE
+  }
+}
+targetAssignment
+isProb
