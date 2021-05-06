@@ -1,17 +1,116 @@
 
-
 ###############################################################################
-# Estimate MC from abundance and transition probability estimates.
-###############################################################################
+#' Estimate MC (migratory connectivity strength)
+#'
+#' Resampling of uncertainty for MC (migratory connectivity strength)
+#' from estimates of psi (transition probabilities) and/or relative abundance.
+#' Psi estimates can come from RMark psi matrix, MCMC samples, or other samples
+#' expressed in array form. Abundance estimates for each origin site and be
+#' either just point estimates (no uncertainty propagated) or MCMC samples.
+#' Other inputs include distances between origin sites, distances between target
+#' sites, and sample size used to estimate psi.
+#'
+#' @param originDist Distances between the B origin sites. Symmetric B by B
+#'  matrix
+#' @param targetDist Distances between the W target sites. Symmetric W by W
+#'  matrix
+#' @param originRelAbund Relative abundance estimates at B origin sites. Either
+#'  a numeric vector of length B that sums to 1 or an mcmc object with at least
+#'  \code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'
+#' @param psi Transition probabilities between B origin and W target sites.
+#'  Either a matrix with B rows and W columns where rows sum to 1, an array with
+#'  dimensions x, B, and W (with x samples of the transition probability matrix
+#'  from another model), an 'estPsi' object (result of calling estTransition),
+#'  or a MARK object with estimates of transition probabilities
+#' @param sampleSize Total sample size of animals that psi will be estimated
+#'  from. Should be the number of animals released in one of the origin sites
+#'  and observed in one of the target sites (or vice-versa). Optional, but
+#'  recommended, unless psi is an estPsi object (in which case this function can
+#'  pull it from there)
+#' @param originSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are origin
+#' @param targetSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are target
+#' @param originNames Optional. Vector of names for the origin sites
+#' @param targetNames Optional. Vector of names for the target sites
+#' @param nSamples Number of times to resample \code{psi} and/or
+#'  \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
+#'  higher values here will do so with more precision
+#' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
+#'  to 0 (default) or any greater integer to specify where to stop ignoring
+#'  samples ("burn-in")
+#' @param verbose 0 (default) to 2. 0 prints no output during run. 1 prints
+#'  a progress update and summary every 100 samples. 2 prints a
+#'  progress update and summary every sample
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95% CI.
+#' @param approxSigTest Should function compute approximate one-sided
+#'    significance tests (p-values) for MC from the resampling? Default is
+#'    FALSE
+#' @param sigConst Value to compare MC to in significance test. Default is 0
+#' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
+#'  updated the structure of the estimates. If you have legacy code that refers
+#'  to elements within an \code{estMigConnectivity} object (results of
+#'  \code{estMC}), you can set this to TRUE to also keep the old structure.
+#'  Defaults to FALSE
+#'
+#' @return \code{estMC} returns a list with the elements:
+#' \describe{
+#'   \item{\code{MC}}{List containing estimates of migratory connectivity
+#'    strength:
+#'    \itemize{
+#'      \item{\code{sample}} \code{nSamples} sampled values for
+#'       MC. Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Mean of \code{MC$sample}. Main estimate of MC,
+#'       incorporating parametric uncertainty.
+#'      \item{\code{se}} Standard error of MC, estimated from SD of
+#'       \code{MC$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       MC, estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'       \code{MC$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'       for MC. May be preferable to \code{MC$simpleCI} when \code{MC$mean} is
+#'       the best estimate of MC. \code{MC$simpleCI} is preferred when
+#'       \code{MC$median} is a better estimator. When \code{MC$mean==MC$median},
+#'       these should be identical.  Estimated as the
+#'       \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{MC$sample},
+#'       where z0 is the proportion of \code{MC$sample < MC$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible interval for MC,
+#'       estimated using the highest posterior density (HPD) method.
+#'      \item{\code{median}} Median of MC, alternate point estimate also
+#'       including parametric uncertainty.
+#'      \item{\code{point}} Simple point estimate of MC, using the point
+#'      estimates of \code{psi} and \code{originRelAbund} (usually the mean
+#'      values), not accounting for sampling error.
+#'      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
+#'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
+#'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+#'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+#'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+#'      \code{approxSigTest==FALSE}.
+#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
+#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+#'      than \code{simpleP}, but many of the same limitations apply.  NULL when
+#'      \code{approxSigTest==FALSE}.
+#'    }
+#'   }
+#'   \item{\code{input}}{List containing the inputs to \code{estStrength}.}
+#' }
+#' @export
+#'
+#' @examples
+#' @seealso \code{\link{calcMC}}, \code{\link{estTransition}},
+#'   \code{\link{estMC}}, \code{\link{estMantel}},
+#'   \code{\link{plot.estMigConnectivity}}
 estStrength <- function(originDist, targetDist, originRelAbund, psi,
-                  sampleSize = NULL,
-                  originSites=NULL, targetSites=NULL,
-                  originNames = NULL, targetNames = NULL,
-                  nSamples = 1000, row0 = 0, verbose=0,
-                  alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-                  #nReleased = NULL, reencountered = NULL,
-                  #nBurnin = NULL, nThin = NULL, nChains = NULL,
-                  maintainLegacyOutput = FALSE) {
+                        sampleSize = NULL,
+                        originSites=NULL, targetSites=NULL,
+                        originNames = NULL, targetNames = NULL,
+                        nSamples = 1000, row0 = 0, verbose=0,
+                        alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
+                        maintainLegacyOutput = FALSE) {
   nOriginSites <- nrow(originDist)
   nTargetSites <- nrow(targetDist)
   absAbund <- !is.null(sampleSize)
@@ -105,7 +204,7 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                                  psi = psiNew, sampleSize = sampleSize),
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
                                  psi = psiNew))
-    if (verbose > 1 || verbose == 1 && i %% 10 == 0)
+    if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat(" MC mean:", mean(sampleMC, na.rm=TRUE),
           "SD:", sd(sampleMC, na.rm=TRUE),
           "low quantile:", quantile(sampleMC, alpha/2, na.rm=TRUE),
@@ -135,22 +234,6 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
     if (pointMC < sigConst)
       bcP <- 1 - bcP
   }
-  # meanPsi <- apply(psi.array, 2:3, mean)
-  # medianPsi <- apply(psi.array, 2:3, median)
-  # sePsi <- apply(psi.array, 2:3, sd)
-  # simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-  #                      na.rm=TRUE, type = 8, names = F)
-  # bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
-  #                  dimnames = list(NULL, originNames, targetNames))
-  # for (i in 1:nOriginSites) {
-  #   for (j in 1:nTargetSites) {
-  #     psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
-  #                       length(which(!is.na(psi.array[, i, j]))))
-  #     bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
-  #                                  pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-  #                                  na.rm=TRUE, type = 8, names = F)
-  #   }
-  # }
   if (maintainLegacyOutput) {
     mc <- list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
                 pointMC=pointMC, meanMC=meanMC,
@@ -160,15 +243,10 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                 meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
                 simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
                 alpha = alpha, sigConst = sigConst,
-                # psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
-                #            simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-                #            median = medianPsi, point = psiBase),
                 MC = list(sample = sampleMC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
                           median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
-                # corr = NULL,
-                # r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund, psi = psiIn,
                              sampleSize = sampleSize, originSites = originSites,
@@ -178,24 +256,14 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                              nSamples = nSamples, row0 = row0,
                              verbose = verbose, alpha = alpha,
                              approxSigTest = approxSigTest, sigConst = sigConst,
-                             # nReleased = nReleased,
-                             # reencountered = reencountered,
-                             # nBurnin = nBurnin, nChains = nChains,
-                             # nThin = nThin,
                              maintainLegacyOutput = TRUE))
   }
   else {
-    mc <- list(
-      # psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
-      #                      simpleCI = simpleCIPsi, bcCI = bcCIPsi,
-      #                      median = medianPsi, point = psiBase),
-                MC = list(sample = sampleMC, mean = meanMC, se = seMC,
+    mc <- list(MC = list(sample = sampleMC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
                           median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
-  #              corr = NULL,
-  #              r = NULL,
-                input = list(originDist = originDist, targetDist = targetDist,
+               input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund, psi = psiIn,
                              sampleSize = sampleSize, originSites = originSites,
                              targetSites = targetSites,
@@ -204,9 +272,6 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                              nSamples = nSamples, row0 = row0,
                              verbose = verbose, alpha = alpha,
                              approxSigTest = approxSigTest, sigConst = sigConst,
-#                             nReleased = nReleased,
-#                             reencountered = reencountered,
-#                             nBurnin = nBurnin, nChains = nChains, nThin = nThin,
                              maintainLegacyOutput = FALSE))
   }
   class(mc) <- c("estMC", "estMigConnectivity")
@@ -217,8 +282,7 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
 estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                             nSamples = 1000, verbose=0,
                             originNames = NULL, targetNames = NULL,
-                            nThin = 1, nBurnin = 5000, nChains = 3) { #,
-#                            maintainLegacyOutput = FALSE) {
+                            nThin = 1, nBurnin = 5000, nChains = 3) {
   if (is.null(originNames))
     originNames <- dimnames(reencountered)[[1]]
   if (is.null(targetNames))
@@ -299,16 +363,6 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                                    na.rm=TRUE, type = 8, names = F)
     }
   }
-  # result <- estMCCmrAbund(originDist = originDist, targetDist = targetDist,
-  #                         originRelAbund = originRelAbund,
-  #                         psi = psi,
-  #                         sampleSize = sampleSize, nSamples = nBoot,
-  #                         verbose = verbose, alpha = alpha,
-  #                         approxSigTest = approxSigTest, sigConst = sigConst,
-  #                         nReleased = nReleased, reencountered = reencountered,
-  #                         nThin = nThin, nBurnin = nBurnin, nChains = nChains,
-  #                         originNames = originNames, targetNames = targetNames,
-  #                         maintainLegacyOutput = maintainLegacyOutput)
   results <- list(psi = list(sample = psi, mean = out$BUGSoutput$mean$psi,
                              se = out$BUGSoutput$sd$psi,
                              simpleCI = simpleCIPsi, bcCI = bcCIPsi,
@@ -820,6 +874,72 @@ estTransitionBoot <- function(originSites = NULL,
                            nSim = nSim, maxTries = maxTries)))
 }
 
+#' Estimate psi (transition probabilities between locations in two phases of
+#' the annual cycle)
+#'
+#' Estimation and resampling of uncertainty for psi (transition probabilities
+#' between origin sites in one phase of the annual cycle and target sites in
+#' another). Data can be from geolocators (GL) and/or telemetry/GPS and/or
+#' intrinsic markers such as isotopes and genetics OR band/ring reencounter data.
+#'
+#' @param originSites the geographic definition of sites in the origin season.
+#'  Mike, fill in options here (sf/sp/whatever)
+#' @param targetSites the geographic definition of sites in the target season.
+#'  Mike, fill in options here (sf/sp/whatever)
+#' @param originPoints A \code{sf} or \code{SpatialPoints} object, with number
+#'  of rows or length being the number of animals tracked. Each point indicates
+#'  the origin location of an animal (or point estimate of same, for GL animals
+#'  released on target sites). Note that to simplify input of multiple
+#'  data types both between and for the same animal, if origin points are
+#'  provided for any animal, they must be provided for all (can be dummy values)
+#' @param targetPoints For GL or telemetry data, a \code{sf} or
+#'  \code{SpatialPoints} object, with length or number of rows number of animals
+#'  tracked. Each point indicates the point estimate location of an animal in
+#'  the target season. Note that to simplify input of multiple
+#'  data types both between and for the same animal, if target points are
+#'  provided for any animal, they must be provided for all (can be dummy values)
+#' @param originAssignment Assignment of animals to origin season sites. Either
+#'  an integer vector with length number of animals tracked or a matrix of
+#'  probabilities with number of animals tracked rows and number of origin sites
+#'  columns (and rows summing to 1). The latter only applies to animals released
+#'  in the target sites where there is uncertainty about their origin site.
+#'  Optional, but either \code{originAssignment} or \code{originSites} and
+#'  \code{originPoints} should be defined. Note that if
+#'  \code{originAssignment} is a probability table, animals with known origin
+#'  sites can have 1 in that column and 0s in all others
+#' @param targetAssignment Optional. Point estimate assignment of
+#'    \code{targetPoints} to non-release season sites. Integer vector with
+#'    length number of animals tracked
+#' @param targetAssignment
+#' @param originNames
+#' @param targetNames
+#' @param nSamples
+#' @param isGL
+#' @param isTelemetry
+#' @param isRaster
+#' @param isProb
+#' @param captured
+#' @param geoBias
+#' @param geoVCov
+#' @param geoBiasOrigin
+#' @param geoVCovOrigin
+#' @param targetRaster
+#' @param originRaster
+#' @param banded
+#' @param reencountered
+#' @param verbose
+#' @param alpha
+#' @param resampleProjection
+#' @param nSim
+#' @param maxTries
+#' @param nBurnin
+#' @param nChains
+#' @param nThin
+#'
+#' @return
+#' @export
+#'
+#' @examples
 estTransition <- function(originSites = NULL, targetSites = NULL,
                           originPoints = NULL, targetPoints = NULL,
                           originAssignment = NULL, targetAssignment = NULL,
@@ -1549,7 +1669,7 @@ estMCisotope <- function(targetDist=NULL,
 #' @param originPoints A \code{SpatialPoints} object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal
 #' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
-#'    length number ofanimals tracked.  Each point indicates the point estimate
+#'    length number of animals tracked.  Each point indicates the point estimate
 #'    location in the non-release season
 #' @param originAssignment Assignment of \code{originPoints} to release season
 #'    sites. Integer vector with length number of animals tracked. Optional,
