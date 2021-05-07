@@ -82,7 +82,7 @@ will use the \code{targetSites} defined in \code{targetIntrinsic}}
 animals tracked.  Each point indicates the release location of an animal}
 
 \item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} object, with
-length number ofanimals tracked.  Each point indicates the point estimate
+length number of animals tracked.  Each point indicates the point estimate
 location in the non-release season}
 
 \item{originAssignment}{Assignment of \code{originPoints} to release season

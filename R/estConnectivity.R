@@ -1,6 +1,6 @@
 
 ###############################################################################
-#' Estimate MC (migratory connectivity strength)
+#' Estimate MC, migratory connectivity strength
 #'
 #' Resampling of uncertainty for MC (migratory connectivity strength)
 #' from estimates of psi (transition probabilities) and/or relative abundance.
@@ -9,6 +9,7 @@
 #' either just point estimates (no uncertainty propagated) or MCMC samples.
 #' Other inputs include distances between origin sites, distances between target
 #' sites, and sample size used to estimate psi.
+#'
 #'
 #' @param originDist Distances between the B origin sites. Symmetric B by B
 #'  matrix
@@ -43,10 +44,10 @@
 #'  a progress update and summary every 100 samples. 2 prints a
 #'  progress update and summary every sample
 #' @param alpha Level for confidence/credible intervals provided. Default (0.05)
-#'  gives 95% CI.
+#'  gives 95 percent CI
 #' @param approxSigTest Should function compute approximate one-sided
-#'    significance tests (p-values) for MC from the resampling? Default is
-#'    FALSE
+#'  significance tests (p-values) for MC from the resampling? Default is
+#'  FALSE
 #' @param sigConst Value to compare MC to in significance test. Default is 0
 #' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
 #'  updated the structure of the estimates. If you have legacy code that refers
@@ -98,9 +99,9 @@
 #'   }
 #'   \item{\code{input}}{List containing the inputs to \code{estStrength}.}
 #' }
+#'
 #' @export
 #'
-#' @examples
 #' @seealso \code{\link{calcMC}}, \code{\link{estTransition}},
 #'   \code{\link{estMC}}, \code{\link{estMantel}},
 #'   \code{\link{plot.estMigConnectivity}}
@@ -879,8 +880,9 @@ estTransitionBoot <- function(originSites = NULL,
 #'
 #' Estimation and resampling of uncertainty for psi (transition probabilities
 #' between origin sites in one phase of the annual cycle and target sites in
-#' another). Data can be from geolocators (GL) and/or telemetry/GPS and/or
-#' intrinsic markers such as isotopes and genetics OR band/ring reencounter data.
+#' another for migratory animals). Data can be from geolocators (GL) and/or
+#' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
+#' band/ring reencounter data.
 #'
 #' @param originSites the geographic definition of sites in the origin season.
 #'  Mike, fill in options here (sf/sp/whatever)
@@ -902,44 +904,160 @@ estTransitionBoot <- function(originSites = NULL,
 #'  an integer vector with length number of animals tracked or a matrix of
 #'  probabilities with number of animals tracked rows and number of origin sites
 #'  columns (and rows summing to 1). The latter only applies to animals released
-#'  in the target sites where there is uncertainty about their origin site.
-#'  Optional, but either \code{originAssignment} or \code{originSites} and
-#'  \code{originPoints} should be defined. Note that if
-#'  \code{originAssignment} is a probability table, animals with known origin
+#'  in the target sites where there is uncertainty about their origin site, for
+#'  example from genetic population estimates from the rubias package.
+#'  Optional, but some combination of these inputs should be defined. Note that
+#'  if \code{originAssignment} is a probability table, animals with known origin
 #'  sites can have 1 in that column and 0s in all others
-#' @param targetAssignment Optional. Point estimate assignment of
-#'    \code{targetPoints} to non-release season sites. Integer vector with
-#'    length number of animals tracked
-#' @param targetAssignment
-#' @param originNames
-#' @param targetNames
-#' @param nSamples
-#' @param isGL
-#' @param isTelemetry
-#' @param isRaster
-#' @param isProb
-#' @param captured
-#' @param geoBias
-#' @param geoVCov
-#' @param geoBiasOrigin
-#' @param geoVCovOrigin
-#' @param targetRaster
-#' @param originRaster
-#' @param banded
-#' @param reencountered
-#' @param verbose
-#' @param alpha
-#' @param resampleProjection
-#' @param nSim
-#' @param maxTries
-#' @param nBurnin
-#' @param nChains
-#' @param nThin
+#' @param targetAssignment Assignment of animals to target season sites. Either
+#'  an integer vector with length number of animals tracked or a matrix of
+#'  probabilities with number of animals tracked rows and number of target sites
+#'  columns (and rows summing to 1). The latter only applies to animals released
+#'  in the origin sites where there is uncertainty about their target site, for
+#'  example from genetic population estimates from the rubias package.
+#'  Optional, but some combination of these inputs needs to be defined. Note
+#'  that if \code{targetAssignment} is a probability table, animals with known
+#'  target sites can have 1 in that column and 0s in all others
+#' @param originNames Optional, but recommended to keep track. Vector of names
+#'  for the origin sites. If not provided, the function will either try to get
+#'  these from another input or provide default names (capital letters)
+#' @param targetNames Optional, but recommended to keep track. Vector of names
+#'  for the target sites. If not provided, the function will either try to get
+#'  these from another input or provide default names (numbers)
+#' @param nSamples Number of post-burn-in MCMC samples to store (band
+#'  data) OR number of bootstrap runs for GL, telemetry, probability assignment,
+#'  and/or raster data. In the latter case, animals are sampled with replacement
+#'  for each. For all, the purpose is to estimate sampling uncertainty
+#' @param isGL Indicates whether or which animals were tracked with geolocators.
+#'  Should be either single TRUE or FALSE value, or vector with length of
+#'  number of animals tracked, with TRUE or FALSE for each animal in data. For
+#'  TRUE animals, the model applies \code{geoBias} and \code{geoVCov} to
+#'  \code{targetPoints} where \code{captured} == "origin" or "neither" and
+#'  \code{geoBiasOrigin} and \code{geoVCovOrigin} to
+#'  \code{originPoints} where \code{captured} == "target" or "neither"
+#' @param isTelemetry Indicates whether or which animals were tracked with
+#'  telemetry/GPS (no location uncertainty on either end).
+#'  Should be either single TRUE or FALSE value, or vector with length of
+#'  number of animals tracked, with TRUE or FALSE for each animal in data
+#' @param isRaster Indicates whether or which animals were tracked with
+#'  intrinsic markers (e.g., genetics or isotopes), with location uncertainty
+#'  expressed as a raster of probabilities by grid cells, either in
+#'  \code{targetRaster} or \code{originRaster}. Should be either single TRUE or
+#'  FALSE value, or vector with length of number of animals tracked, with TRUE
+#'  or FALSE for each animal in data
+#' @param isProb Indicates whether or which animals were tracked with
+#'  intrinsic markers (e.g., genetics or isotopes), with location uncertainty
+#'  expressed as a probability table, either in \code{targetAssignment} or
+#'  \code{originAssignment}. Should be either single TRUE or FALSE value, or vector
+#'  with length of number of animals tracked, with TRUE or FALSE for each animal
+#'  in data
+#' @param captured Indicates whether or which animals were captured in the
+#'  origin sites, the target sites, or neither (another phase of the annual
+#'  cycle). Location uncertainty will only be applied where the animal was not
+#'  captured. So this doesn't matter for telemetry data, and is assumed to be
+#'  "origin" for band return data. Should be either single "origin" (default),
+#'  "target", or "neither" value, or a character vector with length of number of
+#'  animals tracked, with "origin", "target", or "neither" for each animal
+#' @param geoBias For GL data, vector of length 2 indicating expected bias
+#'  in longitude and latitude of \code{targetPoints}, in
+#'  \code{resampleProjection} units (default meters)
+#' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
+#'    in longitude and latitude of \code{targetPoints}, in
+#'    \code{resampleProjection} units (default meters)
+#' @param geoBiasOrigin For GL data where \code{captured}!="origin", vector of
+#'  length 2 indicating expected bias in longitude and latitude of
+#'  \code{originPoints}, in
+#'  \code{resampleProjection} units (default meters)
+#' @param geoVCovOrigin For GL data where \code{captured}!="origin", 2x2 matrix
+#'  with expected variance/covariance in longitude and latitude of
+#'  \code{targetPoints}, in \code{resampleProjection} units (default meters)
+#' @param targetRaster For intrinsic tracking data, the results of
+#'  \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+#'  class \code{RasterBrick}/\code{RasterStack}, for example from the package
+#'  \code{assignR}. In any case, it expresses location uncertainty on target
+#'  range, through a raster of probabilities by grid cells
+#' @param originRaster For intrinsic tracking data, the results of
+#'  \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+#'  class \code{RasterBrick}/\code{RasterStack}, for example from the package
+#'  \code{assignR}. In any case, it expresses location uncertainty on origin
+#'  range, through a raster of probabilities by grid cells
+#' @param banded For band return data, a vector or matrix of the number of
+#'  released animals from each origin site (including those never reencountered
+#'  in a target site). If a matrix, the second dimension is taken as the number
+#'  of age classes of released animals; the model estimates reencounter
+#'  probability by age class but assumes transition probabilities are the same
+#' @param reencountered For band return data, either a matrix with B rows and W
+#'  columns or a B x [number of ages] x W array. Number of animals reencountered
+#'  on each target site (by age class banded as) by origin site they came from
+#' @param verbose 0 (default) to 3. 0 prints no output during run (except on
+#'  convergence for banding data). 1 prints an update every 100 samples or
+#'  bootstraps (or a status bar for banding data).  2 prints an update
+#'  every sample or bootstrap. 3 also prints the number of
+#'  draws (for tuning nSim for GL/intrinsic data only)
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95 percent CI
+#' @param resampleProjection Projection when sampling from location uncertainty.
+#'  Default is Equidistant Conic. The default setting preserves distances
+#'  around latitude = 0 and longitude = 0. Other projections may work well,
+#'  depending on the location of sites. Ignored unless data are geolocator,
+#'  telemetry, or intrinsic
+#' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
+#'  speed; 1000 seems to work well with our GL data and 10 for our intrinsic
+#'  data, but your results may vary. For data combinations, we put the default
+#'  higher (5000) to allow for more data conflicts. Should be integer > 0
+#' @param maxTries Maximum number of times to run a single GL/intrinsic
+#'  bootstrap before exiting with an error. Default is 300; you may want to make
+#'  a little higher if your nSim is low and nSamples is high. Set to NULL to
+#'  never stop. This parameter was added to prevent setups where some
+#'  sample points never land on target sites from running indefinitely
+#' @param nBurnin For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of burn-in
+#'  samples before beginning to store results. Default 5000
+#' @param nChains For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of MCMC
+#'  chains (to test for convergence). Default 3
+#' @param nThin For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the thinning rate.
+#'  Default 1
 #'
-#' @return
+#' @return \code{estMC} returns a list with the elements:
+#' \describe{
+#'   \item{\code{psi}}{List containing estimates of transition probabilities:
+#'   \itemize{
+#'    \item{\code{sample}} Array of sampled values for psi. \code{nSamples} x
+#'      [number of origin sites] x [number of target sites]. Provided to allow
+#'      the user to compute own summary statistics.
+#'    \item{\code{mean}} Main estimate of psi matrix. [number of origin sites]
+#'      x [number of target sites].
+#'    \item{\code{se}} Standard error of psi, estimated from SD of
+#'      \code{psi$sample}.
+#'    \item{\code{simpleCI}} \code{1 - alpha} confidence interval for psi,
+#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'      \code{psi$sample}.
+#'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'      for psi. May be preferable to \code{simpleCI} when \code{mean} is the
+#'      best estimate of psi. \code{simpleCI} is preferred when
+#'      \code{median} is a better estimator. When \code{meanMC==medianMC},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
+#'      where z0 is the proportion of \code{sample < mean}.
+#'    \item{\code{median}} Median estimate of psi matrix.
+#'    \item{\code{point}} Simple point estimate of psi matrix, not accounting
+#'      for sampling error.
+#'   }
+#'   }
+#'   \item{\code{r}}{List containing estimates of reencounter probabilities at
+#'    each target site. NULL except when using direct band/ring reencounter
+#'    data.}
+#'   \item{\code{input}}{List containing the inputs to \code{estTransition}.}
+#'   \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
+#'    when using direct band/ring reencounter data.}
+#' }
+#'
 #' @export
 #'
-#' @examples
+#' @example inst/examples/estTransitionExamples.R
 estTransition <- function(originSites = NULL, targetSites = NULL,
                           originPoints = NULL, targetPoints = NULL,
                           originAssignment = NULL, targetAssignment = NULL,

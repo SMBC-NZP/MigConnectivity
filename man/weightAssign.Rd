@@ -104,6 +104,7 @@ r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
 relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
 relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 
+BE <- weightAssign(knownLocs = knownLocs,
                  isovalues = HBEFbirds[,2],
                  isoSTD = 12,
                  intercept = -10,

@@ -6,7 +6,8 @@
 \usage{
 \method{plot}{estMigConnectivity}(
   x,
-  plot.which = ifelse(inherits(x, "estMC"), "psi", "rM"),
+  plot.which = ifelse(inherits(x, "estPsi"), "psi", ifelse(inherits(x, "estMC"), "MC",
+    "rM")),
   point = c("mean", "median", "point"),
   range = c("simpleCI", "bcCI", "se"),
   xlab = NULL,
@@ -24,7 +25,8 @@
 )
 }
 \arguments{
-\item{x}{an estMigConnectivity object (output of estMC or estMantel)}
+\item{x}{an estMigConnectivity object (output of estTransition, estStrength,
+estMC, or estMantel)}
 
 \item{plot.which}{which parameter (psi, MC, rM, or r) to graph. Defaults to
 psi for estMC objects, to rM (Mantel correlation) otherwise}
