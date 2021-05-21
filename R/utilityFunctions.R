@@ -406,9 +406,8 @@ locSample <- function(isGL,
                              drop = FALSE],
                 2,
                 function(x) x[!is.na(x)][1])
-        good.sample2
         # Fill in target points of valid sampled points
-        point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ]<-
+        point.sample[which(!isProb & !isGL & isRaster & toSampleBool), ]<- #[which(!is.na(good.sample2))]
           t(mapply(x = good.sample2[!is.na(good.sample2)],
                    y = point.sample2,#which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
                    FUN = function(x, y) sf::st_coordinates(y[x,])))

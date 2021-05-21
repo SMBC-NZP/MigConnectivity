@@ -197,6 +197,8 @@ OVENdist <- getRDS("OVENdist")
 
 raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
+OVENdist <- sf::st_as_sf(OVENdist)
+
 OVENvals <- getCSV("deltaDvalues.csv")
 
 OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
@@ -228,7 +230,7 @@ iso <- isoAssign(isovalues = OVENvals[,2],
                  intercept = -10,   # this value is for demonstration only
                  slope = 0.8,       # this value is for demonstration only
                  odds = NULL,
-                 restrict2Likely = TRUE,
+                 restrict2Likely = FALSE,
                  nSamples = 1000,
                  sppShapefile = OVENdist,
                  assignExtent = c(-179,-60,15,89),
@@ -339,6 +341,10 @@ ovenMC5 <- estMC(originRelAbund = originRelAbund,
                 approxSigTest = FALSE,
                 isIntrinsic = TRUE)
 ovenMC5
+test4$psi$mean - ovenMC5$psi$mean
+test5$psi$mean - ovenMC5$psi$mean
+ovenMC$psi$mean - ovenMC5$psi$mean
+test4$psi$se - ovenMC5$psi$se
 
 
 
@@ -365,55 +371,38 @@ plot(sc2, col = RColorBrewer::brewer.pal(7, "Dark2")[2], add = T, pch = 5, alpha
 # Example 4 (raster plus prob tables) (haven't gotten far setting this one up)
 ###############################################################################
 isProb <- rep(c(F, T), c(20, nAnimals - 20))
-targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
-xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
-                      MARGIN = 2,
-                      FUN = function(x){
-                        #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
-                        #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
-                        # xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
-                        #            weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
-                        # Select cell with the maximum posterior probability #
-                        xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
-                                    targetRasterXYZ[which.max(x)[1],2])
-                        return(xy)})
-# returns a point estimate for each bird - turn it into a sf object
-xyTargetRast <- t(xyTargetRast)
-colnames(xyTargetRast) <- c("x","y")
-# right now the assignment CRS is WGS84 - should be the same as the origin raster
-targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
-# transform to match originSites
-targetSites_wgs <- sf::st_transform(targetSites, 4326)
-#targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
-#targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
-#                                                           y = targetSites_wgs,
-#                                                           sparse = TRUE)))))
-# Check which points are in target sites
-ta_assign <- suppressMessages(sf::st_intersects(x = targetAssignRast,
-                                                y = targetSites_wgs,
-                                                sparse = TRUE))
-
-# Give values without intersection an NA
-ta_intersect <- lengths(ta_assign)
-# quick check to ensure that all the points fall exactly in one targetSite #
-if(any(ta_intersect)>1){stop("Overlapping targetSites not allowed \n")}
-
-ta_bool_intersect <- lengths(ta_intersect)>0
-
-targetAssignment <- unlist(as.numeric(ta_assign))
-
-
-assignment0 <- unclass(sf::st_intersects(x = targetPoints, y = targetSites,
-                                         sparse = TRUE))
-assignment0[sapply(assignment0, function(x) length(x)==0)] <- 0
-assignment0 <- array(unlist(assignment0), nAnimals)
-for (ani in 1:nAnimals) {
-  if (assignment0[ani]>0)
-    targetAssignment[ani, assignment0[ani]] <- 1
-  else{
-    targetAssignment[ani, ] <- rdiric(1, c(15, 1, 1))
-    isProb[ani] <- TRUE
-  }
-}
+nTargetSites <- nrow(targetSites)
+targetAssignment <- rdiric(nAnimals, rep(1, nTargetSites))
 targetAssignment
 isProb
+system.time(test6 <-
+              estTransition(isGL = isGL,
+                            isRaster = isRaster,
+                            isProb = isProb,
+                            isTelemetry = isTelemetry,
+                            #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                            #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                            #targetPoints = targetPoints,
+                            targetAssignment = targetAssignment,
+                            targetSites = targetSites,
+                            resampleProjection = resampleProjection,
+                            targetRaster = iso,
+                            #nSim = 5000, maxTries = 300,
+                            originSites = originSites,
+                            originPoints = originPoints,
+                            #originAssignment = originAssignment,
+                            captured = rep("origin", nAnimals),
+                            #originNames = OVENdata$originNames,
+                            #targetNames = OVENdata$targetNames,
+                            verbose = 3,
+                            nSamples = 200))
+something <- MigConnectivity:::locSample(isGL = isGL,
+                                         isRaster = isRaster,
+                                         isProb = isProb,
+                                         isTelemetry = isTelemetry,
+                                         sites = targetSites,
+                                         resampleProjection = resampleProjection,
+                                         matvals = raster::rasterToPoints(iso$probassign),
+                                         singleCell = iso$SingleCell,
+                                         nSim = 10, maxTries = 300,
+                                         assignment = targetAssignment)
