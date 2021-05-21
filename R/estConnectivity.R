@@ -1144,9 +1144,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     isGL <- rep(isGL, nAnimals)
   if (length(isGLReverse)==1)
     isGLReverse <- rep(isGLReverse, nAnimals)
-  if(class(originSites)=="SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(originSites)){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(class(targetSites)=="SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(targetSites)){
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
     originAssignment <- sp::over(originPoints, originSites)
@@ -1425,7 +1425,7 @@ estMCisotope <- function(targetDist=NULL,
                          alpha = 0.05,
                          approxSigTest = F,
                          sigConst = 0,
-                         resampleProjection = MigConnectivity::projections$WGS84,
+                         resampleProjection = sf::st_crs(4326),# MigConnectivity::projections$WGS84,
                          maxTries = 300,
                          maintainLegacyOutput = FALSE) {
 
@@ -1444,7 +1444,7 @@ estMCisotope <- function(targetDist=NULL,
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
-     if(class(targetSites)=="SpatialPolygonsDataFrame"){
+     if("SpatialPolygonsDataFrame" %in% class(targetSites)){
        targetSites <- rgeos::gUnaryUnion(targetSites, id = targetSites$targetSite)
        targetSites <- sf::st_as_sf(targetSites)
      }
@@ -1458,9 +1458,9 @@ estMCisotope <- function(targetDist=NULL,
 
   pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
 
-  if(class(originSites) %in% "SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(originSites)){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(class(targetSites) %in% "SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(targetSites)){
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
 
@@ -2155,7 +2155,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   }
   targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
   if(!is.null(targetSites)){
-    if(class(targetSites)=="SpatialPolygonsDataFrame"){
+    if("SpatialPolygonsDataFrame" %in% class(targetSites)){
       targetSites <- sp::SpatialPolygons(targetSites@polygons)}
     if(is.na(raster::projection(targetSites))){
       stop('Coordinate system definition needed for targetSites')

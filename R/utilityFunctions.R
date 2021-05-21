@@ -537,8 +537,10 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
     samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
     point.sample <- targetIntrinsic2[samp2]
     # Changed to make sure x,y coords stack correctly
-    target.point.sample[toSample,1]<- point.sample@coords[,1]
-    target.point.sample[toSample,2]<- point.sample@coords[,2]
+    #target.point.sample[toSample,1]<- point.sample@coords[,1]
+    #target.point.sample[toSample,2]<- point.sample@coords[,2]
+    target.point.sample[toSample,1] <- sf::st_coordinates(point.sample)[,1]
+    target.point.sample[toSample,1] <- sf::st_coordinates(point.sample)[,2]
     if (!is.null(targCon))
       # Grab the relevant target sites
       target.sample[toSample] <- targCon[samp2]
@@ -572,10 +574,11 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 
             point.sample <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
 
-            point.sample1 <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
+            point.sample1 <- sp::SpatialPoints(point.sample,
+                                               proj4string = sp::CRS("+proj=longlat +datum=WGS84 +no_defs"))
 
             # covert to sf
-            point.sample1 <- sf::st_as_sf(point.sample1)
+            point.sample1 <- sf::st_as_sf(point.sample1, crs = sf::st_crs(4326))
 
             # Check which points are in target sites
 
