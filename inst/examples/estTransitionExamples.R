@@ -408,3 +408,26 @@ system.time(test6 <-
 #                                          assignment = targetAssignment)
 test6
 test6$psi$mean - test4$psi$mean
+system.time(test7 <-
+              estTransition(isGL = isGL,
+                            isRaster = isRaster,
+                            isProb = isProb,
+                            isTelemetry = isTelemetry,
+                            #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
+                            #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
+                            #targetPoints = targetPoints,
+                            targetAssignment = targetAssignment,
+                            targetSites = targetSites,
+                            resampleProjection = resampleProjection,
+                            targetRaster = iso2,
+                            nSim = 200, maxTries = 300,
+                            originSites = originSites,
+                            originPoints = originPoints,
+                            #originAssignment = originAssignment,
+                            captured = rep("origin", nAnimals),
+                            #originNames = OVENdata$originNames,
+                            #targetNames = OVENdata$targetNames,
+                            verbose = 3,
+                            nSamples = 10))
+test7
+test7$psi$mean - test5$psi$mean
