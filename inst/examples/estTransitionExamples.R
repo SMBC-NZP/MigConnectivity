@@ -387,7 +387,7 @@ system.time(test6 <-
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
                             targetRaster = iso,
-                            #nSim = 5000, maxTries = 300,
+                            nSim = 1000, maxTries = 300,
                             originSites = originSites,
                             originPoints = originPoints,
                             #originAssignment = originAssignment,
@@ -396,13 +396,15 @@ system.time(test6 <-
                             #targetNames = OVENdata$targetNames,
                             verbose = 3,
                             nSamples = 200))
-something <- MigConnectivity:::locSample(isGL = isGL,
-                                         isRaster = isRaster,
-                                         isProb = isProb,
-                                         isTelemetry = isTelemetry,
-                                         sites = targetSites,
-                                         resampleProjection = resampleProjection,
-                                         matvals = raster::rasterToPoints(iso$probassign),
-                                         singleCell = iso$SingleCell,
-                                         nSim = 10, maxTries = 300,
-                                         assignment = targetAssignment)
+# something <- MigConnectivity:::locSample(isGL = isGL,
+#                                          isRaster = isRaster,
+#                                          isProb = isProb,
+#                                          isTelemetry = isTelemetry,
+#                                          sites = targetSites,
+#                                          resampleProjection = resampleProjection,
+#                                          matvals = raster::rasterToPoints(iso$probassign),
+#                                          singleCell = iso$SingleCell,
+#                                          nSim = 10, maxTries = 300,
+#                                          assignment = targetAssignment)
+test6
+test6$psi$mean - test4$psi$mean
