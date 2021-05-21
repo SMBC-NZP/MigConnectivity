@@ -125,6 +125,11 @@ if(!is.null(sppShapefile)){
     sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
   }
 
+# convert sp file to sf
+if(class(spShapefile) %in% c("SpatialPolygon","SpatialPolygonDataFrame")){
+  sppShapefile <- sf::st_as_sf(sppShapefile)
+}
+
 if(verbose>0){cat("\n Restricting possible assignments to species distribution \n")}
 
 sppShapefile$INOUT<-1
@@ -223,6 +228,7 @@ if (is.null(odds)){odds <- 0.67}
 matvals <- raster::rasterToPoints(assign2prob)
 # XY coords of raster
 matvalsXY <- matvals[,1:2]
+
 # drop XY from matvals
 matvals <- matvals[,-(1:2)]
 
@@ -280,6 +286,9 @@ set.seed(seed)
 # make a simulated array twice the size to weed out locations
 # that fall outside of distribution
 xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,raster::nlayers(assign2prob)))
+# give names for sf to convert down the line
+dimnames(xysimulation)[[2]] <- c("Longitude","Latitude")
+
 xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
 # name the array
   #dimnames(xysim)[[1]] <- 1:nSamples
@@ -313,14 +322,22 @@ for(i in 1:ncol(matvals)) {
     xysimulation[,2,i] <- matvalsXY[which(multidraw == 1, arr.ind = TRUE)[,1],2]
     # check to see which are in the distribution and which fall outside
     if(!is.null(sppShapefile)){
-    randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
-                                    sp::CRS(sppShapefile@proj4string@projargs))
-    inout <- sp::over(randpoints,sppShapefile)
+   # randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
+   #                                 sp::CRS(sppShapefile@proj4string@projargs))
+     randpoints <- sf::st_as_sf(data.frame(xysimulation[,,i]), coords = c("Longitude","Latitude"),
+                                crs = 4326)
+
+   # inout <- sp::over(randpoints,sppShapefile)
+    inout <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = randpoints,
+                                                                   y = sppShapefile,
+                                                          sparse = TRUE))))
     # How many are in
     InDist <- randpoints[which(inout$INOUT == 1),]
     samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
-    xysim[,1,i] <- InDist@coords[samplecoords,1]
-    xysim[,2,i] <- InDist@coords[samplecoords,2]
+    #xysim[,1,i] <- InDist@coords[samplecoords,1]
+    #xysim[,2,i] <- InDist@coords[samplecoords,2]
+    xysim[,1,i] <- sf::st_coordinates(InDist)[samplecoords,1]
+    xysim[,2,i] <- sf::st_coordinates(InDist)[samplecoords,2]
     }else{
     randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
     xysim[,1,i] <- xysimulation[randsamples,1,i]
