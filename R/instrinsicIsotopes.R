@@ -121,9 +121,18 @@ if(!is.null(sppShapefile)){
   if(is.na(raster::crs(sppShapefile))){
     stop("coordinate system needed for sppShapefile")}
 # 3. if the projections don't match - project into same as isomap then mask
+  # quick check
+  if(class(sppShapefile) %in% c("SpatialPolygons","SpatialPolygonsDataFrame")){
   if(sppShapefile@proj4string@projargs != isomap@crs@projargs){
     sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
   }
+  }
+  if(class(sppShapefile)[1] %in% "sf"){
+    if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
+      sppShapefile <- sf::st_transform(sppShapefile, 4326)
+    }
+    }
+
 
 # convert sp file to sf
 if(class(sppShapefile) %in% c("SpatialPolygon","SpatialPolygonDataFrame")){
