@@ -560,6 +560,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
     draws <- 0
     # Make sure targetSites are WGS84
     targetSites <- sf::st_transform(targetSites, 4326)
+
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
       draws <- draws + 1
       if (!pointsAssigned) {
@@ -568,11 +569,23 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
           animals <- which(animal.sample[toSample]==i - 2)
           if (length(animals) > 0) {
             multidraw <- rmultinom(n = length(animals)*nSim, size = 1, prob = matvals[,i])
+
             point.sample <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
+
             point.sample1 <- sp::SpatialPoints(point.sample, proj4string = sp::CRS(MigConnectivity::projections$WGS84))
+
+            # covert to sf
+            point.sample1 <- sf::st_as_sf(point.sample1)
+
             # Check which points are in target sites
-            target.sample0 <- sp::over(point.sample1, y = targetSites)
+
+            #target.sample0 <- sp::over(point.sample1, y = targetSites)
+            target.sample0 <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = point.sample1,
+                                                                                    y = targetSites,
+                                                                                    sparse = TRUE))))
+
             good.sample <- which(!is.na(target.sample0))
+
             nToFill <- min(length(good.sample), length(animals))
             if (nToFill > 0) {
               target.sample[animals[1:nToFill]] <- target.sample0[good.sample[1:nToFill]]
