@@ -126,7 +126,7 @@ if(!is.null(sppShapefile)){
   }
 
 # convert sp file to sf
-if(class(spShapefile) %in% c("SpatialPolygon","SpatialPolygonDataFrame")){
+if(class(sppShapefile) %in% c("SpatialPolygon","SpatialPolygonDataFrame")){
   sppShapefile <- sf::st_as_sf(sppShapefile)
 }
 
