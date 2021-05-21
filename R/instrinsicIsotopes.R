@@ -322,9 +322,11 @@ for(i in 1:ncol(matvals)) {
     xysimulation[,2,i] <- matvalsXY[which(multidraw == 1, arr.ind = TRUE)[,1],2]
     # check to see which are in the distribution and which fall outside
     if(!is.null(sppShapefile)){
+      sppShapefile <- sf::st_as_sf(sppShapefile)
    # randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
    #                                 sp::CRS(sppShapefile@proj4string@projargs))
-     randpoints <- sf::st_as_sf(data.frame(xysimulation[,,i]), coords = c("Longitude","Latitude"),
+     randpoints <- sf::st_as_sf(data.frame(xysimulation[,,i]),
+                                coords = c("Longitude","Latitude"),
                                 crs = 4326)
 
    # inout <- sp::over(randpoints,sppShapefile)
@@ -332,8 +334,11 @@ for(i in 1:ncol(matvals)) {
                                                                    y = sppShapefile,
                                                           sparse = TRUE))))
     # How many are in
-    InDist <- randpoints[which(inout$INOUT == 1),]
-    samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
+   # InDist <- randpoints[which(inout$INOUT == 1),]
+    InDist <- randpoints[which(inout > 0),]
+    samplecoords <- sample(1:nrow(InDist),
+                           size = nSamples,
+                           replace = FALSE)
     #xysim[,1,i] <- InDist@coords[samplecoords,1]
     #xysim[,2,i] <- InDist@coords[samplecoords,2]
     xysim[,1,i] <- sf::st_coordinates(InDist)[samplecoords,1]
