@@ -326,6 +326,19 @@ test5$psi$mean
 test4$psi$mean - test5$psi$mean
 test4$psi$se - test5$psi$se
 
+ovenMC5 <- estMC(originRelAbund = originRelAbund,
+                targetIntrinsic = iso2,
+                originPoints = originPoints,
+                originSites = originSites,
+                targetSites = targetSites,
+                originDist = originDist,
+                nSamples = 200,
+                verbose = 1,
+                calcCorr = F,
+                alpha = 0.05,
+                approxSigTest = FALSE,
+                isIntrinsic = TRUE)
+ovenMC5
 
 
 
