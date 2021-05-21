@@ -443,7 +443,7 @@ estTransitionBoot <- function(originSites = NULL,
                               originRaster = NULL,
                               verbose = 0,
                               alpha = 0.05,
-                              resampleProjection = MigConnectivity::projections$EquidistConic,
+                              resampleProjection = 'ESRI:54027',#MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300) {
   # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
@@ -681,7 +681,7 @@ estTransitionBoot <- function(originSites = NULL,
     targetPointSample2 <- apply(targetSingleCell,
                                 FUN = function(x){sf::st_as_sf(data.frame(x),
                                                                coords = c("Longitude", "Latitude"),
-                                                               crs = MigConnectivity::projections$WGS84)},
+                                                               crs = 4326)},
                                 MARGIN = 3)
     if(!sf::st_crs(targetSites)==sf::st_crs(targetPointSample2[[1]])){
       targetPointSample2 <- sapply(targetPointSample2, sf::st_transform, crs = resampleProjection)
@@ -706,7 +706,7 @@ estTransitionBoot <- function(originSites = NULL,
     originPointSample2 <- apply(originSingleCell,
                                 FUN = function(x){sf::st_as_sf(data.frame(x),
                                                                coords = c("Longitude", "Latitude"),
-                                                               crs = MigConnectivity::projections$WGS84)},
+                                                               crs = 4326)},
                                 MARGIN = 3)
     if(!sf::st_crs(originSites)==sf::st_crs(originPointSample2[[1]])){
       originPointSample2 <- sapply(originPointSample2, sf::st_transform,
@@ -1069,7 +1069,7 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           targetRaster = NULL, originRaster = NULL,
                           banded = NULL, reencountered = NULL,
                           verbose = 0, alpha = 0.05,
-                          resampleProjection = MigConnectivity::projections$EquidistConic,
+                          resampleProjection = 'ESRI:54027',
                           nSim = ifelse(any(isRaster & isGL) ||
                                           any(isRaster & isProb) ||
                                           any(isGL & isProb), 5000,
@@ -1120,7 +1120,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
+            resampleProjection = 'ESRI:54027',
                        maxTries = 300,
                        maintainLegacyOutput = FALSE) {
 
@@ -1991,7 +1991,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0, calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
+            resampleProjection = 'ESRI:54027',
                   maxTries = 300, targetIntrinsic = NULL,
                   isIntrinsic = FALSE, nReleased = NULL, reencountered = NULL,
                   nBurnin = 5000, nChains = 3, nThin = 1,
@@ -2134,7 +2134,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
+            resampleProjection = 'ESRI:54027',
                       maxTries = 300, maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment

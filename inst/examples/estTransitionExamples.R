@@ -323,12 +323,12 @@ system.time(test5 <-
                                               #originNames = OVENdata$originNames,
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
-                                              nSamples = 1000))
+                                              nSamples = 10))
 test5$psi$mean
 test4$psi$mean - test5$psi$mean
 test4$psi$se - test5$psi$se
 
-ovenMC5 <- estMC(originRelAbund = originRelAbund,
+ovenMC5 <- suppressMessages(estMC(originRelAbund = originRelAbund,
                 targetIntrinsic = iso2,
                 originPoints = originPoints,
                 originSites = originSites,
@@ -339,7 +339,7 @@ ovenMC5 <- estMC(originRelAbund = originRelAbund,
                 calcCorr = F,
                 alpha = 0.05,
                 approxSigTest = FALSE,
-                isIntrinsic = TRUE)
+                isIntrinsic = TRUE))
 ovenMC5
 test4$psi$mean - ovenMC5$psi$mean
 test5$psi$mean - ovenMC5$psi$mean

@@ -186,7 +186,7 @@ locSample <- function(isGL,
 
     # project points to WGS #
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
-                               crs = MigConnectivity::projections$WGS84)
+                               crs = 4326)
   }
   # If assignment isn't defined, create one from sites and points
   if (is.null(assignment)) {
@@ -307,7 +307,7 @@ locSample <- function(isGL,
                                FUN = function(x){
                                  sf::st_as_sf(data.frame(x),
                                               coords = c("x","y"),
-                                    crs = MigConnectivity::projections$WGS84)},
+                                    crs = 4326)},
                                MARGIN = 2)
         #point.sample <- lapply(point.sample1, st_as_sf)
         # Find out which sampled points are in a target site
@@ -518,7 +518,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 
     # project target points to WGS #
     targetIntrinsic2 <- sf::st_as_sf(as.data.frame(targetIntrinsic1), coords = c("x", "y"),
-                                     crs = MigConnectivity::projections$WGS84)
+                                     crs = 4326)
 
   }
   else {
