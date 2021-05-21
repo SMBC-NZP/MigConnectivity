@@ -66,7 +66,7 @@ targetSample <- function(isGL,
   if (is.null(targetAssignment)) {
     if (!is.null(targetSites)){
       #Use the provided spatial layers to create targetAssignment
-      if(!st_crs(targetSites)==st_crs(targetPoints)){targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)}
+      if(!sf::st_crs(targetSites)==sf::st_crs(targetPoints)){targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)}
       targetAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = targetPoints, y = targetSites, sparse = TRUE))))
       #if targetAssignment is NA - convert to 0
       targetAssignment[is.na(targetAssignment)] <- 0
