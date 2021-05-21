@@ -153,6 +153,8 @@ randomPoints <- function(probs, xy, nSim) {
   return(point.sample2a)
 }
 
+# Function for sampling from geolocator, telemetry, and/or intrinsic location
+# uncertainty on either origin or target side
 locSample <- function(isGL,
                       isRaster,
                       isProb,
@@ -186,7 +188,7 @@ locSample <- function(isGL,
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
                                crs = MigConnectivity::projections$WGS84)
   }
-
+  # If assignment isn't defined, create one from sites and points
   if (is.null(assignment)) {
     if (!is.null(sites)){
       #Use the provided spatial layers to create assignment
@@ -206,7 +208,7 @@ locSample <- function(isGL,
   # Storage
   site.sample <- rep(NA, nAnimals)
   point.sample <- matrix(NA, nAnimals, 2)
-  # Fill in GPS values (no location uncertainty)
+  # Fill in telemetry/GPS values (no location uncertainty)
   if (length(dim(assignment))==2){
     site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ], 1,
                                                   which.max)
@@ -216,30 +218,13 @@ locSample <- function(isGL,
     point.sample[which(isTelemetry), ] <- sf::st_coordinates(points[which(isTelemetry),])
   # Which to sample still
   toSample <- which(!isTelemetry)
-  # In this case, only have to sample each GL animal once, because no restrictions
-  # if (is.null(sites) && any(isGL)) {
-  #   draws <- 1
-  #   geoBias2 <- array(rep(geoBias, length(toSample)), c(2, length(toSample)))
-  #
-  #   # generate sample and subtract the bias
-  #   point.sample0 <- array(apply(sf::st_coordinates(points)[toSample, ,
-  #                                                           drop = FALSE],
-  #                                MARGIN = 1,
-  #                                MASS::mvrnorm, n=1, Sigma=geoVCov),
-  #                          # dimensions of the array
-  #                          c(2, length(toSample))) - geoBias2 #subtract the bias
-  #
-  #   # name so can
-  #   rownames(point.sample0) <- c("x","y")
-  #
-  #   point.sample0 <- sf::st_as_sf(data.frame(t(point.sample0)), coords = c("x","y"), crs = resampleProjection)
-  #
-  #   point.sample[toSample, ]<- t(sf::st_coordinates(point.sample0))
-  # }else {
   draws <- 0
+  # Loop until all animals have valid sample or have exceeded maxTries
   while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
     draws <- draws + 1
+    # Convert toSample (numbers) into T/F, so can combine with other T/F
     toSampleBool <- 1:nAnimals %in% toSample
+    # Sample geolocator points
     if (any(isGL & toSampleBool)) {
       # Create giant version of geoBias we can subtract from point.sample
       geoBias2 <- array(rep(geoBias, sum(isGL & toSampleBool), each = nSim),
