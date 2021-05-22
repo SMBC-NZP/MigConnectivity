@@ -323,7 +323,7 @@ system.time(test5 <-
                                               #originNames = OVENdata$originNames,
                                               #targetNames = OVENdata$targetNames,
                                               verbose = 3,
-                                              nSamples = 10))
+                                              nSamples = 200))
 test5$psi$mean
 test4$psi$mean - test5$psi$mean
 test4$psi$se - test5$psi$se
