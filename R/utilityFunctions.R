@@ -226,6 +226,7 @@ locSample <- function(isGL,
     toSampleBool <- 1:nAnimals %in% toSample
     # Sample geolocator points
     if (any(isGL & toSampleBool)) {
+      #cat("*************", sum(isGL & toSampleBool), "*************\n")
       # Create giant version of geoBias we can subtract from point.sample
       geoBias2 <- array(rep(geoBias, sum(isGL & toSampleBool), each = nSim),
                         c(nSim, 2, sum(isGL & toSampleBool)))
@@ -236,6 +237,7 @@ locSample <- function(isGL,
                             c(nSim, 2, sum(isGL & toSampleBool))) - geoBias2
 
       dimnames(point.sample0)[[2]] <- c("x","y")
+      #print(str(point.sample0, max.level = 1))
 
       # Convert those to SpatialPoints
 
@@ -244,15 +246,25 @@ locSample <- function(isGL,
                                                             coords = c("x","y"),
                                                             crs = resampleProjection)},
                              MARGIN = 3)
+      #print(str(point.sample0))
       #point.sample <- lapply(point.sample1, st_as_sf)
       # Find out which sampled points are in a target site
       if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
         sites <- sf::st_transform(sites, crs = resampleProjection)
       }
-
+      # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
+      #                            sparse = TRUE)
+      # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
+      #                   sparse = TRUE)
+      # inter[lengths(inter)==0] <- 0
+      # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+      # test <- as.numeric(unlist(unclass(inter)))
       site.sample0 <- sapply(point.sample0, FUN = function(z){
-        suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-                                             sparse = TRUE))))})
+        inter <- sf::st_intersects(x = z, y = sites,
+                                   sparse = TRUE)
+        inter[lengths(inter)==0] <- NA
+        inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+        as.numeric(unlist(unclass(inter)))})
 
       # Identify which animals have at least one valid sample point. good.sample0
       # will be NA for those that don't.  For those that do, it will location in

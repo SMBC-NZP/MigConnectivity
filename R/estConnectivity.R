@@ -579,9 +579,9 @@ estTransitionBoot <- function(originSites = NULL,
 
   if (is.null(targetAssignment)){
     if (all(isGL | isTelemetry | captured != "origin"))
-      targetAssignment <- array(unclass(sf::st_intersects(x = targetPoints,
+      targetAssignment <- array(unlist(unclass(sf::st_intersects(x = targetPoints,
                                                           y = targetSites,
-                                                          sparse = TRUE)))
+                                                          sparse = TRUE))))
     else if (all(isRaster & captured != "target")){
       #targetAssignment <- what # need point assignment for raster (mean location?)
       xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
@@ -751,11 +751,14 @@ estTransitionBoot <- function(originSites = NULL,
   else{
     pointTargetAssignment <- as.vector(targetAssignment)
   }
-
+  if (length(pointTargetAssignment) == length(pointOriginAssignment)) {
    pointSites <- table(pointOriginAssignment, pointTargetAssignment)
 
    pointPsi <- prop.table(pointSites, 1)
-
+  }
+  else {
+    pointPsi <- NULL
+  }
   boot <- 1
   while (boot <= nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
