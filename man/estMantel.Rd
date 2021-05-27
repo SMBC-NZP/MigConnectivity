@@ -15,7 +15,7 @@ estMantel(
   nSim = 1000,
   verbose = 0,
   alpha = 0.05,
-  resampleProjection = MigConnectivity::projections$EquidistConic,
+  resampleProjection = "ESRI:54027",
   maxTries = 300,
   maintainLegacyOutput = FALSE
 )

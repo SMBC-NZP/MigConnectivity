@@ -1752,11 +1752,14 @@ estMCisotope <- function(targetDist=NULL,
 ###############################################################################
 #' Estimate migratory connectivity
 #'
-#' Resampling of uncertainty for MC (migratory connectivity strength)
-#' and psi (transition probabilities) from RMark psi matrix estimates or
+#' Resampling of uncertainty for migratory connectivity strength (MC)
+#' and transition probabilities (psi) from RMark psi matrix estimates or
 #' samples of psi and/or JAGS
 #' relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
-#' data OR intrinsic markers such as isotopes OR band/ring reencounter data.
+#' data OR intrinsic markers such as isotopes. NOTE: active development of this
+#' function is ending. We suggest users estimate psi with
+#' \code{\link{estTransition}}, MC with \code{\link{estStrength}}, and Mantel
+#' correlations (rM) with \code{\link{estMantel}}.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
 #'  matrix
@@ -1852,23 +1855,6 @@ estMCisotope <- function(targetDist=NULL,
 #'  intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
 #'  connectivity for all intrinsically marked animals or all extrinsic (e.g.,
 #'  bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE
-#' @param nReleased For band return data, a vector or matrix of the number of
-#'  released animals from each origin site (including those never reencountered
-#'  in a target site). If a matrix, the second dimension is taken as the number
-#'  of age classes of released animals; the model estimates reencounter
-#'  probability by age class but assumes transition probabilities are the same
-#' @param reencountered For band return data, either a matrix with B rows and W
-#'  columns or a B x [number of ages] x W array. Number of animals reencountered
-#'  on each target site (by age class banded as) by origin site they came from
-#' @param nBurnin For band return data, \code{estMC} runs a \code{JAGS}
-#'  multinomial non-Markovian model, for which it needs the number of burn-in
-#'  samples before beginning to store results. Default 5000
-#' @param nChains For band return data, \code{estMC} runs a \code{JAGS}
-#'  multinomial non-Markovian model, for which it needs the number of MCMC
-#'  chains (to test for convergence). Default 3
-#' @param nThin For band return data, \code{estMC} runs a \code{JAGS}
-#'  multinomial non-Markovian model, for which it needs the thinning rate.
-#'  Default 1
 #' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
 #'  updated the structure of the estimates. If you have legacy code that refers
 #'  to elements within a \code{estMigConnectivity} object, you can set this
@@ -1962,16 +1948,12 @@ estMCisotope <- function(targetDist=NULL,
 #'      statistics for continuous correlation bootstraps.
 #'    }
 #'   }
-#'   \item{\code{r}}{List containing estimates of reencounter probabilities at
-#'    each target site. NULL except when using direct band/ring reencounter
-#'    data.}
 #'   \item{\code{input}}{List containing the inputs to \code{estMC}, or at least
 #'    the relevant ones, such as sampleSize.}
-#'   \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
-#'    when using direct band/ring reencounter data.}
 #' }
 #' @example inst/examples/estMCExamples.R
-#' @seealso \code{\link{calcMC}}, \code{\link{projections}},
+#' @seealso \code{\link{estStrength}}, \code{\link{estTransition}},
+#'   \code{\link{estMantel}}, \code{\link{calcMC}}, \code{\link{projections}},
 #'   \code{\link{isoAssign}}, \code{\link{plot.estMigConnectivity}}
 #' @export
 #' @references
@@ -1982,7 +1964,9 @@ estMCisotope <- function(targetDist=NULL,
 #'
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 #' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658–669.
+#' \href{https://doi.org/10.1111/ecog.03974}{doi:10.1111/ecog.03974}
 
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -1994,10 +1978,9 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0, calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-            resampleProjection = 'ESRI:54027',
+                  resampleProjection = 'ESRI:54027',
                   maxTries = 300, targetIntrinsic = NULL,
-                  isIntrinsic = FALSE, nReleased = NULL, reencountered = NULL,
-                  nBurnin = 5000, nChains = 3, nThin = 1,
+                  isIntrinsic = FALSE,
                   maintainLegacyOutput = FALSE) {
   if (is.null(psi)) {
     if(isIntrinsic) {
