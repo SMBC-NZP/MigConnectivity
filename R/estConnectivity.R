@@ -4,8 +4,9 @@
 #'
 #' Resampling of uncertainty for MC (migratory connectivity strength)
 #' from estimates of psi (transition probabilities) and/or relative abundance.
-#' Psi estimates can come from RMark psi matrix, MCMC samples, or other samples
-#' expressed in array form. Abundance estimates for each origin site and be
+#' Psi estimates can come from an estMigConnectivity object, an RMark psi
+#' matrix, MCMC samples, or other samples expressed in array form.
+#' Abundance estimates for each origin site can be
 #' either just point estimates (no uncertainty propagated) or MCMC samples.
 #' Other inputs include distances between origin sites, distances between target
 #' sites, and sample size used to estimate psi.
@@ -32,8 +33,10 @@
 #'  vector indicating which sites are origin
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are target
-#' @param originNames Optional. Vector of names for the origin sites
-#' @param targetNames Optional. Vector of names for the target sites
+#' @param originNames Optional. Vector of names for the origin sites. Mostly for
+#'  internal use
+#' @param targetNames Optional. Vector of names for the target sites. Mostly for
+#'  internal use
 #' @param nSamples Number of times to resample \code{psi} and/or
 #'  \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
 #'  higher values here will do so with more precision
@@ -105,6 +108,7 @@
 #' @seealso \code{\link{calcMC}}, \code{\link{estTransition}},
 #'   \code{\link{estMC}}, \code{\link{estMantel}},
 #'   \code{\link{plot.estMigConnectivity}}
+#' @example inst/examples/estStrengthExamples.R
 estStrength <- function(originDist, targetDist, originRelAbund, psi,
                         sampleSize = NULL,
                         originSites=NULL, targetSites=NULL,
@@ -138,7 +142,7 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
     psiFixed <- FALSE
     if (!is.numeric(originSites) || !is.numeric(targetSites))
       stop('Must specify which RMark Psi parameters represent origin and target sites')
-    psiVCV <- model$results$beta.vcv
+    psiVCV <- psi$results$beta.vcv
     psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
                                                        se=TRUE))[originSites,
                                                               targetSites]
@@ -541,9 +545,9 @@ estTransitionBoot <- function(originSites = NULL,
   if (is.null(originAssignment)){
     # if geolocator, telemetry and captured in origin then simply get the origin site
     if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints))
-      originAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = originPoints,
+      originAssignment <- unclass(sf::st_intersects(x = originPoints,
                                                           y = originSites,
-                                                          sparse = TRUE)))))
+                                                          sparse = TRUE))
     # if raster and not captured in origin sites then determine the origin site
     else if (all(isRaster & captured != "origin")) {
       # if isRaster == TRUE and captured != origin
@@ -565,23 +569,28 @@ estTransitionBoot <- function(originSites = NULL,
       originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
       # transform to match originSites
       originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
-      originAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = originAssignRast,
-                                                                 y = originSites,
-                                                                 sparse = TRUE)))))
+      originAssignment <- unclass(sf::st_intersects(x = originAssignRast,
+                                            y = originSites,
+                                            sparse = TRUE))
     }   # originAssignment <- what # need point assignment for raster (mean location?)
     else
       # originAssignment <- what # points over where we have them, raster assignment otherwise
-      originAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = originPoints,
+      originAssignment <- unclass(sf::st_intersects(x = originPoints,
                                                                  y = originSites,
-                                                                sparse = TRUE)))))
+                                                                sparse = TRUE))
+    originAssignment[lengths(originAssignment)==0] <- NA
+    if (any(lengths(originAssignment)>1))
+      stop("Overlapping originSites not allowed\n")
+    originAssignment <- array(unlist(originAssignment))
   }
 
 
   if (is.null(targetAssignment)){
-    if (all(isGL | isTelemetry | captured != "origin"))
-      targetAssignment <- array(unlist(unclass(sf::st_intersects(x = targetPoints,
-                                                          y = targetSites,
-                                                          sparse = TRUE))))
+    if (all(isGL | isTelemetry | captured != "origin")) {
+      targetAssignment <- unclass(sf::st_intersects(x = targetPoints,
+                                                    y = targetSites,
+                                                    sparse = TRUE))
+    }
     else if (all(isRaster & captured != "target")){
       #targetAssignment <- what # need point assignment for raster (mean location?)
       xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
@@ -595,38 +604,33 @@ estTransitionBoot <- function(originSites = NULL,
                             xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
                                         targetRasterXYZ[which.max(x)[1],2])
                             return(xy)})
-    # returns a point estimate for each bird - turn it into a sf object
-    xyTargetRast <- t(xyTargetRast)
-    colnames(xyTargetRast) <- c("x","y")
-    # right now the assignment CRS is WGS84 - should be the same as the origin raster
-    targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
-    # transform to match originSites
-    targetSites_wgs <- sf::st_transform(targetSites, 4326)
-    #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
-    #targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
-    #                                                           y = targetSites_wgs,
-    #                                                           sparse = TRUE)))))
-    # Check which points are in target sites
-    ta_assign <- suppressMessages(sf::st_intersects(x = targetAssignRast,
-                                                    y = targetSites_wgs,
-                                                    sparse = TRUE))
-
-    # Give values without intersection an NA
-    ta_intersect <- lengths(ta_assign)
-    # quick check to ensure that all the points fall exactly in one targetSite #
-    if(any(ta_intersect)>1){stop("Overlapping targetSites not allowed \n")}
-
-    ta_bool_intersect <- lengths(ta_intersect)>0
-
-    targetAssignment <- unlist(as.numeric(ta_assign))
+      # returns a point estimate for each bird - turn it into a sf object
+      xyTargetRast <- t(xyTargetRast)
+      colnames(xyTargetRast) <- c("x","y")
+      # right now the assignment CRS is WGS84 - should be the same as the origin raster
+      targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+      # transform to match originSites
+      targetSites_wgs <- sf::st_transform(targetSites, 4326)
+      #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
+      #targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+      #                                                           y = targetSites_wgs,
+      #                                                           sparse = TRUE)))))
+      # Check which points are in target sites
+      targetAssignment <- sf::st_intersects(x = targetAssignRast,
+                                                      y = targetSites_wgs,
+                                                      sparse = TRUE)
 
     # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
     # IF INTERSECTS IS (empty)
    }else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
-    targetAssignment <- suppressMessages(array(unclass(sf::st_intersects(x = targetPoints,
+      targetAssignment <- unclass(sf::st_intersects(x = targetPoints,
                                                         y = targetSites,
-                                                        sparse = TRUE))))
+                                                        sparse = TRUE))
+   targetAssignment[lengths(targetAssignment)==0] <- NA
+   if (any(lengths(targetAssignment)>1))
+     stop("Overlapping targetSites not allowed\n")
+   targetAssignment <- array(unlist(targetAssignment))
   }
 
   nOriginSites <- ifelse(is.null(originSites), ncol(originAssignment), nrow(originSites))
@@ -875,7 +879,8 @@ estTransitionBoot <- function(originSites = NULL,
                            verbose = verbose,
                            alpha = alpha,
                            resampleProjection = resampleProjection,
-                           nSim = nSim, maxTries = maxTries)))
+                           nSim = nSim, maxTries = maxTries),
+              BUGSoutput = NULL))
 }
 
 #' Estimate psi (transition probabilities between locations in two phases of
@@ -1349,7 +1354,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
                             median = medianCorr, point = pointCorr),
-                r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
                              sampleSize = sampleSize, originSites = originSites,
@@ -1380,7 +1384,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
                             median = medianCorr, point = pointCorr),
-                r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
                              sampleSize = sampleSize, originSites = originSites,
@@ -1690,7 +1693,6 @@ estMCisotope <- function(targetDist=NULL,
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
                             median = medianCorr, point = pointCorr),
-                r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
                              sampleSize = sampleSize, originSites = originSites,
@@ -1724,7 +1726,6 @@ estMCisotope <- function(targetDist=NULL,
                 corr = list(sample = corr, mean = meanCorr, se = seCorr,
                             simpleCI = simpleCICorr, bcCI = bcCICorr,
                             median = medianCorr, point = pointCorr),
-                r = NULL,
                 input = list(originDist = originDist, targetDist = targetDist,
                              originRelAbund = originRelAbund,
                              sampleSize = sampleSize, originSites = originSites,

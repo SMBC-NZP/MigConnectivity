@@ -1,6 +1,6 @@
 \dontrun{
 set.seed(101)
-# Uncertainty in detection with equal abundances
+# Uncertainty in detection (RMark estimates) with equal abundances
 # Number of resampling iterations for generating confidence intervals
 
 nSamplesCMR <- 100
@@ -31,8 +31,8 @@ trueMC
 # Storage matrix for samples
 cmrMCSample <- matrix(NA, nSamplesCMR, nSimulationsCMR)
 summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC,
-                         estimate=NA, mean=NA, median=NA, se=NA, lcl.simple=NA,
-                         ucl.simple=NA, lcl.BC=NA, ucl.BC=NA)
+                         mean=NA, se=NA, lcl=NA, ucl=NA)
+# Get RMark psi estimates and estimate MC from each
 for (r in 1:nSimulationsCMR) {
   cat("Simulation",r,"of",nSimulationsCMR,"\n")
   # Note: getCMRexample requires a valid internet connection and that GitHub is
@@ -44,24 +44,19 @@ for (r in 1:nSimulationsCMR) {
                    nSamples = nSamplesCMR, verbose = 0,
                    sampleSize = length(grep('[2-5]', fm$data$data$ch)))
   #sampleSize argument not really needed (big sample sizes)
-  cmrMCSample[ , r] <- results$sampleMC
-  summaryCMR$estimate[r] <- results$pointMC
-  summaryCMR$mean[r] <- results$meanMC
-  summaryCMR$median[r] <- results$medianMC
-  summaryCMR$se[r] <- results$seMC
+  cmrMCSample[ , r] <- results$MC$sample
+  summaryCMR$mean[r] <- results$MC$mean
+  summaryCMR$se[r] <- results$MC$se
   # Calculate confidence intervals using quantiles of sampled MC
-  summaryCMR[r, c('lcl.simple', 'ucl.simple')] <- results$simpleCI
-  summaryCMR[r, c('lcl.BC', 'ucl.BC')] <- results$bcCI
+  summaryCMR[r, c('lcl', 'ucl')] <- results$MC$simpleCI
 }
 
-summaryCMR <- transform(summaryCMR, coverage.simple = (True>=lcl.simple &
-                                                         True<=ucl.simple),
-                        coverage.BC=(True>=lcl.BC & True<=ucl.BC))
+summaryCMR <- transform(summaryCMR, coverage = (True>=lcl & True<=ucl))
 summaryCMR
 summary(summaryCMR)
-biasCMR <- mean(summaryCMR$estimate) - trueMC
+biasCMR <- mean(summaryCMR$mean) - trueMC
 biasCMR
-mseCMR <- mean((summaryCMR$estimate - trueMC)^2)
+mseCMR <- mean((summaryCMR$mean - trueMC)^2)
 mseCMR
 rmseCMR <- sqrt(mseCMR)
 rmseCMR
@@ -78,35 +73,26 @@ nSimulationsAbund <- 10 #length(abundExamples) is 100
 # Storage matrix for samples
 abundMCSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
 summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund, True = trueMC,
-                           estimate = NA, mean = NA, median = NA, se = NA,
-                           lcl.simple = NA, ucl.simple = NA,
-                           lcl.BC = NA, ucl.BC = NA, lclHPD = NA, uclHPD = NA)
+                           mean = NA, se = NA, lcl = NA, ucl = NA)
 for (r in 1:nSimulationsAbund) {
   cat("Simulation",r,"of",nSimulationsAbund,"\n")
   row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
   results <- estMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
                    originDist = originDist, targetDist = targetDist,
                    row0 = row0, nSamples = nSamplesAbund, verbose = 1)
-  abundMCSample[ , r] <- results$sampleMC
-  summaryAbund$estimate[r] <- results$pointMC
-  summaryAbund$mean[r] <- results$meanMC
-  summaryAbund$median[r] <- results$medianMC
-  summaryAbund$se[r] <- results$seMC
+  abundMCSample[ , r] <- results$MC$sample
+  summaryAbund$mean[r] <- results$MC$mean
+  summaryAbund$se[r] <- results$MC$se
   # Calculate confidence intervals using quantiles of sampled MC
-  summaryAbund[r, c('lcl.simple', 'ucl.simple')] <- results$simpleCI
-  summaryAbund[r, c('lcl.BC', 'ucl.BC')] <- results$bcCI
-  summaryAbund[r, c('lclHPD', 'uclHPD')] <- results$hpdCI
+  summaryAbund[r, c('lcl', 'ucl')] <- results$MC$simpleCI
 }
 
-summaryAbund <- transform(summaryAbund, coverage.simple = (True >= lcl.simple &
-                                                           True <= ucl.simple),
-                          coverage.BC=(True>=lcl.BC & True<=ucl.BC),
-                          coverage.HPD=(True>=lclHPD & True<=uclHPD))
+summaryAbund <- transform(summaryAbund, coverage = (True >= lcl & True <= ucl))
 summaryAbund
 summary(summaryAbund)
-biasAbund <- mean(summaryAbund$estimate) - trueMC
+biasAbund <- mean(summaryAbund$mean) - trueMC
 biasAbund
-mseAbund <- mean((summaryAbund$estimate - trueMC)^2)
+mseAbund <- mean((summaryAbund$mean - trueMC)^2)
 mseAbund
 rmseAbund <- sqrt(mseAbund)
 rmseAbund
@@ -200,7 +186,7 @@ Combo <- estMC(targetDist = OVENdata$targetDist, # targetSites distance matrix
                psi = Combined$psi$sample,
                originRelAbund = OVENdata$originRelAbund,
                nSamples = nSamplesGLGPS * 2,
-               sampleSize = length(OVENdata$targetPoints))
+               sampleSize = nrow(OVENdata$targetPoints))
 Combo
 Combined
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
