@@ -171,6 +171,7 @@ locSample <- function(isGL,
                       resampleProjection = 'ESRI:53027',
                       nSim = 1000,
                       maxTries = 300) {
+  #cat("Starting locSample\n")
   # points should come in as sf object #
   nAnimals <- length(isGL)
   if (!is.null(singleCell)) {
@@ -224,6 +225,7 @@ locSample <- function(isGL,
     draws <- draws + 1
     # Convert toSample (numbers) into T/F, so can combine with other T/F
     toSampleBool <- 1:nAnimals %in% toSample
+    #cat(toSample, '\n')
     # Sample geolocator points
     if (any(isGL & toSampleBool)) {
       #cat("*************", sum(isGL & toSampleBool), "*************\n")
@@ -337,7 +339,7 @@ locSample <- function(isGL,
         # will be NA for those that don't.  For those that do, it will location in
         # point.sample first valid point can be found.
         good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])
-
+        #cat(good.sample2, "\n")
       }
       else {
         # Select nSim points for each animal still to be sampled
@@ -453,6 +455,7 @@ locSample <- function(isGL,
           site.sample0[, which(isGL & toSampleBool) %in% which(!isProb & isRaster),
                        drop = FALSE]
         good.sample02 <- apply(compare, 2, function(x) which(!is.na(x) & x)[1])
+        #cat(good.sample02, '\n')
         if (any(!is.na(good.sample02))){
           for (col in 1:sum(!isProb & isGL & isRaster & toSampleBool))
             site.sample[which(!isProb & isGL & isRaster & toSampleBool)[col]] <-
