@@ -2121,18 +2121,14 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = 'ESRI:54027',
+                      resampleProjection = 'ESRI:54027',
                       maxTries = 300, maintainLegacyOutput = FALSE) {
 
   # double check that spatial data coming in is in sf format #
-  if("SpatialPoints" %in% class(targetPoints) |
-     "SpatialPointsDataFrame" %in% class(targetPoints)){
+  if (inherits(targetPoints, "SpatialPoints"))
     targetPoints <- sf::st_as_sf(targetPoints)
-  }
-  if("SpatialPoints" %in% class(originPoints) |
-     "SpatialPointsDataFrame" %in% class(originPoints)){
+  if (inherits(originPoints, "SpatialPoints"))
     originPoints <- sf::st_as_sf(originPoints)
-  }
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -2141,6 +2137,7 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
+
   nAnimals <- nrow(targetPoints)
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
