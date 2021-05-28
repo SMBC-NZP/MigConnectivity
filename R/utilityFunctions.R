@@ -115,13 +115,21 @@ targetSample <- function(isGL,
 
       # Convert those to SpatialPoints
 
-      point.sample <- apply(point.sample, FUN = function(x){sf::st_as_sf(data.frame(x), coords = c("x","y"), crs = resampleProjection)}, MARGIN = 3)
+      point.sample <- apply(point.sample, FUN = function(x){
+        sf::st_as_sf(data.frame(x), coords = c("x","y"),
+                     crs = resampleProjection)}, MARGIN = 3)
       #point.sample <- lapply(point.sample1, st_as_sf)
       # Find out which sampled points are in a target site
-      if(!sf::st_crs(targetSites)==sf::st_crs(point.sample)){targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
-
-      target.sample0 <- sapply(point.sample, FUN = function(z){suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites, sparse = TRUE))))})
-
+      if(!sf::st_crs(targetSites)==sf::st_crs(point.sample)){
+        targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
+      }
+      target.sample0 <- sapply(point.sample, FUN = function(z){
+        inter <- sf::st_intersects(x = z, y = targetSites,
+                                   sparse = TRUE)
+        inter[lengths(inter)==0] <- NA
+        inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1],
+                                          function(x) x[1])
+        as.numeric(unlist(unclass(inter)))})
       # Identify which animals have at least one valid sample point. good.sample
       # will be NA for those that don't.  For those that do, it will location in
       # point.sample first valid point can be found.

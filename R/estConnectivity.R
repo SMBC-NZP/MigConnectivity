@@ -616,9 +616,9 @@ estTransitionBoot <- function(originSites = NULL,
       #                                                           y = targetSites_wgs,
       #                                                           sparse = TRUE)))))
       # Check which points are in target sites
-      targetAssignment <- sf::st_intersects(x = targetAssignRast,
+      targetAssignment <- unclass(sf::st_intersects(x = targetAssignRast,
                                                       y = targetSites_wgs,
-                                                      sparse = TRUE)
+                                                      sparse = TRUE))
 
     # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
     # IF INTERSECTS IS (empty)
