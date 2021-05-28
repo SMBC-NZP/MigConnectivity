@@ -16,6 +16,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
 
 ##Introduction  
 
+NOTE: this vignette is a bit out of date. Everything in it should still work 
+(let us know if it doesn't), but it doesn't highlight the new functions from 
+versions 0.3 and 0.4, such as `estStrength`, `estTransition`, and `diffMC`. We 
+are working on an updated (or new) vignette that will highlight the new 
+features.
+
 Technological advancements have spurred rapid growth in the study of migratory connectivity,
 the spatial and temporal linkage of migratory populations throughout the annual cycle. However, 
 the lack of a quantitative definition for the strength of migratory connectivity (MC) has limited our ability to draw 
@@ -82,17 +88,13 @@ library(MigConnectivity)
 
 ```{r}
 mlogitMat <- function(slope, dist) {
-       preMat <- exp(-slope/mean(dist)*dist)
-       diag(preMat) <- 0
-       nr <- nrow(dist)
-       nc <- ncol(dist)
-       outMat <- matrix(0, nr, nc)
-  for (b in 1:nr) {
-      outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
-      outMat[b,b] <- 1 - sum(outMat[b, ])
-  }
-  return(outMat)
+   preMat <- exp(-slope/mean(dist)*dist)
+   diag(preMat) <- 0
+   outMat <- t(apply(preMat, 1, function(x) x/(1 + sum(x))))
+   diag(outMat) <- 1 - rowSums(outMat)
+   return(outMat)
 }
+
 ```
 
 `mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
@@ -322,12 +324,12 @@ nNonBreeding <- 3 #number of non-breeding regions
 
 Generate a distance matrix between the different regions
 ```{r}
-#distances between centriods of three breeding regions
+#distances between centroids of three breeding regions
 breedDist <- matrix(c(0, 1, 2,
                       1, 0, 1,
                       2, 1, 0), nBreeding, nBreeding) 
 
-#distances between centriods of three non-breeding regions
+#distances between centroids of three non-breeding regions
 nonBreedDist <- matrix(c(0, 5, 10,
                          5, 0, 5,
                         10, 5, 0), nNonBreeding, nNonBreeding)
@@ -621,7 +623,7 @@ plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
 plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
 plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
-legend(400000,-2105956,legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+legend(400000,-2105956,legend=paste("MC =",round(M$MC$mean,2), "\u00b1", round(M$MC$se,2)),bty="n",cex=1.8,bg="white",xjust=0)
 
 shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
               gCentroid(OVENdata$originSites[1])@coords[,2],
@@ -632,8 +634,8 @@ shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
-              lty=1)
+              lwd = M$psi$mean[1,2]*10,
+              lty = 1)
 
 shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
               gCentroid(OVENdata$originSites[1])@coords[,2],
@@ -644,7 +646,7 @@ shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
               arr.lwd = 1,
               arr.width = 0.4, 
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+              lwd = M$psi$mean[1,3]*10,
               lty=1)
 
 shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
@@ -656,7 +658,7 @@ shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+              lwd = M$psi$mean[2,1]*10,
               lty=1)
 
 shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
@@ -668,7 +670,7 @@ shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+              lwd = M$psi$mean[2,2]*10)
 
 box(which="plot")
 ```
@@ -720,18 +722,22 @@ breedingRelN <- breedingN/sum(breedingN)
 ```
 
 The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
-```{r}
+```{r eval = FALSE}
 # Set up psi matrix
 o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
               target.dist = nonbreedDist, origin.abund = breedingRelN,
               sample.size = sum(breedingN),
-              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+              interval = c(1, 3), tol = .Machine$double.eps^0.5)#
 
 slope <- o$minimum
 
 psi <- mlogitMat(slope, breedDist)
 ```
 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+slope <- 1.92093332054914
+psi <- mlogitMat(slope, breedDist)
+```
 Now that we have all the data needed to calculate the strength of migratory connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
 ```{r}
 # Baseline strength of migratory connectivity
@@ -817,7 +823,7 @@ There were five relative breeding abundance scenarios:
 
 First we calculate MC for the eight transition probability scenarios (with base spatial arrangement and relative abundance):
 ```{r}
-nScenarios1 <- length(samplePsis) # samplePsis - comes with MigConnectivity pacakge
+nScenarios1 <- length(samplePsis) # samplePsis - comes with MigConnectivity package
 
 # Create vector of length nScenarios1
 MC1 <- rep(NA, nScenarios1)
