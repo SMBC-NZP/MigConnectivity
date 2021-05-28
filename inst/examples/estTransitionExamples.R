@@ -52,7 +52,7 @@ GL_psi <- estTransition(isGL=TRUE,
                         originSites = OVENdata$originSites,
                         originPoints = OVENdata$originPoints,
                         targetPoints = OVENdata$targetPoints,
-                        verbose = 1,
+                        verbose = 2,
                         nSamples = nSamplesGLGPS,
                         resampleProjection = sf::st_crs(OVENdata$targetPoints))
 
@@ -65,57 +65,60 @@ Combined.psi <- estTransition(isGL=OVENdata$isGL,
                 originSites = OVENdata$originSites, # Breeding origin sites
                 originPoints = OVENdata$originPoints, # Capture Locations
                 targetPoints = OVENdata$targetPoints, # Device target locations
-                verbose = 1,   # output options
+                verbose = 2,   # output options
                 nSamples = nSamplesGLGPS, # This is set low for example
                 resampleProjection = sf::st_crs(OVENdata$targetPoints))
 
 print(Combined.psi)
 
 # For treating all data as GPS,
-# Move the latitude of birds with locations that fall off shore - only change
-# Latitude Estimate #
-tp<-sf::st_(OVENdata$targetPoints)
-sp::plot(OVENdata$targetPoints)
-sp::plot(OVENdata$targetSites,add=TRUE)
-text(OVENdata$targetPoints@coords[,1], OVENdata$targetPoints@coords[,2],
-     label=c(1:39))
+# Move the latitude of birds with locations that fall offshore
+int <- sf::st_intersects(OVENdata$targetPoints, OVENdata$targetSites)
+offshore <- which(lengths(int)==0)
+tp<-sf::st_coordinates(OVENdata$targetPoints)
+replacers <- sf::st_nearest_points(OVENdata$targetPoints[offshore, ],
+                                   OVENdata$targetSites)
+plot(OVENdata$targetPoints)
+plot(OVENdata$targetSites,add=TRUE)
+text(tp[,1], tp[,2], label=c(1:39))
 
 tp[5,2]<- -1899469
-tp[10,2]<- -2007848
-tp[1,2]<- -2017930
-tp[11,2]<- -2136511
-tp[15,2]<- -2121268
-tp[16,2]<- -2096063
+tp[10,2]<- -1927848
+tp[1,2]<- -1927930
+tp[11,2]<- -2026511
+tp[15,2]<- -2021268
+tp[16,2]<- -1976063
 
-oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
-raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
+oven_targetPoints<-sf::st_as_sf(as.data.frame(tp),
+                                coords = c("X","Y"),
+                                crs = sf::st_crs(OVENdata$targetPoints))
+inter <- sf::st_intersects(oven_targetPoints, OVENdata$targetSites)
+lengths(inter)
+plot(oven_targetPoints,add=TRUE, col = "red")
+#raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
 
 # Estimate MC only, treat all data as GPS
-GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
-              targetDist = OVENdata$targetDist, # targetSites distance matrix
-              originDist = OVENdata$originDist, # originSites distance matrix
+GPS_psi <- estTransition(isTelemetry = TRUE,
               targetSites = OVENdata$targetSites, # Non-breeding target sites
               originSites = OVENdata$originSites, # Breeding origin sites
               originPoints = OVENdata$originPoints, # Capture Locations
               targetPoints = oven_targetPoints, # Device target locations
-              originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
-              verbose = 1,   # output options
+              verbose = 2,   # output options
               nSamples = nSamplesGLGPS) # This is set low for example
 
 
 
 ###############################################################################
-# Example 2 (all released origin; some telemetry, some GL, some prob
-# some both GL and prob)
+# Example 3 (all released origin; some telemetry, some GL, some probability
+# tables, some both GL and probability tables; data modified from ovenbird
+# example)
 ###############################################################################
 #\dontrun{
 #  install.packages(c('VGAM'))
 #}
 library(VGAM)
-library(MigConnectivity)
 nAnimals <- 40
 isGL <- c(OVENdata$isGL, FALSE)
-#isGL[5] <- FALSE
 isTelemetry <- c(!OVENdata$isGL, FALSE)
 isRaster <- rep(FALSE, nAnimals)
 isProb <- rep(FALSE, nAnimals)
@@ -123,8 +126,6 @@ targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[1,])
 targetSites <- OVENdata$targetSites
 originSites <- OVENdata$originSites
 resampleProjection <- sf::st_crs(OVENdata$targetPoints)
-targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
-targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
 targetNames <- OVENdata$targetNames
 originNames <- OVENdata$originNames
 targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
@@ -142,64 +143,47 @@ for (ani in 1:nAnimals) {
 }
 targetAssignment
 isProb
-system.time(test <- MigConnectivity:::locSample(isGL, isRaster, isProb, isTelemetry,
-                  geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                  geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                  points = targetPoints, assignment = targetAssignment,
-                  sites = targetSites, resampleProjection = resampleProjection,
-                  nSim = 20000, maxTries = 300))
-test
+nSamplesTry <- 100 # Number of bootstrap iterations
 originPoints <- rbind(OVENdata$originPoints,
                       OVENdata$originPoints[39,])
-originPoints <- sf::st_transform(originPoints, crs = resampleProjection)
-originSites <- sf::st_transform(OVENdata$originSites, crs = resampleProjection)
-system.time(test2 <-
+system.time(psi3 <-
               estTransition(isGL = isGL, isRaster = isRaster,
-                                              isProb = isProb,
-                                              isTelemetry = isTelemetry,
-                                              geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                              geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                                              targetPoints = targetPoints,
-                                              targetAssignment = targetAssignment,
-                                              targetSites = targetSites,
-                                              resampleProjection = resampleProjection,
-                                              nSim = 5000, maxTries = 300,
-                                              originSites = originSites,
-                                              originPoints = originPoints,
-                                              captured = "origin",
-                                              originNames = OVENdata$originNames,
-                                              targetNames = OVENdata$targetNames,
-                                              verbose = 3,
-                                              nSamples = 1000))
-test2
-plot(test2, legend = "top",
+                            isProb = isProb,
+                            isTelemetry = isTelemetry,
+                            geoBias = OVENdata$geo.bias,
+                            geoVCov = OVENdata$geo.vcov,
+                            targetPoints = targetPoints,
+                            targetAssignment = targetAssignment,
+                            targetSites = targetSites,
+                            resampleProjection = resampleProjection,
+                            nSim = 5000, maxTries = 300,
+                            originSites = originSites,
+                            originPoints = originPoints,
+                            captured = "origin",
+                            originNames = OVENdata$originNames,
+                            targetNames = OVENdata$targetNames,
+                            verbose = 3,
+                            nSamples = nSamplesTry))
+psi3
+
+nNonBreeding <- nrow(OVENdata$targetSites)
+
+plot(psi3, legend = "top",
      main = paste("OVENlike w/", sum(isGL & !isProb), "GL,",
                   sum(!isGL & isProb), "probs,",
                   sum(isGL & isProb), "both, and", sum(isTelemetry), "GPS"),
      col = RColorBrewer::brewer.pal(nNonBreeding, "Dark2"))
-plot(targetPoints)
-plot(targetSites, add = T)
-plot(targetSites)
-plot(targetPoints[isProb & isGL, ], add = T, col = 1:sum(isProb & isGL))
 
 ################################################################
-# Example 2 (add prob animals released on other end)
+# Example 4 (add prob animals released on other end)
 ################################################################
 nAnimals <- 45
 captured <- rep(c("origin", "target"), c(40, 5))
 isGL <- c(OVENdata$isGL, rep(FALSE, 6))
-#isGL[5] <- FALSE
 isTelemetry <- c(!OVENdata$isGL, rep(FALSE, 6))
 isRaster <- rep(FALSE, nAnimals)
 isProb <- rep(FALSE, nAnimals)
 targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[c(1:4,6:7),])
-targetSites <- OVENdata$targetSites
-originSites <- OVENdata$originSites
-resampleProjection <- sf::st_crs(OVENdata$targetPoints)
-targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
-targetSites <- sf::st_transform(targetSites, crs = resampleProjection)
-targetNames <- OVENdata$targetNames
-originNames <- OVENdata$originNames
 targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
 assignment0 <- unclass(sf::st_intersects(x = targetPoints, y = targetSites,
                                          sparse = TRUE))
@@ -240,43 +224,40 @@ for (ani in 41:nAnimals) {
 }
 originAssignment
 isProb
-system.time(test3 <-
+system.time(psi4 <-
               estTransition(isGL = isGL, isRaster = isRaster,
-                                              isProb = isProb,
-                                              isTelemetry = isTelemetry,
-                                              geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                              geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                                              targetPoints = targetPoints,
-                                              targetAssignment = targetAssignment,
-                                              targetSites = targetSites,
-                                              resampleProjection = resampleProjection,
-                                              nSim = 5000, maxTries = 300,
-                                              originSites = originSites,
-                                              #originPoints = originPoints,
-                                              originAssignment = originAssignment,
-                                              captured = captured,
-                                              originNames = OVENdata$originNames,
-                                              targetNames = OVENdata$targetNames,
-                                              verbose = 3,
-                                              nSamples = 100))
-test3
+                            isProb = isProb,
+                            isTelemetry = isTelemetry,
+                            geoBias = OVENdata$geo.bias,
+                            geoVCov = OVENdata$geo.vcov,
+                            targetPoints = targetPoints,
+                            targetAssignment = targetAssignment,
+                            targetSites = targetSites,
+                            resampleProjection = resampleProjection,
+                            nSim = 5000, maxTries = 300,
+                            originSites = originSites,
+                            originAssignment = originAssignment,
+                            captured = captured,
+                            originNames = OVENdata$originNames,
+                            targetNames = OVENdata$targetNames,
+                            verbose = 3,
+                            nSamples = nSamplesTry))
+psi4
 
-nNonBreeding <- nrow(OVENdata$targetSites)
-
-plot(test3, legend = "top",
+plot(psi4, legend = "top",
      main = paste(sum(isGL & !isProb), "GL,",
                   sum(!isGL & isProb & captured == "origin"), "prob,",
                   sum(isGL & isProb), "both,",
                   sum(isTelemetry), "GPS (all\ncaptured origin), and",
                   sum(isProb & captured == "target"), "probs (captured target)"),
      col = RColorBrewer::brewer.pal(nNonBreeding, "Dark2"))
-MC3 <- MigConnectivity:::estStrength(OVENdata$originDist, OVENdata$targetDist,
-                                     OVENdata$originRelAbund, test3,
+MC4 <- estStrength(OVENdata$originDist, OVENdata$targetDist,
+                                     OVENdata$originRelAbund, psi4,
                                      sampleSize = nAnimals)
-MC3
+MC4
 
 ###############################################################################
-# Example 3 (all raster, from our OVEN example)
+# Example 5 (all raster, from our OVEN example)
 ###############################################################################
 getCSV <- function(filename) {
   tmp <- tempdir()
@@ -312,7 +293,6 @@ OVENvals <- getCSV("deltaDvalues.csv")
 OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
 
 originSites <- getRDS("originSites")
-originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
 originSites <- sf::st_as_sf(originSites)
 
 EVER <- length(grep(x=OVENvals$Sample,"EVER"))
@@ -355,188 +335,18 @@ targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSi
 targetSites <- sf::st_as_sf(targetSites)
 
 
-system.time(test4 <-
-              estTransition(isGL = isGL,
-                                              isRaster = isRaster,
-                                              isProb = isProb,
-                                              isTelemetry = isTelemetry,
-                                              #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                              #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                                              #targetPoints = targetPoints,
-                                              #targetAssignment = targetAssignment,
-                                              targetSites = targetSites,
-                                              resampleProjection = resampleProjection,
-                                              targetRaster = iso,
-                                              #nSim = 5000, maxTries = 300,
-                                              originSites = originSites,
-                                              originPoints = originPoints,
-                                              #originAssignment = originAssignment,
-                                              captured = rep("origin", nAnimals),
-                                              #originNames = OVENdata$originNames,
-                                              #targetNames = OVENdata$targetNames,
-                                              verbose = 3,
-                                              nSamples = 1000))
-test4
-
-ovenMC <- estMC(originRelAbund = originRelAbund,
-                targetIntrinsic = iso,
-                originPoints = originPoints,
-                originSites = originSites,
-                targetSites = targetSites,
-                originDist = originDist,
-                nSamples = 200,
-                verbose = 1,
-                calcCorr = TRUE,
-                alpha = 0.05,
-                approxSigTest = FALSE,
-                isIntrinsic = TRUE)
-ovenMC
-
-test4$psi$mean - ovenMC$psi$mean
-test4$psi$se - ovenMC$psi$se
-
-iso2 <- iso
-iso2$SingleCell <- NULL
-something <- MigConnectivity:::locSample(isGL = isGL,
-                                             isRaster = isRaster,
-                                             isProb = isProb,
-                                             isTelemetry = isTelemetry,
-                                             #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                             #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                                             #targetPoints = targetPoints,
-                                             #targetAssignment = targetAssignment,
-                                             sites = targetSites,
-                                             resampleProjection = resampleProjection,
-                                             matvals = raster::rasterToPoints(iso2$probassign),
-                                            nSim = 10, maxTries = 300,
-                                         assignment = targetAssignment)
-
-system.time(test5 <-
-              estTransition(isGL = isGL,
-                                              isRaster = isRaster,
-                                              isProb = isProb,
-                                              isTelemetry = isTelemetry,
-                                              #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                                              #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                                              #targetPoints = targetPoints,
-                                              #targetAssignment = targetAssignment,
-                                              targetSites = targetSites,
-                                              resampleProjection = resampleProjection,
-                                              targetRaster = iso2,
-                                              #nSim = 5000, maxTries = 300,
-                                              originSites = originSites,
-                                              originPoints = originPoints,
-                                              #originAssignment = originAssignment,
-                                              captured = rep("origin", nAnimals),
-                                              #originNames = OVENdata$originNames,
-                                              #targetNames = OVENdata$targetNames,
-                                              verbose = 3,
-                                              nSamples = 200))
-test5$psi$mean
-test4$psi$mean - test5$psi$mean
-test4$psi$se - test5$psi$se
-
-ovenMC5 <- suppressMessages(estMC(originRelAbund = originRelAbund,
-                targetIntrinsic = iso2,
-                originPoints = originPoints,
-                originSites = originSites,
-                targetSites = targetSites,
-                originDist = originDist,
-                nSamples = 200,
-                verbose = 1,
-                calcCorr = F,
-                alpha = 0.05,
-                approxSigTest = FALSE,
-                isIntrinsic = TRUE))
-ovenMC5
-test4$psi$mean - ovenMC5$psi$mean
-test5$psi$mean - ovenMC5$psi$mean
-ovenMC$psi$mean - ovenMC5$psi$mean
-test4$psi$se - ovenMC5$psi$se
-
-
-
-# Don't run, only works if you've run a bunch of stuff from within functions
-ts <- sf::st_transform(targetSites, resampleProjection)
-ps2 <- lapply(point.sample2, sf::st_transform, crs = resampleProjection)
-tar <- sf::st_transform(targetAssignRast, resampleProjection)
-
-plot(ts)
-for(i in 2) {
-  plot(ps2[[i]], col = RColorBrewer::brewer.pal(7, "Dark2")[i], add = T)
-}
-plot(tar[1:7, ], col = RColorBrewer::brewer.pal(7, "Dark2"), add = T, pch = 19)
-sc1 <- sf::st_as_sf(as.data.frame(iso$SingleCell[,,1]), coords = c("Longitude", "Latitude"),
-                    crs = MigConnectivity::projections$WGS84)
-sc1 <- sf::st_transform(sc1, resampleProjection)
-plot(sc1, col = RColorBrewer::brewer.pal(7, "Dark2")[1], add = T, pch = 5)
-sc2 <- sf::st_as_sf(as.data.frame(iso$SingleCell[,,2]), coords = c("Longitude", "Latitude"),
-                    crs = MigConnectivity::projections$WGS84)
-sc2 <- sf::st_transform(sc2, resampleProjection)
-plot(sc2, col = RColorBrewer::brewer.pal(7, "Dark2")[2], add = T, pch = 5, alpha = 0.5)
-
-###############################################################################
-# Example 4 (raster plus prob tables) (haven't gotten far setting this one up)
-###############################################################################
-isProb <- rep(c(F, T), c(20, nAnimals - 20))
-nTargetSites <- nrow(targetSites)
-targetAssignment <- rdiric(nAnimals, rep(1, nTargetSites))
-targetAssignment
-isProb
-system.time(test6 <-
+system.time(psi5 <-
               estTransition(isGL = isGL,
                             isRaster = isRaster,
                             isProb = isProb,
                             isTelemetry = isTelemetry,
-                            #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                            #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                            #targetPoints = targetPoints,
-                            targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
                             targetRaster = iso,
-                            nSim = 1000, maxTries = 300,
                             originSites = originSites,
                             originPoints = originPoints,
-                            #originAssignment = originAssignment,
                             captured = rep("origin", nAnimals),
-                            #originNames = OVENdata$originNames,
-                            #targetNames = OVENdata$targetNames,
                             verbose = 3,
-                            nSamples = 200))
-# something <- MigConnectivity:::locSample(isGL = isGL,
-#                                          isRaster = isRaster,
-#                                          isProb = isProb,
-#                                          isTelemetry = isTelemetry,
-#                                          sites = targetSites,
-#                                          resampleProjection = resampleProjection,
-#                                          matvals = raster::rasterToPoints(iso$probassign),
-#                                          singleCell = iso$SingleCell,
-#                                          nSim = 10, maxTries = 300,
-#                                          assignment = targetAssignment)
-test6
-test6$psi$mean - test4$psi$mean
-system.time(test7 <-
-              estTransition(isGL = isGL,
-                            isRaster = isRaster,
-                            isProb = isProb,
-                            isTelemetry = isTelemetry,
-                            #geoBias = OVENdata$geo.bias, #[, 2:1, drop = FALSE]
-                            #geoVCov = OVENdata$geo.vcov,#*1.5,#[2:1,2:1]
-                            #targetPoints = targetPoints,
-                            targetAssignment = targetAssignment,
-                            targetSites = targetSites,
-                            resampleProjection = resampleProjection,
-                            targetRaster = iso2,
-                            nSim = 200, maxTries = 300,
-                            originSites = originSites,
-                            originPoints = originPoints,
-                            #originAssignment = originAssignment,
-                            captured = rep("origin", nAnimals),
-                            #originNames = OVENdata$originNames,
-                            #targetNames = OVENdata$targetNames,
-                            verbose = 3,
-                            nSamples = 10))
-test7
-test7$psi$mean - test5$psi$mean
+                            nSamples = nSamplesTry))
+psi5
 }

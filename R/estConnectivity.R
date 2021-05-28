@@ -510,7 +510,7 @@ estTransitionBoot <- function(originSites = NULL,
     }
   }
 
-  nAnimals <- max(length(targetPoints), length(originPoints), length(isGL),
+  nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
                   length(isTelemetry), length(isRaster), length(isProb),
                   min(length(targetAssignment), dim(targetAssignment)[1]),
                   min(length(originAssignment), dim(originAssignment)[1]),
@@ -1023,7 +1023,7 @@ estTransitionBoot <- function(originSites = NULL,
 #'  multinomial non-Markovian model, for which it needs the thinning rate.
 #'  Default 1
 #'
-#' @return \code{estMC} returns a list with the elements:
+#' @return \code{estTransition} returns a list with the elements:
 #' \describe{
 #'   \item{\code{psi}}{List containing estimates of transition probabilities:
 #'   \itemize{
@@ -1059,6 +1059,9 @@ estTransitionBoot <- function(originSites = NULL,
 #' }
 #'
 #' @export
+#'
+#' @seealso \code{\link{estStrength}}, \code{\link{plot.estMigConnectivity}},
+#'   \code{\link{estMC}}, \code{\link{estMantel}}
 #'
 #' @example inst/examples/estTransitionExamples.R
 estTransition <- function(originSites = NULL, targetSites = NULL,
