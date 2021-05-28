@@ -1,8 +1,116 @@
-# Test new code for sampling different types of data
+\dontrun{
 ###############################################################################
-# Example 1 (all released origin; some telemetry, some GL, some prob
+# Examples 1 (banding data: first example is based on common tern banding data;
+#   the second is made up data to demonstrate data with two ages)
+###############################################################################
+COTE_banded <- c(10360, 1787, 2495, 336)
+COTE_reencountered <- matrix(c(12, 0, 38, 15,
+                               111, 7, 6, 2,
+                               5, 0, 19, 4,
+                               1123, 40, 41, 7),
+                             4, 4,
+                             dimnames = list(LETTERS[1:4], 1:4))
+COTE_psi <- estTransition(originNames = LETTERS[1:4],
+                          targetNames = 1:4,
+                          banded = COTE_banded,
+                          reencountered = COTE_reencountered,
+                          verbose = 1,
+                          nSamples = 60000, nBurnin = 20000)
+COTE_psi
+
+COTE_banded2 <- matrix(rep(COTE_banded, 2), 4, 2)
+COTE_reencountered2 <- array(c(12, 0, 38, 15, 6, 0, 17, 7,
+                               111, 7, 6, 2, 55, 3, 3, 1,
+                               5, 0, 19, 4, 2, 0, 10, 2,
+                               1123, 40, 41, 7, 660, 20, 20, 3),
+                             c(4, 2, 4),
+                             dimnames = list(LETTERS[1:4], c("J", "A"), 1:4))
+COTE_psi2 <- estTransition(originNames = LETTERS[1:4],
+                          targetNames = 1:4,
+                          banded = COTE_banded2,
+                          reencountered = COTE_reencountered2,
+                          verbose = 0,
+                          nSamples = 60000, nBurnin = 20000)
+COTE_psi2
+
+###############################################################################
+# Example 2 (geolocator and telemetry ovenbirds captured on origin sites)
+###############################################################################
+data(OVENdata) # Ovenbird
+
+nSamplesGLGPS <- 100 # Number of bootstrap iterations
+#\dontrun{
+#  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
+#  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
+#}
+
+# Estimate MC only, treat all data as geolocator
+GL_psi <- estTransition(isGL=TRUE,
+                        geoBias = OVENdata$geo.bias,
+                        geoVCov = OVENdata$geo.vcov,
+                        targetSites = OVENdata$targetSites,
+                        originSites = OVENdata$originSites,
+                        originPoints = OVENdata$originPoints,
+                        targetPoints = OVENdata$targetPoints,
+                        verbose = 1,
+                        nSamples = nSamplesGLGPS,
+                        resampleProjection = sf::st_crs(OVENdata$targetPoints))
+
+# Estimate MC and rM, treat all data as is
+Combined.psi <- estTransition(isGL=OVENdata$isGL,
+                        isTelemetry = !OVENdata$isGL,
+                geoBias = OVENdata$geo.bias, # Light-level GL location bias
+                geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+                targetSites = OVENdata$targetSites, # Non-breeding target sites
+                originSites = OVENdata$originSites, # Breeding origin sites
+                originPoints = OVENdata$originPoints, # Capture Locations
+                targetPoints = OVENdata$targetPoints, # Device target locations
+                verbose = 1,   # output options
+                nSamples = nSamplesGLGPS, # This is set low for example
+                resampleProjection = sf::st_crs(OVENdata$targetPoints))
+
+print(Combined.psi)
+
+# For treating all data as GPS,
+# Move the latitude of birds with locations that fall off shore - only change
+# Latitude Estimate #
+tp<-sf::st_(OVENdata$targetPoints)
+sp::plot(OVENdata$targetPoints)
+sp::plot(OVENdata$targetSites,add=TRUE)
+text(OVENdata$targetPoints@coords[,1], OVENdata$targetPoints@coords[,2],
+     label=c(1:39))
+
+tp[5,2]<- -1899469
+tp[10,2]<- -2007848
+tp[1,2]<- -2017930
+tp[11,2]<- -2136511
+tp[15,2]<- -2121268
+tp[16,2]<- -2096063
+
+oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
+raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
+
+# Estimate MC only, treat all data as GPS
+GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
+              targetDist = OVENdata$targetDist, # targetSites distance matrix
+              originDist = OVENdata$originDist, # originSites distance matrix
+              targetSites = OVENdata$targetSites, # Non-breeding target sites
+              originSites = OVENdata$originSites, # Breeding origin sites
+              originPoints = OVENdata$originPoints, # Capture Locations
+              targetPoints = oven_targetPoints, # Device target locations
+              originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
+              verbose = 1,   # output options
+              nSamples = nSamplesGLGPS) # This is set low for example
+
+
+
+###############################################################################
+# Example 2 (all released origin; some telemetry, some GL, some prob
 # some both GL and prob)
 ###############################################################################
+#\dontrun{
+#  install.packages(c('VGAM'))
+#}
 library(VGAM)
 library(MigConnectivity)
 nAnimals <- 40
@@ -431,3 +539,4 @@ system.time(test7 <-
                             nSamples = 10))
 test7
 test7$psi$mean - test5$psi$mean
+}

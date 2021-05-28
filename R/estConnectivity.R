@@ -288,44 +288,38 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                             nSamples = 1000, verbose=0,
                             originNames = NULL, targetNames = NULL,
                             nThin = 1, nBurnin = 5000, nChains = 3) {
+  nDim <- length(dim(reencountered))
   if (is.null(originNames))
     originNames <- dimnames(reencountered)[[1]]
   if (is.null(targetNames))
-    targetNames <- dimnames(reencountered)[[2]]
-  nTargetSites <- dim(targetDist)[1]
-  nOriginSites <- dim(originDist)[2]
-  if (length(originRelAbund)!=nOriginSites)
-    stop('Number of origin sites must be constant between distance matrix and abundance')
-  if (length(dim(nReleased))< 2) {
+    targetNames <- dimnames(reencountered)[[nDim]]
+  nTargetSites <- dim(reencountered)[nDim]
+  nOriginSites <- dim(reencountered)[1]
+  if (nDim == 2) {
     nAges <- 1
-    if (length(nReleased)!=nOriginSites)
-      stop('Number of origin sites must be constant between distance matrix and nReleased')
-    if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[2]!=nTargetSites)
-      stop('Number of sites must be constant between distance matrices and reencountered')
+    if (length(banded)!=nOriginSites)
+      stop('Number of origin sites must be constant between reencountered and banded')
     nfound <- apply(reencountered, 1, sum)
-    if (is.null(sampleSize))
-      sampleSize <- sum(nfound)
-    tmat <- cbind(reencountered, nReleased - nfound)
+    sampleSize <- sum(nfound)
+    tmat <- cbind(reencountered, banded - nfound)
     # Data
     jags.data <- list(recmat = tmat, npop = nOriginSites,
-                      ndest = nTargetSites, nreleased = nReleased)
+                      ndest = nTargetSites, nreleased = banded)
   }
   else {
-    nAges <- dim(nReleased)[2]
-    if (dim(nReleased)[1]!=nOriginSites)
-      stop('Number of origin sites must be consistant between distance matrix and nReleased')
+    nAges <- dim(banded)[2]
+    if (dim(banded)[1]!=nOriginSites)
+      stop('Number of origin sites must be consistant between reencountered and banded')
     if (dim(reencountered)[2]!=nAges)
-      stop('Number of ages must be consistant between nReleased and reencountered')
-    if (dim(reencountered)[1]!=nOriginSites || dim(reencountered)[3]!=nTargetSites)
-      stop('Number of sites must be consistant between distance matrices and reencountered')
+      stop('Number of ages must be consistant between banded and reencountered')
     nfound <- apply(reencountered, 1:2, sum)
     sampleSize <- sum(nfound)
     tmat <- array(NA, c(nOriginSites, nAges, nTargetSites + 1))
     tmat[ , , 1:nTargetSites] <- reencountered
-    tmat[ , , 1 + nTargetSites] <- nReleased - nfound
+    tmat[ , , 1 + nTargetSites] <- banded - nfound
     # Data
     jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
-                      ndest = nTargetSites, nreleased = nReleased)
+                      ndest = nTargetSites, nreleased = banded)
   }
   # Initial values
   jags.inits <- function()list()
@@ -355,20 +349,21 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
   }
   psi <- out$BUGSoutput$sims.list$psi
   dimnames(psi) <- list(NULL, originNames, targetNames)
-  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+  meanPsi <- out$BUGSoutput$mean$psi
+  simpleCIPsi <- apply(psi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
                        na.rm=TRUE, type = 8, names = F)
   bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
                    dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nOriginSites) {
     for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
-                        length(which(!is.na(psi.array[, i, j]))))
-      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+      psi.z0 <- qnorm(sum(psi[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi[, i, j],
                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
                                    na.rm=TRUE, type = 8, names = F)
     }
   }
-  results <- list(psi = list(sample = psi, mean = out$BUGSoutput$mean$psi,
+  results <- list(psi = list(sample = psi, mean = meanPsi,
                              se = out$BUGSoutput$sd$psi,
                              simpleCI = simpleCIPsi, bcCI = bcCIPsi,
                              median = out$BUGSoutput$median$psi))
@@ -386,7 +381,7 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
     colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
       names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
       targetNames
-    result$r <- list(sample = out$BUGSoutput$sims.list$r,
+    results$r <- list(sample = out$BUGSoutput$sims.list$r,
                      mean = out$BUGSoutput$mean$r,
                      se = out$BUGSoutput$sd$r,
                      simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
@@ -409,7 +404,7 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
     dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
       colnames(out$BUGSoutput$sd$r) <- colnames(out$BUGSoutput$median$r) <-
       targetNames
-    result$r <- list(sample = out$BUGSoutput$sims.list$r,
+    results$r <- list(sample = out$BUGSoutput$sims.list$r,
                      mean = out$BUGSoutput$mean$r,
                      se = out$BUGSoutput$sd$r,
                      simpleCI = apply(out$BUGSoutput$sims.list$r, 2:3, quantile,
@@ -421,8 +416,8 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                         nSamples = nSamples, verbose=verbose,
                         originNames = originNames, targetNames = targetNames,
                         nThin = nThin, nBurnin = nBurnin, nChains = nChains)
-  result$BUGSoutput <- out$BUGSoutput
-  return(result)
+  results$BUGSoutput <- out$BUGSoutput
+  return(results)
 }
 
 estTransitionBoot <- function(originSites = NULL,
