@@ -2121,7 +2121,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = 'ESRI:54027',
+                      resampleProjection = 'ESRI:54027',
                       maxTries = 300, maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
@@ -2131,7 +2131,11 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
-  nAnimals <- length(targetPoints)
+  if (inherits(targetPoints, "SpatialPoints"))
+    targetPoints <- sf::st_as_sf(targetPoints)
+  if (inherits(originPoints, "SpatialPoints"))
+    originPoints <- sf::st_as_sf(originPoints)
+  nAnimals <- nrow(targetPoints)
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
   if(is.na(raster::projection(originPoints))) {
