@@ -2124,6 +2124,12 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       resampleProjection = 'ESRI:54027',
                       maxTries = 300, maintainLegacyOutput = FALSE) {
 
+  # double check that spatial data coming in is in sf format #
+  if (inherits(targetPoints, "SpatialPoints"))
+    targetPoints <- sf::st_as_sf(targetPoints)
+  if (inherits(originPoints, "SpatialPoints"))
+    originPoints <- sf::st_as_sf(originPoints)
+
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
@@ -2131,27 +2137,30 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
-  if (inherits(targetPoints, "SpatialPoints"))
-    targetPoints <- sf::st_as_sf(targetPoints)
-  if (inherits(originPoints, "SpatialPoints"))
-    originPoints <- sf::st_as_sf(originPoints)
+
   nAnimals <- nrow(targetPoints)
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if(is.na(raster::projection(originPoints))) {
+  if(is.na(sf::st_crs(originPoints))) {
     stop('Coordinate system definition needed for originPoints')
   }
-  if(is.na(raster::projection(targetPoints))){
+  if(is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
+  targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
+
   if(!is.null(targetSites)){
+    #if sp object covert to sf #
     if("SpatialPolygonsDataFrame" %in% class(targetSites)){
-      targetSites <- sp::SpatialPolygons(targetSites@polygons)}
-    if(is.na(raster::projection(targetSites))){
+      targetSites <- sf::st_as_sf(targetSites)
+      #targetSites <- sp::SpatialPolygons(targetSites@polygons)
+      }
+
+    if(is.na(sf::st_crs(targetSites))){
       stop('Coordinate system definition needed for targetSites')
     }
-    targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+
+    targetSites <- sf::st_transform(targetSites, resampleProjection)
   }
 
   corr <- rep(NA, nBoot)
@@ -2167,19 +2176,22 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Sample individual animals with replacement
     animal.sample <- sample.int(nAnimals, replace=TRUE)
-    origin.point.sample <- originPoints[animal.sample]
+    origin.point.sample <- originPoints[animal.sample,]
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
-                          targetPoints = targetPoints, animal.sample = animal.sample,
-                          targetSites = targetSites,
-                          resampleProjection = resampleProjection,
-                          maxTries = maxTries)
+                                   targetPoints = targetPoints, animal.sample = animal.sample,
+                                   targetSites = targetSites,
+                                   resampleProjection = resampleProjection,
+                                   maxTries = maxTries)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
       cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
-    target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+    #target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
+    target.point.sample <- sp::SpatialPoints(target.point.sample)
+    target.point.sample <- sf::st_as_sf(target.point.sample)
+    sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
     corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),

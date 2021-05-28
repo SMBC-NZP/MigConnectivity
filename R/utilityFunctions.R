@@ -118,7 +118,7 @@ targetSample <- function(isGL,
       point.sample <- apply(point.sample, FUN = function(x){sf::st_as_sf(data.frame(x), coords = c("x","y"), crs = resampleProjection)}, MARGIN = 3)
       #point.sample <- lapply(point.sample1, st_as_sf)
       # Find out which sampled points are in a target site
-      if(!st_crs(targetSites)==st_crs(point.sample)){targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
+      if(!sf::st_crs(targetSites)==sf::st_crs(point.sample)){targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
 
       target.sample0 <- sapply(point.sample, FUN = function(z){suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites, sparse = TRUE))))})
 
@@ -132,7 +132,7 @@ targetSample <- function(isGL,
       if (any(!is.na(good.sample)))
         target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(x = good.sample[!is.na(good.sample)],
                                                                         y = point.sample[!is.na(good.sample)],
-                                                                        FUN = function(x, y){st_coordinates(y[x,])}))
+                                                                        FUN = function(x, y){sf::st_coordinates(y[x,])}))
 
       toSample <- which(is.na(target.sample))
     }
