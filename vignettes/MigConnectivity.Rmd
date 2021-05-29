@@ -1683,7 +1683,7 @@ for (sim in 1:nSims14) {
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
                             nSamples = 1000,
-                            verbose = 0,
+                            verbose = 1,
                             calcCorr = T,
                             geoBias = c(0, 0),
                             geoVCov = matrix(0, 2, 2))
