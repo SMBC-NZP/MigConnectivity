@@ -893,10 +893,8 @@ estTransitionBoot <- function(originSites = NULL,
 #' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
 #' band/ring reencounter data.
 #'
-#' @param originSites the geographic definition of sites in the origin season.
-#'  Mike, fill in options here (sf/sp/whatever)
-#' @param targetSites the geographic definition of sites in the target season.
-#'  Mike, fill in options here (sf/sp/whatever)
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.
 #' @param originPoints A \code{sf} or \code{SpatialPoints} object, with number
 #'  of rows or length being the number of animals tracked. Each point indicates
 #'  the origin location of an animal (or point estimate of same, for GL animals
@@ -1798,9 +1796,9 @@ estMCisotope <- function(targetDist=NULL,
 #'  intrinsic data, this must be the geographic definition of sites in the
 #'  non-release season.  Optional for intrinsic data; if left out, the function
 #'  will use the \code{targetSites} defined in \code{targetIntrinsic}
-#' @param originPoints A \code{SpatialPoints} object, with length number of
+#' @param originPoints A \code{SpatialPoints} from sp or \code{POINT} sf object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal
-#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
+#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} from sp or \code{POINT} sf object, with
 #'    length number of animals tracked.  Each point indicates the point estimate
 #'    location in the non-release season
 #' @param originAssignment Assignment of \code{originPoints} to release season
@@ -1810,8 +1808,8 @@ estMCisotope <- function(targetDist=NULL,
 #' @param targetAssignment Optional. Point estimate assignment of
 #'    \code{targetPoints} to non-release season sites. Integer vector with
 #'    length number of animals tracked
-#' @param originNames Optional. Vector of names for the release season sites
-#' @param targetNames Optional. Vector of names for the non-release season
+#' @param originNames Optional but recommended. Vector of names for the release season sites
+#' @param targetNames Optional but recommended. Vector of names for the non-release season
 #'    sites
 #' @param nSamples Number of times to resample \code{psi} and/or
 #'  \code{originRelAbund} OR number of post-burn-in MCMC samples to store (band
@@ -2049,10 +2047,10 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
 #' data.
 #'
-#' @param targetPoints A \code{SpatialPoints} object, with length number of
+#' @param targetPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
 #'    animals tracked.  Each point indicates the point estimate location in
 #'    the non-release season
-#' @param originPoints A \code{SpatialPoints} object, with length number of
+#' @param originPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal
 #' @param isGL Indicates whether or which animals were tracked with geolocators
 #'    Should be either single TRUE or FALSE value, or vector with length of
@@ -2064,8 +2062,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
 #'    \code{resampleProjection} units (default meters)
-#' @param targetSites A \code{SpatialPolygons} or \code{SpatialPolygonsDataFrame}
-#'    object indicating valid target location(s).  Not needed unless you want
+#' @param targetSites A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
+#'     or \code{POLYGONS} sf object indicating valid target location(s).  Not needed unless you want
 #'    to mask out certain areas (e.g. water)
 #' @param nBoot Number of bootstrap runs. Animals are sampled with replacement for each,
 #'    to estimate sampling uncertainty

@@ -15,7 +15,7 @@
 #' @param restrict2Likely if \code{TRUE} restricts locations to fall within the 'likely' assignment
 #'        locations.
 #' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
-#' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 #'        areas.
 #' @param relAbund raster with relative abundance (must match extent of isotope assignment)
 #' @param isoWeight weighting value to apply to isotope assignment
@@ -652,7 +652,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' @param relAbund raster layer of relative abundance that sums to 1.
 #' @param weightRange vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 #'        Default = c(-1,1)
-#' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 #'        areas.
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
