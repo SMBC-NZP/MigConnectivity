@@ -49,6 +49,8 @@ Status: Done (v0.3.1)
 sites so that calculations don't run for days without ever producing results.
 Status: Done (v0.2.5)
 10. Break up vignette into more manageable parts.  Status: Done (v0.3.0)
+11. Add code to automatically identify and remove overlapping targetRegions,
+    originRegions to avoid errors. Status: Proposed
 
 Updates
 1. When manuscript is accepted, update references to it throughout
