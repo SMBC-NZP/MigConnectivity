@@ -311,7 +311,7 @@ originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sf::st_coordinates(op)[2,2]
 
 originPoints <- sf::st_as_sf(data.frame(originPoints),
                              coords = c("x", "y"),
-                             crs = 4326)
+                             crs = sf::st_crs(originSites))
 
 iso <- isoAssign(isovalues = OVENvals[,2],
                  isoSTD = 12,       # this value is for demonstration only
