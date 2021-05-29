@@ -1128,6 +1128,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        approxSigTest = F, sigConst = 0,
             resampleProjection = 'ESRI:54027',
                        maxTries = 300,
+                       row0=0,
                        maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
@@ -1145,22 +1146,28 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if ((is.null(targetPoints) || is.null(targetSites)) &&
       is.null(targetAssignment))
     stop("Need to define either targetAssignment or targetSites and targetPoints")
-  nAnimals <- max(length(targetPoints), length(targetAssignment))
+  nAnimals <- max(nrow(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
   if (length(isGLReverse)==1)
     isGLReverse <- rep(isGLReverse, nAnimals)
-  if("SpatialPolygonsDataFrame" %in% class(originSites)){
-    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if("SpatialPolygonsDataFrame" %in% class(targetSites)){
-    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
+  if(inherits(originSites, "SpatialPolygonsDataFrame") |
+     inherits(originSites, "SpatialPolygons")){
+    originSites <- sf::st_as_sf(originSites)}
+    if(inherits(targetSites, "SpatialPolygonsDataFrame") |
+       inherits(targetSites, "SpatialPolygons")){
+         targetSites <- sf::st_as_sf(targetSites)}
   if (is.null(originAssignment))
-    originAssignment <- sp::over(originPoints, originSites)
+    originAssignment <- suppressMessages(unlist(unclass(sf::st_intersects(x = originPoints,
+                                                                   y = originSites,
+                                                                   sparse = TRUE))))
   if (is.null(targetAssignment))
-    targetAssignment <- sp::over(targetPoints, targetSites)
-  nOriginSites <- max(length(unique(originAssignment[!is.na(originAssignment)])), length(originSites))
-  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
-  if (length(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
+    targetAssignment <- suppressMessages(unlist(unclass(sf::st_intersects(x = targetPoints,
+                                                                      y = targetSites,
+                                                                      sparse = TRUE))))
+  nOriginSites <- max(length(unique(originAssignment[!is.na(originAssignment)])), nrow(originSites))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
+  if (nrow(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
       length(originAssignment)!=nAnimals)
     stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
   # if (any(is.na(originAssignment)))
@@ -1168,18 +1175,20 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
   if(!is.null(originPoints))
-    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+    if(is.na(sf::st_crs(originPoints)) || is.na(sf::st_crs(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
-  if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
+  if(is.na(sf::st_crs(targetSites)) || is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetSites & targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
-  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+  targetPoints <- sf::st_transform(targetPoints, resampleProjection)
+  targetSites <- sf::st_transform(targetSites, resampleProjection)
   if (is.null(targetNames))
-    targetNames <- names(targetSites)
+    #targetNames <- names(targetSites)
+    targetNames <- 1:nrow(targetSites)
   if (is.null(originNames))
-    originNames <- names(originSites)
+    #originNames <- names(originSites)
+    originNames <- 1:nrow(originSites)
   if (is.null(sampleSize))
     sampleSize <- nAnimals
   if (!identical(dim(originDist),rep(nOriginSites,2)) ||
@@ -1272,7 +1281,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+      #target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"),crs = resampleProjection)
       corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
