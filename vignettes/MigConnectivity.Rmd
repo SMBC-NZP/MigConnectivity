@@ -206,8 +206,15 @@ simLocationError <- function(targetPoints,
                              projection, 
               							 verbose = 0, 
               							 nSim = 1000) {
+  
+if(inherits(targetPoints,"SpatialPoints")){
+  targetPoints <- sf::st_as_sf(targetPoints)}
+if(inherits(targetSites,"SpatialPolygons") |
+   inherits(targetSites,"SpatialPolygonsDataFrame")){
+  targetSites <- sf::st_as_sf(targetPoints)}
 
-nAnimals <- length(targetPoints)
+nAnimals <- nrow(targetPoints)
+
 geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
 target.sample <- rep(NA, nAnimals)
 target.point.sample <- matrix(NA, nAnimals, 2)
@@ -220,19 +227,28 @@ for(i in 1:nAnimals){
     draws <- draws + 1
     # Sample random point for each bird 
     # from parametric distribution of NB error
-    point.sample <- sp::SpatialPoints(
-                  MASS::mvrnorm(n=nSim, 
-                  mu=cbind(targetPoints@coords[i,1],targetPoints@coords[i,2]),
+    ps <- MASS::mvrnorm(n=nSim, 
+                  mu=cbind(sf::st_coordinates(targetPoints)[i,1],
+                           sf::st_coordinates(targetPoints)[i,2]),
                   Sigma=geoVCov)+
-                  geoBias2,
-                  sp::CRS(projection))
+                  geoBias2
+    
+    colnames(ps) <- c("Longitude","Latitude")
+    
+    point.sample <- sf::st_as_sf(
+                  data.frame(ps),
+                  coords = c("Longitude","Latitude"),
+                  crs = sf::st_crs(targetPoints))
 	  
     # filtered to stay in NB areas (land)
-    target.sample0 <- sp::over(point.sample, targetSites)
+    #target.sample0 <- sp::over(point.sample, targetSites)
+    
+    target.sample0 <- unlist(unclass(sf::st_intersects(point.sample,
+                                                       targetSites)))
     target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
   }
 	
-  target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+  target.point.sample[i, ]<-sf::st_coordinates(point.sample[!is.na(target.sample0),])[1,]
   if (verbose > 0)
     cat(' ', draws, 'draws\n')
 }
@@ -245,11 +261,7 @@ for(i in 1:nAnimals){
 
 ```{r}
 toPoly <- function(siteCentroids,
-                   projection.in = "+proj=longlat 
-                                    +datum=WGS84 
-                                    +no_defs 
-                                    +ellps=WGS84 
-                                    +towgs84=0,0,0",
+                   projection.in = 4326,
                    projection.out = NA,
                    resolution = NA,
                    order.by.input = TRUE)
@@ -258,6 +270,7 @@ toPoly <- function(siteCentroids,
 # cover the entire surface. Alternatively the user can supply the 
 # resolution of the raster cells in the units of the input projection 
 #(projection.in) 
+  colnames(siteCentroids) <- c("Longitude","Latitude")
   
   if(is.na(resolution)){
      long <- unique(siteCentroids[,1])
@@ -270,26 +283,33 @@ toPoly <- function(siteCentroids,
           raster::rasterFromXYZ(cbind(cbind(siteCentroids),
                                 (1:nrow(siteCentroids))),
                                  res = resolution,
-                                  crs = projection.in))
+                                  crs = sf::st_crs(projection.in)$proj4string))
   
   polys <- raster::rasterToPolygons(rast)
   
   # Give unique names to polygons #
-  
-  polys <- sp::SpatialPolygons(polys@polygons)
-  raster::crs(polys)<-projection.in
+  polys <- sf::st_as_sf(polys)
+  sf::st_crs(polys) <- sf::st_crs(projection.in)
+ # polys <- sp::SpatialPolygons(polys@polygons)
+ # raster::crs(polys)<-projection.in
   
   # Reorders the polygons to match that of the input #
-  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
+  centers <- sf::st_as_sf(data.frame(siteCentroids),
+                          coords = c("Longitude","Latitude"),
+                          crs = projection.in)
+  #centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
   
   if(order.by.input){
-  orders <- sp::over(centers,polys)
-  polys <- polys[orders] 
+ # orders <- sp::over(centers,polys)
+  orders <- suppressMessages(unlist(unclass(sf::st_intersects(centers,
+                                                       polys,
+                                                       sparse = TRUE))))
+  polys <- polys[orders,] 
   }
-  sp::spChFIDs(polys,as.character(1:length(polys)))
+  #sp::spChFIDs(polys,as.character(1:length(polys)))
   
   if(!is.na(projection.out)){
-    polys <- sp::spTransform(polys,sp::CRS(projection.out))
+    polys <- sf::st_transform(polys, projection.out)
   }
   
   return(polys)
@@ -1763,34 +1783,34 @@ geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
 
-targLocs14.2 <- lapply(targLocs14, sf::st_transform, 
-                       crs = projections$Lambert)
+targLocs14.2 <- lapply(targLocs14,
+                       FUN = function(x){sf::st_transform(x, 6933)})
 
 # convert wintering locations to polygons using the helper function
 WinteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = projections$WGS84, 
-                         projection.out = projections$Lambert)
+                         projection.in = 4326, 
+                         projection.out = 6933)
 
 winteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = projections$WGS84,
-                         projection.out = projections$WGS84)
+                         projection.in = 4326,
+                         projection.out = 4326)
 
 winteringPolys2 <- lapply(winteringPos14,
                           toPoly,
-                          projection.in = projections$WGS84,
-                          projection.out = projections$EquidistConic)
+                          projection.in = 4326,
+                          projection.out = 'ESRI:54027')
 
 # Double check that the input center points and output polygons are ordered
 # correctly 
-cbind(breedingPos14[[1]][,1:2],
-      t(sapply(slot(breedingPolys[[1]], "polygons"),
-               function(x){ slot(x,"labpt")})))
+#cbind(breedingPos14[[1]][,1:2],
+#      t(sapply(slot(breedingPolys[[1]], "polygons"),
+#               function(x){ slot(x,"labpt")})))
 
-cbind(winteringPos14[[1]][,1:2],
-      t(sapply(slot(winteringPolys[[1]], "polygons"),
-               function(x){ slot(x,"labpt")})))
+#cbind(winteringPos14[[1]][,1:2],
+#      t(sapply(slot(winteringPolys[[1]], "polygons"),
+#               function(x){ slot(x,"labpt")})))
   
 # Simulate capture and non-breeding locations of 100 individuals #
 
@@ -1812,8 +1832,8 @@ sampleBreeding14.2 <- list(round(breedingRelN14[[1]]*nSample14.2),
 lapply(sampleBreeding14.2, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14.2 <- 100
-nSimsLarge14.2 <- 2500
+nSims14.2 <- 10
+nSimsLarge14.2 <- 25
 nYears <- 1
 nMonths <- 1
 
@@ -1860,7 +1880,7 @@ for (i in 13) { # only run one scenario
                                            WinteringPolys[[i]], 
                                            geoBias,
                                            geoVCov,
-                                           projections$Lambert)
+                                           projection = sf::st_crs(winteringTruePoints14))
     
     animalLoc14.2 <- animalLoc14[[i]]
     
@@ -1875,20 +1895,20 @@ for (i in 13) { # only run one scenario
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
     
     originDist0 <- geosphere::distVincentyEllipsoid(
-                                     breedingTruePoints14[distIndices[,'row']],
-                                     breedingTruePoints14[distIndices[,'col']])
+                                     as(breedingTruePoints14[distIndices[,'row'],],"Spatial"),
+                                     as(breedingTruePoints14[distIndices[,'col'],],"Spatial"))
     
     originDist1[lower.tri(originDist1)] <- originDist0
     
-    target.point.sample <- sp::SpatialPoints(
-      results14.2[[sim]]$targetPointSample,
-                                             sp::CRS(projections$Lambert))
+    target.point.sample <- sf::st_as_sf(
+      data.frame(results14.2[[sim]]$targetPointSample),
+      coords = c(1,2),
+      crs = 6933)
     
-    target.point.sample2 <- sp::spTransform(target.point.sample,
-                                            sp::CRS(projections$WGS84))
+    target.point.sample2 <- sf::st_transform(target.point.sample, 4326)
     
-    targetDist0 <-geosphere::distGeo(target.point.sample2[distIndices[,'row']],
-                                     target.point.sample2[distIndices[,'col']])
+    targetDist0 <-geosphere::distGeo(as(target.point.sample2[distIndices[,'row'],],"Spatial"),
+                                     as(target.point.sample2[distIndices[,'col'],],"Spatial"))
     
     targetDist1[lower.tri(targetDist1)] <- targetDist0
     
@@ -1926,11 +1946,11 @@ sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, T)]
 for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
  for (i in 13) {
-  points0 <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
-                                sp::CRS(projections$Lambert))
+  points0 <- sf::st_as_sf(data.frame(results14.2[[sim]]$targetPointSample),
+                          coords=c("X1","X2"),
+                          crs = 6933)
     
-  points1 <- sp::spTransform(points0, 
-                              sp::CRS(projections$EquidistConic))
+  points1 <- sf::st_transform(points0, crs = "ESRI:54027")
     
   animalLoc14[[sim]] <- changeLocations(
     sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
@@ -2041,7 +2061,7 @@ trues14.all.df <- data.frame(DataType = rep(c("GPS", "GL"), 2, each = 2),
                        Quantity = rep(c('Mean', 'Variance'), each = 4),
                        Value = c(rep(MC14, 4), vars14, vars14.2))
 
-g.est <- ggplot(est14.all.df, aes(Estimate)) + geom_histogram(bins = 12) +
+g.est <- ggplots::ggplot(est14.all.df, aes(Estimate)) + geom_histogram(bins = 12) +
   facet_grid(DataType + Parameter ~ Quantity, scales = 'free_x') +
   geom_vline(aes(xintercept = Value), data = trues14.all.df) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
