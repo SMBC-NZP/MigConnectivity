@@ -611,6 +611,8 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
          originDist = OVENdata$originDist, # Origin location distance matrix
          targetSites = OVENdata$targetSites, # Non-breeding / target sites
          originSites = OVENdata$originSites, # Breeding / origin sites 
+         targetNames = OVENdata$targetNames, # Names of nonbreeding/target sites
+         originNames = OVENdata$originNames, # Names of breeding/origin sites
          originPoints = OVENdata$originPoints, # Capture Locations 
          targetPoints = OVENdata$targetPoints, # Target locations from devices
          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
@@ -623,11 +625,10 @@ M
 Take a closer look at what is included in the output
 
 ```{r}
-str(M, max.level = 1)
+str(M, max.level = 2)
 ```
 
 ```{r echo = FALSE, warning = FALSE, error = FALSE, eval = FALSE}
-# THIS ISN"T ESSENTIAL RIGHT NOW - TIME WAS SPENT ELSEWHERE
 par(mar=c(0,0,0,0))
 plot(sf::st_geometry(wrld_simple),
      xlim=sf::st_bbox(OVENdata$targetSites)[c(1,3)],
@@ -1688,17 +1689,17 @@ for (sim in 1:nSims14) {
                             geoBias = c(0, 0),
                             geoVCov = matrix(0, 2, 2))
   
-    est14.array[sim, 'MC'] <- results14[[sim]]$meanMC
-    est14.array[sim, 'Mantel'] <- results14[[sim]]$meanCorr
-    var14.array[sim, 'MC'] <- results14[[sim]]$seMC ^ 2
-    var14.array[sim, 'Mantel'] <- results14[[sim]]$seCorr ^ 2
-    ci14.array[sim, 'MC', ] <- results14[[sim]]$bcCI
-    ci14.array[sim, 'Mantel', ] <- results14[[sim]]$bcCICorr
+    est14.array[sim, 'MC'] <- results14[[sim]]$MC$mean
+    est14.array[sim, 'Mantel'] <- results14[[sim]]$corr$mean
+    var14.array[sim, 'MC'] <- results14[[sim]]$MC$se ^ 2
+    var14.array[sim, 'Mantel'] <- results14[[sim]]$corr$se ^ 2
+    ci14.array[sim, 'MC', ] <- results14[[sim]]$MC$bcCI
+    ci14.array[sim, 'Mantel', ] <- results14[[sim]]$corr$bcCI
   }
 }
 
 # Crude point estimates (bootstrap means are better)
-pointEsts14.1 <- t(sapply(results14, function(x) c(x$pointMC, x$pointCorr)))
+pointEsts14.1 <- t(sapply(results14, function(x) c(x$MC$point, x$corr$point)))
 
 # Summarize results
 summary(var14.array)
@@ -1762,8 +1763,8 @@ geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
 
-targLocs14.2 <- lapply(targLocs14, sp::spTransform, 
-                       CRSobj = sp::CRS(projections$Lambert))
+targLocs14.2 <- lapply(targLocs14, sf::st_transform, 
+                       crs = projections$Lambert)
 
 # convert wintering locations to polygons using the helper function
 WinteringPolys <- lapply(winteringPos14,
@@ -1943,13 +1944,14 @@ for (sim in 1:nSims14.2) {
                             targetPoints = points1,
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = results14.2[[sim]]$targetSample,
-                            nSamples = 1000,
+                            nSamples = 10,
                             verbose = 0,
                             calcCorr = T,
                             geoBias = geoBias,
                             geoVCov = geoVCov,
                             isGL = T,
-                            targetSites = winteringPolys2[[i]])
+                            targetSites = winteringPolys2[[i]], 
+                            maintainLegacyOutput = TRUE)
   
     est14.2.array[sim, 'MC'] <- results14[[sim]]$meanMC
     
