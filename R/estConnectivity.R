@@ -1122,8 +1122,7 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
 # Resampling of uncertainty from geolocators and/or GPS data
 ###############################################################################
 estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
-                       geoBias, geoVCov, isGLReverse=FALSE,
-                       geoBiasReverse=NULL, geoVCovReverse=NULL,
+                       geoBias, geoVCov,
                        targetPoints, targetSites,
                        sampleSize = NULL,
                        targetAssignment=NULL,
@@ -1155,24 +1154,34 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   nAnimals <- max(nrow(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if (length(isGLReverse)==1)
-    isGLReverse <- rep(isGLReverse, nAnimals)
   if(inherits(originSites, "SpatialPolygonsDataFrame") |
      inherits(originSites, "SpatialPolygons")){
     originSites <- sf::st_as_sf(originSites)}
     if(inherits(targetSites, "SpatialPolygonsDataFrame") |
        inherits(targetSites, "SpatialPolygons")){
          targetSites <- sf::st_as_sf(targetSites)}
-  if (is.null(originAssignment))
-    originAssignment <- suppressMessages(unlist(unclass(sf::st_intersects(x = originPoints,
+  if (is.null(originAssignment)) {
+    originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                                    y = originSites,
-                                                                   sparse = TRUE))))
-  if (is.null(targetAssignment))
-    targetAssignment <- suppressMessages(unlist(unclass(sf::st_intersects(x = targetPoints,
-                                                                      y = targetSites,
-                                                                      sparse = TRUE))))
-  nOriginSites <- max(length(unique(originAssignment[!is.na(originAssignment)])), nrow(originSites))
-  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
+                                                                   sparse = TRUE)))
+    originAssignment[lengths(originAssignment)==0] <- NA
+    if (any(lengths(originAssignment)>1))
+      stop("Overlapping originSites not allowed\n")
+    originAssignment <- unlist(originAssignment)
+  }
+  if (is.null(targetAssignment)) {
+    targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                                   y = targetSites,
+                                                                   sparse = TRUE)))
+    targetAssignment[lengths(targetAssignment)==0] <- NA
+    if (any(lengths(targetAssignment)>1))
+      stop("Overlapping targetSites not allowed\n")
+    targetAssignment <- unlist(targetAssignment)
+  }
+  nOriginSites <- ifelse(is.null(originSites), nrow(originDist),
+                         nrow(originSites))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist),
+                         nrow(targetSites))
   if (nrow(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
       length(originAssignment)!=nAnimals)
     stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
@@ -1190,11 +1199,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if(!is.null(targetPoints)){targetPoints <- sf::st_transform(targetPoints, resampleProjection)}
   if(!is.null(targetSites)){targetSites <- sf::st_transform(targetSites, resampleProjection)}
   if (is.null(targetNames))
-    #targetNames <- names(targetSites)
-    targetNames <- ifelse(!is.null(targetSites),1:nrow(targetSites),1:nTargetSites)
-  if (is.null(originNames))
-    #originNames <- names(originSites)
-    originNames <- ifelse(!is.null(originSites),1:nrow(originSites),1:nOriginSites)
+    targetNames <- as.character(1:nTargetSites)
+  if (is.null(originNames)) {
+    originNames <- LETTERS[1:nOriginSites]
+  }
   if (is.null(sampleSize))
     sampleSize <- nAnimals
   if (!identical(dim(originDist),rep(nOriginSites,2)) ||
@@ -1243,26 +1251,8 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
       animal.sample <- sample.int(nAnimals, replace=TRUE)
-      if (any(isGLReverse)) {
-        oSamp <- targetSample(isGL = isGLReverse, geoBias = geoBiasReverse,
-                              geoVCov = geoVCovReverse,
-                              targetPoints = originPoints,
-                              animal.sample = animal.sample,
-                              targetSites = originSites,
-                              targetAssignment = originAssignment,
-                              resampleProjection = resampleProjection,
-                              nSim = nSim,
-                              maxTries = maxTries)
-        origin.point.sample <- oSamp$target.point.sample
-        origin.sample <- oSamp$target.sample
-      }
-      else {
-        # Get origin points for those animals
-        if (calcCorr)
-          origin.point.sample <- originPoints[animal.sample]
-        # Get origin population for each animal sampled
-        origin.sample <- originAssignment[animal.sample]
-      }
+      # Get origin population for each animal sampled
+      origin.sample <- originAssignment[animal.sample]
     }
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
                           targetPoints = targetPoints, animal.sample = animal.sample,
@@ -1286,10 +1276,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
+      colnames(target.point.sample) <- c("x", "y")
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
+                                          coords = c("x","y"),
+                                          crs = resampleProjection)
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      #target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"),crs = resampleProjection)
-      corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
+      corr[boot] <- calcMantel(originDist = originDist1,
+                               targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),

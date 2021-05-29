@@ -74,12 +74,10 @@ print(Combined.psi)
 # For treating all data as GPS,
 # Move the latitude of birds with locations that fall offshore
 int <- sf::st_intersects(OVENdata$targetPoints, OVENdata$targetSites)
-offshore <- which(lengths(int)==0)
-tp<-sf::st_coordinates(OVENdata$targetPoints)
-replacers <- sf::st_nearest_points(OVENdata$targetPoints[offshore, ],
-                                   OVENdata$targetSites)
+any(lengths(int)<1)
 plot(OVENdata$targetPoints)
 plot(OVENdata$targetSites,add=TRUE)
+tp<-sf::st_coordinates(OVENdata$targetPoints)
 text(tp[,1], tp[,2], label=c(1:39))
 
 tp[5,2]<- -1899469
@@ -93,9 +91,8 @@ oven_targetPoints<-sf::st_as_sf(as.data.frame(tp),
                                 coords = c("X","Y"),
                                 crs = sf::st_crs(OVENdata$targetPoints))
 inter <- sf::st_intersects(oven_targetPoints, OVENdata$targetSites)
-lengths(inter)
-plot(oven_targetPoints,add=TRUE, col = "red")
-#raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
+any(lengths(inter)<1)
+plot(oven_targetPoints,add=TRUE, col = "green")
 
 # Estimate MC only, treat all data as GPS
 GPS_psi <- estTransition(isTelemetry = TRUE,

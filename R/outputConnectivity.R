@@ -25,52 +25,52 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
           quote = FALSE)
   }
   if (inherits(x, "estMC")) {
-    if (is.null(x$psi) && !is.null(x$samplePsi)) {
-      x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
-                    se = apply(x$samplePsi, 2:3, sd),
-                    simpleCI = apply(x$samplePsi, 2:3, quantile,
-                                     probs = c(alpha/2, 1-alpha/2),
-                                     na.rm=TRUE, type = 8, names = F))
-      x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
-      x$input <- list(alpha = x$alpha)
-      if (is.null(dimnames(x$samplePsi)[2])){
-        x$input$originNames <- LETTERS[1:dim(x$samplePsi)[2]]
-        originNamesFilled <- TRUE
-      }
-      else {
-        x$input$originNames <- dimnames(x$samplePsi)[[2]]
-        originNamesFilled <- FALSE
-      }
-      if (is.null(dimnames(x$samplePsi)[3])){
-        x$input$targetNames <- 1:dim(x$samplePsi)[3]
-        targetNamesFilled <- TRUE
-      }
-      else {
-        x$input$targetNames <- dimnames(x$samplePsi)[[3]]
-        targetNamesFilled <- FALSE
-      }
-    }
-    else {
-      originNamesFilled <- targetNamesFilled <- FALSE
-    }
-    if (!is.null(x$psi)) {
-      dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
-                                                         x$input$targetNames)
-      cat("\nTransition probability (psi) estimates (mean):",
-          ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
-          ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
-          "\n")
-      print(x$psi$mean, digits = digits)
-      cat("+/- SE:\n")
-      print(x$psi$se, digits = digits)
-      cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-          "% confidence interval (simple quantile):\n", sep = "")
-      print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
-                        format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
-                        sep = ' - '), dim = dim(x$psi$mean),
-                  dimnames = list(x$input$originNames, x$input$targetNames)),
-            quote = FALSE)
-    }
+    # if (is.null(x$psi) && !is.null(x$samplePsi)) {
+    #   x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
+    #                 se = apply(x$samplePsi, 2:3, sd),
+    #                 simpleCI = apply(x$samplePsi, 2:3, quantile,
+    #                                  probs = c(alpha/2, 1-alpha/2),
+    #                                  na.rm=TRUE, type = 8, names = F))
+    #   x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
+    #   x$input <- list(alpha = x$alpha)
+    #   if (is.null(dimnames(x$samplePsi)[2])){
+    #     x$input$originNames <- LETTERS[1:dim(x$samplePsi)[2]]
+    #     originNamesFilled <- TRUE
+    #   }
+    #   else {
+    #     x$input$originNames <- dimnames(x$samplePsi)[[2]]
+    #     originNamesFilled <- FALSE
+    #   }
+    #   if (is.null(dimnames(x$samplePsi)[3])){
+    #     x$input$targetNames <- 1:dim(x$samplePsi)[3]
+    #     targetNamesFilled <- TRUE
+    #   }
+    #   else {
+    #     x$input$targetNames <- dimnames(x$samplePsi)[[3]]
+    #     targetNamesFilled <- FALSE
+    #   }
+    # }
+    # else {
+    #   originNamesFilled <- targetNamesFilled <- FALSE
+    # }
+    # if (!is.null(x$psi)) {
+    #   dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
+    #                                                      x$input$targetNames)
+    #   cat("\nTransition probability (psi) estimates (mean):",
+    #       ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
+    #       ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
+    #       "\n")
+    #   print(x$psi$mean, digits = digits)
+    #   cat("+/- SE:\n")
+    #   print(x$psi$se, digits = digits)
+    #   cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+    #       "% confidence interval (simple quantile):\n", sep = "")
+    #   print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
+    #                     format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
+    #                     sep = ' - '), dim = dim(x$psi$mean),
+    #               dimnames = list(x$input$originNames, x$input$targetNames)),
+    #         quote = FALSE)
+    # }
     cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
         format(x$MC$se, digits = digits), '\n')
     cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),

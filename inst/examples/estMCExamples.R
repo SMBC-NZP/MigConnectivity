@@ -136,28 +136,35 @@ Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
                 calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS, # This is set low for example
                 approxSigTest = TRUE,
-                resampleProjection = raster::projection(OVENdata$targetSites))
+                resampleProjection = raster::projection(OVENdata$targetSites),
+                originNames = OVENdata$originNames,
+                targetNames = OVENdata$targetNames)
 
 print(Combined)
 
 # For treating all data as GPS,
-# Move the latitude of birds with locations that fall off shore - only change
-# Latitude Estimate #
-tp<-OVENdata$targetPoints@coords
-sp::plot(OVENdata$targetPoints)
-sp::plot(OVENdata$targetSites,add=TRUE)
-text(OVENdata$targetPoints@coords[,1], OVENdata$targetPoints@coords[,2],
-     label=c(1:39))
+# Move the latitude of birds with locations that fall offshore - only change
+# Latitude
+int <- sf::st_intersects(OVENdata$targetPoints, OVENdata$targetSites)
+any(lengths(int)<1)
+plot(OVENdata$targetPoints)
+plot(OVENdata$targetSites,add=TRUE)
+tp<-sf::st_coordinates(OVENdata$targetPoints)
+text(tp[,1], tp[,2], label=c(1:39))
 
 tp[5,2]<- -1899469
-tp[10,2]<- -2007848
-tp[1,2]<- -2017930
-tp[11,2]<- -2136511
-tp[15,2]<- -2121268
-tp[16,2]<- -2096063
+tp[10,2]<- -1927848
+tp[1,2]<- -1927930
+tp[11,2]<- -2026511
+tp[15,2]<- -2021268
+tp[16,2]<- -1976063
 
-oven_targetPoints<-sp::SpatialPoints(cbind(tp[,1],tp[,2]))
-raster::crs(oven_targetPoints)<-raster::crs(OVENdata$targetPoints)
+oven_targetPoints<-sf::st_as_sf(as.data.frame(tp),
+                                coords = c("X","Y"),
+                                crs = sf::st_crs(OVENdata$targetPoints))
+inter <- sf::st_intersects(oven_targetPoints, OVENdata$targetSites)
+any(lengths(inter)<1)
+plot(oven_targetPoints,add=TRUE, col = "green")
 
 # Estimate MC only, treat all data as GPS
 GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
@@ -176,21 +183,14 @@ str(Combined, max.level = 2)
 str(GL_mc, max.level = 2)
 if (length(find.package("RColorBrewer", quiet = T))==0)
   install.packages(c('RColorBrewer'))
-plot(Combined, col.range = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
+plot(Combined, col = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
      main = "Ovenbird GL and GPS")
+text(1.1, 0.98, cex = 1,
+     labels = paste("MC = ", round(Combined$MC$mean, 2), "+/-",
+                    round(Combined$MC$se, 2)))
 
-Combo <- estMC(targetDist = OVENdata$targetDist, # targetSites distance matrix
-               originDist = OVENdata$originDist, # originSites distance matrix
-               targetSites = OVENdata$targetSites, # Non-breeding target sites
-               originSites = OVENdata$originSites, # Breeding origin sites
-               psi = Combined$psi$sample,
-               originRelAbund = OVENdata$originRelAbund,
-               nSamples = nSamplesGLGPS * 2,
-               sampleSize = nrow(OVENdata$targetPoints))
-Combo
-Combined
+
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
-library(sp)
 getCSV <- function(filename) {
   tmp <- tempdir()
   url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
@@ -218,12 +218,14 @@ OVENdist <- getRDS("OVENdist")
 
 raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
+OVENdist <- sf::st_as_sf(OVENdist)
+
 OVENvals <- getCSV("deltaDvalues.csv")
 
 OVENvals <- OVENvals[grep(x=OVENvals$Sample,"NH", invert = TRUE),]
 
 originSites <- getRDS("originSites")
-originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+originSites <- sf::st_as_sf(originSites)
 
 EVER <- length(grep(x=OVENvals$Sample,"EVER"))
 JAM <- length(grep(x=OVENvals$Sample,"JAM"))
@@ -231,16 +233,19 @@ JAM <- length(grep(x=OVENvals$Sample,"JAM"))
 originRelAbund <- matrix(c(EVER,JAM),nrow = 1,byrow = TRUE)
 originRelAbund <- prop.table(originRelAbund,1)
 
-op <- rgeos::gCentroid(originSites,byid = TRUE)
+op <- sf::st_centroid(originSites)
 
-originPoints <- array(NA,c(EVER+JAM,2))
-originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sp::coordinates(op[1])[,1]
-originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sp::coordinates(op[1])[,2]
-originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sp::coordinates(op[2])[,1]
-originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sp::coordinates(op[2])[,2]
+originPoints <- array(NA,c(EVER+JAM,2), list(NULL, c("x","y")))
+originPoints[grep(x = OVENvals$Sample,"JAM"),1] <- sf::st_coordinates(op)[1,1]
+originPoints[grep(x = OVENvals$Sample,"JAM"),2] <- sf::st_coordinates(op)[1,2]
+originPoints[grep(x = OVENvals$Sample,"EVER"),1] <- sf::st_coordinates(op)[2,1]
+originPoints[grep(x = OVENvals$Sample,"EVER"),2] <- sf::st_coordinates(op)[2,2]
 
-originPoints <- sp::SpatialPoints(originPoints)
-raster::crs(originPoints)<- MigConnectivity::projections$WGS84
+originPoints <- sf::st_as_sf(data.frame(originPoints),
+                             coords = c("x", "y"),
+                             crs = sf::st_crs(originSites))
+originDist <- distFromPos(sf::st_coordinates(op))
+
 
 iso <- isoAssign(isovalues = OVENvals[,2],
                  isoSTD = 12,       # this value is for demonstration only
