@@ -34,7 +34,7 @@ well as with CMR data or alone.  Status: Proposed
 3. Allow users to estimate MC (and rM) from intrinsic data types, like isotopes
 and morphometrics.  Status: Done for isotopes (v0.3.0)
 4. Allow users to resample from transition matrix uncertainty from sources
-other than RMark.  Status: Proposed
+other than RMark.  Status: Done (v0.4.0)
 5. Line up estMC outputs and help file better (currently verbose works
 differently for CMR and GL data, documentation matches what CMR does).  Status:
 Done (v0.2.4)

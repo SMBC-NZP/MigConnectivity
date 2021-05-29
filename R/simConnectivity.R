@@ -365,15 +365,15 @@ simGL <- function(psi, originRelAbund, sampleSize,
     }
   }
   originPointsTrue <- raster::bind(mapply(sp::spsample,
-                                          x = slot(originSites, "polygons")[originAssignment],
+                                          x = methods::slot(originSites, "polygons")[originAssignment],
                                           n = 1,
                                           type = "random", SIMPLIFY = TRUE))
   targetPointsTrue <- raster::bind(mapply(sp::spsample,
-                                          x = slot(targetSites, "polygons")[targetAssignment],
+                                          x = methods::slot(targetSites, "polygons")[targetAssignment],
                                           n = 1,
                                           type = "random"))
-  crs(originPointsTrue) <- crs(originSites)
-  crs(targetPointsTrue) <- crs(targetSites)
+  raster::crs(originPointsTrue) <- raster::crs(originSites)
+  raster::crs(targetPointsTrue) <- raster::crs(targetSites)
   originPointsObs <- originPointsTrue
   targetPointsObs <- targetPointsTrue
   if (any(releasedOrigin)) {
