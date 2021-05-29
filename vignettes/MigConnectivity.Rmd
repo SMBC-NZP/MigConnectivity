@@ -2061,7 +2061,7 @@ trues14.all.df <- data.frame(DataType = rep(c("GPS", "GL"), 2, each = 2),
                        Quantity = rep(c('Mean', 'Variance'), each = 4),
                        Value = c(rep(MC14, 4), vars14, vars14.2))
 
-g.est <- ggplots::ggplot(est14.all.df, aes(Estimate)) + geom_histogram(bins = 12) +
+g.est <- ggplot(est14.all.df, aes(Estimate)) + geom_histogram(bins = 12) +
   facet_grid(DataType + Parameter ~ Quantity, scales = 'free_x') +
   geom_vline(aes(xintercept = Value), data = trues14.all.df) +
   theme_bw() + scale_x_continuous(breaks = c(0.002, 0.003, 0.1, 0.2, 0.3))
