@@ -473,7 +473,7 @@ plot.estMigConnectivity <- function(x,
                    pt.bg = col[as.integer(ests.df$To)],
                    ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
                    sfrac = sfrac, ...)
-    axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
+    graphics::axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
          labels = originNames)
     if (!isFALSE(legend))
       legend(legend, legend = targetNames, col = col, pch = pch,
@@ -496,7 +496,7 @@ plot.estMigConnectivity <- function(x,
                      pt.bg = col,
                      ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
                      sfrac = sfrac, ...)
-      axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
+      graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
            labels = targetNames)
     }
     else {
@@ -522,7 +522,7 @@ plot.estMigConnectivity <- function(x,
                      pt.bg = col[as.integer(ests.df$To)],
                      ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
                      sfrac = sfrac, ...)
-      axis(1, at = 1:nAges, labels = ageNames)
+      graphics::axis(1, at = 1:nAges, labels = ageNames)
       if (!isFALSE(legend))
         legend(legend, legend = targetNames, col = col, pch = pch,
                pt.bg = col)

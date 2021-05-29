@@ -33,11 +33,13 @@ Imports:
     geosphere (>= 1.5),
     gplots,
     MASS,
+    methods,
     ncf,
     R2jags,
     RMark (>= 2.1.14),
     sf,
     sp,
+    stats,
     utils
 Suggests:
     knitr,

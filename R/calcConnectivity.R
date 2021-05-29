@@ -276,6 +276,7 @@ reversePsiRelAbund <- function(psi, originRelAbund) {
     return(list(gamma = t(proportions(sweep(psi, 1, originRelAbund, "*"), 2)),
                 targetRelAbund = colSums(apply(psi, 2, "*", originRelAbund))))
   }
-  else
-    return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund))
+  # Future function?
+  # else
+  #   return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund))
 }
