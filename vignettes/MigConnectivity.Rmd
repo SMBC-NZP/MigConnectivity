@@ -1588,7 +1588,7 @@ lapply(sampleBreeding14.1, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
 nSims14 <- 100
-nSimsLarge14 <- 2500
+nSimsLarge14 <- 250 #0riginally 2500
 nYears <- 1
 nMonths <- 1
 
@@ -1675,8 +1675,8 @@ for (sim in 1:nSims14) {
                                         breedingSiteTrans14[[i]], 
                                         winteringSiteTrans14[[i]])
   
-  results14[[sim]] <- estMC(breedDist14[[i]], 
-                            nonbreedDist14[[i]],
+  results14[[sim]] <- estMC(originDist = breedDist14[[i]], 
+                            targetDist = nonbreedDist14[[i]],
                             originRelAbund = breedingRelN14[[i]],
               originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
               targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
