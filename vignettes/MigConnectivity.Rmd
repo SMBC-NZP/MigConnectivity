@@ -334,6 +334,7 @@ nonBreedDist <- matrix(c(0, 5, 10,
                          5, 0, 5,
                         10, 5, 0), nNonBreeding, nNonBreeding)
 ```
+
 ```{r echo=FALSE}
 par(bty="n")
 plot(c(4,5,6),rep(1,3),
@@ -448,11 +449,13 @@ captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
 
 # Convert capture locations into SpatialPoints #
 
-CapLocs<-sp::SpatialPoints(captureLocations,sp::CRS(projections$WGS84))
+CapLocs<-sp::SpatialPoints(captureLocations)
+CapLocs <- sf::st_as_sf(CapLocs)
+sf::st_crs(CapLocs)<-4326
 
 # Project Capture locations # 
 
-CapLocsM<-sp::spTransform(CapLocs, sp::CRS(projections$EquidistConic))
+CapLocsM<-sf::st_transform(CapLocs, 'ESRI:54027')# sp::CRS(projections$EquidistConic))
 
 # Retrieve raw non-breeding locations from github 
 # First grab the identity of the bird so we can loop through the files 
@@ -495,14 +498,15 @@ PR <- c(13:16)  # locations w/in list of winterBirds in Puerto Rico
 
 NB_GL <- lapply(Non_breeding_files, 
                 FUN = function(x){
-                  sp::SpatialPoints(cbind(x$Longitude,x$Latitude),
-                                    sp::CRS(projections$WGS84))})
+                  sf::st_as_sf(data.frame(x),
+                               coords = c("Longitude",
+                                          "Latitude"),
+                               crs = 4326)})
 
 # Project into UTM projection #
 
 NB_GLmeters <- lapply(NB_GL,
-                      FUN = function(x){sp::spTransform(x,
-                                          sp::CRS(projections$EquidistConic))})
+                      FUN = function(x){sf::st_transform(x,'ESRI:54027')})
 
 # Process to determine geolocator bias and variance-covariance in meters #
 
@@ -514,31 +518,31 @@ LatError<-rep(NA,length(winterBirds))
 # from geolocators from the true capture location 
 
 LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                         FUN = function(x){mean(x@coords[,1]-
-                                                  CapLocsM@coords[1,1])}))
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[1,1])}))
 
 LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                         FUN = function(x){mean(x@coords[,1]-
-                                                  CapLocsM@coords[2,1])}))
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[2,1])}))
 
 LongError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,1]-
-                                                 CapLocsM@coords[3,1])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                 sf::st_coordinates(CapLocsM)[3,1])}))
 
 # Calculate the error in latitude derived from
 # geolocators from the true capture location 
 
 LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[1,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[1,2])}))
 
 LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[2,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                 sf::st_coordinates(CapLocsM)[2,2])}))
 
 LatError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[3,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[3,2])}))
 
 # Get co-variance matrix for error of 
 # known non-breeding deployment sites 
@@ -576,7 +580,7 @@ library(rgdal)
 
 data(wrld_simpl)
 
-raster::crs(wrld_simpl)
+wrld_simpl <- sf::st_as_sf(wrld_simpl, crs = 4326)
 
 par(mar=c(0,0,0,0))
 plot(OVENdata$originSites,
@@ -590,9 +594,9 @@ plot(OVENdata$targetSites,
      add = TRUE,
      col=c("gray70","gray35","gray10"))
 
-wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
+wrld_simple<-sf::st_transform(wrld_simpl, sf::st_crs(OVENdata$originSites))
 
-plot(wrld_simple,add=TRUE)
+plot(sf::st_geometry(wrld_simple),add=TRUE)
 ```
 
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
@@ -608,12 +612,13 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
          originPoints = OVENdata$originPoints, # Capture Locations 
          targetPoints = OVENdata$targetPoints, # Target locations from devices
          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
-         resampleProjection = raster::projection(OVENdata$targetPoints), 
+         resampleProjection = sf::st_crs(OVENdata$targetPoints), 
          verbose = 0,   # output options - see help ??estMC
          nSamples = 10) # This is set low for example 
 ```
 
-```{r echo = FALSE, warning = FALSE, error = FALSE}
+```{r echo = FALSE, warning = FALSE, error = FALSE, eval = FALSE}
+# THIS ISN"T ESSENTIAL RIGHT NOW - TIME WAS SPENT ELSEWHERE
 par(mar=c(0,0,0,0))
 plot(wrld_simple,xlim=c(raster::extent(OVENdata$targetSites)[1],
                         raster::extent(OVENdata$targetSites)[2]),
