@@ -1181,20 +1181,20 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
   if(!is.null(originPoints))
-    if(is.na(sf::st_crs(originPoints)) || is.na(sf::st_crs(originSites))) {
+    if(is.na(sf::st_crs(originPoints)) || !is.null(originSites) & is.na(sf::st_crs(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
-  if(is.na(sf::st_crs(targetSites)) || is.na(sf::st_crs(targetPoints))){
+  if(!is.null(targetSites) & is.na(sf::st_crs(targetSites)) || !is.null(targetPoints) & is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetSites & targetPoints')
   }
-  targetPoints <- sf::st_transform(targetPoints, resampleProjection)
-  targetSites <- sf::st_transform(targetSites, resampleProjection)
+  if(!is.null(targetPoints)){targetPoints <- sf::st_transform(targetPoints, resampleProjection)}
+  if(!is.null(targetSites)){targetSites <- sf::st_transform(targetSites, resampleProjection)}
   if (is.null(targetNames))
     #targetNames <- names(targetSites)
-    targetNames <- 1:nrow(targetSites)
+    targetNames <- ifelse(!is.null(targetSites),1:nrow(targetSites),1:nTargetSites)
   if (is.null(originNames))
     #originNames <- names(originSites)
-    originNames <- 1:nrow(originSites)
+    originNames <- ifelse(!is.null(originSites),1:nrow(originSites),1:nOriginSites)
   if (is.null(sampleSize))
     sampleSize <- nAnimals
   if (!identical(dim(originDist),rep(nOriginSites,2)) ||
@@ -1525,7 +1525,7 @@ estMCisotope <- function(targetDist=NULL,
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
 
   if(!is.null(originPoints))
-    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+    if(is.na(sf::st_crs(originPoints)) || is.na(sf::st_crs(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
 
