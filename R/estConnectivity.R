@@ -411,6 +411,8 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                                       probs = c(alpha/2, 1-alpha/2), type = 8),
                      bcCI = bcCIr, median = out$BUGSoutput$median$r)
   }
+  # adding this is to avoid error but needs to be checked
+  nReleased <- NA
   results$input <- list(nReleased = nReleased, reencountered = reencountered,
                         sampleSize = sampleSize, alpha = alpha,
                         nSamples = nSamples, verbose=verbose,
@@ -539,12 +541,16 @@ estTransitionBoot <- function(originSites = NULL,
   # the data provided
   if (is.null(originAssignment)){
     # if geolocator, telemetry and captured in origin then simply get the origin site
-    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints))
-      originAssignment <- unclass(sf::st_intersects(x = originPoints,
+    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
+      if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
+        # project if needed
+        originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
+      }
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                           y = originSites,
-                                                          sparse = TRUE))
+                                                          sparse = TRUE)))
     # if raster and not captured in origin sites then determine the origin site
-    else if (all(isRaster & captured != "origin")) {
+    }else if (all(isRaster & captured != "origin")) {
       # if isRaster == TRUE and captured != origin
       # WEIGHTED XY COORDIANTES FROM THE RASTER
       # get geographically weighted median value
@@ -564,15 +570,15 @@ estTransitionBoot <- function(originSites = NULL,
       originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
       # transform to match originSites
       originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
-      originAssignment <- unclass(sf::st_intersects(x = originAssignRast,
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
                                             y = originSites,
-                                            sparse = TRUE))
+                                            sparse = TRUE)))
     }   # originAssignment <- what # need point assignment for raster (mean location?)
     else
       # originAssignment <- what # points over where we have them, raster assignment otherwise
-      originAssignment <- unclass(sf::st_intersects(x = originPoints,
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                                  y = originSites,
-                                                                sparse = TRUE))
+                                                                sparse = TRUE)))
     originAssignment[lengths(originAssignment)==0] <- NA
     if (any(lengths(originAssignment)>1))
       stop("Overlapping originSites not allowed\n")
@@ -582,9 +588,9 @@ estTransitionBoot <- function(originSites = NULL,
 
   if (is.null(targetAssignment)){
     if (all(isGL | isTelemetry | captured != "origin")) {
-      targetAssignment <- unclass(sf::st_intersects(x = targetPoints,
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
                                                     y = targetSites,
-                                                    sparse = TRUE))
+                                                    sparse = TRUE)))
     }
     else if (all(isRaster & captured != "target")){
       #targetAssignment <- what # need point assignment for raster (mean location?)
@@ -611,17 +617,17 @@ estTransitionBoot <- function(originSites = NULL,
       #                                                           y = targetSites_wgs,
       #                                                           sparse = TRUE)))))
       # Check which points are in target sites
-      targetAssignment <- unclass(sf::st_intersects(x = targetAssignRast,
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetAssignRast,
                                                       y = targetSites_wgs,
-                                                      sparse = TRUE))
+                                                      sparse = TRUE)))
 
     # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
     # IF INTERSECTS IS (empty)
    }else
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
-      targetAssignment <- unclass(sf::st_intersects(x = targetPoints,
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
                                                         y = targetSites,
-                                                        sparse = TRUE))
+                                                        sparse = TRUE)))
    targetAssignment[lengths(targetAssignment)==0] <- NA
    if (any(lengths(targetAssignment)>1))
      stop("Overlapping targetSites not allowed\n")
