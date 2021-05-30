@@ -128,11 +128,12 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' data, not accounting for uncertainty. If you've already calculated
 #' distances between points, you can use those instead.
 #'
-#' @param targetPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the point estimate location in
-#'    the non-release season.
-#' @param originPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the release location of an animal.
+#' @param targetPoints A sp \code{SpatialPoints} or sf \code{POINTS} object,
+#'     with length number of animals tracked.  Each point indicates the point
+#'     estimate location in the non-release season.
+#' @param originPoints A sp \code{SpatialPoints} or sf \code{POINTS} , with
+#'    length number of animals tracked.  Each point indicates the release
+#'     location of an animal.
 #' @param targetDist Distances between the target locations of the tracked
 #'    animals.  Symmetric matrix with number of animals rows and columns,
 #'    although really you only need the lower triangle filled in.
@@ -175,15 +176,18 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     nAnimals <- dim(targetDist)[1]
   else {
     nAnimals <- nrow(targetPoints)
-    if(is.na(raster::projection(targetPoints))){
-      stop('Coordinate system definition needed for targetPoints')
-    }
-    # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
-    # are sf objects
+
     if(!is.null(targetPoints) & !("sf" %in% class(targetPoints))){
      targetPoints <- sf::st_as_sf(targetPoints)}
     if(!is.null(originPoints) & !("sf" %in% class(originPoints))){
      originPoints <- sf::st_as_sf(originPoints)}
+
+     if(is.na(sf::st_crs(targetPoints))){
+      stop('Coordinate system definition needed for targetPoints')
+    }
+    # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
+    # are sf objects
+
 
     targetDist <- matrix(NA, nAnimals, nAnimals)
 
@@ -202,7 +206,7 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     targetDist[lower.tri(targetDist)] <- targetDist0
   }
   if (is.null(originDist)) {
-    if(is.na(raster::projection(originPoints))) {
+    if(is.na(sf::st_crs(originPoints))) {
       stop('Coordinate system definition needed for originPoints')
     }
     originPoints2 <- sf::st_transform(originPoints, 4326)
