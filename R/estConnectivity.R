@@ -443,7 +443,7 @@ estTransitionBoot <- function(originSites = NULL,
                               originRaster = NULL,
                               verbose = 0,
                               alpha = 0.05,
-                              resampleProjection = 'ESRI:54027',#MigConnectivity::projections$EquidistConic,
+                              resampleProjection = 'ESRI:102010',#MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300) {
   # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
@@ -1082,7 +1082,7 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           targetRaster = NULL, originRaster = NULL,
                           banded = NULL, reencountered = NULL,
                           verbose = 0, alpha = 0.05,
-                          resampleProjection = 'ESRI:54027',
+                          resampleProjection = 'ESRI:102010',
                           nSim = ifelse(any(isRaster & isGL) ||
                                           any(isRaster & isProb) ||
                                           any(isGL & isProb), 5000,
@@ -1132,7 +1132,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-            resampleProjection = 'ESRI:54027',
+            resampleProjection = 'ESRI:102010',
                        maxTries = 300,
                        row0=0,
                        maintainLegacyOutput = FALSE) {
@@ -1979,7 +1979,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
                   verbose = 0, calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-                  resampleProjection = 'ESRI:54027',
+                  resampleProjection = 'ESRI:102010',
                   maxTries = 300, targetIntrinsic = NULL,
                   isIntrinsic = FALSE,
                   maintainLegacyOutput = FALSE) {
@@ -2121,7 +2121,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-                      resampleProjection = 'ESRI:54027',
+                      resampleProjection = 'ESRI:102010',
                       maxTries = 300, maintainLegacyOutput = FALSE) {
 
   # double check that spatial data coming in is in sf format #
