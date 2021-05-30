@@ -72,13 +72,16 @@ captureLocations<-matrix(c(-77.93,18.04,  # Jamaica
                            -71.72,43.95), # New Hampshire
                           nrow=4,ncol=2,byrow=TRUE)
 
-# Convert capture locations into SpatialPoints #
+# Convert capture locations into sf #
+colnames(captureLocations) <- c("Longitude","Latitude")
 
-CapLocs<-SpatialPoints(captureLocations,CRS(WGS84))
+CapLocs <- sf::st_as_sf(data.frame(captureLocations),
+                        coords = c("Longitude","Latitude"),
+                        crs = 4326)
 
 # Project Capture locations #
 
-CapLocsM<-spTransform(CapLocs, CRS(EquidistConic))
+CapLocsM<-sf::st_transform(CapLocs, 'ESRI:102010')
 
 # Retrieve raw non-breeding locations from github #
 # First grab the identity of the bird so we can loop through the files #
@@ -108,29 +111,39 @@ PR <- c(13:16)  # locations within the list of winterBirds in Puerto Rico
 
 # Turn the locations into shapefiles #
 
-NB_GL <- lapply(Non_breeding_files, FUN = function(x){sp::SpatialPoints(cbind(x$Longitude,x$Latitude),CRS(WGS84))})
+NB_GL <- lapply(Non_breeding_files,
+                FUN = function(x){
+                  sf::st_as_sf(x,
+                               coords = c("Longitude","Latitude"),
+                               crs =  4326)})
 
 # Project into UTM projection #
 
-NB_GLmeters <- lapply(NB_GL, FUN = function(x){sp::spTransform(x,CRS(EquidistConic))})
+NB_GLmeters <- lapply(NB_GL,
+                      FUN = function(x){sf::st_transform(x,'ESRI:102010')})
 
 # Process to determine geolocator bias and variance-covariance in meters #
 
 # generate empty vector to store data #
-LongError<-rep(NA,length(winterBirds)) # 16 birds were recovered during the non-breeding season
-LatError<-rep(NA,length(winterBirds))
+# 16 birds were recovered during the non-breeding season
+LongError <- rep(NA,length(winterBirds))
+LatError <- rep(NA,length(winterBirds))
 
 # Calculate the error in longitude derived from geolocators from the true capture location #
-LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[1,1])}))
-LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[2,1])}))
-LongError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,1]-CapLocsM@coords[3,1])}))
+LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
+                                FUN = function(x){mean(sf::st_coordinates(x)[,1]-sf::st_coordinates(CapLocsM)[1,1])}))
+LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
+                                FUN = function(x){mean(sf::st_coordinates(x)[,1]-sf::st_coordinates(CapLocsM)[2,1])}))
+LongError[PR] <- unlist(lapply(NB_GLmeters[PR],
+                               FUN = function(x){mean(sf::st_coordinates(x)[,1]-sf::st_coordinates(CapLocsM)[3,1])}))
 
 # Calculate the error in latitude derived from geolocators from the true capture location #
-LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[1,2])}))
-LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[2,2])}))
-LatError[PR] <- unlist(lapply(NB_GLmeters[PR],FUN = function(x){mean(x@coords[,2]-CapLocsM@coords[3,2])}))
-
-
+LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
+                                FUN = function(x){mean(sf::st_coordinates(x)[,2]-sf::st_coordinates(CapLocsM)[1,2])}))
+LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
+                                FUN = function(x){mean(sf::st_coordinates(x)[,2]-sf::st_coordinates(CapLocsM)[2,2])}))
+LatError[PR] <- unlist(lapply(NB_GLmeters[PR],
+                               FUN = function(x){mean(sf::st_coordinates(x)[,2]-sf::st_coordinates(CapLocsM)[3,2])}))
 # Get co-variance matrix for error of known non-breeding deployment sites #
 
 geo.error.model <- lm(cbind(LongError,LatError) ~ 1) # lm does multivariate normal models if you give it a matrix dependent variable!
@@ -169,18 +182,21 @@ NB_kde_lat[i]<-weighted.mean(x=kdelist[[i]][,2],w=kdelist[[i]][,3])
 }
 
 # Replace estimated locations with TRUE capture locations - Jam, Fla, PR birds #
-NB_kde_long[c(1,9,21,22,24,25,29,31,36)]<--77.94 # Jamaica
-NB_kde_lat[c(1,9,21,22,24,25,29,31,36)]<-18.04 # Jamaica
+NB_kde_long[c(1,9,21,22,24,25,29,31,36)] <- -77.94 # Jamaica
+NB_kde_lat[c(1,9,21,22,24,25,29,31,36)] <- 18.04 # Jamaica
 
-NB_kde_long[c(17,18,23)]<--80.94 # FLA
-NB_kde_lat[c(17,18,23)]<-25.13 # FLA
+NB_kde_long[c(17,18,23)] <- -80.94 # FLA
+NB_kde_lat[c(17,18,23)] <- 25.13 # FLA
 
-NB_kde_long[c(32,33,34,35)]<--66.86 # PR
-NB_kde_lat[c(32,33,34,35)]<-17.97 # PR
+NB_kde_long[c(32,33,34,35)] <- -66.86 # PR
+NB_kde_lat[c(32,33,34,35)] <- 17.97 # PR
 
-weightedNB<-SpatialPoints(as.matrix(cbind(NB_kde_long,NB_kde_lat)))
-crs(weightedNB)<-WGS84
-weightedNBm<-spTransform(weightedNB,CRS(EquidistConic))
+weightedNB <- sf::st_as_sf(data.frame(longitude = NB_kde_long,
+                                      latitude = NB_kde_lat),
+                           coords = c("longitude","latitude"),
+                           crs = 4326)
+
+weightedNBm <- sf::st_transform(weightedNB, 'ESRI:102010')
 
 # USE ONLY BIRDS CAPTURED DURING BREEDING SEASON - GEOLOCATORS #
 summerDeploy<-c(2,3,4,5,6,7,8,10,11,12,13,14,15,16,19,20,26,27,28,30)
@@ -192,9 +208,14 @@ nB_GL <- length(summerDeploy)
 #
 #######################################################################################################################################################
 GPSdata<-read.csv("data-raw/Ovenbird_GPS_HallworthMT_FirstLast.csv")
+
 nGPS <- nrow(GPSdata)/2
-GPSpts<-SpatialPoints(as.matrix(cbind(GPSdata[,2],GPSdata[,1]),nrow=nGPS,ncol=2,byrow=TRUE),CRS(WGS84))
-GPSptsm<-spTransform(GPSpts,CRS(EquidistConic))
+
+GPSpts <- sf::st_as_sf(GPSdata,
+                       coords = c("Longitude","Latitude"),
+                       crs = 4326)
+
+GPSptsm <- sf::st_transform(GPSpts, 'ESRI:102010')
 
 # First add GPS locations to both breeding and non-breeding data sets #
 cap<-seq(1,2*nGPS,2)
@@ -202,12 +223,15 @@ wint<-seq(2,2*nGPS,2)
 
 # Using the weighted locations #
 
-weightedNB_breeDeployOnly<-SpatialPoints(as.matrix(cbind(c(NB_kde_long[summerDeploy],GPSdata[wint,2]),c(NB_kde_lat[summerDeploy],GPSdata[wint,1]))))
-crs(weightedNB_breeDeployOnly)<-WGS84
-NB_breedDeploy<-spTransform(weightedNB_breeDeployOnly,CRS(EquidistConic))
+weightedNB_breeDeployOnly <- sf::st_as_sf(data.frame(Longitude = c(NB_kde_long[summerDeploy],GPSdata[wint,2]),
+                                                     Latitude = c(NB_kde_lat[summerDeploy],GPSdata[wint,1])),
+                                          coords = c("Longitude","Latitude"),
+                                          crs = 4326)
 
-isGL<-c(rep(TRUE,20),rep(FALSE,19))
-targetPoints<-NB_breedDeploy
+NB_breedDeploy<-sf::st_transform(weightedNB_breeDeployOnly, 'ESRI:102010')
+
+isGL <- c(rep(TRUE,20),rep(FALSE,19))
+targetPoints <- NB_breedDeploy
 
 
 ###################################################################
@@ -218,38 +242,43 @@ targetPoints<-NB_breedDeploy
 ###################################################################
 
 
-Origin<-SpatialPoints(cbind(c(rep(captureLocations[4,1],20),GPSdata[cap,2]),c(rep(captureLocations[4,2],20),GPSdata[cap,1])))
-crs(Origin)<-WGS84
+OriginData <- data.frame(Longitude = c(rep(captureLocations[4,1],20),GPSdata[cap,2]),
+                         Latitude = c(rep(captureLocations[4,2],20),GPSdata[cap,1]))
 
-originPoints<-spTransform(Origin,CRS(EquidistConic))
+Origin <- sf::st_as_sf(OriginData,
+                       coords = c("Longitude","Latitude"),
+                       crs = 4326)
+
+originPoints<-sf::st_transform(Origin, 'ESRI:102010')
 
 ###################################################################
 #
 #  Origin & Target sites
 #
 ###################################################################
-World<-shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
-crs(World) <- WGS84
-World<-spTransform(World,CRS(EquidistConic))
-States<-shapefile("data-raw/Spatial_Layers/st99_d00.shp")
-States<-spTransform(States,CRS(EquidistConic))
+World<-sf::st_read("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
+
+World<-sf::st_transform(World,'ESRI:102010')
+
+States<-sf::st_read("data-raw/Spatial_Layers/st99_d00.shp")
+States<-sf::st_transform(States,'ESRI:102010')
 
 # Non-breeding - Target sites #
 Florida<-subset(States,subset=NAME=="Florida")
-Florida<-gUnaryUnion(Florida)
+Florida <- aggregate(Florida, list(Florida$NAME), head, n=1)
+
 Cuba<-subset(World,subset=NAME=="Cuba")
-Hisp<-gUnion(subset(World,subset=NAME=="Haiti"),subset(World,subset=NAME=="Dominican Republic"))
+
+Hisp <- rbind(subset(World,subset=NAME=="Haiti"),
+                     subset(World,subset=NAME=="Dominican Republic"))
+Hisp <- aggregate(Hisp, list(Hisp$REGION), head, n=1)
+Hisp$NAME <- "Hispaniola"
 
 # Change IDs to merge files together
-Cuba<-spChFIDs(Cuba,"Cuba")
-Florida<-spChFIDs(Florida,"Florida")
-Hisp<-spChFIDs(Hisp,"Hisp")
 
-#Combine into a single SpatialPolygon
-WinterRegion1 <- suppressWarnings(spRbind(Florida,Cuba))
-WinterRegions <- suppressWarnings(spRbind(WinterRegion1,Hisp))
-
-targetSites<-WinterRegions
+targetSites <- rbind(Cuba[,c("NAME","geometry")],
+                     Florida[,c("NAME","geometry")],
+                     Hisp[,c("NAME","geometry")])
 
 # Make polygons -
 # Breeding - Make square region around capture location - equal size around NH and MD.
@@ -276,6 +305,7 @@ crs(originSites)<-Lambert
 
 originSites <- spTransform(originSites,CRS(EquidistConic))
 
+originSites <- sf::st_as_sf(originSites)
 ###################################################################
 #
 #  Get relative abundance within breeding "population" polygons #
@@ -284,7 +314,8 @@ originSites <- spTransform(originSites,CRS(EquidistConic))
 
 # Breeding Bird Survey Abundance Data #
 BBSoven<-raster("data-raw/Spatial_Layers/bbsoven.txt")
-crs(BBSoven)<-WGS84
+crs(BBSoven)<-sf::st_crs(4326)$proj4string
+
 BBSovenMeters<-projectRaster(BBSoven,crs=EquidistConic)
 
 NHbreedPoly <- spTransform(NHbreedPoly,CRS(EquidistConic))
@@ -310,8 +341,8 @@ originRelAbund<-BreedRelAbund
 # define current projection #
 
 # project to WGS84
-NHbreedPolyWGS<-spTransform(NHbreedPoly,CRS(WGS84))
-MDbreedPolyWGS<-spTransform(MDbreedPoly,CRS(WGS84))
+NHbreedPolyWGS<-spTransform(NHbreedPoly,sf::st_crs(4326)$proj4string)
+MDbreedPolyWGS<-spTransform(MDbreedPoly,sf::st_crs(4326)$proj4string)
 
 BreedDistMat<-array(NA,c(2,2))
 rownames(BreedDistMat)<-colnames(BreedDistMat)<-c(1,2)
@@ -321,21 +352,21 @@ BreedDistMat[1,2]<-BreedDistMat[2,1]<-distVincentyEllipsoid(gCentroid(MDbreedPol
 
 
 # Project to WGS84 #
-FloridaWGS<-spTransform(Florida,CRS(WGS84))
-CubaWGS<-spTransform(Cuba,CRS(WGS84))
-HispWGS<-spTransform(Hisp,CRS(WGS84))
+FloridaWGS<-sf::st_transform(Florida,4326)
+CubaWGS<-sf::st_transform(Cuba,4326)
+HispWGS<-sf::st_transform(Hisp,4326)
 
 
 NBreedDistMat<-array(NA,c(3,3))
 rownames(NBreedDistMat)<-colnames(NBreedDistMat)<-c(3,4,5)
 
 diag(NBreedDistMat)<-0
-NBreedDistMat[2,1]<-NBreedDistMat[1,2]<-distVincentyEllipsoid(gCentroid(FloridaWGS, byid=FALSE)@coords,
-                                                           gCentroid(CubaWGS, byid=FALSE)@coords)
-NBreedDistMat[3,1]<-NBreedDistMat[1,3]<-distVincentyEllipsoid(gCentroid(FloridaWGS, byid=FALSE)@coords,
-                                                           gCentroid(HispWGS, byid=FALSE)@coords)
-NBreedDistMat[3,2]<-NBreedDistMat[2,3]<-distVincentyEllipsoid(gCentroid(CubaWGS, byid=FALSE)@coords,
-                                                         gCentroid(HispWGS, byid=FALSE)@coords)
+NBreedDistMat[2,1]<-NBreedDistMat[1,2]<-distVincentyEllipsoid(st_coordinates(st_centroid(FloridaWGS)),
+                                                              st_coordinates(st_centroid(CubaWGS)))
+NBreedDistMat[3,1]<-NBreedDistMat[1,3]<-distVincentyEllipsoid(st_coordinates(st_centroid(FloridaWGS)),
+                                                              st_coordinates(st_centroid(HispWGS)))
+NBreedDistMat[3,2]<-NBreedDistMat[2,3]<-distVincentyEllipsoid(st_coordinates(st_centroid(CubaWGS)),
+                                                              st_coordinates(st_centroid(HispWGS)))
 
 
 originDist<-BreedDistMat
