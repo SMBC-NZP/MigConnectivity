@@ -632,23 +632,27 @@ estTransitionBoot <- function(originSites = NULL,
      stop("Overlapping targetSites not allowed\n")
    targetAssignment <- array(unlist(targetAssignment))
   }
+  if(is.null(originSites)){
+  nOriginSites <- ncol(originAssignment)}else{
+  nOriginSites <- nrow(originSites)}
 
-  nOriginSites <- ifelse(is.null(originSites), ncol(originAssignment), nrow(originSites))
-  nTargetSites <- ifelse(is.null(targetSites), ncol(targetAssignment), nrow(targetSites))
+  if(is.null(targetSites)){
+  nTargetSites <- ncol(targetAssignment)}else{
+  nTargetSites <- nrow(targetSites)}
   # if (length(targetPoints)!=nAnimals &&
   #     dim(targetAssignment)[length(dim(targetAssignment))]!=nAnimals ||
   #     nrow(originAssignment)!=nAnimals)
   #   stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
   # if (any(is.na(originAssignment)))
   #   stop("NAs in origin sites (make sure all points fall within polygons)")
-  if(!is.null(originPoints) && is.na(raster::projection(originPoints)))
+  if(!is.null(originPoints) && is.na(sf::st_crs(originPoints)))
     stop('Coordinate system definition needed for originPoints')
-  if(!is.null(originSites) && is.na(raster::projection(originSites)))
+  if(!is.null(originSites) && is.na(sf::st_crs(originSites)))
     stop('Coordinate system definition needed for originSites')
-  if(!is.null(targetPoints) && is.na(raster::projection(targetPoints))){
+  if(!is.null(targetPoints) && is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetPoints')
   }
-  if(!is.null(targetSites) && is.na(raster::projection(targetSites))){
+  if(!is.null(targetSites) && is.na(sf::st_crs(targetSites))){
     stop('Coordinate system definition needed for targetSites')
   }
   if(!is.null(targetPoints)){
