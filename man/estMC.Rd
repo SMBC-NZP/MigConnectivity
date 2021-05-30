@@ -29,7 +29,7 @@ estMC(
   alpha = 0.05,
   approxSigTest = FALSE,
   sigConst = 0,
-  resampleProjection = "ESRI:54027",
+  resampleProjection = "ESRI:102010",
   maxTries = 300,
   targetIntrinsic = NULL,
   isIntrinsic = FALSE,
@@ -73,10 +73,10 @@ intrinsic data, this must be the geographic definition of sites in the
 non-release season.  Optional for intrinsic data; if left out, the function
 will use the \code{targetSites} defined in \code{targetIntrinsic}}
 
-\item{originPoints}{A \code{SpatialPoints} object, with length number of
+\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINT} sf object, with length number of
 animals tracked.  Each point indicates the release location of an animal}
 
-\item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} object, with
+\item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} from sp or \code{POINT} sf object, with
 length number of animals tracked.  Each point indicates the point estimate
 location in the non-release season}
 
@@ -89,9 +89,9 @@ but if using GL or GPS data, either \code{originAssignment} or
 \code{targetPoints} to non-release season sites. Integer vector with
 length number of animals tracked}
 
-\item{originNames}{Optional. Vector of names for the release season sites}
+\item{originNames}{Optional but recommended. Vector of names for the release season sites}
 
-\item{targetNames}{Optional. Vector of names for the non-release season
+\item{targetNames}{Optional but recommended. Vector of names for the non-release season
 sites}
 
 \item{nSamples}{Number of times to resample \code{psi} and/or

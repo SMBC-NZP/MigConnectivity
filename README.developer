@@ -9,7 +9,8 @@ branch name (such as "develop"), you may have to delete the old branch first.
 4. Commit and push to your development branch of our GitHub repository as things
 progress.  This push may have be done through the shell: Git | More | Shell...
 then type "git push origin develop".
-5. Run formal tests too: Build | Check.  Fix any errors and examine any notes.
+5. Run formal tests too: Build | Check.  Fix any errors and examine any notes
+and warnings.
 6. [With maintainer approval only] Pull latest develop version, update version
 number and date in DESCRIPTION, and run Check one last time.  Push to develop
 branch on origin one last time.

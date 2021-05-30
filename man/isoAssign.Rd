@@ -41,7 +41,7 @@ locations.}
 
 \item{nSamples}{integer specifying how many random samples to draw from a multinomial distribution.}
 
-\item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
+\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 areas.}
 
 \item{relAbund}{raster with relative abundance (must match extent of isotope assignment)}

@@ -1964,7 +1964,7 @@ for (sim in 1:nSims14.2) {
                             targetPoints = points1,
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = results14.2[[sim]]$targetSample,
-                            nSamples = 10,
+                            nSamples = 1000,
                             verbose = 0,
                             calcCorr = T,
                             geoBias = geoBias,

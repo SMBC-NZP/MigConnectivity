@@ -30,7 +30,7 @@ estTransition(
   reencountered = NULL,
   verbose = 0,
   alpha = 0.05,
-  resampleProjection = "ESRI:54027",
+  resampleProjection = "ESRI:102010",
   nSim = ifelse(any(isRaster & isGL) || any(isRaster & isProb) || any(isGL & isProb),
     5000, ifelse(any(isGL), 1000, ifelse(any(isRaster), 10, 1))),
   maxTries = 300,
@@ -40,11 +40,9 @@ estTransition(
 )
 }
 \arguments{
-\item{originSites}{the geographic definition of sites in the origin season.
-Mike, fill in options here (sf/sp/whatever)}
+\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.}
 
-\item{targetSites}{the geographic definition of sites in the target season.
-Mike, fill in options here (sf/sp/whatever)}
+\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.}
 
 \item{originPoints}{A \code{sf} or \code{SpatialPoints} object, with number
 of rows or length being the number of animals tracked. Each point indicates

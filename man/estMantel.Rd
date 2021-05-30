@@ -15,17 +15,17 @@ estMantel(
   nSim = 1000,
   verbose = 0,
   alpha = 0.05,
-  resampleProjection = "ESRI:54027",
+  resampleProjection = "ESRI:102010",
   maxTries = 300,
   maintainLegacyOutput = FALSE
 )
 }
 \arguments{
-\item{targetPoints}{A \code{SpatialPoints} object, with length number of
+\item{targetPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
 animals tracked.  Each point indicates the point estimate location in
 the non-release season}
 
-\item{originPoints}{A \code{SpatialPoints} object, with length number of
+\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
 animals tracked.  Each point indicates the release location of an animal}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators
@@ -41,8 +41,8 @@ in longitude and latitude of \code{targetPoints}, in
 in longitude and latitude of \code{targetPoints}, in
 \code{resampleProjection} units (default meters)}
 
-\item{targetSites}{A \code{SpatialPolygons} or \code{SpatialPolygonsDataFrame}
-object indicating valid target location(s).  Not needed unless you want
+\item{targetSites}{A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
+ or \code{POLYGONS} sf object indicating valid target location(s).  Not needed unless you want
 to mask out certain areas (e.g. water)}
 
 \item{nBoot}{Number of bootstrap runs. Animals are sampled with replacement for each,

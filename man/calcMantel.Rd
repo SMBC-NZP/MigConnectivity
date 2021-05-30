@@ -12,12 +12,13 @@ calcMantel(
 )
 }
 \arguments{
-\item{targetPoints}{A \code{SpatialPoints} object, with length number of
-animals tracked.  Each point indicates the point estimate location in
-the non-release season.}
+\item{targetPoints}{A sp \code{SpatialPoints} or sf \code{POINTS} object,
+with length number of animals tracked.  Each point indicates the point
+estimate location in the non-release season.}
 
-\item{originPoints}{A \code{SpatialPoints} object, with length number of
-animals tracked.  Each point indicates the release location of an animal.}
+\item{originPoints}{A sp \code{SpatialPoints} or sf \code{POINTS} , with
+length number of animals tracked.  Each point indicates the release
+ location of an animal.}
 
 \item{targetDist}{Distances between the target locations of the tracked
 animals.  Symmetric matrix with number of animals rows and columns,

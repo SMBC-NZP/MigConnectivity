@@ -39,7 +39,7 @@ weightAssign(
 \item{weightRange}{vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 Default = c(-1,1)}
 
-\item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
+\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 areas.}
 
 \item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
