@@ -1,6 +1,6 @@
 #' Example transition probabilities (psis) between origin and target sites
 #'
-#' A dataset containing example psi matrices used in Cohen et al. (in press).
+#' A dataset containing example psi matrices used in Cohen et al. (2018).
 #'
 #' @format A named list with 8 transition probability matrices in it. The
 #' direction is from origin site (rows) to target sites (columns), so each
@@ -29,7 +29,7 @@
 #' Example origin and target site positions and distances on a 2-D plane
 #'
 #' \code{sampleOriginPos} is a dataset containing example origin site positions
-#' from 12 scenarios used in Cohen et al. (in press).  For the same 12
+#' from 12 scenarios used in Cohen et al. (2018).  For the same 12
 #' scenarios, \code{sampleOriginDist} contains the origin site distances,
 #' \code{sampleTargetPos} contains the target site positions, and
 #' \code{sampleTargetDist} contains the target site distances.
@@ -105,7 +105,7 @@
 #' Example relative abundance estimates from simulated data
 #'
 #' A dataset containing mcmc relative abundance estimates from simulated
-#' BBS-type data from Cohen et al. (in press). Each estimate can
+#' BBS-type data from Cohen et al. (2018). Each estimate can
 #' be used in \code{estMC} function to estimate MC with uncertainty.
 #'
 #' @format A list with 100 mcmc (coda) estimates in it.
@@ -113,10 +113,10 @@
 
 #' Ovenbird light-level geolocator and GPS neccesary data
 #'
-#' Ovenbird data from Cohen et al. (in press) and Hallworth and Marra (2015).
+#' Ovenbird data from Cohen et al. (2018) and Hallworth and Marra (2015).
 #'
 #' @format A named list with the neccesary data to replicate the analyses
-#' found in Cohen et al. (in press) with archival light-level geolocator and
+#' found in Cohen et al. (2018) with archival light-level geolocator and
 #' GPS data.
 #' The data contained in the list are:
 #' \itemize{

@@ -3,11 +3,11 @@ title: '''MigConnectivity'' package: isotope simulation'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
+  rmarkdown::html_vignette: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package: isotope simulation}
   %\usepackage[utf8]{inputenc}
+  %\VignetteIndexEntry{MigConnectivity package: isotope simulation}
   %\VignetteEngine{knitr::rmarkdown}
 ---
 ```{r, echo = FALSE}

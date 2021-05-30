@@ -1,11 +1,18 @@
 library(raster); library(MigConnectivity)
 
-OVENdist <- shapefile("data-raw/Spatial_Layers/OVENdist.shp")
-OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+# read in a shapefile with sf package
+OVENdist <- sf::st_read("data-raw/Spatial_Layers/OVENdist.shp")
 
+# keep ony the breeding info
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,]
+
+# set the crs to WGS84
+sf::st_crs(OVENdist) <- 4326
+
+# read in data
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 
+# save only those from outside NH
 OVENvals <- OVENvals[grep(OVENvals[,1],pattern = "NH", invert = TRUE),]
 
 nSamples <- 1000
@@ -33,7 +40,8 @@ Sys.time()-a
 
 summary(b)
 
-OVENdist <- rgeos::gUnaryUnion(OVENdist, id = OVENdist$ORIGIN)
+# OVENdist <- rgeos::gUnaryUnion(OVENdist, id = OVENdist$ORIGIN)
+OVENdist <- aggregate(OVENdist, list(OVENdist$ORIGIN), head, n=1)
 
 r <- raster(extent(OVENdist)+10,res = c(40,10))
 
@@ -41,27 +49,30 @@ r1 <- raster::rasterize(OVENdist,r,mask = TRUE)
 
 r1[] <- 1:ncell(r1)
 
-r2 <- rasterToPolygons(r1)
+r2 <- sf::st_as_sf(rasterToPolygons(r1))
+sf::st_crs(r2) <- 4326
 
 targetSites <- raster::intersect(OVENdist,r2)
-targetSites$layer <- 1:length(targetSites)
-targetSites <- as(targetSites,"SpatialPolygons")
+targetSites$layer <- 1:nrow(targetSites)
 
-targetDist <- distFromPos(rgeos::gCentroid(targetSites,byid = TRUE)@coords)
 
-plot(targetSites)
-plot(SpatialPoints(t(b[1,,])),add = TRUE, pch = 19)
+targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites)))
+
+plot(sf::st_geometry(targetSites))
+plot(sp::SpatialPoints(t(b$SingleCell[1,,])),add = TRUE, pch = 19)
 
 results <- array(NA, c(nAnimals, nSamples))
 for(i in 1:nSamples) {
-  results[, i] <- over(SpatialPoints(t(b$SingleCell[i, , ]),
-                                     proj4string = CRS(targetSites@proj4string@projargs)),
-                       targetSites)
+  point.samples <- sf::st_as_sf(data.frame(t(b$SingleCell[i,,])),
+                                coords = c("Longitude","Latitude"),
+                                crs = 4326)
+  results[, i] <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = point.samples,
+                                                      y = targetSites,
+                                                      sparse = TRUE))))
 }
-
 # What is proportion of simulated points not in targetSites, with restrict2Likely TRUE?
 sum(is.na(results)) / length(results)
-# [1] 0.07018543
+# 0
 
 set.seed(122)
 a <- Sys.time()
@@ -69,14 +80,14 @@ b <- isoAssign(isovalues = OVENvals[,2],
                isoSTD = 12,
                intercept = -10,
                slope = 0.8,
-               oddsRatio = FALSE,
-               odds = NULL,
-               SingleCellAssign = TRUE,
+               #oddsRatio = FALSE,
+               #odds = NULL,
+               #SingleCellAssign = TRUE,
                nSamples = nSamples,
-               dataFrame = FALSE,
+               #dataFrame = FALSE,
                sppShapefile = OVENdist,
                assignExtent = NULL,
-               return = "sim.cell",
+               #return = "sim.cell",
                element = "Hydrogen",
                surface = FALSE,
                period = "Annual",
@@ -85,33 +96,39 @@ Sys.time()-a
 
 results <- array(NA, c(nAnimals, nSamples))
 for(i in 1:nSamples) {
-  results[, i] <- over(SpatialPoints(t(b$SingleCell[i, , ]),
-                                     proj4string = CRS(targetSites@proj4string@projargs)),
-                       targetSites)
+  point.samples <- sf::st_as_sf(data.frame(t(b$SingleCell[i,,])),
+                                coords = c("Longitude","Latitude"),
+                                crs = 4326)
+  results[, i] <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = point.samples,
+                                                                        y = targetSites,
+                                                                        sparse = TRUE))))
 }
 
 # What is proportion of simulated points not in targetSites, with restrict2Likely FALSE?
 sum(is.na(results)) / length(results)
 # Same:
-# [1] 0.07018543
+# 0
 
 # Plot points that aren't in targetSites only
-notIn <- which(is.na(t(results)), arr.ind = T)
-plot(targetSites)
-for (i in 1:nrow(notIn))
-  plot(SpatialPoints(t(b[notIn[i,1],,notIn[i,2]])),add = TRUE, pch = 19)
+# notIn <- which(is.na(t(results)), arr.ind = T)
+# plot(targetSites)
+# for (i in 1:nrow(notIn))
+#  plot(SpatialPoints(t(b[notIn[i,1],,notIn[i,2]])),add = TRUE, pch = 19)
 
-Countries <- shapefile("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
+Countries <- sf::st_read("data-raw/Spatial_Layers/TM_WORLD_BORDERS-0.3.shp")
 JAM <- Countries[Countries$NAME == "Jamaica",]
-JAM <- as(JAM,"SpatialPolygons")
+# JAM <- as(JAM,"SpatialPolygons")
 
-States <- shapefile("data-raw/Spatial_Layers/st99_d00.shp")
+States <- sf::st_read("data-raw/Spatial_Layers/st99_d00.shp")
 FL <- States[States$NAME == "Florida",]
-FL <- rgeos::gUnaryUnion(FL,id = FL$STATE)
+FL <- aggregate(FL, list(FL$STATE), head, n=1)
 
-originSites <- rbind(JAM,FL)
 
-originDist <- distFromPos(rgeos::gCentroid(originSites,byid = TRUE)@coords)
+originSites <- rbind(JAM[,c("NAME","geometry")],
+                     FL[,c("NAME","geometry")])
+
+
+originDist <- distFromPos(sf::st_coordinates(sf::st_centroid(originSites)))
 
 ever <- length(grep(OVENvals[,1],pattern = "EVER")) / nAnimals
 jam <- length(grep(OVENvals[,1],pattern = "JAM")) / nAnimals
@@ -119,8 +136,15 @@ jam <- length(grep(OVENvals[,1],pattern = "JAM")) / nAnimals
 
 originRelAbundance <- as.matrix(c(jam, ever))
 
-targetSites <- sp::spTransform(targetSites, CRS(MigConnectivity::projections$Lambert))
-originSites <- sp::spTransform(originSites, CRS(MigConnectivity::projections$Lambert))
+
+
+# # # # # # # # # # # # # # # # # # # #
+# NEEDS CONVERSION from sp to sf BELOW
+
+
+
+targetSites <- sf::st_transform(targetSites, srid = 9820)#crs = CRS(MigConnectivity::projections$Lambert)
+originSites <- sf::st_transform(originSites, 9820)#CRS(MigConnectivity::projections$Lambert))
 
 set.seed(12)
 originLongLat <- array(NA,c(nrow(OVENvals),2))

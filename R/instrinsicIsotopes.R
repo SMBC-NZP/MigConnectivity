@@ -15,7 +15,7 @@
 #' @param restrict2Likely if \code{TRUE} restricts locations to fall within the 'likely' assignment
 #'        locations.
 #' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
-#' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 #'        areas.
 #' @param relAbund raster with relative abundance (must match extent of isotope assignment)
 #' @param isoWeight weighting value to apply to isotope assignment
@@ -121,17 +121,33 @@ if(!is.null(sppShapefile)){
   if(is.na(raster::crs(sppShapefile))){
     stop("coordinate system needed for sppShapefile")}
 # 3. if the projections don't match - project into same as isomap then mask
+  # quick check
+  if(inherits(sppShapefile, "SpatialPolygons") |
+     inherits(sppShapefile, "SpatialPolygonsDataFrame")){
   if(sppShapefile@proj4string@projargs != isomap@crs@projargs){
     sppShapefile <- sp::spTransform(sppShapefile, sp::CRS(isomap@crs@projargs))
   }
+  }
+  if(class(sppShapefile)[1] %in% "sf"){
+    if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
+      sppShapefile <- sf::st_transform(sppShapefile, 4326)
+    }
+    }
+
+
+# convert sp file to sf
+  if(inherits(sppShapefile, "SpatialPolygons") |
+     inherits(sppShapefile, "SpatialPolygonsDataFrame")){
+  sppShapefile <- sf::st_as_sf(sppShapefile)
+}
 
 if(verbose>0){cat("\n Restricting possible assignments to species distribution \n")}
 
 sppShapefile$INOUT<-1
 
 # mask the isomap to sppShapefile
-isomap <- raster::mask(isomap, sppShapefile)
 isomap <- raster::crop(isomap, sppShapefile)
+isomap <- raster::mask(isomap, sppShapefile)
 }
 if(!is.null(relAbund) && !inherits(relAbund,"RasterLayer")){stop("relAbund should be a raster layer")}
 if(!is.null(relAbund) && inherits(relAbund,"RasterLayer")){
@@ -165,7 +181,7 @@ targetSites <- raster::intersect(targetSites,sppShapefile)
 # rename the targetSites to simplify output
 targetSites<-targetSites[,1]
 names(targetSites) <- c("targetSite")
-
+#targetSites <- rgeos::gUnaryUnion(targetSites, id=targetSites$targetSite)
 # spatially explicit assignment
 assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
 
@@ -223,6 +239,7 @@ if (is.null(odds)){odds <- 0.67}
 matvals <- raster::rasterToPoints(assign2prob)
 # XY coords of raster
 matvalsXY <- matvals[,1:2]
+
 # drop XY from matvals
 matvals <- matvals[,-(1:2)]
 
@@ -280,6 +297,9 @@ set.seed(seed)
 # make a simulated array twice the size to weed out locations
 # that fall outside of distribution
 xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,raster::nlayers(assign2prob)))
+# give names for sf to convert down the line
+dimnames(xysimulation)[[2]] <- c("Longitude","Latitude")
+
 xysim <- array(NA, c(nSamples, 2, raster::nlayers(assign2prob)))
 # name the array
   #dimnames(xysim)[[1]] <- 1:nSamples
@@ -313,14 +333,27 @@ for(i in 1:ncol(matvals)) {
     xysimulation[,2,i] <- matvalsXY[which(multidraw == 1, arr.ind = TRUE)[,1],2]
     # check to see which are in the distribution and which fall outside
     if(!is.null(sppShapefile)){
-    randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
-                                    sp::CRS(sppShapefile@proj4string@projargs))
-    inout <- sp::over(randpoints,sppShapefile)
+      sppShapefile <- sf::st_as_sf(sppShapefile)
+   # randpoints <- sp::SpatialPoints(cbind(xysimulation[,1,i],xysimulation[,2,i]),
+   #                                 sp::CRS(sppShapefile@proj4string@projargs))
+     randpoints <- sf::st_as_sf(data.frame(xysimulation[,,i]),
+                                coords = c("Longitude","Latitude"),
+                                crs = 4326)
+
+   # inout <- sp::over(randpoints,sppShapefile)
+    inout <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = randpoints,
+                                                                   y = sppShapefile,
+                                                          sparse = TRUE))))
     # How many are in
-    InDist <- randpoints[which(inout$INOUT == 1),]
-    samplecoords <- sample(1:length(InDist),size = nSamples,replace = FALSE)
-    xysim[,1,i] <- InDist@coords[samplecoords,1]
-    xysim[,2,i] <- InDist@coords[samplecoords,2]
+   # InDist <- randpoints[which(inout$INOUT == 1),]
+    InDist <- randpoints[which(inout > 0),]
+    samplecoords <- sample(1:nrow(InDist),
+                           size = nSamples,
+                           replace = FALSE)
+    #xysim[,1,i] <- InDist@coords[samplecoords,1]
+    #xysim[,2,i] <- InDist@coords[samplecoords,2]
+    xysim[,1,i] <- sf::st_coordinates(InDist)[samplecoords,1]
+    xysim[,2,i] <- sf::st_coordinates(InDist)[samplecoords,2]
     }else{
     randsamples <- sample(1:nrow(xysimulation),size = nSamples,replace = FALSE)
     xysim[,1,i] <- xysimulation[randsamples,1,i]
@@ -399,7 +432,7 @@ return(isoAssignReturn)
 #' @export
 #' @examples
 #' \dontrun{
-#' getIsoMap(element = "Hydrogen", period = "Annual")
+#' map <- getIsoMap(element = "Hydrogen", period = "Annual")
 #' }
 
 getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
@@ -619,7 +652,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' @param relAbund raster layer of relative abundance that sums to 1.
 #' @param weightRange vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 #'        Default = c(-1,1)
-#' @param sppShapefile SpatialPolygon layer defining species range. Assignments are restricted to these
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 #'        areas.
 #' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
 #'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
@@ -639,14 +672,15 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
 #' }
 #'
-#' #' @references
+#' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of migratory
+#' connectivity for birds en route to breeding through the Gulf of Mexico.
+#' Ecography 42: 658-669.
 #'
 #' Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
-#' abundance into spatial assignments on continuous surfaces. Ecology and Evolution
-#' 3:11, 3847-3855.
+#' abundance into spatial assignments on continuous surfaces. Ecology and
+#' Evolution 3: 3847-3855.
 #' @export
 #'
 #' @examples
@@ -672,7 +706,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
 #' relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 #'
-#BE <- weightAssign(knownLocs = knownLocs,
+#' BE <- weightAssign(knownLocs = knownLocs,
 #'                  isovalues = HBEFbirds[,2],
 #'                  isoSTD = 12,
 #'                  intercept = -10,

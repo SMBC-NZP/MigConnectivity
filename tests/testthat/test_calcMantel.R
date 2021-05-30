@@ -2,16 +2,17 @@ library(MigConnectivity)
 context('Calculate Mantel correlation')
 
 test_that('Ovenbird example produces right Mantel correlation', {
-  nAnimals <- length(OVENdata$targetPoints)
-  originPoints2 <- sp::spTransform(OVENdata$originPoints,
-                                   sp::CRS(MigConnectivity::projections$WGS84))
+  nAnimals <- nrow(OVENdata$targetPoints)
+  originPoints2 <- sf::st_transform(OVENdata$originPoints,4326)
   originDist <- matrix(NA, nAnimals, nAnimals)
 
   originDist[lower.tri(originDist)] <- 1
 
   distIndices <- which(!is.na(originDist), arr.ind = TRUE)
-  originDist0 <- geosphere::distGeo(originPoints2[distIndices[,'row'],],
-                                    originPoints2[distIndices[,'col'],])
+
+  originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
+                                    sf::st_coordinates(originPoints2[distIndices[,'col'],]))
+
   originDist[lower.tri(originDist)] <- originDist0
   diag(originDist) <- 0
   originDist <- t(originDist)
@@ -24,10 +25,10 @@ test_that('Ovenbird example produces right Mantel correlation', {
   distIndices <- which(!is.na(targetDist), arr.ind = TRUE)
 
   # project target points to WGS #
-  targetPoints2 <- sp::spTransform(OVENdata$targetPoints,
-                                   sp::CRS(MigConnectivity::projections$WGS84))
-  targetDist0 <- geosphere::distGeo(targetPoints2[distIndices[,'row'],],
-                                    targetPoints2[distIndices[,'col'],])
+  targetPoints2 <- sf::st_transform(OVENdata$targetPoints,4326)
+
+  targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
+                                    sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
 
   targetDist[lower.tri(targetDist)] <- targetDist0
   diag(targetDist) <- 0
@@ -36,6 +37,7 @@ test_that('Ovenbird example produces right Mantel correlation', {
 
   rM0 <- calcMantel(originPoints = OVENdata$originPoints, # Capture Locations
                     targetPoints = OVENdata$targetPoints) # Target locations
+
   expect_equal(rM0$pointCorr,
                0.813679665)
   expect_equal(lower.tri(rM0$originDist),

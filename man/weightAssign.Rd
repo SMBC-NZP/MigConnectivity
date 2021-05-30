@@ -39,7 +39,7 @@ weightAssign(
 \item{weightRange}{vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
 Default = c(-1,1)}
 
-\item{sppShapefile}{SpatialPolygon layer defining species range. Assignments are restricted to these
+\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
 areas.}
 
 \item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
@@ -63,15 +63,6 @@ returns an \code{weightAssign} object containing the following:
    \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
 }
-
-#' @references
-Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-migratory connectivity for birds en route to breeding through the Gulf of Mexico.
-
-Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
-abundance into spatial assignments on continuous surfaces. Ecology and Evolution
-3:11, 3847-3855.
 }
 \description{
 The primary purpose of this function is to determine whether weighting likelihood based isotope assignments
@@ -113,6 +104,7 @@ r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
 relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
 relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 
+BE <- weightAssign(knownLocs = knownLocs,
                  isovalues = HBEFbirds[,2],
                  isoSTD = 12,
                  intercept = -10,
@@ -129,6 +121,15 @@ relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
 
 }
 \references{
+Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of migratory
+connectivity for birds en route to breeding through the Gulf of Mexico.
+Ecography 42: 658-669.
+
+Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
+abundance into spatial assignments on continuous surfaces. Ecology and
+Evolution 3: 3847-3855.
+
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
 migratory connectivity for birds en route to breeding through the Gulf of Mexico.

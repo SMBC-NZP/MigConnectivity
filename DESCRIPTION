@@ -1,26 +1,29 @@
 Package: MigConnectivity
 Type: Package
-Title: Estimate Strength of Migratory Connectivity for Migratory Animals
-Version: 0.3.1
-Date: 2020-04-30
+Title: Estimate Migratory Connectivity for Migratory Animals
+Version: 0.4.0
+Date: 2021-5-30
 Authors@R: c(
-    person("Jeffrey A.", "Hostetler", email = "jeffrey.hostetler@myfwc.com", role = c("cre", "aut")),
+    person("Jeffrey A.", "Hostetler", email = "jeffrey_hostetler@fws.gov", 
+           role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"))
-Description: Calculates and estimates the strength of migratory connectivity
-    (MC), a standardized metric to quantify the extent to which populations
-    co-occur between two phases of the annual cycle. MC is independent of data
-    type and accounts for the relative abundance of populations distributed
-    across a seasonal range.  MC is equally applicable between any two phases
-    of the annual cycle that are temporally distinct, including migratory
-    phases. MC can be defined for entire seasonal ranges or for subsets of
-    those ranges, as long as those subsets of ranges can be further divided
-    into regional populations. The package includes functions to estimate MC
-    and the more traditional metric of migratory connectivity strength (Mantel
-    correlation; rM) incorporating uncertainty from multiple sources of
-    sampling error. Description of the metric can be found in Cohen et al.
-    (2018).
+Description: Allows the user to estimate transition probabilities for migratory 
+    animals between any two phases of the annual cycle, using a variety of 
+    different data types. Also calculates or estimates the strength of migratory
+    connectivity (MC), a standardized metric to quantify the extent to which 
+    populations co-occur between two phases of the annual cycle. MC is 
+    independent of data type and accounts for the relative abundance of 
+    populations distributed across a seasonal range.  MC is applicable between 
+    any two phases of the annual cycle that are temporally distinct, including 
+    migratory phases. MC can be defined for entire seasonal ranges or for 
+    subsets of those ranges, as long as those subsets of ranges can be further 
+    divided into regional populations. The package includes functions to 
+    estimate MC and the more traditional metric of migratory connectivity 
+    strength (Mantelcorrelation; rM) incorporating uncertainty from multiple 
+    sources ofsampling error. Description of the MC metric can be found in Cohen 
+    et al. (2018).
 License: GPL (>=3)
 LazyData: true
 Depends:
@@ -28,11 +31,15 @@ Depends:
 Imports:
     coda,
     geosphere (>= 1.5),
+    gplots,
     MASS,
+    methods,
     ncf,
     R2jags,
     RMark (>= 2.1.14),
+    sf,
     sp,
+    stats,
     utils
 Suggests:
     knitr,
@@ -45,5 +52,5 @@ Suggests:
     shape,
     testthat
 VignetteBuilder: knitr
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.1
 Encoding: UTF-8

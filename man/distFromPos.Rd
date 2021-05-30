@@ -7,7 +7,7 @@
 distFromPos(pos, surface = "ellipsoid")
 }
 \arguments{
-\item{pos}{Number of sites by 2 matrix with postions of each site.  If
+\item{pos}{Number of sites by 2 matrix with positions of each site.  If
 \code{surface} is 'ellipsoid' or 'sphere', then column 1 should be
 longitude and column 2 should be latitude.  If \code{surface} is 'plane',
 column 1 can be x-position and column 2 y-position.}

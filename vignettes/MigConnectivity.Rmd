@@ -3,8 +3,8 @@ title: '''MigConnectivity'' package'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
+  rmarkdown::html_vignette: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
@@ -15,6 +15,12 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
 ```
 
 ##Introduction  
+
+NOTE: this vignette is a bit out of date. Everything in it should still work 
+(let us know if it doesn't), but it doesn't highlight the new functions from 
+versions 0.3 and 0.4, such as `estStrength`, `estTransition`, and `diffMC`. We 
+are working on an updated (or new) vignette that will highlight the new 
+features.
 
 Technological advancements have spurred rapid growth in the study of migratory connectivity,
 the spatial and temporal linkage of migratory populations throughout the annual cycle. However, 
@@ -82,17 +88,13 @@ library(MigConnectivity)
 
 ```{r}
 mlogitMat <- function(slope, dist) {
-       preMat <- exp(-slope/mean(dist)*dist)
-       diag(preMat) <- 0
-       nr <- nrow(dist)
-       nc <- ncol(dist)
-       outMat <- matrix(0, nr, nc)
-  for (b in 1:nr) {
-      outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
-      outMat[b,b] <- 1 - sum(outMat[b, ])
-  }
-  return(outMat)
+   preMat <- exp(-slope/mean(dist)*dist)
+   diag(preMat) <- 0
+   outMat <- t(apply(preMat, 1, function(x) x/(1 + sum(x))))
+   diag(outMat) <- 1 - rowSums(outMat)
+   return(outMat)
 }
+
 ```
 
 `mlogitMC`: Crude optimization function for developing migratory connectivity pattern based on migratory connectivity strength.  Uses same argument (origin.abund) for relative or absolute abundance.
@@ -204,8 +206,15 @@ simLocationError <- function(targetPoints,
                              projection, 
               							 verbose = 0, 
               							 nSim = 1000) {
+  
+if(inherits(targetPoints,"SpatialPoints")){
+  targetPoints <- sf::st_as_sf(targetPoints)}
+if(inherits(targetSites,"SpatialPolygons") |
+   inherits(targetSites,"SpatialPolygonsDataFrame")){
+  targetSites <- sf::st_as_sf(targetPoints)}
 
-nAnimals <- length(targetPoints)
+nAnimals <- nrow(targetPoints)
+
 geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
 target.sample <- rep(NA, nAnimals)
 target.point.sample <- matrix(NA, nAnimals, 2)
@@ -218,19 +227,28 @@ for(i in 1:nAnimals){
     draws <- draws + 1
     # Sample random point for each bird 
     # from parametric distribution of NB error
-    point.sample <- sp::SpatialPoints(
-                  MASS::mvrnorm(n=nSim, 
-                  mu=cbind(targetPoints@coords[i,1],targetPoints@coords[i,2]),
+    ps <- MASS::mvrnorm(n=nSim, 
+                  mu=cbind(sf::st_coordinates(targetPoints)[i,1],
+                           sf::st_coordinates(targetPoints)[i,2]),
                   Sigma=geoVCov)+
-                  geoBias2,
-                  sp::CRS(projection))
+                  geoBias2
+    
+    colnames(ps) <- c("Longitude","Latitude")
+    
+    point.sample <- sf::st_as_sf(
+                  data.frame(ps),
+                  coords = c("Longitude","Latitude"),
+                  crs = sf::st_crs(targetPoints))
 	  
     # filtered to stay in NB areas (land)
-    target.sample0 <- sp::over(point.sample, targetSites)
+    #target.sample0 <- sp::over(point.sample, targetSites)
+    
+    target.sample0 <- unlist(unclass(sf::st_intersects(point.sample,
+                                                       targetSites)))
     target.sample[i]<-target.sample0[!is.na(target.sample0)][1]
   }
 	
-  target.point.sample[i, ]<-point.sample[!is.na(target.sample0)][1]@coords
+  target.point.sample[i, ]<-sf::st_coordinates(point.sample[!is.na(target.sample0),])[1,]
   if (verbose > 0)
     cat(' ', draws, 'draws\n')
 }
@@ -243,11 +261,7 @@ for(i in 1:nAnimals){
 
 ```{r}
 toPoly <- function(siteCentroids,
-                   projection.in = "+proj=longlat 
-                                    +datum=WGS84 
-                                    +no_defs 
-                                    +ellps=WGS84 
-                                    +towgs84=0,0,0",
+                   projection.in = 4326,
                    projection.out = NA,
                    resolution = NA,
                    order.by.input = TRUE)
@@ -256,6 +270,7 @@ toPoly <- function(siteCentroids,
 # cover the entire surface. Alternatively the user can supply the 
 # resolution of the raster cells in the units of the input projection 
 #(projection.in) 
+  colnames(siteCentroids) <- c("Longitude","Latitude")
   
   if(is.na(resolution)){
      long <- unique(siteCentroids[,1])
@@ -268,26 +283,33 @@ toPoly <- function(siteCentroids,
           raster::rasterFromXYZ(cbind(cbind(siteCentroids),
                                 (1:nrow(siteCentroids))),
                                  res = resolution,
-                                  crs = projection.in))
+                                  crs = sf::st_crs(projection.in)$proj4string))
   
   polys <- raster::rasterToPolygons(rast)
   
   # Give unique names to polygons #
-  
-  polys <- sp::SpatialPolygons(polys@polygons)
-  raster::crs(polys)<-projection.in
+  polys <- sf::st_as_sf(polys)
+  sf::st_crs(polys) <- sf::st_crs(projection.in)
+ # polys <- sp::SpatialPolygons(polys@polygons)
+ # raster::crs(polys)<-projection.in
   
   # Reorders the polygons to match that of the input #
-  centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
+  centers <- sf::st_as_sf(data.frame(siteCentroids),
+                          coords = c("Longitude","Latitude"),
+                          crs = projection.in)
+  #centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
   
   if(order.by.input){
-  orders <- sp::over(centers,polys)
-  polys <- polys[orders] 
+ # orders <- sp::over(centers,polys)
+  orders <- suppressMessages(unlist(unclass(sf::st_intersects(centers,
+                                                       polys,
+                                                       sparse = TRUE))))
+  polys <- polys[orders,] 
   }
-  sp::spChFIDs(polys,as.character(1:length(polys)))
+  #sp::spChFIDs(polys,as.character(1:length(polys)))
   
   if(!is.na(projection.out)){
-    polys <- sp::spTransform(polys,sp::CRS(projection.out))
+    polys <- sf::st_transform(polys, projection.out)
   }
   
   return(polys)
@@ -322,16 +344,17 @@ nNonBreeding <- 3 #number of non-breeding regions
 
 Generate a distance matrix between the different regions
 ```{r}
-#distances between centriods of three breeding regions
+#distances between centroids of three breeding regions
 breedDist <- matrix(c(0, 1, 2,
                       1, 0, 1,
                       2, 1, 0), nBreeding, nBreeding) 
 
-#distances between centriods of three non-breeding regions
+#distances between centroids of three non-breeding regions
 nonBreedDist <- matrix(c(0, 5, 10,
                          5, 0, 5,
                         10, 5, 0), nNonBreeding, nNonBreeding)
 ```
+
 ```{r echo=FALSE}
 par(bty="n")
 plot(c(4,5,6),rep(1,3),
@@ -444,13 +467,17 @@ captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
                            -66.86,17.97),  # Puerto Rico
                             nrow=3, ncol=2, byrow = TRUE)
 
+colnames(captureLocations) <- c("Longitude","Latitude")
+
 # Convert capture locations into SpatialPoints #
 
-CapLocs<-sp::SpatialPoints(captureLocations,sp::CRS(projections$WGS84))
+CapLocs <- sf::st_as_sf(data.frame(captureLocations),
+                      coords = c("Longitude","Latitude"),
+                      crs = 4326)
 
 # Project Capture locations # 
 
-CapLocsM<-sp::spTransform(CapLocs, sp::CRS(projections$EquidistConic))
+CapLocsM<-sf::st_transform(CapLocs, 'ESRI:54027')
 
 # Retrieve raw non-breeding locations from github 
 # First grab the identity of the bird so we can loop through the files 
@@ -493,14 +520,15 @@ PR <- c(13:16)  # locations w/in list of winterBirds in Puerto Rico
 
 NB_GL <- lapply(Non_breeding_files, 
                 FUN = function(x){
-                  sp::SpatialPoints(cbind(x$Longitude,x$Latitude),
-                                    sp::CRS(projections$WGS84))})
+                  sf::st_as_sf(data.frame(x),
+                               coords = c("Longitude",
+                                          "Latitude"),
+                               crs = 4326)})
 
 # Project into UTM projection #
 
 NB_GLmeters <- lapply(NB_GL,
-                      FUN = function(x){sp::spTransform(x,
-                                          sp::CRS(projections$EquidistConic))})
+                      FUN = function(x){sf::st_transform(x,'ESRI:54027')})
 
 # Process to determine geolocator bias and variance-covariance in meters #
 
@@ -512,31 +540,31 @@ LatError<-rep(NA,length(winterBirds))
 # from geolocators from the true capture location 
 
 LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                         FUN = function(x){mean(x@coords[,1]-
-                                                  CapLocsM@coords[1,1])}))
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[1,1])}))
 
 LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                         FUN = function(x){mean(x@coords[,1]-
-                                                  CapLocsM@coords[2,1])}))
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[2,1])}))
 
 LongError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,1]-
-                                                 CapLocsM@coords[3,1])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                 sf::st_coordinates(CapLocsM)[3,1])}))
 
 # Calculate the error in latitude derived from
 # geolocators from the true capture location 
 
 LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[1,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[1,2])}))
 
 LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[2,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                 sf::st_coordinates(CapLocsM)[2,2])}))
 
 LatError[PR] <- unlist(lapply(NB_GLmeters[PR],
-                        FUN = function(x){mean(x@coords[,2]-
-                                                 CapLocsM@coords[3,2])}))
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[3,2])}))
 
 # Get co-variance matrix for error of 
 # known non-breeding deployment sites 
@@ -574,7 +602,7 @@ library(rgdal)
 
 data(wrld_simpl)
 
-raster::crs(wrld_simpl)
+wrld_simpl <- sf::st_as_sf(wrld_simpl, crs = 4326)
 
 par(mar=c(0,0,0,0))
 plot(OVENdata$originSites,
@@ -588,9 +616,9 @@ plot(OVENdata$targetSites,
      add = TRUE,
      col=c("gray70","gray35","gray10"))
 
-wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
+wrld_simple<-sf::st_transform(wrld_simpl, sf::st_crs(OVENdata$originSites))
 
-plot(wrld_simple,add=TRUE)
+plot(sf::st_geometry(wrld_simple),add=TRUE)
 ```
 
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 
@@ -603,79 +631,85 @@ M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
          originDist = OVENdata$originDist, # Origin location distance matrix
          targetSites = OVENdata$targetSites, # Non-breeding / target sites
          originSites = OVENdata$originSites, # Breeding / origin sites 
+         targetNames = OVENdata$targetNames, # Names of nonbreeding/target sites
+         originNames = OVENdata$originNames, # Names of breeding/origin sites
          originPoints = OVENdata$originPoints, # Capture Locations 
          targetPoints = OVENdata$targetPoints, # Target locations from devices
          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
-         resampleProjection = raster::projection(OVENdata$targetPoints), 
+         resampleProjection = sf::st_crs(OVENdata$targetPoints), 
          verbose = 0,   # output options - see help ??estMC
          nSamples = 10) # This is set low for example 
+
+M
+```
+Take a closer look at what is included in the output
+
+```{r}
+str(M, max.level = 2)
 ```
 
-```{r echo = FALSE, warning = FALSE, error = FALSE}
+```{r echo = FALSE, warning = FALSE, error = FALSE, eval = FALSE}
 par(mar=c(0,0,0,0))
-plot(wrld_simple,xlim=c(raster::extent(OVENdata$targetSites)[1],
-                        raster::extent(OVENdata$targetSites)[2]),
-                 ylim=c(raster::extent(OVENdata$targetSites)[3],
-                        raster::extent(OVENdata$originSites)[4]))
-plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
-plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
-plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
+plot(sf::st_geometry(wrld_simple),
+     xlim=sf::st_bbox(OVENdata$targetSites)[c(1,3)],
+     ylim=c(sf::st_bbox(OVENdata$targetSites)[2],
+            sf::st_bbox(OVENdata$originSites)[4]))
+plot(sf::st_geometry(OVENdata$originSites[1,]),add=TRUE,lwd=1.75)
+plot(sf::st_geometry(OVENdata$originSites[2,]),add=TRUE,lwd=1.75)
+plot(sf::st_geometry(OVENdata$targetSites),add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
-legend(400000,-2105956,legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+legend(400000,-2105956,legend=paste("MC =",round(M$MC$mean,2), "\u00b1", round(M$MC$se,2)),bty="n",cex=1.8,bg="white",xjust=0)
 
-shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
-              gCentroid(OVENdata$originSites[1])@coords[,2],
-              gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,
-              extent(OVENdata$targetSites[2])[4]+150000,
+shape::Arrows(x0 = sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,1],
+              y0 = sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,2],
+              x1 = sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[2,]))[,1]+80000,
+              y1 = sf::st_bbox(OVENdata$targetSites[2,])[4]+150000,
               arr.length = 0.3,
               arr.adj = 0.5,
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
-              lty=1)
+              lwd = M$psi$mean[1,2]*10,
+              lty = 1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
-              gCentroid(OVENdata$originSites[1])@coords[,2],
-              gCentroid(OVENdata$targetSites[3])@coords[,1],
-              extent(OVENdata$targetSites[3])[4]+150000,
+shape::Arrows(sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,1],
+             sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,2],
+              sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[3,]))[,1],
+              sf::st_bbox(OVENdata$targetSites[3,])[4]+150000,
               arr.length = 0.3,
               arr.adj = 0.5,
               arr.lwd = 1,
               arr.width = 0.4, 
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+              lwd = M$psi$mean[1,3]*10,
               lty=1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
-              gCentroid(OVENdata$originSites[2])@coords[,2],
-              gCentroid(OVENdata$targetSites[1])@coords[,1],
-              extent(OVENdata$targetSites[1])[4]+150000,
+shape::Arrows(sf::st_coordinates(sf::st_centroid(OVENdata$originSites[2,]))[,1],
+              sf::st_coordinates(sf::st_centroid(OVENdata$originSites[2,]))[,2],
+              sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[1,]))[,1],
+              sf::st_bbox(OVENdata$targetSites[1,])[4]+150000,
               arr.length = 0.3,
               arr.adj = 0.5,
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+              lwd = M$psi$mean[2,1]*10,
               lty=1)
 
-shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
-              gCentroid(OVENdata$originSites[2])@coords[,2],
-              (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),
-              extent(OVENdata$targetSites[2])[4]+150000,
+shape::Arrows(sf::st_coordinates(sf::st_centroid(OVENdata$originSites[2,]))[,1],
+              sf::st_coordinates(sf::st_centroid(OVENdata$originSites[2,]))[,2],
+              sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[2,]))[,1]-80000,
+              sf::st_bbox(OVENdata$targetSites[2,])[4]+150000,
               arr.length = 0.3,
               arr.adj = 0.5,
               arr.lwd = 1,
               arr.width = 0.4,
               arr.type = "triangle",
-              lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+              lwd = M$psi$mean[2,2]*10)
 
 box(which="plot")
 ```
 
-```{r}
-str(M)
-```
 
 ### EXAMPLE 3
 
@@ -720,18 +754,22 @@ breedingRelN <- breedingN/sum(breedingN)
 ```
 
 The transition probability (psi) between the breeding and non-breeding populations is calculated below. 
-```{r}
+```{r eval = FALSE}
 # Set up psi matrix
 o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
               target.dist = nonbreedDist, origin.abund = breedingRelN,
               sample.size = sum(breedingN),
-              interval = c(0, 10), tol = .Machine$double.eps^0.5)
+              interval = c(1, 3), tol = .Machine$double.eps^0.5)#
 
 slope <- o$minimum
 
 psi <- mlogitMat(slope, breedDist)
 ```
 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+slope <- 1.92093332054914
+psi <- mlogitMat(slope, breedDist)
+```
 Now that we have all the data needed to calculate the strength of migratory connectivity we can use the `calcMC` function in the `MigConnecitivty` package to generate a standardized MC metric. 
 ```{r}
 # Baseline strength of migratory connectivity
@@ -817,7 +855,7 @@ There were five relative breeding abundance scenarios:
 
 First we calculate MC for the eight transition probability scenarios (with base spatial arrangement and relative abundance):
 ```{r}
-nScenarios1 <- length(samplePsis) # samplePsis - comes with MigConnectivity pacakge
+nScenarios1 <- length(samplePsis) # samplePsis - comes with MigConnectivity package
 
 # Create vector of length nScenarios1
 MC1 <- rep(NA, nScenarios1)
@@ -1530,10 +1568,19 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 data("projections")
 
 set.seed(75)
-capLocs14 <- lapply(breedingPos14, sp::SpatialPoints, 
-                    proj4string = sp::CRS(projections$WGS84))
-targLocs14 <- lapply(winteringPos14, sp::SpatialPoints, 
-                     proj4string = sp::CRS(projections$WGS84))
+capLocs14 <- lapply(breedingPos14, 
+                    FUN = function(x){
+                      colnames(x)<-c("Longitude","Latitude")
+                      sf::st_as_sf(data.frame(x),
+                                   coords = c("Longitude","Latitude"),
+                                   crs = 4326)})
+
+targLocs14 <- lapply(winteringPos14,
+                     FUN = function(x){
+                      colnames(x)<-c("Longitude","Latitude")
+                      sf::st_as_sf(data.frame(x),
+                                   coords = c("Longitude","Latitude"),
+                                   crs = 4326)})
 
 
 # Relative abundance by scenario and breeding population
@@ -1562,7 +1609,7 @@ lapply(sampleBreeding14.1, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
 nSims14 <- 100
-nSimsLarge14 <- 2500
+nSimsLarge14 <- 250 #0riginally 2500
 nYears <- 1
 nMonths <- 1
 
@@ -1649,30 +1696,30 @@ for (sim in 1:nSims14) {
                                         breedingSiteTrans14[[i]], 
                                         winteringSiteTrans14[[i]])
   
-  results14[[sim]] <- estMC(breedDist14[[i]], 
-                            nonbreedDist14[[i]],
+  results14[[sim]] <- estMC(originDist = breedDist14[[i]], 
+                            targetDist = nonbreedDist14[[i]],
                             originRelAbund = breedingRelN14[[i]],
               originPoints = capLocs14[[i]][animalLoc14[[sim]][, 1, 1, 1], ],
               targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
                             nSamples = 1000,
-                            verbose = 0,
+                            verbose = 1,
                             calcCorr = T,
                             geoBias = c(0, 0),
                             geoVCov = matrix(0, 2, 2))
   
-    est14.array[sim, 'MC'] <- results14[[sim]]$meanMC
-    est14.array[sim, 'Mantel'] <- results14[[sim]]$meanCorr
-    var14.array[sim, 'MC'] <- results14[[sim]]$seMC ^ 2
-    var14.array[sim, 'Mantel'] <- results14[[sim]]$seCorr ^ 2
-    ci14.array[sim, 'MC', ] <- results14[[sim]]$bcCI
-    ci14.array[sim, 'Mantel', ] <- results14[[sim]]$bcCICorr
+    est14.array[sim, 'MC'] <- results14[[sim]]$MC$mean
+    est14.array[sim, 'Mantel'] <- results14[[sim]]$corr$mean
+    var14.array[sim, 'MC'] <- results14[[sim]]$MC$se ^ 2
+    var14.array[sim, 'Mantel'] <- results14[[sim]]$corr$se ^ 2
+    ci14.array[sim, 'MC', ] <- results14[[sim]]$MC$bcCI
+    ci14.array[sim, 'Mantel', ] <- results14[[sim]]$corr$bcCI
   }
 }
 
 # Crude point estimates (bootstrap means are better)
-pointEsts14.1 <- t(sapply(results14, function(x) c(x$pointMC, x$pointCorr)))
+pointEsts14.1 <- t(sapply(results14, function(x) c(x$MC$point, x$corr$point)))
 
 # Summarize results
 summary(var14.array)
@@ -1736,34 +1783,34 @@ geoBias <- c(-10000, 50000)
 geoVCov <- matrix(c(1.2e+8, 0, 0, 1.2e+9), 2, 2)
 sqrt(diag(geoVCov))
 
-targLocs14.2 <- lapply(targLocs14, sp::spTransform, 
-                       CRSobj = sp::CRS(projections$Lambert))
+targLocs14.2 <- lapply(targLocs14,
+                       FUN = function(x){sf::st_transform(x, 6933)})
 
 # convert wintering locations to polygons using the helper function
 WinteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = projections$WGS84, 
-                         projection.out = projections$Lambert)
+                         projection.in = 4326, 
+                         projection.out = 6933)
 
 winteringPolys <- lapply(winteringPos14,
                          toPoly,
-                         projection.in = projections$WGS84,
-                         projection.out = projections$WGS84)
+                         projection.in = 4326,
+                         projection.out = 4326)
 
 winteringPolys2 <- lapply(winteringPos14,
                           toPoly,
-                          projection.in = projections$WGS84,
-                          projection.out = projections$EquidistConic)
+                          projection.in = 4326,
+                          projection.out = 'ESRI:54027')
 
 # Double check that the input center points and output polygons are ordered
 # correctly 
-cbind(breedingPos14[[1]][,1:2],
-      t(sapply(slot(breedingPolys[[1]], "polygons"),
-               function(x){ slot(x,"labpt")})))
+#cbind(breedingPos14[[1]][,1:2],
+#      t(sapply(slot(breedingPolys[[1]], "polygons"),
+#               function(x){ slot(x,"labpt")})))
 
-cbind(winteringPos14[[1]][,1:2],
-      t(sapply(slot(winteringPolys[[1]], "polygons"),
-               function(x){ slot(x,"labpt")})))
+#cbind(winteringPos14[[1]][,1:2],
+#      t(sapply(slot(winteringPolys[[1]], "polygons"),
+#               function(x){ slot(x,"labpt")})))
   
 # Simulate capture and non-breeding locations of 100 individuals #
 
@@ -1785,8 +1832,8 @@ sampleBreeding14.2 <- list(round(breedingRelN14[[1]]*nSample14.2),
 lapply(sampleBreeding14.2, matrix, nrow=10, ncol=10)
 
 # Number of simulations to run
-nSims14.2 <- 100
-nSimsLarge14.2 <- 2500
+nSims14.2 <- 10
+nSimsLarge14.2 <- 25
 nYears <- 1
 nMonths <- 1
 
@@ -1833,7 +1880,7 @@ for (i in 13) { # only run one scenario
                                            WinteringPolys[[i]], 
                                            geoBias,
                                            geoVCov,
-                                           projections$Lambert)
+                                           projection = sf::st_crs(winteringTruePoints14))
     
     animalLoc14.2 <- animalLoc14[[i]]
     
@@ -1848,20 +1895,20 @@ for (i in 13) { # only run one scenario
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
     
     originDist0 <- geosphere::distVincentyEllipsoid(
-                                     breedingTruePoints14[distIndices[,'row']],
-                                     breedingTruePoints14[distIndices[,'col']])
+                                     as(breedingTruePoints14[distIndices[,'row'],],"Spatial"),
+                                     as(breedingTruePoints14[distIndices[,'col'],],"Spatial"))
     
     originDist1[lower.tri(originDist1)] <- originDist0
     
-    target.point.sample <- sp::SpatialPoints(
-      results14.2[[sim]]$targetPointSample,
-                                             sp::CRS(projections$Lambert))
+    target.point.sample <- sf::st_as_sf(
+      data.frame(results14.2[[sim]]$targetPointSample),
+      coords = c(1,2),
+      crs = 6933)
     
-    target.point.sample2 <- sp::spTransform(target.point.sample,
-                                            sp::CRS(projections$WGS84))
+    target.point.sample2 <- sf::st_transform(target.point.sample, 4326)
     
-    targetDist0 <-geosphere::distGeo(target.point.sample2[distIndices[,'row']],
-                                     target.point.sample2[distIndices[,'col']])
+    targetDist0 <-geosphere::distGeo(as(target.point.sample2[distIndices[,'row'],],"Spatial"),
+                                     as(target.point.sample2[distIndices[,'col'],],"Spatial"))
     
     targetDist1[lower.tri(targetDist1)] <- targetDist0
     
@@ -1899,11 +1946,11 @@ sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, T)]
 for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
  for (i in 13) {
-  points0 <- sp::SpatialPoints(results14.2[[sim]]$targetPointSample,
-                                sp::CRS(projections$Lambert))
+  points0 <- sf::st_as_sf(data.frame(results14.2[[sim]]$targetPointSample),
+                          coords=c("X1","X2"),
+                          crs = 6933)
     
-  points1 <- sp::spTransform(points0, 
-                              sp::CRS(projections$EquidistConic))
+  points1 <- sf::st_transform(points0, crs = "ESRI:54027")
     
   animalLoc14[[sim]] <- changeLocations(
     sim14.2.sub[[sim]][[scenarioToSampleMap14[i]]]$animalLoc,
@@ -1923,7 +1970,8 @@ for (sim in 1:nSims14.2) {
                             geoBias = geoBias,
                             geoVCov = geoVCov,
                             isGL = T,
-                            targetSites = winteringPolys2[[i]])
+                            targetSites = winteringPolys2[[i]], 
+                            maintainLegacyOutput = TRUE)
   
     est14.2.array[sim, 'MC'] <- results14[[sim]]$meanMC
     

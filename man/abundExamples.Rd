@@ -12,7 +12,7 @@ abundExamples
 }
 \description{
 A dataset containing mcmc relative abundance estimates from simulated
-BBS-type data from Cohen et al. (in press). Each estimate can
+BBS-type data from Cohen et al. (2018). Each estimate can
 be used in \code{estMC} function to estimate MC with uncertainty.
 }
 \keyword{datasets}

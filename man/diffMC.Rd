@@ -53,6 +53,7 @@ independent (e.g., different species).
 }
 \examples{
 \dontrun{
+data('OVENdata')
 ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
@@ -93,6 +94,6 @@ diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
 }
 \references{
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 }

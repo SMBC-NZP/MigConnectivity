@@ -1,60 +1,199 @@
-#' @import stats
-
 ###############################################################################
-# Estimate MC from abundance and transition probability estimates.
-###############################################################################
-estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
-                          sampleSize = NULL,
-                          originSites=NULL, targetSites=NULL,
-                          nSamples = 1000, row0 = 0, verbose=0,
-                          alpha = 0.05,
-                          approxSigTest = F, sigConst = 0) {
-  nOrigin <- nrow(originDist)
-  nTarget <- nrow(targetDist)
+#' Estimate MC, migratory connectivity strength
+#'
+#' Resampling of uncertainty for MC (migratory connectivity strength)
+#' from estimates of psi (transition probabilities) and/or relative abundance.
+#' Psi estimates can come from an estMigConnectivity object, an RMark psi
+#' matrix, MCMC samples, or other samples expressed in array form.
+#' Abundance estimates for each origin site can be
+#' either just point estimates (no uncertainty propagated) or MCMC samples.
+#' Other inputs include distances between origin sites, distances between target
+#' sites, and sample size used to estimate psi.
+#'
+#'
+#' @param originDist Distances between the B origin sites. Symmetric B by B
+#'  matrix
+#' @param targetDist Distances between the W target sites. Symmetric W by W
+#'  matrix
+#' @param originRelAbund Relative abundance estimates at B origin sites. Either
+#'  a numeric vector of length B that sums to 1 or an mcmc object with at least
+#'  \code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'
+#' @param psi Transition probabilities between B origin and W target sites.
+#'  Either a matrix with B rows and W columns where rows sum to 1, an array with
+#'  dimensions x, B, and W (with x samples of the transition probability matrix
+#'  from another model), an 'estPsi' object (result of calling estTransition),
+#'  or a MARK object with estimates of transition probabilities
+#' @param sampleSize Total sample size of animals that psi will be estimated
+#'  from. Should be the number of animals released in one of the origin sites
+#'  and observed in one of the target sites (or vice-versa). Optional, but
+#'  recommended, unless psi is an estPsi object (in which case this function can
+#'  pull it from there)
+#' @param originSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are origin
+#' @param targetSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are target
+#' @param originNames Optional. Vector of names for the origin sites. Mostly for
+#'  internal use
+#' @param targetNames Optional. Vector of names for the target sites. Mostly for
+#'  internal use
+#' @param nSamples Number of times to resample \code{psi} and/or
+#'  \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
+#'  higher values here will do so with more precision
+#' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
+#'  to 0 (default) or any greater integer to specify where to stop ignoring
+#'  samples ("burn-in")
+#' @param verbose 0 (default) to 2. 0 prints no output during run. 1 prints
+#'  a progress update and summary every 100 samples. 2 prints a
+#'  progress update and summary every sample
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95 percent CI
+#' @param approxSigTest Should function compute approximate one-sided
+#'  significance tests (p-values) for MC from the resampling? Default is
+#'  FALSE
+#' @param sigConst Value to compare MC to in significance test. Default is 0
+#' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
+#'  updated the structure of the estimates. If you have legacy code that refers
+#'  to elements within an \code{estMigConnectivity} object (results of
+#'  \code{estMC}), you can set this to TRUE to also keep the old structure.
+#'  Defaults to FALSE
+#'
+#' @return \code{estMC} returns a list with the elements:
+#' \describe{
+#'   \item{\code{MC}}{List containing estimates of migratory connectivity
+#'    strength:
+#'    \itemize{
+#'      \item{\code{sample}} \code{nSamples} sampled values for
+#'       MC. Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Mean of \code{MC$sample}. Main estimate of MC,
+#'       incorporating parametric uncertainty.
+#'      \item{\code{se}} Standard error of MC, estimated from SD of
+#'       \code{MC$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       MC, estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'       \code{MC$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'       for MC. May be preferable to \code{MC$simpleCI} when \code{MC$mean} is
+#'       the best estimate of MC. \code{MC$simpleCI} is preferred when
+#'       \code{MC$median} is a better estimator. When \code{MC$mean==MC$median},
+#'       these should be identical.  Estimated as the
+#'       \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{MC$sample},
+#'       where z0 is the proportion of \code{MC$sample < MC$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible interval for MC,
+#'       estimated using the highest posterior density (HPD) method.
+#'      \item{\code{median}} Median of MC, alternate point estimate also
+#'       including parametric uncertainty.
+#'      \item{\code{point}} Simple point estimate of MC, using the point
+#'      estimates of \code{psi} and \code{originRelAbund} (usually the mean
+#'      values), not accounting for sampling error.
+#'      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
+#'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
+#'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+#'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+#'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+#'      \code{approxSigTest==FALSE}.
+#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
+#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+#'      than \code{simpleP}, but many of the same limitations apply.  NULL when
+#'      \code{approxSigTest==FALSE}.
+#'    }
+#'   }
+#'   \item{\code{input}}{List containing the inputs to \code{estStrength}.}
+#' }
+#'
+#' @export
+#'
+#' @seealso \code{\link{calcMC}}, \code{\link{estTransition}},
+#'   \code{\link{estMC}}, \code{\link{estMantel}},
+#'   \code{\link{plot.estMigConnectivity}}
+#' @example inst/examples/estStrengthExamples.R
+estStrength <- function(originDist, targetDist, originRelAbund, psi,
+                        sampleSize = NULL,
+                        originSites=NULL, targetSites=NULL,
+                        originNames = NULL, targetNames = NULL,
+                        nSamples = 1000, row0 = 0, verbose=0,
+                        alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
+                        maintainLegacyOutput = FALSE) {
+  nOriginSites <- nrow(originDist)
+  nTargetSites <- nrow(targetDist)
   absAbund <- !is.null(sampleSize)
   if (coda::is.mcmc(originRelAbund)) {
     abundFixed <- FALSE
-    abundParams <- paste('relN[', 1:nOrigin, ']', sep='')
+    abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
     abundBase <- colMeans(originRelAbund[row0 + 1:nSamples, abundParams])
   }
   else {
     abundFixed <- TRUE
-    if (length(originRelAbund)!=nOrigin)
+    if (length(originRelAbund)!=nOriginSites)
       stop('Number of origin sites must be constant between distance matrix and abundance')
     abundBase <- originRelAbund
   }
   if (is.matrix(psi)) {
     psiFixed <- TRUE
-    if (nrow(psi)!=nOrigin || ncol(psi)!=nTarget)
+    psiVCV <- NULL
+    if (nrow(psi)!=nOriginSites || ncol(psi)!=nTargetSites)
       stop('Size of psi matrix must be consistant with distance matrices')
     psiBase <- psi
+    psiIn <- psi
   }
-  else {
+  else if (inherits(psi, "mark")) {
     psiFixed <- FALSE
     if (!is.numeric(originSites) || !is.numeric(targetSites))
       stop('Must specify which RMark Psi parameters represent origin and target sites')
+    psiVCV <- psi$results$beta.vcv
     psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
                                                        se=TRUE))[originSites,
                                                               targetSites]
     if (any(diag(psi$results$beta.vcv) < 0))
       stop("Can't sample model, negative beta variances")
+    psiIn <- psi
+  }
+  else if (is.array(psi)) {
+    if (length(dim(psi))!=3)
+      stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
+    psiFixed <- FALSE
+    if (dim(psi)[2]!=nOriginSites || dim(psi)[3]!=nTargetSites)
+      stop('Size of psi array must be consistant with distance matrices')
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- 1:nSamples
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    psiIn <- psi
+  }
+  else if (inherits(psi, "estPsi") || inherits(psi, "estMC")) {
+    psiFixed <- FALSE
+    psiIn <- psi
+    psi <- psi$psi$sample
+    if (dim(psi)[2]!=nOriginSites || dim(psi)[3]!=nTargetSites)
+      stop('Size of psi array must be consistant with distance matrices')
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- 1:nSamples
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    if (is.null(sampleSize))
+      sampleSize <- psiIn$input$sampleSize # or wherever we put it
   }
   pointMC <- ifelse(absAbund,
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
                            psi = psiBase, sampleSize = sampleSize),
                     calcMC(originDist, targetDist, originRelAbund = abundBase,
                            psi = psiBase))
-  sampleMC <- vector('numeric', nSamples)
-  psi.array <- array(0, c(nSamples, nOrigin, nTarget))
+  sampleMC <- rep(NA, nSamples)
+  psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+                     dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nSamples) {
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat("\tSample", i, "of", nSamples, "at", date(), "\n")
     # Generate random transition probability matrices
-    # resampling from each files, 1000 samples from each of the 100 files
-    # using the estimates of psi and uncertainty from the mark file to generate a new estimate of psi
-    # choose a random psi from that interval of the distribution
     if (psiFixed)
       psiNew <- psiBase
+    else if (is.null(psiVCV))
+      psiNew <- psi[psiSamples[i],,]
     else
       psiNew <- makePsiRand(psi, originSites, targetSites)
     psi.array[i, , ] <- psiNew
@@ -69,7 +208,7 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
                                  psi = psiNew, sampleSize = sampleSize),
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
                                  psi = psiNew))
-    if (verbose > 1 || verbose == 1 && i %% 10 == 0)
+    if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat(" MC mean:", mean(sampleMC, na.rm=TRUE),
           "SD:", sd(sampleMC, na.rm=TRUE),
           "low quantile:", quantile(sampleMC, alpha/2, na.rm=TRUE),
@@ -99,21 +238,893 @@ estMCCmrAbund <- function(originDist, targetDist, originRelAbund, psi,
     if (pointMC < sigConst)
       bcP <- 1 - bcP
   }
-  return(list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
-              pointMC=pointMC, meanMC=meanMC,
-              medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
-              bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = NULL, pointCorr = NULL,
-              meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
-              simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  if (maintainLegacyOutput) {
+    mc <- list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
+                pointMC=pointMC, meanMC=meanMC,
+                medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
+                bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = NULL, pointCorr = NULL,
+                meanCorr = NULL, medianCorr = NULL, seCorr=NULL,
+                simpleCICorr=NULL, bcCICorr=NULL, inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                MC = list(sample = sampleMC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund, psi = psiIn,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0,
+                             verbose = verbose, alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             maintainLegacyOutput = TRUE))
+  }
+  else {
+    mc <- list(MC = list(sample = sampleMC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+               input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund, psi = psiIn,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0,
+                             verbose = verbose, alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             maintainLegacyOutput = FALSE))
+  }
+  class(mc) <- c("estMC", "estMigConnectivity")
+  return(mc)
+}
+
+
+estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
+                            nSamples = 1000, verbose=0,
+                            originNames = NULL, targetNames = NULL,
+                            nThin = 1, nBurnin = 5000, nChains = 3) {
+  nDim <- length(dim(reencountered))
+  if (is.null(originNames))
+    originNames <- dimnames(reencountered)[[1]]
+  if (is.null(targetNames))
+    targetNames <- dimnames(reencountered)[[nDim]]
+  nTargetSites <- dim(reencountered)[nDim]
+  nOriginSites <- dim(reencountered)[1]
+  if (nDim == 2) {
+    nAges <- 1
+    if (length(banded)!=nOriginSites)
+      stop('Number of origin sites must be constant between reencountered and banded')
+    nfound <- apply(reencountered, 1, sum)
+    sampleSize <- sum(nfound)
+    tmat <- cbind(reencountered, banded - nfound)
+    # Data
+    jags.data <- list(recmat = tmat, npop = nOriginSites,
+                      ndest = nTargetSites, nreleased = banded)
+  }
+  else {
+    nAges <- dim(banded)[2]
+    if (dim(banded)[1]!=nOriginSites)
+      stop('Number of origin sites must be consistant between reencountered and banded')
+    if (dim(reencountered)[2]!=nAges)
+      stop('Number of ages must be consistant between banded and reencountered')
+    nfound <- apply(reencountered, 1:2, sum)
+    sampleSize <- sum(nfound)
+    tmat <- array(NA, c(nOriginSites, nAges, nTargetSites + 1))
+    tmat[ , , 1:nTargetSites] <- reencountered
+    tmat[ , , 1 + nTargetSites] <- banded - nfound
+    # Data
+    jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
+                      ndest = nTargetSites, nreleased = banded)
+  }
+  # Initial values
+  jags.inits <- function()list()
+  # Parameters to monitor
+  params <- c("psi", "r")
+  print(paste0(find.package('MigConnectivity'),
+               ifelse(nAges == 1,
+                      "/JAGS/multinomial_banding_1age.txt",
+                      "/JAGS/multinomial_banding.txt")))
+  out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
+                      #"inst/JAGS/multinomial_banding_1age.txt",
+                      paste0(find.package('MigConnectivity'),
+                             ifelse(nAges == 1,
+                                    "/JAGS/multinomial_banding_1age.txt",
+                                    "/JAGS/multinomial_banding.txt")),
+                      n.chains = nChains, n.thin = nThin,
+                      n.iter = nBurnin + ceiling(nSamples * nThin / nChains),
+                      n.burnin = nBurnin, DIC = FALSE,
+                      progress.bar = ifelse(verbose==0, 'none', 'text'))
+
+  if (nChains > 1) {
+    maxRhat <- max(out$BUGSoutput$summary[, "Rhat"], na.rm = TRUE)
+    if (maxRhat < 1.1)
+      cat("Successful convergence based on Rhat values (all < 1.1).\n")
+    else
+      cat("**WARNING** Rhat values indicate convergence failure.\n")
+  }
+  psi <- out$BUGSoutput$sims.list$psi
+  dimnames(psi) <- list(NULL, originNames, targetNames)
+  meanPsi <- out$BUGSoutput$mean$psi
+  simpleCIPsi <- apply(psi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  results <- list(psi = list(sample = psi, mean = meanPsi,
+                             se = out$BUGSoutput$sd$psi,
+                             simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                             median = out$BUGSoutput$median$psi))
+  if (nAges == 1) {
+    bcCIr <- array(NA, dim = c(2, nTargetSites),
+                   dimnames = list(NULL, targetNames))
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
+                            out$BUGSoutput$mean$r[j], na.rm = T) /
+                        length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
+      bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
+                              pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                              na.rm=TRUE, type = 8, names = F)
+    }
+    colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
+      names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
+      targetNames
+    results$r <- list(sample = out$BUGSoutput$sims.list$r,
+                     mean = out$BUGSoutput$mean$r,
+                     se = out$BUGSoutput$sd$r,
+                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
+                                      probs = c(alpha/2, 1-alpha/2), type = 8),
+                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
+  }
+  else {
+    bcCIr <- array(NA, dim = c(2, nAges, nTargetSites),
+                   dimnames = list(NULL, NULL, targetNames))
+    for (i in 1:nAges) {
+      for (j in 1:nTargetSites) {
+        psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ , i, j] <
+                            out$BUGSoutput$mean$r[i, j], na.rm = T) /
+                        length(which(!is.na(out$BUGSoutput$sims.list$r[,i,j]))))
+        bcCIr[,i,j] <- quantile(out$BUGSoutput$sims.list$r[ , i, j],
+                                pnorm(2 * psi.z0 + qnorm(c(alpha/2,1-alpha/2))),
+                                na.rm=TRUE, type = 8, names = F)
+      }
+    }
+    dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
+      colnames(out$BUGSoutput$sd$r) <- colnames(out$BUGSoutput$median$r) <-
+      targetNames
+    results$r <- list(sample = out$BUGSoutput$sims.list$r,
+                     mean = out$BUGSoutput$mean$r,
+                     se = out$BUGSoutput$sd$r,
+                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2:3, quantile,
+                                      probs = c(alpha/2, 1-alpha/2), type = 8),
+                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
+  }
+  # adding this is to avoid error but needs to be checked
+  nReleased <- NA
+  results$input <- list(nReleased = nReleased, reencountered = reencountered,
+                        sampleSize = sampleSize, alpha = alpha,
+                        nSamples = nSamples, verbose=verbose,
+                        originNames = originNames, targetNames = targetNames,
+                        nThin = nThin, nBurnin = nBurnin, nChains = nChains)
+  results$BUGSoutput <- out$BUGSoutput
+  return(results)
+}
+
+estTransitionBoot <- function(originSites = NULL,
+                              targetSites = NULL,
+                              originPoints = NULL,
+                              targetPoints = NULL,
+                              originAssignment = NULL,
+                              targetAssignment = NULL,
+                              originNames = NULL,
+                              targetNames = NULL,
+                              nBoot = 1000,
+                              isGL = FALSE,
+                              isTelemetry = FALSE,
+                              isRaster = FALSE,
+                              isProb = FALSE,
+                              captured = "origin",
+                              geoBias = NULL,
+                              geoVCov = NULL,
+                              geoBiasOrigin = NULL,
+                              geoVCovOrigin = NULL,
+                              targetRaster = NULL,
+                              originRaster = NULL,
+                              verbose = 0,
+                              alpha = 0.05,
+                              resampleProjection = 'ESRI:102010',#MigConnectivity::projections$EquidistConic,
+                              nSim = ifelse(any(isRaster), 10, 1000),
+                              maxTries = 300) {
+  # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
+  # CONTINAS- isotope assignment
+  # COULD ALSO BE A GENETIC RASTER OR A COMBINATION #
+
+  # ORIGIN RASTER NEEDS WORK
+  # Input checking and assignment
+  if (any(captured != "origin" & captured != "target" & captured != "neither")){
+    stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
+  if (!(verbose %in% 0:3)){
+    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
+  if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if ((is.null(originPoints) && is.null(originRaster) || is.null(originSites)) && is.null(originAssignment)){
+    stop("Need to define either originAssignment or originSites and originRaster or originPoints")}
+  if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) && is.null(targetAssignment)){
+    stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")}
+  if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
+  if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
+
+# if targetRaster is NULL #
+  if (is.null(targetRaster)){
+    targetPointsAssigned <- FALSE
+    targetSingleCell <- NULL
+    targetRasterXYZ <- NULL
+  }else{
+    if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
+      targetRasterXYZ <- raster::rasterToPoints(targetRaster)
+      targetSingleCell <- NULL
+      targetPointsAssigned <- FALSE
+    }else{if (inherits(targetRaster, "isoAssign")) {
+      targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
+                                  is.na(targetRaster$SingleCell))
+      targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
+      targetSingleCell <- targetRaster$SingleCell
+    }else {
+      stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
+    }
+  }
+
+  if (is.null(originRaster)){
+    originPointsAssigned <- FALSE
+    originSingleCell <- NULL
+    originRasterXYZ <- NULL
+  }else {
+    if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
+      originRasterXYZ <- raster::rasterToPoints(originRaster)
+      originSingleCell <- NULL
+      originPointsAssigned <- FALSE
+    }else { if (inherits(originRaster, "isoAssign")) {
+      originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
+                                  is.na(originRaster$SingleCell))
+      originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
+      originSingleCell <- originRaster$SingleCell
+    }
+    else {
+      stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
+    }
+  }
+
+  nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
+                  length(isTelemetry), length(isRaster), length(isProb),
+                  min(length(targetAssignment), dim(targetAssignment)[1]),
+                  min(length(originAssignment), dim(originAssignment)[1]),
+                  ifelse(is.null(targetRaster), 0,
+                         ifelse(targetPointsAssigned, dim(targetSingleCell)[3],
+                         dim(targetRasterXYZ)[2] - 2)),
+                  ifelse(is.null(originRaster), 0,
+                         ifelse(originPointsAssigned, dim(originSingleCell)[3],
+                                dim(originRasterXYZ)[2] - 2)),
+                  length(captured))
+
+  if (length(isGL)==1){isGL <- rep(isGL, nAnimals)}
+  if (length(isTelemetry)==1){isTelemetry <- rep(isTelemetry, nAnimals)}
+  if (length(isRaster)==1){isRaster <- rep(isRaster, nAnimals)}
+  if (length(isProb)==1){isProb <- rep(isProb, nAnimals)}
+  if (length(captured)==1){captured <- rep(captured, nAnimals)}
+  if(inherits(originSites,"SpatialPolygonsDataFrame")){
+    originSites <- sf::st_as_sf(originSites)}
+    #originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
+  if(inherits(targetSites,"SpatialPolygonsDataFrame")){
+    targetSites <- sf::st_as_sf(targetSites)}
+    #targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
+
+
+  # IF originAssignment is NULL - we need to generate originAssignments from
+  # the data provided
+  if (is.null(originAssignment)){
+    # if geolocator, telemetry and captured in origin then simply get the origin site
+    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
+      if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
+        # project if needed
+        originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
+      }
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                          y = originSites,
+                                                          sparse = TRUE)))
+    # if raster and not captured in origin sites then determine the origin site
+    }else if (all(isRaster & captured != "origin")) {
+      # if isRaster == TRUE and captured != origin
+      # WEIGHTED XY COORDIANTES FROM THE RASTER
+      # get geographically weighted median value
+      xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
+                            MARGIN = 2,
+                            FUN = function(x){
+                        # xy <-cbind(weighted.mean(originRasterXYZ[,1], w = x, na.rm = TRUE),
+                        #           weighted.mean(originRasterXYZ[,2], w = x, na.rm = TRUE))
+                  #select the cell with the highest posterior probability #
+                              xy <- cbind(originRasterXYZ[which.max(x)[1],1],
+                                          originRasterXYZ[which.max(x)[1],2])
+                        return(xy)})
+      # returns a point estimate for each bird - turn it into a sf object
+      xyOriginRast <- t(xyOriginRast)
+      colnames(xyOriginRast) <- c("x","y")
+      # right now the assignment CRS is WGS84 - should be the same as the origin raster
+      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
+      # transform to match originSites
+      originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
+                                            y = originSites,
+                                            sparse = TRUE)))
+    }   # originAssignment <- what # need point assignment for raster (mean location?)
+    else
+      # originAssignment <- what # points over where we have them, raster assignment otherwise
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                                 y = originSites,
+                                                                sparse = TRUE)))
+    originAssignment[lengths(originAssignment)==0] <- NA
+    if (any(lengths(originAssignment)>1))
+      stop("Overlapping originSites not allowed\n")
+    originAssignment <- array(unlist(originAssignment))
+  }
+
+
+  if (is.null(targetAssignment)){
+    if (all(isGL | isTelemetry | captured != "origin")) {
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                    y = targetSites,
+                                                    sparse = TRUE)))
+    }
+    else if (all(isRaster & captured != "target")){
+      #targetAssignment <- what # need point assignment for raster (mean location?)
+      xyTargetRast <- apply(targetRasterXYZ[,3:ncol(targetRasterXYZ)],
+                          MARGIN = 2,
+                          FUN = function(x){
+                            #xy <-cbind(Hmisc::wtd.quantile(targetRasterXYZ[,1],probs = 0.5, weight = x, na.rm = TRUE),
+                            #           Hmisc::wtd.quantile(targetRasterXYZ[,2],probs = 0.5, weight = x, na.rm = TRUE))
+                            # xy <- cbind(weighted.mean(targetRasterXYZ[,1], w = x, na.rm = TRUE),
+                            #            weighted.mean(targetRasterXYZ[,2], w = x, na.rm = TRUE))
+                  # Select cell with the maximum posterior probability #
+                            xy <- cbind(targetRasterXYZ[which.max(x)[1],1],
+                                        targetRasterXYZ[which.max(x)[1],2])
+                            return(xy)})
+      # returns a point estimate for each bird - turn it into a sf object
+      xyTargetRast <- t(xyTargetRast)
+      colnames(xyTargetRast) <- c("x","y")
+      # right now the assignment CRS is WGS84 - should be the same as the origin raster
+      targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+      # transform to match originSites
+      targetSites_wgs <- sf::st_transform(targetSites, 4326)
+      #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
+      #targetAssignment <- suppressMessages(array(unlist(unclass(sf::st_intersects(x = targetAssignRast,
+      #                                                           y = targetSites_wgs,
+      #                                                           sparse = TRUE)))))
+      # Check which points are in target sites
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetAssignRast,
+                                                      y = targetSites_wgs,
+                                                      sparse = TRUE)))
+
+    # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
+    # IF INTERSECTS IS (empty)
+   }else
+   #   targetAssignment <- what # points over where we have them, raster assignment otherwise
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                        y = targetSites,
+                                                        sparse = TRUE)))
+   targetAssignment[lengths(targetAssignment)==0] <- NA
+   if (any(lengths(targetAssignment)>1))
+     stop("Overlapping targetSites not allowed\n")
+   targetAssignment <- array(unlist(targetAssignment))
+  }
+  if(is.null(originSites)){
+  nOriginSites <- ncol(originAssignment)}else{
+  nOriginSites <- nrow(originSites)}
+
+  if(is.null(targetSites)){
+  nTargetSites <- ncol(targetAssignment)}else{
+  nTargetSites <- nrow(targetSites)}
+  # if (length(targetPoints)!=nAnimals &&
+  #     dim(targetAssignment)[length(dim(targetAssignment))]!=nAnimals ||
+  #     nrow(originAssignment)!=nAnimals)
+  #   stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
+  # if (any(is.na(originAssignment)))
+  #   stop("NAs in origin sites (make sure all points fall within polygons)")
+  if(!is.null(originPoints) && is.na(sf::st_crs(originPoints)))
+    stop('Coordinate system definition needed for originPoints')
+  if(!is.null(originSites) && is.na(sf::st_crs(originSites)))
+    stop('Coordinate system definition needed for originSites')
+  if(!is.null(targetPoints) && is.na(sf::st_crs(targetPoints))){
+    stop('Coordinate system definition needed for targetPoints')
+  }
+  if(!is.null(targetSites) && is.na(sf::st_crs(targetSites))){
+    stop('Coordinate system definition needed for targetSites')
+  }
+  if(!is.null(targetPoints)){
+    targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)}
+  if(!is.null(targetSites)){
+    targetSites <- sf::st_transform(targetSites, crs = resampleProjection)}
+  if(!is.null(originPoints)){
+    originPoints <- sf::st_transform(originPoints, crs = resampleProjection)}
+  if(!is.null(originSites)){
+    originSites <- sf::st_transform(originSites, crs = resampleProjection)}
+  # Names - this isn't going to work as currently written for sf objects #
+  if (is.null(targetNames)){
+    # if (is.null(targetSites[[1]]) || anyDuplicated(targetSites[[1]])){
+    #   targetNames <- as.character(1:nTargetSites)}else{
+    targetNames <- as.character(1:nTargetSites)
+  }
+
+  if (is.null(originNames)){
+#    if (is.null(originSites[[1]]) || anyDuplicated(originSites[[1]])){
+    if (nOriginSites > 26){
+      originNames <- as.character(1:nOriginSites)
+    }else{
+      originNames <- LETTERS[1:nOriginSites]}
+    # }else{
+    #   originNames <- 1:nOriginSites
+    # }
+  }
+
+  targetPointsInSites <- FALSE
+
+  if (targetPointsAssigned && !is.null(targetSites)) {
+    if (verbose > 0){
+      cat('Checking if single cell target points in targetSites, may take a moment\n')}
+    targetPointSample2 <- apply(targetSingleCell,
+                                FUN = function(x){sf::st_as_sf(data.frame(x),
+                                                               coords = c("Longitude", "Latitude"),
+                                                               crs = 4326)},
+                                MARGIN = 3)
+    if(!sf::st_crs(targetSites)==sf::st_crs(targetPointSample2[[1]])){
+      targetPointSample2 <- sapply(targetPointSample2, sf::st_transform, crs = resampleProjection)
+    }
+
+    targetCon <- sapply(targetPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites,
+                                           sparse = TRUE))))})
+
+    if (!any(is.na(targetCon)))
+      pointsInSites <- TRUE
+    else if (verbose > 0)
+      cat('Single cell target points supplied, but some points (proportion',
+          format(sum(is.na(targetCon))/length(targetCon), digits = 2), ') not in targetSites\n')
+  }else {targetCon <- NULL}
+
+  originPointsInSites <- FALSE
+  if (originPointsAssigned && !is.null(originSites)) {
+    if (verbose > 0)
+      cat('Checking if single cell origin points in originSites, may take a moment\n')
+    nSamples <- dim(originSingleCell)[1]
+    originPointSample2 <- apply(originSingleCell,
+                                FUN = function(x){sf::st_as_sf(data.frame(x),
+                                                               coords = c("Longitude", "Latitude"),
+                                                               crs = 4326)},
+                                MARGIN = 3)
+    if(!sf::st_crs(originSites)==sf::st_crs(originPointSample2[[1]])){
+      originPointSample2 <- sapply(originPointSample2, sf::st_transform,
+                                   crs = resampleProjection)
+    }
+
+    originCon <- sapply(originPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
+                                           sparse = TRUE))))})
+
+    if (!any(is.na(originCon)))
+      pointsInSites <- TRUE
+    else if (verbose > 0){
+      cat('Single cell origin points supplied, but some points (proportion',
+          sum(is.na(originCon))/length(originCon), ') not in originSites\n')
+    }
+  }else{
+    originCon <- NULL
+  }
+
+
+  sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
+                                    dimnames = list(1:nBoot, originNames,
+                                                    #targetNames))
+                                                    NULL))
+  if (is.null(dim(originAssignment))){
+    originAssignment <- array(originAssignment)}
+  if (is.null(dim(targetAssignment))){
+    targetAssignment <- array(targetAssignment)}
+
+
+
+  if (length(dim(originAssignment))==2){
+    pointOriginAssignment <- apply(originAssignment, 1, which.max)
+  }
+  else{
+    pointOriginAssignment <- as.vector(originAssignment)
+  }
+  if (length(dim(targetAssignment))==2){
+    pointTargetAssignment <- apply(targetAssignment, 1, which.max)
+  }
+  else{
+    pointTargetAssignment <- as.vector(targetAssignment)
+  }
+  if (length(pointTargetAssignment) == length(pointOriginAssignment)) {
+   pointSites <- table(pointOriginAssignment, pointTargetAssignment)
+
+   pointPsi <- prop.table(pointSites, 1)
+  }
+  else {
+    pointPsi <- NULL
+  }
+  boot <- 1
+  while (boot <= nBoot) {
+    if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
+      cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
+    # Make sure have animals from every origin site
+    origin.sample <- 'Filler' # Start with one origin site
+    while (length(unique(origin.sample)) < nOriginSites) { #2
+      # Sample individual animals with replacement
+      animal.sample <- sample.int(nAnimals, replace=TRUE)
+      if (any(captured[animal.sample]!='origin')) {
+        if (length(dim(originAssignment))==2)
+          assignment <- originAssignment[animal.sample, , drop = FALSE]
+        else
+          assignment <- originAssignment[animal.sample, drop = FALSE]
+        oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
+                           isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
+                           isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),
+                           isTelemetry = (isTelemetry[animal.sample] | captured[animal.sample]=='origin'),
+                           geoBias = geoBiasOrigin,
+                           geoVCov = geoVCovOrigin,
+                           points = originPoints[animal.sample, ],
+                           matvals = originRasterXYZ[, c(1:2, animal.sample + 2)],
+                           singleCell = originSingleCell[,,animal.sample],
+                           overlap1 = originCon[,animal.sample],
+                           pointsInSites = originPointsInSites,
+                           assignment = assignment,
+                           sites = originSites,
+                           resampleProjection = resampleProjection,
+                           nSim = nSim,
+                           maxTries = maxTries)
+        #origin.point.sample <- oSamp$target.point.sample
+        origin.sample <- oSamp$site.sample
+        if (verbose > 2)
+          cat(' ', oSamp$draws, 'origin draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+      }
+      else {
+        # Get origin population for each animal sampled
+        origin.sample <- pointOriginAssignment[animal.sample]
+      }
+    }
+    if (any(captured[animal.sample]!="target")) {
+      if (length(dim(targetAssignment))==2)
+        assignment <- targetAssignment[animal.sample, , drop = FALSE]
+      else
+        assignment <- targetAssignment[animal.sample, drop = FALSE]
+      # DOUBLE CHECK ARGUMENTS MATCH CURRENTY LOCSAMPLE
+      tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
+                         isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
+                         isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
+                         isTelemetry = (isTelemetry[animal.sample] | captured[animal.sample] == "target"),
+                         geoBias = geoBias, geoVCov = geoVCov,
+                         points = targetPoints[animal.sample, ],
+                         matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
+                         singleCell = targetSingleCell[,,animal.sample],
+                         pointsInSites = targetPointsInSites,
+                         overlap1 = targetCon[, animal.sample],
+                         sites = targetSites,
+                         assignment = assignment,
+                         resampleProjection = resampleProjection, nSim = nSim,
+                         maxTries = maxTries)
+      target.sample <- tSamp$site.sample
+      #target.point.sample <- tSamp$target.point.sample
+      if (verbose > 2)
+        cat(' ', tSamp$draws, 'target draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+    }
+    else {
+      # Get target population for each animal sampled
+      target.sample <- pointTargetAssignment[animal.sample]
+    }
+    # Now that we have breeding and non-breeding site for point, add to transition count matrix
+    sites <- table(origin.sample, target.sample)
+    sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
+    # Create psi matrix as proportion of those from each breeding site that went to each NB site
+    psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
+    boot <- boot + 1
+  }
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                         simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                         median = medianPsi, point = pointPsi),
+              r = NULL,
+              input = list(sampleSize = nAnimals, originSites = originSites,
+                           targetSites = targetSites,
+                           originPoints = originPoints,
+                           targetPoints = targetPoints,
+                           originAssignment = originAssignment,
+                           targetAssignment = targetAssignment,
+                           originNames = originNames,
+                           targetNames = targetNames,
+                           nSamples = nBoot,
+                           isGL=isGL, isTelemetry = isTelemetry,
+                           isRaster = isRaster, isProb = isProb,
+                           captured = captured,
+                           geoBias=geoBias, geoVCov=geoVCov,
+                           geoBiasOrigin = geoBiasOrigin,
+                           geoVCovOrigin = geoVCovOrigin,
+                           targetRaster = targetRaster,
+                           originRaster = originRaster,
+                           verbose = verbose,
+                           alpha = alpha,
+                           resampleProjection = resampleProjection,
+                           nSim = nSim, maxTries = maxTries),
+              BUGSoutput = NULL))
+}
+
+#' Estimate psi (transition probabilities between locations in two phases of
+#' the annual cycle)
+#'
+#' Estimation and resampling of uncertainty for psi (transition probabilities
+#' between origin sites in one phase of the annual cycle and target sites in
+#' another for migratory animals). Data can be from geolocators (GL) and/or
+#' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
+#' band/ring reencounter data.
+#'
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.
+#' @param originPoints A \code{sf} or \code{SpatialPoints} object, with number
+#'  of rows or length being the number of animals tracked. Each point indicates
+#'  the origin location of an animal (or point estimate of same, for GL animals
+#'  released on target sites). Note that to simplify input of multiple
+#'  data types both between and for the same animal, if origin points are
+#'  provided for any animal, they must be provided for all (can be dummy values)
+#' @param targetPoints For GL or telemetry data, a \code{sf} or
+#'  \code{SpatialPoints} object, with length or number of rows number of animals
+#'  tracked. Each point indicates the point estimate location of an animal in
+#'  the target season. Note that to simplify input of multiple
+#'  data types both between and for the same animal, if target points are
+#'  provided for any animal, they must be provided for all (can be dummy values)
+#' @param originAssignment Assignment of animals to origin season sites. Either
+#'  an integer vector with length number of animals tracked or a matrix of
+#'  probabilities with number of animals tracked rows and number of origin sites
+#'  columns (and rows summing to 1). The latter only applies to animals released
+#'  in the target sites where there is uncertainty about their origin site, for
+#'  example from genetic population estimates from the rubias package.
+#'  Optional, but some combination of these inputs should be defined. Note that
+#'  if \code{originAssignment} is a probability table, animals with known origin
+#'  sites can have 1 in that column and 0s in all others
+#' @param targetAssignment Assignment of animals to target season sites. Either
+#'  an integer vector with length number of animals tracked or a matrix of
+#'  probabilities with number of animals tracked rows and number of target sites
+#'  columns (and rows summing to 1). The latter only applies to animals released
+#'  in the origin sites where there is uncertainty about their target site, for
+#'  example from genetic population estimates from the rubias package.
+#'  Optional, but some combination of these inputs needs to be defined. Note
+#'  that if \code{targetAssignment} is a probability table, animals with known
+#'  target sites can have 1 in that column and 0s in all others
+#' @param originNames Optional, but recommended to keep track. Vector of names
+#'  for the origin sites. If not provided, the function will either try to get
+#'  these from another input or provide default names (capital letters)
+#' @param targetNames Optional, but recommended to keep track. Vector of names
+#'  for the target sites. If not provided, the function will either try to get
+#'  these from another input or provide default names (numbers)
+#' @param nSamples Number of post-burn-in MCMC samples to store (band
+#'  data) OR number of bootstrap runs for GL, telemetry, probability assignment,
+#'  and/or raster data. In the latter case, animals are sampled with replacement
+#'  for each. For all, the purpose is to estimate sampling uncertainty
+#' @param isGL Indicates whether or which animals were tracked with geolocators.
+#'  Should be either single TRUE or FALSE value, or vector with length of
+#'  number of animals tracked, with TRUE or FALSE for each animal in data. For
+#'  TRUE animals, the model applies \code{geoBias} and \code{geoVCov} to
+#'  \code{targetPoints} where \code{captured} == "origin" or "neither" and
+#'  \code{geoBiasOrigin} and \code{geoVCovOrigin} to
+#'  \code{originPoints} where \code{captured} == "target" or "neither"
+#' @param isTelemetry Indicates whether or which animals were tracked with
+#'  telemetry/GPS (no location uncertainty on either end).
+#'  Should be either single TRUE or FALSE value, or vector with length of
+#'  number of animals tracked, with TRUE or FALSE for each animal in data
+#' @param isRaster Indicates whether or which animals were tracked with
+#'  intrinsic markers (e.g., genetics or isotopes), with location uncertainty
+#'  expressed as a raster of probabilities by grid cells, either in
+#'  \code{targetRaster} or \code{originRaster}. Should be either single TRUE or
+#'  FALSE value, or vector with length of number of animals tracked, with TRUE
+#'  or FALSE for each animal in data
+#' @param isProb Indicates whether or which animals were tracked with
+#'  intrinsic markers (e.g., genetics or isotopes), with location uncertainty
+#'  expressed as a probability table, either in \code{targetAssignment} or
+#'  \code{originAssignment}. Should be either single TRUE or FALSE value, or vector
+#'  with length of number of animals tracked, with TRUE or FALSE for each animal
+#'  in data
+#' @param captured Indicates whether or which animals were captured in the
+#'  origin sites, the target sites, or neither (another phase of the annual
+#'  cycle). Location uncertainty will only be applied where the animal was not
+#'  captured. So this doesn't matter for telemetry data, and is assumed to be
+#'  "origin" for band return data. Should be either single "origin" (default),
+#'  "target", or "neither" value, or a character vector with length of number of
+#'  animals tracked, with "origin", "target", or "neither" for each animal
+#' @param geoBias For GL data, vector of length 2 indicating expected bias
+#'  in longitude and latitude of \code{targetPoints}, in
+#'  \code{resampleProjection} units (default meters)
+#' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
+#'    in longitude and latitude of \code{targetPoints}, in
+#'    \code{resampleProjection} units (default meters)
+#' @param geoBiasOrigin For GL data where \code{captured}!="origin", vector of
+#'  length 2 indicating expected bias in longitude and latitude of
+#'  \code{originPoints}, in
+#'  \code{resampleProjection} units (default meters)
+#' @param geoVCovOrigin For GL data where \code{captured}!="origin", 2x2 matrix
+#'  with expected variance/covariance in longitude and latitude of
+#'  \code{targetPoints}, in \code{resampleProjection} units (default meters)
+#' @param targetRaster For intrinsic tracking data, the results of
+#'  \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+#'  class \code{RasterBrick}/\code{RasterStack}, for example from the package
+#'  \code{assignR}. In any case, it expresses location uncertainty on target
+#'  range, through a raster of probabilities by grid cells
+#' @param originRaster For intrinsic tracking data, the results of
+#'  \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+#'  class \code{RasterBrick}/\code{RasterStack}, for example from the package
+#'  \code{assignR}. In any case, it expresses location uncertainty on origin
+#'  range, through a raster of probabilities by grid cells
+#' @param banded For band return data, a vector or matrix of the number of
+#'  released animals from each origin site (including those never reencountered
+#'  in a target site). If a matrix, the second dimension is taken as the number
+#'  of age classes of released animals; the model estimates reencounter
+#'  probability by age class but assumes transition probabilities are the same
+#' @param reencountered For band return data, either a matrix with B rows and W
+#'  columns or a B x [number of ages] x W array. Number of animals reencountered
+#'  on each target site (by age class banded as) by origin site they came from
+#' @param verbose 0 (default) to 3. 0 prints no output during run (except on
+#'  convergence for banding data). 1 prints an update every 100 samples or
+#'  bootstraps (or a status bar for banding data).  2 prints an update
+#'  every sample or bootstrap. 3 also prints the number of
+#'  draws (for tuning nSim for GL/intrinsic data only)
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95 percent CI
+#' @param resampleProjection Projection when sampling from location uncertainty.
+#'  Default is Equidistant Conic. The default setting preserves distances
+#'  around latitude = 0 and longitude = 0. Other projections may work well,
+#'  depending on the location of sites. Ignored unless data are geolocator,
+#'  telemetry, or intrinsic
+#' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
+#'  speed; 1000 seems to work well with our GL data and 10 for our intrinsic
+#'  data, but your results may vary. For data combinations, we put the default
+#'  higher (5000) to allow for more data conflicts. Should be integer > 0
+#' @param maxTries Maximum number of times to run a single GL/intrinsic
+#'  bootstrap before exiting with an error. Default is 300; you may want to make
+#'  a little higher if your nSim is low and nSamples is high. Set to NULL to
+#'  never stop. This parameter was added to prevent setups where some
+#'  sample points never land on target sites from running indefinitely
+#' @param nBurnin For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of burn-in
+#'  samples before beginning to store results. Default 5000
+#' @param nChains For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the number of MCMC
+#'  chains (to test for convergence). Default 3
+#' @param nThin For band return data, \code{estTransition} runs a \code{JAGS}
+#'  multinomial non-Markovian model, for which it needs the thinning rate.
+#'  Default 1
+#'
+#' @return \code{estTransition} returns a list with the elements:
+#' \describe{
+#'   \item{\code{psi}}{List containing estimates of transition probabilities:
+#'   \itemize{
+#'    \item{\code{sample}} Array of sampled values for psi. \code{nSamples} x
+#'      [number of origin sites] x [number of target sites]. Provided to allow
+#'      the user to compute own summary statistics.
+#'    \item{\code{mean}} Main estimate of psi matrix. [number of origin sites]
+#'      x [number of target sites].
+#'    \item{\code{se}} Standard error of psi, estimated from SD of
+#'      \code{psi$sample}.
+#'    \item{\code{simpleCI}} \code{1 - alpha} confidence interval for psi,
+#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'      \code{psi$sample}.
+#'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'      for psi. May be preferable to \code{simpleCI} when \code{mean} is the
+#'      best estimate of psi. \code{simpleCI} is preferred when
+#'      \code{median} is a better estimator. When \code{meanMC==medianMC},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
+#'      where z0 is the proportion of \code{sample < mean}.
+#'    \item{\code{median}} Median estimate of psi matrix.
+#'    \item{\code{point}} Simple point estimate of psi matrix, not accounting
+#'      for sampling error.
+#'   }
+#'   }
+#'   \item{\code{r}}{List containing estimates of reencounter probabilities at
+#'    each target site. NULL except when using direct band/ring reencounter
+#'    data.}
+#'   \item{\code{input}}{List containing the inputs to \code{estTransition}.}
+#'   \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
+#'    when using direct band/ring reencounter data.}
+#' }
+#'
+#' @export
+#'
+#' @seealso \code{\link{estStrength}}, \code{\link{plot.estMigConnectivity}},
+#'   \code{\link{estMC}}, \code{\link{estMantel}}
+#'
+#' @example inst/examples/estTransitionExamples.R
+estTransition <- function(originSites = NULL, targetSites = NULL,
+                          originPoints = NULL, targetPoints = NULL,
+                          originAssignment = NULL, targetAssignment = NULL,
+                          originNames = NULL, targetNames = NULL,
+                          nSamples = 1000, isGL = FALSE, isTelemetry = FALSE,
+                          isRaster = FALSE, isProb = FALSE,
+                          captured = "origin", geoBias = NULL, geoVCov = NULL,
+                          geoBiasOrigin = NULL, geoVCovOrigin = NULL,
+                          targetRaster = NULL, originRaster = NULL,
+                          banded = NULL, reencountered = NULL,
+                          verbose = 0, alpha = 0.05,
+                          resampleProjection = 'ESRI:102010',
+                          nSim = ifelse(any(isRaster & isGL) ||
+                                          any(isRaster & isProb) ||
+                                          any(isGL & isProb), 5000,
+                                        ifelse(any(isGL), 1000,
+                                               ifelse(any(isRaster), 10, 1))),
+                          maxTries = 300,
+                          nBurnin = 5000, nChains = 3, nThin = 1) {
+  if (is.null(banded)) {
+    psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
+                             isRaster = isRaster, isProb = isProb,
+                             geoBias=geoBias, geoVCov=geoVCov,
+                             geoBiasOrigin = geoBiasOrigin,
+                             geoVCovOrigin=geoVCovOrigin,
+                             targetPoints=targetPoints, targetSites=targetSites,
+                     targetAssignment=targetAssignment,
+                     originPoints=originPoints, originSites=originSites,
+                     originAssignment=originAssignment,
+                     originNames=originNames, targetNames=targetNames,
+                     targetRaster = targetRaster, originRaster = originRaster,
+                     captured = captured,
+                     nBoot = nSamples, verbose=verbose,
+                     nSim = nSim, alpha = alpha,
+                     resampleProjection = resampleProjection,
+                     maxTries = maxTries)
+  }
+  else {
+    psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
+                         alpha = alpha,
+                         nSamples = nSamples, verbose = verbose,
+                         originNames = originNames, targetNames = targetNames,
+                         nBurnin = nBurnin, nThin = nThin, nChains = nChains)
+  }
+  class(psi) <- c("estPsi", "estMigConnectivity")
+  return(psi)
 }
 
 ###############################################################################
 # Resampling of uncertainty from geolocators and/or GPS data
 ###############################################################################
 estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
-                       geoBias, geoVCov, targetPoints, targetSites,
+                       geoBias, geoVCov,
+                       targetPoints, targetSites,
                        sampleSize = NULL,
                        targetAssignment=NULL,
                        originPoints=NULL, originSites=NULL,
@@ -121,8 +1132,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
                        approxSigTest = F, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
-                       maxTries = 300) {
+            resampleProjection = 'ESRI:102010',
+                       maxTries = 300,
+                       row0=0,
+                       maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -139,39 +1152,58 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
   if ((is.null(targetPoints) || is.null(targetSites)) &&
       is.null(targetAssignment))
     stop("Need to define either targetAssignment or targetSites and targetPoints")
-  nAnimals <- max(length(targetPoints), length(targetAssignment))
+  nAnimals <- max(nrow(targetPoints), length(targetAssignment))
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if(class(originSites)=="SpatialPolygonsDataFrame"){
-    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(class(targetSites)=="SpatialPolygonsDataFrame"){
-    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
-  if (is.null(originAssignment))
-    originAssignment <- sp::over(originPoints, originSites)
-  if (is.null(targetAssignment))
-    targetAssignment <- sp::over(targetPoints, targetSites)
-  nOriginSites <- length(unique(originAssignment))
-  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
-  if (length(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
+  if(inherits(originSites, "SpatialPolygonsDataFrame") |
+     inherits(originSites, "SpatialPolygons")){
+    originSites <- sf::st_as_sf(originSites)}
+    if(inherits(targetSites, "SpatialPolygonsDataFrame") |
+       inherits(targetSites, "SpatialPolygons")){
+         targetSites <- sf::st_as_sf(targetSites)}
+  if (is.null(originAssignment)) {
+    originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                                   y = originSites,
+                                                                   sparse = TRUE)))
+    originAssignment[lengths(originAssignment)==0] <- NA
+    if (any(lengths(originAssignment)>1))
+      stop("Overlapping originSites not allowed\n")
+    originAssignment <- unlist(originAssignment)
+  }
+  if (is.null(targetAssignment)) {
+    targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                                   y = targetSites,
+                                                                   sparse = TRUE)))
+    targetAssignment[lengths(targetAssignment)==0] <- NA
+    if (any(lengths(targetAssignment)>1))
+      stop("Overlapping targetSites not allowed\n")
+    targetAssignment <- unlist(targetAssignment)
+  }
+  nOriginSites <- ifelse(is.null(originSites), nrow(originDist),
+                         nrow(originSites))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist),
+                         nrow(targetSites))
+  if (nrow(targetPoints)!=nAnimals && length(targetAssignment)!=nAnimals ||
       length(originAssignment)!=nAnimals)
     stop("isGL should be the same length as originAssignment/originPoints and targetPoints/targetAssignment (number of animals)")
-  if (any(is.na(originAssignment)))
-    stop("NAs in origin sites (make sure all points fall within polygons)")
+  # if (any(is.na(originAssignment)))
+  #   stop("NAs in origin sites (make sure all points fall within polygons)")
   if (length(originRelAbund)!=nOriginSites || sum(originRelAbund)!=1)
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
   if(!is.null(originPoints))
-    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+    if(is.na(sf::st_crs(originPoints)) || !is.null(originSites) & is.na(sf::st_crs(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
-  if(is.na(raster::projection(targetSites)) || is.na(raster::projection(targetPoints))){
+  if(!is.null(targetSites) & is.na(sf::st_crs(targetSites)) || !is.null(targetPoints) & is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetSites & targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
-  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+  if(!is.null(targetPoints)){targetPoints <- sf::st_transform(targetPoints, resampleProjection)}
+  if(!is.null(targetSites)){targetSites <- sf::st_transform(targetSites, resampleProjection)}
   if (is.null(targetNames))
-    targetNames <- names(targetSites)
-  if (is.null(originNames))
-    originNames <- names(originSites)
+    targetNames <- as.character(1:nTargetSites)
+  if (is.null(originNames)) {
+    originNames <- LETTERS[1:nOriginSites]
+  }
   if (is.null(sampleSize))
     sampleSize <- nAnimals
   if (!identical(dim(originDist),rep(nOriginSites,2)) ||
@@ -197,7 +1229,10 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
 
   pointPsi <- prop.table(pointSites, 1)
 
-  pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
+  if (any(is.na(pointPsi)))
+    pointMC <- NA
+  else
+    pointMC <- calcMC(originDist, targetDist, originRelAbund, pointPsi,
                     sampleSize = sampleSize)
 
   if (calcCorr) {
@@ -217,9 +1252,6 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
       animal.sample <- sample.int(nAnimals, replace=TRUE)
-      # Get origin points for those animals
-      if (calcCorr)
-        origin.point.sample <- originPoints[animal.sample]
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
@@ -245,9 +1277,13 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
           "low quantile:", quantile(MC, alpha/2, na.rm=TRUE),
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
+      colnames(target.point.sample) <- c("x", "y")
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
+                                          coords = c("x","y"),
+                                          crs = resampleProjection)
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
-      corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
+      corr[boot] <- calcMantel(originDist = originDist1,
+                               targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
             "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
@@ -285,17 +1321,97 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                            na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
-  return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = pointPsi, pointMC = pointMC, meanMC = mean(MC, na.rm=TRUE),
-              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                                  type = 8, names = F),
-              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = pointCorr,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  meanMC <- mean(MC, na.rm=TRUE)
+  medianMC <- median(MC, na.rm=TRUE)
+  seMC <- sd(MC, na.rm=TRUE)
+  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = F)
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  if (maintainLegacyOutput) {
+    return(list(sampleMC=MC, samplePsi = psi.array, pointPsi = pointPsi,
+                pointMC=pointMC, meanMC=meanMC,
+                medianMC=medianMC, seMC=seMC, simpleCI=simpleCI,
+                bcCI=bcCI, hpdCI=hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = corr, pointCorr = pointCorr,
+                meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+                simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+                inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           median = medianPsi, point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            median = medianCorr, point = pointCorr),
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries, maintainLegacyOutput = TRUE)))
+  }
+  else {
+    return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           median = medianPsi, point = pointPsi),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = pointMC,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            median = medianCorr, point = pointCorr),
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
+                             row0 = row0,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             maintainLegacyOutput = FALSE)))
+  }
 }
 
 ###############################################################################
@@ -310,7 +1426,6 @@ estMCisotope <- function(targetDist=NULL,
                          targetIntrinsic,
                          targetSites = NULL,
                          sampleSize = NULL,
-                         # targetAssignment=NULL,
                          originPoints=NULL,
                          originSites=NULL,
                          originDist = NULL,
@@ -324,8 +1439,9 @@ estMCisotope <- function(targetDist=NULL,
                          alpha = 0.05,
                          approxSigTest = F,
                          sigConst = 0,
-                         resampleProjection = MigConnectivity::projections$WGS84,
-                         maxTries = 300) {
+                         resampleProjection = sf::st_crs(4326),# MigConnectivity::projections$WGS84,
+                         maxTries = 300,
+                         maintainLegacyOutput = FALSE) {
 
   # Input checking and assignment
   if (!(verbose %in% 0:3)){
@@ -342,9 +1458,13 @@ estMCisotope <- function(targetDist=NULL,
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
+     if("SpatialPolygonsDataFrame" %in% class(targetSites)){
+       targetSites <- rgeos::gUnaryUnion(targetSites, id = targetSites$targetSite)
+       targetSites <- sf::st_as_sf(targetSites)
+     }
 
   if (is.null(targetDist))
-    targetDist <- distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
+    targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites)))
 
 
   if (!inherits(targetIntrinsic, 'isoAssign'))
@@ -352,15 +1472,16 @@ estMCisotope <- function(targetDist=NULL,
 
   pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
 
-  if(class(originSites)=="SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(originSites)){
     originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(class(targetSites)=="SpatialPolygonsDataFrame"){
+  if("SpatialPolygonsDataFrame" %in% class(targetSites)){
     targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
   if (is.null(originAssignment))
-    originAssignment <- sp::over(originPoints, originSites)
+
+    originAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = originPoints, y = originSites, sparse = TRUE))))
 
   nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
-  targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+  targetSites <- sf::st_transform(targetSites, resampleProjection)
 
   if (length(originAssignment)!=nAnimals)
     stop("originAssignment/originPoints should be the same length as targetIntrinsic (number of animals)")
@@ -369,11 +1490,15 @@ estMCisotope <- function(targetDist=NULL,
   if (pointsAssigned && !is.null(targetSites)) {
     nSamples <- dim(targetIntrinsic$SingleCell)[1]
     targCon <- array(NA, c(nSamples, nAnimals))
+
     for(i in 1:nSamples) {
-      targCon[i, ] <- sp::over(sp::SpatialPoints(t(targetIntrinsic$SingleCell[i, , ]),
-                                         proj4string = sp::CRS(targetSites@proj4string@projargs)),
-                           targetSites)
+      temptargCon <- sf::st_as_sf(data.frame(t(targetIntrinsic$SingleCell[i,,])),
+                                  coords = c("Longitude","Latitude"),
+                                  crs = sf::st_crs(targetSites))
+
+      targCon[i, ] <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = temptargCon, y = targetSites, sparse = TRUE))))
     }
+
     if (!any(is.na(targCon)))
       pointsInSites <- TRUE
     else if (verbose > 0)
@@ -384,7 +1509,7 @@ estMCisotope <- function(targetDist=NULL,
     targCon <- NULL
 
   nOriginSites <- length(unique(originAssignment))
-  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), length(targetSites))
+  nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
 
 
   if (any(is.na(originAssignment)))
@@ -394,17 +1519,19 @@ estMCisotope <- function(targetDist=NULL,
     stop('originRelAbund should be vector with length number of origin sites that sums to 1')
 
   if(!is.null(originPoints))
-    if(is.na(raster::projection(originPoints)) || is.na(raster::projection(originSites))) {
+    if(is.na(sf::st_crs(originPoints)) || is.na(sf::st_crs(originSites))) {
       stop('Coordinate system definition needed for originSites & originPoints')
     }
 
 
 
   if (is.null(targetNames))
-    targetNames <- names(targetSites)
+    # Need to be able to conserve the names from input
+    targetNames <- 1:nrow(targetSites)
 
   if (is.null(originNames))
-    originNames <- names(originSites)
+    # need to conserve names from inputs
+    originNames <- 1:nrow(originSites)
 
   if (is.null(sampleSize))
     sampleSize <- nAnimals
@@ -421,7 +1548,7 @@ estMCisotope <- function(targetDist=NULL,
 
     distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
-    originPoints2 <- sp::spTransform(originPoints, sp::CRS(MigConnectivity::projections$WGS84))
+    originPoints2 <- sf::st_coordinates(sf::st_transform(originPoints, 4326))
     originDistStart <- matrix(NA, nAnimals, nAnimals)
 
     originDistStart[lower.tri(originDistStart)] <- 1
@@ -457,7 +1584,7 @@ estMCisotope <- function(targetDist=NULL,
       animal.sample <- sample.int(nAnimals, replace=TRUE)
       # Get origin points for those animals
       if (calcCorr)
-        origin.point.sample <- originPoints[animal.sample]
+        origin.point.sample <- originPoints[animal.sample,]
       # Get origin population for each animal sampled
       origin.sample <- originAssignment[animal.sample]
     }
@@ -491,7 +1618,10 @@ estMCisotope <- function(targetDist=NULL,
           "high quantile:", quantile(MC, 1-alpha/2, na.rm=TRUE), "\n")
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
-      target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+      colnames(target.point.sample) <- c("x","y")
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
+      #target.point.sample <- sf::st_sfc(t.p.s.geom, crs = resampleProjection)
+      #target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
       corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
       if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
         cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
@@ -530,176 +1660,302 @@ estMCisotope <- function(targetDist=NULL,
                          na.rm=TRUE, type = 8, names = F)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
-  return(list(sampleMC = MC, samplePsi = psi.array,
-              pointPsi = NA, pointMC = NA, meanMC = mean(MC, na.rm=TRUE),
-              medianMC = median(MC, na.rm=TRUE), seMC = sd(MC, na.rm=TRUE),
-              simpleCI = quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                                  type = 8, names = F),
-              bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
-              sampleCorr = corr, pointCorr = NA,
-              meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
-              simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
-              inputSampleSize = sampleSize,
-              alpha = alpha, sigConst = sigConst))
+  meanMC <- mean(MC, na.rm=TRUE)
+  medianMC <- median(MC, na.rm=TRUE)
+  seMC <- sd(MC, na.rm=TRUE)
+  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = F)
+  meanPsi <- apply(psi.array, 2:3, mean)
+  medianPsi <- apply(psi.array, 2:3, median)
+  sePsi <- apply(psi.array, 2:3, sd)
+  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                        length(which(!is.na(psi.array[, i, j]))))
+      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  if (maintainLegacyOutput) {
+    return(list(sampleMC = MC, samplePsi = psi.array, pointPsi = NULL,
+                pointMC = NULL, meanMC = meanMC,
+                medianMC = medianMC, seMC = seMC, simpleCI = simpleCI,
+                bcCI = bcCI, hpdCI = hpdCI, simpleP = simpleP, bcP = bcP,
+                sampleCorr = corr, pointCorr = pointCorr,
+                meanCorr = meanCorr, medianCorr = medianCorr, seCorr=seCorr,
+                simpleCICorr=simpleCICorr, bcCICorr=bcCICorr,
+                inputSampleSize = sampleSize,
+                alpha = alpha, sigConst = sigConst,
+                psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           median = medianPsi, point = NULL),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = NULL,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            median = medianCorr, point = pointCorr),
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             originAssignment = originAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             targetIntrinsic = targetIntrinsic,
+                             isIntrinsic = TRUE,
+                             maintainLegacyOutput = TRUE)))
+  }
+  else {
+    return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
+                           simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                           median = medianPsi, point = NULL),
+                MC = list(sample = MC, mean = meanMC, se = seMC,
+                          simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                          median = medianMC, point = NULL,
+                          simpleP = simpleP, bcP = bcP),
+                corr = list(sample = corr, mean = meanCorr, se = seCorr,
+                            simpleCI = simpleCICorr, bcCI = bcCICorr,
+                            median = medianCorr, point = pointCorr),
+                input = list(originDist = originDist, targetDist = targetDist,
+                             originRelAbund = originRelAbund,
+                             sampleSize = sampleSize, originSites = originSites,
+                             targetSites = targetSites,
+                             originPoints = originPoints,
+                             originAssignment = originAssignment,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nSamples = nBoot, nSim = nSim,
+                             verbose = verbose, calcCorr = calcCorr,
+                             alpha = alpha,
+                             approxSigTest = approxSigTest, sigConst = sigConst,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             targetIntrinsic = targetIntrinsic,
+                             isIntrinsic = TRUE,
+                             maintainLegacyOutput = FALSE)))
+  }
 }
 
 ###############################################################################
-#' Estimate MC from abundance and/or transition probability estimates OR
-#' geolocator and/or GPS data OR intrinsic markers.
+#' Estimate migratory connectivity
 #'
-#' Resampling of uncertainty for MC from RMark psi matrix estimates and/or JAGS
+#' Resampling of uncertainty for migratory connectivity strength (MC)
+#' and transition probabilities (psi) from RMark psi matrix estimates or
+#' samples of psi and/or JAGS
 #' relative abundance MCMC samples OR SpatialPoints geolocators and/or GPS
-#' data OR intrinsic markers such as isotopes.
+#' data OR intrinsic markers such as isotopes. NOTE: active development of this
+#' function is ending. We suggest users estimate psi with
+#' \code{\link{estTransition}}, MC with \code{\link{estStrength}}, and Mantel
+#' correlations (rM) with \code{\link{estMantel}}.
 #'
 #' @param originDist Distances between the B origin sites.  Symmetric B by B
-#'  matrix.
+#'  matrix
 #' @param targetDist Distances between the W target sites.  Symmetric W by W
-#'  matrix.  Optional for intrinsic data.
+#'  matrix.  Optional for intrinsic data
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
 #'  a numeric vector of length B that sums to 1 or an mcmc object with
 #'  \code{nSamples} rows  and columns including 'relN[1]' through 'relN[B]'.
 #'  Currently, an mcmc object doesn't work with geolocator, GPS, or intrinsic
-#'  data.
+#'  data
 #' @param psi Transition probabilities between B origin and W target sites.
-#'  Either a matrix with B rows and W columns where rows sum to 1 or a MARK
-#'  object with estimates of transition probabilities.  If you are estimating
-#'  MC from GPS, geolocator, or intrinsic data, leave this as NULL.
-#' @param sampleSize Total sample size of animals that psi will be estimated from.
-#'    Should be the number of animals released in one of the origin sites and
-#'    observed in one of the target sites.  Optional, but recommended, unless
-#'    you are estimating MC from GPS, geolocator, or intrinsic data (in which
-#'    case the function can calculate it for you).
+#'  Either a matrix with B rows and W columns where rows sum to 1, an array with
+#'  dimensions x, B, and W (with x samples of the transition probability matrix
+#'  from another model), or a MARK object with estimates of transition
+#'  probabilities.  If you are estimating MC from GPS, geolocator, or intrinsic
+#'  data, leave this as NULL
+#' @param sampleSize Total sample size of animals that psi will be estimated
+#'  from. Should be the number of animals released in one of the origin sites
+#'  and observed in one of the target sites.  Optional, but recommended, unless
+#'  you are estimating MC from GPS, geolocator, intrinsic, or direct band return
+#'  data (in which case the function can calculate it for you)
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are origin.  If using GPS, geolocator, or
 #'  intrinsic data, this can be the geographic definition of sites in the
-#'  release season.
+#'  release season
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are target.  If using GPS, geolocator, or
 #'  intrinsic data, this must be the geographic definition of sites in the
 #'  non-release season.  Optional for intrinsic data; if left out, the function
-#'  will use the \code{targetSites} defined in \code{targetIntrinsic}.
-#' @param originPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the release location of an animal.
-#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} object, with
-#'    length number ofanimals tracked.  Each point indicates the point estimate
-#'    location in the non-release season.
+#'  will use the \code{targetSites} defined in \code{targetIntrinsic}
+#' @param originPoints A \code{SpatialPoints} from sp or \code{POINT} sf object, with length number of
+#'    animals tracked.  Each point indicates the release location of an animal
+#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} from sp or \code{POINT} sf object, with
+#'    length number of animals tracked.  Each point indicates the point estimate
+#'    location in the non-release season
 #' @param originAssignment Assignment of \code{originPoints} to release season
 #'    sites. Integer vector with length number of animals tracked. Optional,
 #'    but if using GL or GPS data, either \code{originAssignment} or
-#'    \code{originSites} and \code{originPoints} should be defined.
+#'    \code{originSites} and \code{originPoints} should be defined
 #' @param targetAssignment Optional. Point estimate assignment of
 #'    \code{targetPoints} to non-release season sites. Integer vector with
-#'    length number of animals tracked.
-#' @param originNames Optional. Vector of names for the release season sites.
-#' @param targetNames Optional. Vector of names for the non-release season
-#'    sites.
+#'    length number of animals tracked
+#' @param originNames Optional but recommended. Vector of names for the release season sites
+#' @param targetNames Optional but recommended. Vector of names for the non-release season
+#'    sites
 #' @param nSamples Number of times to resample \code{psi} and/or
-#'    \code{originRelAbund} OR number of times to resample \code{targetPoints}
-#'    for intrinsic data OR number of bootstrap runs for GL or GPS data. In
-#'    the last two cases, animals are sampled with replacement for each. For all,
-#'    the purpose is to estimate sampling uncertainty.
+#'  \code{originRelAbund} OR number of post-burn-in MCMC samples to store (band
+#'  data) OR number of times to resample \code{targetPoints}
+#'  for intrinsic data OR number of bootstrap runs for GL or GPS data. In
+#'  the last two cases, animals are sampled with replacement for each. For all,
+#'  the purpose is to estimate sampling uncertainty
 #' @param nSim Tuning parameter for GL or intrinsic data. Affects only the
 #'    speed; 1000 seems to work well with our GL data and 10 for our intrinsic
-#'    data, but your results may vary.  Should be integer > 0.
+#'    data, but your results may vary.  Should be integer > 0
 #' @param isGL Indicates whether or which animals were tracked with geolocators.
 #'    Should be either single TRUE or FALSE value, or vector with length of
 #'    number of animals tracked, with TRUE for animals in
-#'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
+#'    \code{targetPoints} with geolocators and FALSE for animals with GPS
 #' @param geoBias For GL data, vector of length 2 indicating expected bias
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
+#'    \code{resampleProjection} units (default meters)
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
+#'    \code{resampleProjection} units (default meters)
 #' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
 #'  to 0 (default) or any greater integer to specify where to stop ignoring
-#'  samples ("burn-in").
+#'  samples ("burn-in")
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
 #'  a line every 100 samples or bootstraps and a summary every 10.  2 prints a
 #'  line and summary every sample or bootstrap. 3 also prints the number of
-#'  draws (for tuning nSim for GL/intrinsic data only).
+#'  draws (for tuning nSim for GL/intrinsic data only)
 #' @param calcCorr In addition to MC, should function also estimate Mantel
 #'    correlation between release and non-release locations (GPS or GL data
-#'    only)?  Default is FALSE.
-#' @param alpha Level for confidence/credible intervals provided.
+#'    only)?  Default is FALSE
+#' @param alpha Level for confidence/credible intervals provided
 #' @param approxSigTest Should function compute approximate one-sided
 #'    significance tests (p-values) for MC from the bootstrap?  Default is
-#'    FALSE.
+#'    FALSE
 #' @param sigConst Value to compare MC to in significance test.
-#'    Default is 0.
+#'    Default is 0
 #' @param resampleProjection Projection when sampling from geolocator
 #'    bias/error. This projection needs units = m. Default is Equidistant
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
-#'    of \code{targetSites}.  Ignored unless data are geolocator or GPS.
+#'    of \code{targetSites}.  Ignored unless data are geolocator or GPS
 #' @param maxTries Maximum number of times to run a single GL/intrinsic
 #'    bootstrap before exiting with an error.  Default is 300.  Set to NULL to
-#'    never stop.  Thisparameter was added to prevent GL setups where some
-#'    sample points never land on target sites from running indefinitely.
+#'    never stop.  This parameter was added to prevent GL setups where some
+#'    sample points never land on target sites from running indefinitely
 #' @param targetIntrinsic For intrinsic tracking data, the results of
-#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}.
+#'    \code{isoAssign} or a similar function, of class \code{intrinsicAssign}
 #' @param isIntrinsic Logical indicating whether the animals are tracked via
-#'    intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
-#'    connectivity for all intrinsically marked animals or all extrinsic (e.g.,
-#'    bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE.
+#'  intrinsic marker (e.g. isotopes) or not.  Currently estMC will only estimate
+#'  connectivity for all intrinsically marked animals or all extrinsic (e.g.,
+#'  bands, GL, or GPS), so isIntrinsic should be a single TRUE or FALSE
+#' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
+#'  updated the structure of the estimates. If you have legacy code that refers
+#'  to elements within a \code{estMigConnectivity} object, you can set this
+#'  to TRUE to also keep the old structure. Defaults to FALSE
 #'
-#' @return \code{estMC} returns a list with elements:
+#' @return NOTE: Starting with version 0.4.0 of \code{MigConnectivity}, we've
+#' updated the structure of \code{MigConnectivityEstimate} objects. Below we
+#' describe the updated structure. If parameter \code{maintainLegacyOutput} is
+#' set to TRUE, the list will start with the old structure: \code{sampleMC},
+#' \code{samplePsi}, \code{pointPsi}, \code{pointMC}, \code{meanMC},
+#' \code{medianMC}, \code{seMC}, \code{simpleCI}, \code{bcCI}, \code{hpdCI},
+#' \code{simpleP}, \code{bcP}, \code{sampleCorr}, \code{pointCorr},
+#' \code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr},
+#' \code{inputSampleSize}, \code{alpha}, and \code{sigConst}.
+#'
+#' \code{estMC} returns a list with the elements:
 #' \describe{
-#'   \item{\code{sampleMC}}{\code{nSamples} sampled values for
-#'      MC. Provided to allow the user to compute own summary statistics.}
-#'   \item{\code{samplePsi}}{Array of sampled values for psi. \code{nSamples} x
+#'   \item{\code{psi}}{List containing estimates of transition probabilities:
+#'   \itemize{
+#'    \item{\code{sample}} Array of sampled values for psi. \code{nSamples} x
 #'      [number of origin sites] x [number of target sites]. Provided to allow
-#'      the user to compute own summary statistics.}
-#'   \item{\code{pointPsi}}{Simple point estimate of psi matrix, not accounting
-#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
-#'   \item{\code{pointMC}}{Simple point estimate of MC, using the point
-#'      estimates of \code{psi} and \code{originRelAbund}, not accounting
-#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.}
-#'   \item{\code{meanMC, medianMC}}{Mean and median of \code{sampleMC}.
-#'      Estimates of MC incorporating parametric uncertainty.}
-#'   \item{\code{seMC}}{Standard error of MC, estimated from SD of
-#'      \code{sampleMC}.}
-#'   \item{\code{simpleCI}}{\code{1 - alpha} confidence interval for MC,
+#'      the user to compute own summary statistics.
+#'    \item{\code{mean}} Main estimate of psi matrix. [number of origin sites]
+#'      x [number of target sites].
+#'    \item{\code{se}} Standard error of psi, estimated from SD of
+#'      \code{psi$sample}.
+#'    \item{\code{simpleCI}} \code{1 - alpha} confidence interval for psi,
 #'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
-#'      \code{sampleMC}.}
-#'   \item{\code{bcCI}}{Bias-corrected \code{1 - alpha} confidence interval
-#'      for MC.  Preferable to \code{simpleCI} when \code{meanMC} is the
-#'      best estimate of MC. \code{simpleCI} is preferred when
-#'      \code{medianMC} is a better estimator. When \code{meanMC==medianMC},
+#'      \code{psi$sample}.
+#'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'      for psi.  Preferable to \code{simpleCI} when \code{mean} is the
+#'      best estimate of psi. \code{simpleCI} is preferred when
+#'      \code{median} is a better estimator. When \code{meanMC==medianMC},
 #'      these should be identical.  Estimated as the
 #'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
-#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sampleMC},
-#'      where z0 is the proportion of \code{sampleMC < meanMC}.}
-#'   \item{\code{hpdCI}}{\code{1 - alpha} credible interval for MC,
-#'      estimated using the highest posterior density (HPD) method.}
-#'   \item{\code{simpleP}}{Approximate p-value for MC, estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
+#'      where z0 is the proportion of \code{sample < mean}.
+#'    \item{\code{median}} Median estimate of psi matrix.
+#'    \item{\code{point}} Simple point estimate of psi matrix, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.
+#'   }
+#'   }
+#'   \item{\code{MC}}{List containing estimates of migratory connectivity
+#'    strength:
+#'    \itemize{
+#'      \item{\code{sample}} \code{nSamples} sampled values for
+#'       MC. Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Mean of \code{MC$sample}. Main estimate of MC,
+#'       incorporating parametric uncertainty.
+#'      \item{\code{se}} Standard error of MC, estimated from SD of
+#'       \code{MC$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       MC, estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'       \code{MC$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'       for MC.  Preferable to \code{MC$simpleCI} when \code{MC$mean} is the
+#'       best estimate of MC. \code{MC$simpleCI} is preferred when
+#'       \code{MC$median} is a better estimator. When \code{MC$mean==MC$median},
+#'       these should be identical.  Estimated as the
+#'       \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{MC$sample},
+#'       where z0 is the proportion of \code{MC$sample < MC$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible interval for MC,
+#'       estimated using the highest posterior density (HPD) method.
+#'      \item{\code{median}} Median of MC, alternate estimator also including
+#'       parametric uncertainty.
+#'      \item{\code{point}} Simple point estimate of MC, using the point
+#'      estimates of \code{psi} and \code{originRelAbund}, not accounting
+#'      for sampling error. NULL when \code{isIntrinsic == TRUE}.
+#'      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
 #'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
 #'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
 #'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
 #'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
-#'      \code{approxSigTest==FALSE}.}
-#'   \item{\code{bcP}}{Approximate bias-corrected p-value for MC, estimated as
+#'      \code{approxSigTest==FALSE}.
+#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
 #'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
 #'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
 #'      than \code{simpleP}, but many of the same limitations apply.  NULL when
-#'      \code{approxSigTest==FALSE}.}
-#'   \item{\code{sampleCorr}}{\code{nBoot} sampled values for continuous
+#'      \code{approxSigTest==FALSE}.
+#'    }
+#'   }
+#'   \item{\code{corr}}{List containing estimates of rM, an alternate measure of
+#'    migratory connectivity strength. NULL when \code{calcCorr==FALSE} or
+#'    \code{!is.null(psi)}:
+#'    \itemize{
+#'     \item{\code{sample}} \code{nBoot} sampled values for continuous
 #'      correlation. Provided to allow the user to compute own summary
-#'      statistics.  NULL when \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
-#'   \item{\code{pointCorr}}{Simple point estimate of continuous correlation,
-#'      using \code{originPoints} and \code{targetPoints}, not accounting
-#'      for sampling error. NULL when \code{calcCorr==FALSE} or
-#'      \code{!is.null(psi)} or \code{isIntrinsic == TRUE}.}
-#'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
-#'      statistics for continuous correlation bootstraps.  NULL when
-#'      \code{calcCorr==FALSE} or \code{!is.null(psi)}.}
-#'   \item{\code{inputSampleSize}}{If \code{sampleSize} was provided, this is
-#'      that.  If not, it is either the calculated sample size (if that can be
-#'      done), or left at NULL.  Useful to determining whether calcMC used the
-#'      main MC formula or that for MC(R).}
+#'      statistics.
+#'     \item{\code{mean, se, simpleCI, bcCI, median, point}} Summary
+#'      statistics for continuous correlation bootstraps.
+#'    }
+#'   }
+#'   \item{\code{input}}{List containing the inputs to \code{estMC}, or at least
+#'    the relevant ones, such as sampleSize.}
 #' }
 #' @example inst/examples/estMCExamples.R
-#' @seealso \code{\link{calcMC}}, \code{\link{projections}}, \code{\link{isoAssign}}
+#' @seealso \code{\link{estStrength}}, \code{\link{estTransition}},
+#'   \code{\link{estMantel}}, \code{\link{calcMC}}, \code{\link{projections}},
+#'   \code{\link{isoAssign}}, \code{\link{plot.estMigConnectivity}}
 #' @export
 #' @references
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
@@ -708,8 +1964,10 @@ estMCisotope <- function(targetDist=NULL,
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658–669.
+#' \href{https://doi.org/10.1111/ecog.03974}{doi:10.1111/ecog.03974}
 
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -717,13 +1975,14 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   originPoints = NULL, targetPoints = NULL,
                   originAssignment = NULL, targetAssignment = NULL,
                   originNames = NULL, targetNames = NULL,
-                  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000), isGL = FALSE,
-                  geoBias = NULL, geoVCov = NULL, row0 = 0,
-                  verbose = 0,  calcCorr = FALSE, alpha = 0.05,
+                  nSamples = 1000, nSim = ifelse(isTRUE(isIntrinsic), 10, 1000),
+                  isGL = FALSE, geoBias = NULL, geoVCov = NULL, row0 = 0,
+                  verbose = 0, calcCorr = FALSE, alpha = 0.05,
                   approxSigTest = FALSE, sigConst = 0,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
+                  resampleProjection = 'ESRI:102010',
                   maxTries = 300, targetIntrinsic = NULL,
-                  isIntrinsic = FALSE) {
+                  isIntrinsic = FALSE,
+                  maintainLegacyOutput = FALSE) {
   if (is.null(psi)) {
     if(isIntrinsic) {
       mc <- estMCisotope(targetDist = targetDist,
@@ -738,9 +1997,10 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                          nBoot = nSamples, verbose = verbose, nSim = nSim,
                          calcCorr=calcCorr, alpha = alpha,
                          approxSigTest = approxSigTest, sigConst = sigConst,
-                         maxTries = maxTries)
+                         maxTries = maxTries,
+                         maintainLegacyOutput = maintainLegacyOutput)
     }
-    else {
+    else #if (is.null(nReleased)) {
       mc <- estMCGlGps(isGL=isGL, geoBias=geoBias, geoVCov=geoVCov,
                        originRelAbund=originRelAbund, sampleSize = sampleSize,
                        originDist=originDist,
@@ -754,20 +2014,24 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                        nSim = nSim, calcCorr=calcCorr, alpha = alpha,
                        approxSigTest = approxSigTest, sigConst = sigConst,
                        resampleProjection = resampleProjection,
-                       maxTries = maxTries)
-    }
+                       maxTries = maxTries,
+                       maintainLegacyOutput = maintainLegacyOutput)
   }
   else {
-    mc <- estMCCmrAbund(originRelAbund = originRelAbund,
+    mc <- estStrength(originRelAbund = originRelAbund,
                         sampleSize = sampleSize, psi = psi,
                         originDist = originDist, targetDist = targetDist,
                         originSites=originSites, targetSites=targetSites,
                         nSamples = nSamples, row0 = row0, verbose=verbose,
                         alpha = alpha, approxSigTest = approxSigTest,
-                        sigConst = sigConst)
+                        sigConst = sigConst, originNames = originNames,
+                        targetNames = targetNames,
+                        maintainLegacyOutput = maintainLegacyOutput)
   }
-  if (calcCorr & is.null(psi))
-    class(mc) <- c("estMC", "estMantel", "estMigConnectivity")
+  if (calcCorr && is.null(psi))
+    class(mc) <- c("estMC", "estPsi", "estMantel", "estMigConnectivity")
+  else if (is.null(psi))
+    class(mc) <- c("estMC", "estPsi", "estMigConnectivity")
   else
     class(mc) <- c("estMC", "estMigConnectivity")
   return(mc)
@@ -778,55 +2042,63 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
 #' data.
 #'
-#' @param targetPoints A \code{SpatialPoints} object, with length number of
+#' @param targetPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
 #'    animals tracked.  Each point indicates the point estimate location in
-#'    the non-release season.
-#' @param originPoints A \code{SpatialPoints} object, with length number of
-#'    animals tracked.  Each point indicates the release location of an animal.
-#' @param isGL Indicates whether or which animals were tracked with geolocators.
+#'    the non-release season
+#' @param originPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
+#'    animals tracked.  Each point indicates the release location of an animal
+#' @param isGL Indicates whether or which animals were tracked with geolocators
 #'    Should be either single TRUE or FALSE value, or vector with length of
 #'    number of animals tracked, with TRUE for animals in
 #'    \code{targetPoints} with geolocators and FALSE for animals with GPS.
 #' @param geoBias For GL data, vector of length 2 indicating expected bias
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
+#'    \code{resampleProjection} units (default meters)
 #' @param geoVCov For GL data, 2x2 matrix with expected variance/covariance
 #'    in longitude and latitude of \code{targetPoints}, in
-#'    \code{resampleProjection} units (default meters).
-#' @param targetSites A \code{SpatialPolygons} or \code{SpatialPolygonsDataFrame}
-#'    object indicating valid target location(s).  Not needed unless you want
-#'    to mask out certain areas (e.g. water).
+#'    \code{resampleProjection} units (default meters)
+#' @param targetSites A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
+#'     or \code{POLYGONS} sf object indicating valid target location(s).  Not needed unless you want
+#'    to mask out certain areas (e.g. water)
 #' @param nBoot Number of bootstrap runs. Animals are sampled with replacement for each,
-#'    to estimate sampling uncertainty.
+#'    to estimate sampling uncertainty
 #' @param nSim Tuning parameter for GL data. Affects only the speed; 1000 seems
-#'    to work well with our data.  Should be integer > 0.
+#'    to work well with our data.  Should be integer > 0
 #' @param verbose 0 (default) to 3. 0 prints no output during run. 1 prints
 #'    a line every 100 bootstraps.  2 prints a line every bootstrap.
-#'    3 also prints the number of draws (for tuning nSim for GL data only).
+#'    3 also prints the number of draws (for tuning nSim for GL data only)
 #' @param alpha Level for confidence/credible intervals provided.
 #' @param resampleProjection Projection when sampling from geolocator
 #'    bias/error. This projection needs units = m. Default is Equidistant
 #'    Conic. The default setting preserves distances around latitude = 0 and
 #'    longitude = 0. Other projections may work well, depending on the location
-#'    of \code{targetSites}.
+#'    of \code{targetSites}
 #' @param maxTries Maximum number of times to run a single GL bootstrap before
 #'    exiting with an error.  Default is 300.  Set to NULL to never stop.  This
 #'    parameter was added to prevent GL setups where some sample points never
-#'    land on target sites from running indefinitely.
+#'    land on target sites from running indefinitely
+#' @param maintainLegacyOutput version 0.4.0 of \code{MigConnectivity}
+#'  updated the structure of the estimates. If you have legacy code that refers
+#'  to elements within a \code{estMigConnectivity} object, you can set this
+#'  to TRUE to also keep the old structure. Defaults to FALSE
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
-#'   \item{\code{sampleCorr}}{\code{nBoot} sampled values for Mantel
+#'   \item{\code{corr}}{List containing estimates of rM:
+#'    \itemize{
+#'     \item{\code{sample}} \code{nBoot} sampled values for Mantel
 #'      correlation. Provided to allow the user to compute own summary
-#'      statistics.}
-#'   \item{\code{pointCorr}}{Simple point estimate of Mantel correlation,
-#'      using \code{originPoints} and \code{targetPoints}.}
-#'   \item{\code{meanCorr, medianCorr, seCorr, simpleCICorr, bcCICorr}}{Summary
-#'      statistics for Mantel correlation bootstraps.}
+#'      statistics.
+#'     \item{\code{mean, se, simpleCI, bcCI, median, point}} Summary
+#'      statistics for Mantel correlation bootstraps.
+#'    }
+#'   }
+#'   \item{\code{input}}{List containing the inputs to \code{estMantel}}
 #' }
 #' @export
 #'
 #' @examples
+#' data('OVENdata')
 #' rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
 #'                  geoBias = OVENdata$geo.bias, # Geolocator location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
@@ -836,7 +2108,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
 #'                  resampleProjection = raster::projection(OVENdata$targetSites))
-#' str(rM1)
+#' rM1
+#' str(rM1, max.level = 2)
 #' @seealso \code{\link{estMC}}
 #'
 #' @references
@@ -848,8 +2121,14 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
                       geoVCov = NULL, targetSites = NULL, nBoot = 1000,
                       nSim = 1000, verbose=0, alpha = 0.05,
-            resampleProjection = MigConnectivity::projections$EquidistConic,
-            maxTries = 300) {
+                      resampleProjection = 'ESRI:102010',
+                      maxTries = 300, maintainLegacyOutput = FALSE) {
+
+  # double check that spatial data coming in is in sf format #
+  if (inherits(targetPoints, "SpatialPoints"))
+    targetPoints <- sf::st_as_sf(targetPoints)
+  if (inherits(originPoints, "SpatialPoints"))
+    originPoints <- sf::st_as_sf(originPoints)
 
   # Input checking and assignment
   if (!(verbose %in% 0:3))
@@ -858,23 +2137,30 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
-  nAnimals <- length(targetPoints)
+
+  nAnimals <- nrow(targetPoints)
   if (length(isGL)==1)
     isGL <- rep(isGL, nAnimals)
-  if(is.na(raster::projection(originPoints))) {
+  if(is.na(sf::st_crs(originPoints))) {
     stop('Coordinate system definition needed for originPoints')
   }
-  if(is.na(raster::projection(targetPoints))){
+  if(is.na(sf::st_crs(targetPoints))){
     stop('Coordinate system definition needed for targetPoints')
   }
-  targetPoints <- sp::spTransform(targetPoints, sp::CRS(resampleProjection))
+  targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
+
   if(!is.null(targetSites)){
-    if(class(targetSites)=="SpatialPolygonsDataFrame"){
-      targetSites <- sp::SpatialPolygons(targetSites@polygons)}
-    if(is.na(raster::projection(targetSites))){
+    #if sp object covert to sf #
+    if("SpatialPolygonsDataFrame" %in% class(targetSites)){
+      targetSites <- sf::st_as_sf(targetSites)
+      #targetSites <- sp::SpatialPolygons(targetSites@polygons)
+      }
+
+    if(is.na(sf::st_crs(targetSites))){
       stop('Coordinate system definition needed for targetSites')
     }
-    targetSites <- sp::spTransform(targetSites, sp::CRS(resampleProjection))
+
+    targetSites <- sf::st_transform(targetSites, resampleProjection)
   }
 
   corr <- rep(NA, nBoot)
@@ -890,19 +2176,22 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Sample individual animals with replacement
     animal.sample <- sample.int(nAnimals, replace=TRUE)
-    origin.point.sample <- originPoints[animal.sample]
+    origin.point.sample <- originPoints[animal.sample,]
     tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
-                          targetPoints = targetPoints, animal.sample = animal.sample,
-                          targetSites = targetSites,
-                          resampleProjection = resampleProjection,
-                          maxTries = maxTries)
+                                   targetPoints = targetPoints, animal.sample = animal.sample,
+                                   targetSites = targetSites,
+                                   resampleProjection = resampleProjection,
+                                   maxTries = maxTries)
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
       cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
-    target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
+    #target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
+    target.point.sample <- sp::SpatialPoints(target.point.sample)
+    target.point.sample <- sf::st_as_sf(target.point.sample)
+    sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
     corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
@@ -917,11 +2206,40 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F)
-  return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
-                        meanCorr = meanCorr, medianCorr = medianCorr,
-                        seCorr=seCorr, simpleCICorr=simpleCICorr,
-                        bcCICorr=bcCICorr, alpha = alpha),
-                   class = c("estMantel", "estMigConnectivity")))
+  if (maintainLegacyOutput)
+    return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
+                          meanCorr = meanCorr, medianCorr = medianCorr,
+                          seCorr=seCorr, simpleCICorr=simpleCICorr,
+                          bcCICorr=bcCICorr, alpha = alpha,
+                          corr = list(sample = corr, mean = meanCorr,
+                                      se = seCorr, simpleCI = simpleCICorr,
+                                      bcCI = bcCICorr, median = medianCorr,
+                                      point = pointCorr),
+                          input = list(targetPoints = targetPoints,
+                                       originPoints = originPoints, isGL = isGL,
+                                       geoBias = geoBias, geoVCov = geoVCov,
+                                       targetSites = targetSites, nBoot = nBoot,
+                                       nSim = nSim, verbose = verbose,
+                                       alpha = alpha,
+                                       resampleProjection = resampleProjection,
+                                       maxTries = maxTries,
+                                       maintainLegacyOutput = TRUE)),
+                     class = c("estMantel", "estMigConnectivity")))
+  else
+    return(structure(list(corr = list(sample = corr, mean = meanCorr,
+                                      se = seCorr, simpleCI = simpleCICorr,
+                                      bcCI = bcCICorr, median = medianCorr,
+                                      point = pointCorr),
+                          input = list(targetPoints = targetPoints,
+                                       originPoints = originPoints, isGL = isGL,
+                                       geoBias = geoBias, geoVCov = geoVCov,
+                                       targetSites = targetSites, nBoot = nBoot,
+                                       nSim = nSim, verbose = verbose,
+                                       alpha = alpha,
+                                       resampleProjection = resampleProjection,
+                                       maxTries = maxTries,
+                                       maintainLegacyOutput = FALSE)),
+                     class = c("estMantel", "estMigConnectivity")))
 }
 
 ###############################################################################
@@ -999,11 +2317,12 @@ getCMRexample <- function(number = 1) {
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 #' @examples
 #' \dontrun{
+#' data('OVENdata')
 #' ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
 #'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
@@ -1042,32 +2361,41 @@ getCMRexample <- function(number = 1) {
 #'                 nSamples = 10000, returnSamples = TRUE)
 #'
 #'}
-diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
+diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
+                   returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
-  nSamplesEst <- sapply(estimates, function(x) length(x$sampleMC))
+  for (i in 1:nEst)
+    if (is.null(estimates[[i]]$MC))
+      estimates[[i]]$MC <- list(sample = estimates[[i]]$sampleMC)
+  nSamplesEst <- sapply(estimates, function(x) length(x$MC$sample))
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
-  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
   for (i in 1:nComparisons) {
     if (is.null(nSamples))
-      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleMC, times = nSamplesEst[comparisons[i, 2]]) -
-        rep(estimates[[comparisons[i, 2]]]$sampleMC, each = nSamplesEst[comparisons[i, 1]])
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$MC$sample,
+                              times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$MC$sample,
+            each = nSamplesEst[comparisons[i, 1]])
     else
-      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleMC, nSamples, replace = T) -
-        sample(estimates[[comparisons[i, 2]]]$sampleMC, nSamples, replace = T)
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$MC$sample,
+                                 nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$MC$sample, nSamples, replace = T)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
                      type = 8, names = F)
-  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+  diff.z0 <- sapply(diffSamples,
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T),
+                                           na.rm = T)/length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0)
+    quantile(MC, pnorm(2*z0+ qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
-  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
-  #hpdCI <- sapply(diff.mcmc, function(MC) as.vector(coda::HPDinterval(MC, 1-alpha)))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
@@ -1075,7 +2403,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        sampleDiff = sampleDiff, alpha = alpha),#hpdCI = hpdCI,
+                        sampleDiff = sampleDiff, alpha = alpha),
                    class = c('diffMC', 'diffMigConnectivity')))
 }
 
@@ -1128,40 +2456,50 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 # @examples
-diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05, returnSamples = F) {
+diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
+                       returnSamples = F) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
-  nSamplesEst <- sapply(estimates, function(x) length(x$sampleCorr))
+  for (i in 1:nEst)
+    if (is.null(estimates[[i]]$corr))
+      estimates[[i]]$corr <- list(sample = estimates[[i]]$sampleCorr)
+  nSamplesEst <- sapply(estimates, function(x) length(x$corr$sample))
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
-  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))), nComparisons, 2)
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
   for (i in 1:nComparisons) {
     if (is.null(nSamples))
-      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$sampleCorr, times = nSamplesEst[comparisons[i, 2]]) -
-        rep(estimates[[comparisons[i, 2]]]$sampleCorr, each = nSamplesEst[comparisons[i, 1]])
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]]$corr$sample,
+                              times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]]$corr$sample,
+            each = nSamplesEst[comparisons[i, 1]])
     else
-      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$sampleCorr, nSamples, replace = T) -
-        sample(estimates[[comparisons[i, 2]]]$sampleCorr, nSamples, replace = T)
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$corr$sample,
+                                 nSamples, replace = T) -
+        sample(estimates[[comparisons[i, 2]]]$corr$sample, nSamples,
+               replace = T)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
                      type = 8, names = F)
-  diff.z0 <- sapply(diffSamples, function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0) quantile(MC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+  diff.z0 <- sapply(diffSamples,
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/
+                                         length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0) quantile(MC,
+                                           pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
                        na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
-  diff.mcmc <- lapply(diffSamples, coda::as.mcmc)
-  #hpdCI <- sapply(diff.mcmc, function(MC) as.vector(coda::HPDinterval(MC, 1-alpha)))
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
-  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples) #colnames(hpdCI) <-
+  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples)
   sampleDiff <- ifelse(returnSamples, diffSamples, NA)
   return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
                         seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,

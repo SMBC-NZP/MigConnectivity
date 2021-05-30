@@ -32,6 +32,6 @@ as a raster.
 }
 \examples{
 \dontrun{
-getIsoMap(element = "Hydrogen", period = "Annual")
+map <- getIsoMap(element = "Hydrogen", period = "Annual")
 }
 }
