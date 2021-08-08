@@ -700,7 +700,7 @@ estTransitionBoot <- function(originSites = NULL,
                                            sparse = TRUE))))})
 
     if (!any(is.na(targetCon)))
-      pointsInSites <- TRUE
+      targetPointsInSites <- TRUE
     else if (verbose > 0)
       cat('Single cell target points supplied, but some points (proportion',
           format(sum(is.na(targetCon))/length(targetCon), digits = 2), ') not in targetSites\n')
@@ -726,7 +726,7 @@ estTransitionBoot <- function(originSites = NULL,
                                            sparse = TRUE))))})
 
     if (!any(is.na(originCon)))
-      pointsInSites <- TRUE
+      originPointsInSites <- TRUE
     else if (verbose > 0){
       cat('Single cell origin points supplied, but some points (proportion',
           sum(is.na(originCon))/length(originCon), ') not in originSites\n')
@@ -812,7 +812,6 @@ estTransitionBoot <- function(originSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
-      # DOUBLE CHECK ARGUMENTS MATCH CURRENTY LOCSAMPLE
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
@@ -2118,11 +2117,19 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' Methods in Ecology and Evolution 9: 513 - 524.
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 
-estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
-                      geoVCov = NULL, targetSites = NULL, nBoot = 1000,
-                      nSim = 1000, verbose=0, alpha = 0.05,
+estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
+                      geoBias = NULL, geoVCov = NULL, targetSites = NULL,
+                      nBoot = 1000,
+                      nSim = ifelse(any(isRaster & isGL), 5000,
+                                    ifelse(any(isGL), 1000,
+                                           ifelse(any(isRaster), 10, 1))),
+                      verbose=0, alpha = 0.05,
                       resampleProjection = 'ESRI:102010',
-                      maxTries = 300, maintainLegacyOutput = FALSE) {
+                      maxTries = 300, maintainLegacyOutput = FALSE,
+                      originSites = NULL, isTelemetry = !isGL, isRaster = FALSE,
+                      captured = "origin", geoBiasOrigin = NULL,
+                      geoVCovOrigin = NULL,
+                      targetRaster = NULL, originRaster = NULL) {
 
   # double check that spatial data coming in is in sf format #
   if (inherits(targetPoints, "SpatialPoints"))
@@ -2133,21 +2140,95 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
   # Input checking and assignment
   if (!(verbose %in% 0:3))
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
-  if (length(geoBias)!=2 && any(isGL))
+  if (length(geoBias)!=2 && any(isGL) && any(captured != "target"))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) &&
+      any(isGL) && any(captured != "target"))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
 
-  nAnimals <- nrow(targetPoints)
-  if (length(isGL)==1)
-    isGL <- rep(isGL, nAnimals)
-  if(is.na(sf::st_crs(originPoints))) {
+  if (is.null(targetRaster)){
+    targetPointsAssigned <- FALSE
+    targetSingleCell <- NULL
+    targetRasterXYZ <- NULL
+  }
+  else{
+    if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
+      targetRasterXYZ <- raster::rasterToPoints(targetRaster)
+      targetSingleCell <- NULL
+      targetPointsAssigned <- FALSE
+    }
+    else{
+      if (inherits(targetRaster, "isoAssign")) {
+        targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
+                                    is.na(targetRaster$SingleCell))
+        targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
+        targetSingleCell <- targetRaster$SingleCell
+      }
+      else {
+        stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
+    }
+  }
+
+  if (is.null(originRaster)){
+    originPointsAssigned <- FALSE
+    originSingleCell <- NULL
+    originRasterXYZ <- NULL
+  }else {
+    if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
+      originRasterXYZ <- raster::rasterToPoints(originRaster)
+      originSingleCell <- NULL
+      originPointsAssigned <- FALSE
+    }else { if (inherits(originRaster, "isoAssign")) {
+      originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
+                                  is.na(originRaster$SingleCell))
+      originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
+      originSingleCell <- originRaster$SingleCell
+    }
+      else {
+        stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      }
+    }
+  }
+
+  if (is.null(targetPoints)) {
+    if (any(isGL) || any(isTelemetry) || !all(captured=="origin") ||
+        is.null(targetRaster))
+      stop("Need to define targetPoints unless all data is raster captured on origin")
+  }
+  else {
+    if(is.na(sf::st_crs(targetPoints))){
+      stop('Coordinate system definition needed for targetPoints')
+    }
+    targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
+  }
+
+  if (is.null(originPoints)) {
+    if (any(isGL) || any(isTelemetry) || any(captured=="origin") ||
+        is.null(originRaster))
+      stop("Need to define originPoints unless all data is raster captured on target")
+  }
+  else if (is.na(sf::st_crs(originPoints))) {
     stop('Coordinate system definition needed for originPoints')
   }
-  if(is.na(sf::st_crs(targetPoints))){
-    stop('Coordinate system definition needed for targetPoints')
-  }
-  targetPoints <- sf::st_transform(targetPoints, crs = resampleProjection)
+  nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
+                  length(isTelemetry), length(isRaster),
+                  ifelse(is.null(targetRaster), 0,
+                         ifelse(targetPointsAssigned, dim(targetSingleCell)[3],
+                                dim(targetRasterXYZ)[2] - 2)),
+                  ifelse(is.null(originRaster), 0,
+                         ifelse(originPointsAssigned, dim(originSingleCell)[3],
+                                dim(originRasterXYZ)[2] - 2)),
+                  length(captured))
+
+  if (length(isGL)==1)
+    isGL <- rep(isGL, nAnimals)
+  if (length(isTelemetry)==1)
+    isTelemetry <- rep(isTelemetry, nAnimals)
+  if (length(isRaster)==1)
+    isRaster <- rep(isRaster, nAnimals)
+  if (length(captured)==1)
+    captured <- rep(captured, nAnimals)
 
   if(!is.null(targetSites)){
     #if sp object covert to sf #
@@ -2162,37 +2243,181 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
 
     targetSites <- sf::st_transform(targetSites, resampleProjection)
   }
+  targetPointsInSites <- FALSE
+
+  if (targetPointsAssigned && !is.null(targetSites)) {
+    if (verbose > 0){
+      cat('Checking if single cell target points in targetSites, may take a moment\n')}
+    targetPointSample2 <- apply(targetSingleCell,
+                                FUN = function(x)
+                                  sf::st_as_sf(data.frame(x),
+                                               coords = c("Longitude",
+                                                          "Latitude"),
+                                               crs = 4326),
+                                MARGIN = 3)
+    if(!sf::st_crs(targetSites)==sf::st_crs(targetPointSample2[[1]])){
+      targetPointSample2 <- sapply(targetPointSample2, sf::st_transform,
+                                   crs = resampleProjection)
+    }
+
+    targetCon <- sapply(targetPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z,
+                                                            y = targetSites,
+                                                            sparse = TRUE))))})
+
+    if (!any(is.na(targetCon)))
+      targetPointsInSites <- TRUE
+    else if (verbose > 0)
+      cat('Single cell target points supplied, but some points (proportion',
+          format(sum(is.na(targetCon))/length(targetCon), digits = 2),
+          ') not in targetSites\n')
+  }
+  else {
+    targetCon <- NULL
+  }
+
+  originPointsInSites <- FALSE
+  if (originPointsAssigned && !is.null(originSites)) {
+    if (verbose > 0)
+      cat('Checking if single cell origin points in originSites, may take a moment\n')
+    nSamples <- dim(originSingleCell)[1]
+    originPointSample2 <- apply(originSingleCell,
+                                FUN = function(x){sf::st_as_sf(data.frame(x),
+                                                               coords = c("Longitude", "Latitude"),
+                                                               crs = 4326)},
+                                MARGIN = 3)
+    if(!sf::st_crs(originSites)==sf::st_crs(originPointSample2[[1]])){
+      originPointSample2 <- sapply(originPointSample2, sf::st_transform,
+                                   crs = resampleProjection)
+    }
+
+    originCon <- sapply(originPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
+                                                            sparse = TRUE))))})
+
+    if (!any(is.na(originCon)))
+      originPointsInSites <- TRUE
+    else if (verbose > 0){
+      cat('Single cell origin points supplied, but some points (proportion',
+          sum(is.na(originCon))/length(originCon), ') not in originSites\n')
+    }
+  }else{
+    originCon <- NULL
+  }
 
   corr <- rep(NA, nBoot)
-
-  pointMantel <- calcMantel(targetPoints = targetPoints,
-                            originPoints = originPoints)
-  targetDist1 <- pointMantel$targetDist
-  originDistStart <- pointMantel$originDist
-  pointCorr <- pointMantel$pointCorr
+  if (!is.null(targetPoints) && !is.null(originPoints)){
+    pointMantel <- calcMantel(targetPoints = targetPoints,
+                              originPoints = originPoints)
+    targetDistStart <- pointMantel$targetDist
+    originDistStart <- pointMantel$originDist
+    pointCorr <- pointMantel$pointCorr
+  }
+  else {
+    pointCorr <- NA
+    if (!is.null(targetPoints)){
+      targetPoints2 <- sf::st_transform(targetPoints,4326)
+      targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
+                                        sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
+      targetDistStart <- matrix(NA, nAnimals, nAnimals)
+      targetDistStart[lower.tri(targetDistStart)] <- targetDist0
+      diag(targetDistStart) <- 0
+      targetDistStart <- t(targetDistStart)
+      targetDistStart[lower.tri(targetDistStart)] <- targetDist0
+    }
+    else { # Can't both be null
+      originPoints2 <- sf::st_transform(originPoints,4326)
+      originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
+                                        sf::st_coordinates(originPoints2[distIndices[,'col'],]))
+      originDistStart <- matrix(NA, nAnimals, nAnimals)
+      originDistStart[lower.tri(originDistStart)] <- originDist0
+      diag(originDistStart) <- 0
+      originDistStart <- t(originDistStart)
+      originDistStart[lower.tri(originDistStart)] <- originDist0
+    }
+  }
 
   for (boot in 1:nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Sample individual animals with replacement
     animal.sample <- sample.int(nAnimals, replace=TRUE)
-    origin.point.sample <- originPoints[animal.sample,]
-    tSamp <- targetSample(isGL = isGL, geoBias = geoBias, geoVCov = geoVCov,
-                                   targetPoints = targetPoints, animal.sample = animal.sample,
-                                   targetSites = targetSites,
-                                   resampleProjection = resampleProjection,
-                                   maxTries = maxTries)
-    target.sample <- tSamp$target.sample
-    target.point.sample <- tSamp$target.point.sample
-    if (verbose > 2)
-      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+    if (any(captured[animal.sample]!='origin')) {
+      oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
+                         isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
+                         isProb = rep(FALSE, nAnimals),
+                         isTelemetry = (isTelemetry[animal.sample] | captured[animal.sample]=='origin'),
+                         geoBias = geoBiasOrigin,
+                         geoVCov = geoVCovOrigin,
+                         points = originPoints[animal.sample, ],
+                         matvals = originRasterXYZ[, c(1:2, animal.sample + 2)],
+                         singleCell = originSingleCell[,,animal.sample],
+                         overlap1 = originCon[,animal.sample],
+                         pointsInSites = originPointsInSites,
+                         assignment = NULL,
+                         sites = originSites,
+                         resampleProjection = resampleProjection,
+                         nSim = nSim,
+                         maxTries = maxTries)
+      origin.point.sample <- oSamp$point.sample
+      origin.point.sample <- sf::st_as_sf(data.frame(origin.point.sample),
+                                          coords = c("x","y"),
+                                          crs = resampleProjection)
+      if (verbose > 2)
+        cat(' ', oSamp$draws, 'origin draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+    }
+    else {
+      # Get origin point for each animal sampled
+      origin.point.sample <- originPoints[animal.sample, ]
+    }
 
-    originDist1 <- originDistStart[animal.sample, animal.sample]
-    #target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
-    target.point.sample <- sp::SpatialPoints(target.point.sample)
-    target.point.sample <- sf::st_as_sf(target.point.sample)
-    sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
-    corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
+    if (any(captured[animal.sample]!="target")) {
+      tSamp <- locSample(isGL = (isGL[animal.sample] &
+                                   captured[animal.sample] != "target"),
+                         isRaster = (isRaster[animal.sample] &
+                                       captured[animal.sample] != "target"),
+                         isProb = rep(FALSE, nAnimals),
+                         isTelemetry = (isTelemetry[animal.sample] |
+                                          captured[animal.sample] == "target"),
+                         geoBias = geoBias, geoVCov = geoVCov,
+                         points = targetPoints[animal.sample, ],
+                         matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
+                         singleCell = targetSingleCell[,,animal.sample],
+                         pointsInSites = targetPointsInSites,
+                         overlap1 = targetCon[, animal.sample],
+                         sites = targetSites,
+                         resampleProjection = resampleProjection, nSim = nSim,
+                         maxTries = maxTries)
+      target.point.sample <- tSamp$point.sample
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
+                                          coords = c("x","y"),
+                                          crs = resampleProjection)
+      if (verbose > 2)
+        cat(' ', tSamp$draws, 'target draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+    }
+    else {
+      # Get target point for each animal sampled
+      target.point.sample <- targetPoints[animal.sample, ]
+    }
+
+    if (all(captured[animal.sample]=="target")) {
+      targetDist1 <- targetDistStart[animal.sample, animal.sample]
+      corr[boot] <- calcMantel(targetDist = targetDist1,
+                               originPoints = origin.point.sample)$pointCorr
+    }
+    else if (all(captured[animal.sample]=="origin")) {
+      originDist1 <- originDistStart[animal.sample, animal.sample]
+      corr[boot] <- calcMantel(originDist = originDist1,
+                               targetPoints = target.point.sample)$pointCorr
+    }
+    else {
+      corr[boot] <- calcMantel(originPoints = origin.point.sample,
+                               targetPoints = target.point.sample)$pointCorr
+    }
+
+    # target.point.sample <- sp::SpatialPoints(target.point.sample)
+    # target.point.sample <- sf::st_as_sf(target.point.sample)
+    # sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
           "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
