@@ -405,3 +405,80 @@ simGL <- function(psi, originRelAbund, sampleSize,
                            geoBiasReverse = geoBiasReverse,
                            geoVCovReverse = geoVCovReverse)))
 }
+
+
+
+###############################################################################
+# Simulate genetic populations
+###############################################################################
+#' Simulates genetic population rasters from input polygons
+#'
+#' This code simulates rasters analagous to the genetic surfaces created from
+#' the bird genoscape project
+#'
+#' @param popBoundaries - a list containing polygons that represent the boundaries of each region
+#' @param npts - number of random points used to generate a kernel density surface within each region
+#' @param res - the desired resolution of the output raster
+#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each region to avoid or increase overlap
+#' @param bufferDist - Desired buffer distance in meters. Positive values enlarge regions, negative buffers make regions smaller
+#' @param popNames - a vector the same length as popBoundaries 
+#'
+#' @return returns a rasterStack probability surface.
+
+simGeneticPops <- function(popBoundaries,
+                           npts = 1000,
+						   res = c(0.0833,0.0833), #change to match isotope resolution
+						   bufferRegions = FALSE,
+						   bufferDist = NULL,
+						   popNames = NULL){
+						   
+						   
+# merge the polygons to make an empty raster for the state-space # 
+if(is.null(popNames)){
+popNames <- paste0("pop.",1:length(popBoundaries))} 
+
+if(bufferRegions){
+cat('Creating buffers ... \n')
+popBoundaries <- lapply(popBoundaries, 
+                     FUN = function(x){
+                     z <- sf::st_transform(x, "ESRI:102010")
+                     z1 <- sf::st_buffer(z, -50000) # 50km buffer from edge
+                     z2 <- sf::st_transform(z1, 4326)
+                     return(z2)})
+}
+
+crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox)) 
+
+emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
+                            xmx = max(crdsParams[,3]),
+							ymn = min(crdsParams[,2]),
+							ymx = max(crdsParams[,4]),
+							res = res)
+
+							
+# No buffer applied to edges i.e., some probability overlap
+popKDE <- lapply(popBoundaries,
+                 FUN = function(x){
+                  # generate random points 
+                     z <- sf::st_sample(x, 
+                                       size = npts,
+                                       type = "random")
+                     z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
+                                                  h = ks::Hlscv(sf::st_coordinates(z))))
+                   # convert to probability
+                     z1 <- z1/cellStats(z1, stat = 'sum', na.rm = TRUE)
+      		 # resample to larger raster 
+       		   y <- raster::resample(z1, emptyRast)
+                     y[is.na(y)] <- 0
+                     y[y<0] <- 0
+                 return(y)})
+
+# Stack the rasters # 
+genStack <- stack(popKDE)
+
+# rename the stack to identify the groups 
+names(genStack) <- popNames
+
+return(genStack)
+} 
+
