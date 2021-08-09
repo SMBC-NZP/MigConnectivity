@@ -197,14 +197,17 @@ locSample <- function(isGL,
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
                                crs = 4326)
   }
+
   # If assignment isn't defined, create one from sites and points
   if (is.null(assignment)) {
-    if (!is.null(sites)){
+    if (!is.null(sites) && !is.null(points)){
       #Use the provided spatial layers to create assignment
       if(!sf::st_crs(sites)==sf::st_crs(points)){
         points <- sf::st_transform(points, crs = resampleProjection)
+        sites <- sf::st_transform(sites, crs = resampleProjection)
       }
-      assignment <- suppressMessages(unclass(sf::st_intersects(x = points, y = sites,
+      assignment <- suppressMessages(unclass(sf::st_intersects(x = points,
+                                                               y = sites,
                                                     sparse = TRUE)))
       #if assignment is not there - convert to 0
       assignment[sapply(assignment, function(x) length(x)==0)] <- 0
@@ -216,7 +219,7 @@ locSample <- function(isGL,
 
   # Storage
   site.sample <- rep(NA, nAnimals)
-  point.sample <- matrix(NA, nAnimals, 2)
+  point.sample <- matrix(NA, nAnimals, 2, dimnames = list(NULL, c('x', 'y')))
   # Fill in telemetry/GPS values (no location uncertainty)
   if (length(dim(assignment))==2){
     site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ], 1,
@@ -309,7 +312,8 @@ locSample <- function(isGL,
         if (!is.null(overlap1))
           # Grab the relevant sites
           site.sample2 <- overlap1[1, samp2, drop = FALSE]
-        good.sample2 <- rep(1, sum(isRaster & toSampleBool))
+        good.sample2 <- seq(from = 1, by = nSim,
+              length.out = sum(isRaster & toSampleBool))
       }
       else if (is.null(singleCell)) {
         multidraw <- apply(matvals[ , (1:nAnimals)[toSampleBool & isRaster] + 2, drop = FALSE],
@@ -319,34 +323,53 @@ locSample <- function(isGL,
         #point.sample2 <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
         point.sample2 <- apply(multidraw, c(2:3), function(x) which(x==1))
         point.sample2 <- array(matvals[point.sample2, 1:2],
-                               c(nSim, sum(toSampleBool & isRaster), 2),
-                               list(NULL, NULL, c("x","y")))
+                               c(nSim * sum(toSampleBool & isRaster), 2),
+                               list(NULL, c("x","y")))
         #dimnames(point.sample2)[[2]] <- c("x","y")
 
         # Convert those to SpatialPoints
+        point.sample2 <- sf::st_as_sf(as.data.frame(point.sample2),
+                                      coords = c("x","y"),
+                                      crs = 4326)
 
-        point.sample2 <- apply(point.sample2,
-                               FUN = function(x){
-                                 sf::st_as_sf(data.frame(x),
-                                              coords = c("x","y"),
-                                    crs = 4326)},
-                               MARGIN = 2)
+        # point.sample2 <- apply(point.sample2,
+        #                        FUN = function(x){
+        #                          sf::st_as_sf(data.frame(x),
+        #                                       coords = c("x","y"),
+        #                             crs = 4326)},
+        #                        MARGIN = 2)
         #point.sample <- lapply(point.sample1, st_as_sf)
         # Find out which sampled points are in a target site
-        if(!sf::st_crs(sites)==sf::st_crs(point.sample2[[1]])){
+        if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
           sites <- sf::st_transform(sites, crs = resampleProjection)
-          point.sample2 <- lapply(point.sample2, sf::st_transform,
-                                  crs = resampleProjection)
+          point.sample2 <- sf::st_transform(point.sample2,
+                                            crs = resampleProjection)
         }
 
-        site.sample2 <- sapply(point.sample2, FUN = function(z){
-          suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-                                               sparse = TRUE))))})
+        # site.sample2 <- sapply(point.sample2, FUN = function(z){
+        #   suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
+        #                                        sparse = TRUE))))})
+        # Check which points are in target sites
+        site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
+                                                           y = sites))
+
+        # Give values without intersection an NA
+        len_intersect <- lengths(site.sample2)
+        # quick check to ensure that all the points fall exactly in one site #
+        if(any(len_intersect)>1){
+          stop("Overlapping targetSites or originSites not allowed \n")
+        }
+        site.sample2[lengths(site.sample2)==0] <- NA
+        site.sample2 <- unlist(as.numeric(site.sample2))
+
+        # Organize into matrix (separate by animal)
+        site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
 
         # Identify which animals have at least one valid sample point. good.sample2
         # will be NA for those that don't.  For those that do, it will location in
         # point.sample first valid point can be found.
-        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])
+        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])+
+          seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
         #cat(good.sample2, "\n")
       }
       else {
@@ -370,11 +393,8 @@ locSample <- function(isGL,
         if(any(len_intersect)>1){
           stop("Overlapping targetSites or originSites not allowed \n")
         }
-
-        tf_intersect <- lengths(site.sample2)>0
-
+        site.sample2[len_intersect==0] <- NA
         site.sample2 <- unlist(as.numeric(site.sample2))
-        site.sample2[site.sample2==0] <- NA
 
         # Organize into matrix (separate by animal)
         site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
@@ -382,7 +402,8 @@ locSample <- function(isGL,
         # good.sample2, for those that don't, will be NA. For those that do, it
         # will be location in point.sample where first valid point is.
 
-        good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]}) +
+
+        good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]})+
           seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
       }
     }
@@ -392,14 +413,15 @@ locSample <- function(isGL,
     }
     if (any(!isProb & isGL & !isRaster & toSampleBool)){
       if (any(!is.na(good.sample0[!(which(isGL) %in% which(isProb | isRaster))]))){
-        site.sample[!isProb & isGL & !isRaster & toSampleBool] <- apply(site.sample0[, !(which(isGL & toSampleBool) %in% which(isProb | isRaster)), drop = FALSE],
-                                                                        2,
-                                                                        function(x) x[!is.na(x)][1])
+        site.sample[!isProb & isGL & !isRaster & toSampleBool] <-
+          apply(site.sample0[, !(which(isGL & toSampleBool) %in% which(isProb | isRaster)), drop = FALSE],
+                2,
+                function(x) x[!is.na(x)][1])
         # Fill in target points of valid sampled points
-        # point.sample[which(!isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample0[!(which(isGL & toSampleBool) %in% which(isProb | isRaster))]))], ]<-
-        #   t(mapply(x = good.sample0[!is.na(good.sample0) & !(which(isGL & toSampleBool) %in% which(isProb | isRaster))],
-        #            y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0)))],
-        #            FUN = function(x, y) sf::st_coordinates(y[x,])))
+        point.sample[which(!isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample0[!(which(isGL & toSampleBool) %in% which(isProb | isRaster))]))], ]<-
+          t(mapply(x = good.sample0[!is.na(good.sample0) & !(which(isGL & toSampleBool) %in% which(isProb | isRaster))],
+                   y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0)))],
+                   FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
     if (any(isProb & isGL & !isRaster & toSampleBool)){
@@ -429,11 +451,17 @@ locSample <- function(isGL,
                              drop = FALSE],
                 2,
                 function(x) x[!is.na(x)][1])
+        rows.select <- good.sample2[!(which(isRaster & toSampleBool) %in%
+                                        which(isProb | isGL) |
+                                        is.na(good.sample2))]
         # Fill in target points of valid sampled points
-        # point.sample[which(!isProb & !isGL & isRaster & toSampleBool), ]<- #[which(!is.na(good.sample2))]
-        #   t(mapply(x = good.sample2[!(which(isRaster & toSampleBool) %in% which(isProb | isGL))],
-        #            y = point.sample2[,],#which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
-        #            FUN = function(x, y) sf::st_coordinates(y[x,])))
+        point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ] <-
+          sf::st_coordinates(point.sample2[rows.select, ])
+          #[which(!is.na(good.sample2))]
+          # t(mapply(x = good.sample2[!(which(isRaster & toSampleBool) %in% which(isProb | isGL))],
+          #          y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),,
+          #                            drop = FALSE],
+          #          FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
     if (any(isProb & !isGL & isRaster & toSampleBool)){
@@ -449,6 +477,7 @@ locSample <- function(isGL,
               site.sample2[good.sample12[col],
                            which(which(isRaster & toSampleBool) %in% which(isProb & !isGL))[col]]
           # Fill in target points of valid sampled points
+          # Doesn't get used, not going to include prob with estMantel
           # point.sample[which(isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample12))], ]<-
           #   t(mapply(x = good.sample12[!is.na(good.sample12)],
           #            y = point.sample2[which(which(isRaster & toSampleBool) %in% which(isProb & !isGL))[which(!is.na(good.sample12))], ],
@@ -471,17 +500,17 @@ locSample <- function(isGL,
                            which(which(isRaster & toSampleBool) %in% which(!isProb & isGL))[col]]
           # Just choosing GL point instead of fussing with raster point - generally
           # those are a lot more precise so probably also more accurate.
-          # point.sample[which(!isProb &
-          #                      isGL &
-          #                      isRaster &
-          #                      toSampleBool)[which(!is.na(good.sample02))],] <-
-          #   t(mapply(
-          #     x = good.sample02[!is.na(good.sample02)],
-          #     y = point.sample0[which(which(isGL & toSampleBool) %in%
-          #                               which(!isProb & isRaster))[which(!is.na(good.sample02))]],
-          #     FUN = function(x, y)
-          #       sf::st_coordinates(y[x, ])
-          #   ))
+          point.sample[which(!isProb &
+                               isGL &
+                               isRaster &
+                               toSampleBool)[which(!is.na(good.sample02))],] <-
+            t(mapply(
+              x = good.sample02[!is.na(good.sample02)],
+              y = point.sample0[which(which(isGL & toSampleBool) %in%
+                                        which(!isProb & isRaster))[which(!is.na(good.sample02))]],
+              FUN = function(x, y)
+                sf::st_coordinates(y[x, ])
+            ))
         }
       }
     }

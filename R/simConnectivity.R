@@ -331,65 +331,132 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   return(coda::as.mcmc(out))
 }
 
+#' Simulate geolocator data
+#'
+#' @param psi
+#' @param originRelAbund
+#' @param sampleSize
+#' @param originSites
+#' @param targetSites
+#' @param captured
+#' @param geoBias
+#' @param geoVCov
+#' @param geoBiasOrigin
+#' @param geoVCovOrigin
+#'
+#' @return
+#' @export
+#'
+#' @examples
 simGL <- function(psi, originRelAbund, sampleSize,
-                  originSites = NULL, targetSites = NULL, releasedOrigin=TRUE,
+                  originSites = NULL, targetSites = NULL,
+                  captured = "origin",
                   geoBias = NULL, geoVCov = NULL,
-                  geoBiasReverse=NULL, geoVCovReverse=NULL) {
+                  geoBiasOrigin=NULL, geoVCovOrigin=NULL,
+                  S = 1, p = list(1, 1)) {
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
-  rev <- reversePsiRelAbund(psi, originRelAbund)
+  rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
   gamma <- rev$gamma
   targetRelAbund <- rev$targetRelAbund
-  if (length(sampleSize)==1){
-    nAnimals <- sampleSize
-    # if (all(releasedOrigin))
-    #   sampleSize <- stats::rmultinom(1, nAnimals, rep(1/nOriginSites, nOriginSites)) # sample.int(nOriginSites, nAnimals, replace = TRUE)
-    # else if (all(!releasedOrigin))
-    #   sampleSize <- stats::rmultinom(1, nAnimals, rep(1/nTargetSites, nTargetSites)) # sample.int(nOriginSites, nAnimals, replace = TRUE)
+  if (length(dim(S))<2) {
+    S <- matrix(S, nOriginSites, nTargetSites, byrow = T)
   }
-  else
-    nAnimals <- sum(sampleSize)
-  if (length(releasedOrigin)==1)
-    releasedOrigin <- rep(releasedOrigin, nAnimals)
+  if (length(p[[1]]==1))
+    p[[1]] <- rep(p[[1]], nOriginSites)
+  if (length(p[[2]]==1))
+    p[[2]] <- rep(p[[2]], nTargetSites)
+  nAnimals <- sum(sampleSize[[1]]) + sum(sampleSize[[2]])
+  if (length(captured)==1)
+    captured <- rep(captured, nAnimals)
   targetAssignment <- rep(NA, nAnimals)
   originAssignment <- rep(NA, nAnimals)
+  lived <- rep(1, nAnimals)
+  recaptured <- rep(1, nAnimals)
+  if (length(sampleSize[[1]])>1){
+    originAssignment[captured=="origin"] <- rep(1:nOriginSites, sampleSize[[1]])
+  }
+  if (length(sampleSize[[2]])>1){
+    targetAssignment[captured=="target"] <- rep(1:nTargetSites, sampleSize[[2]])
+  }
+
 
   for (a in 1:nAnimals) {
-    if (releasedOrigin[a]) {
-      originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+    if (captured[a]=="origin") {
+      if (is.na(originAssignment[a]))
+        originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
       targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+      lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
+      recaptured[a] <- rbinom(1, 1, lived[a] * p[[1]][originAssignment[a]])
     }
     else {
-      targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+      if (is.na(targetAssignment[a]))
+        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
       originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+      lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
+      recaptured[a] <- rbinom(1, 1, lived[a] * p[[2]][targetAssignment[a]])
     }
   }
-  originPointsTrue <- raster::bind(mapply(sp::spsample,
-                                          x = methods::slot(originSites, "polygons")[originAssignment],
-                                          n = 1,
-                                          type = "random", SIMPLIFY = TRUE))
-  targetPointsTrue <- raster::bind(mapply(sp::spsample,
-                                          x = methods::slot(targetSites, "polygons")[targetAssignment],
-                                          n = 1,
-                                          type = "random"))
-  raster::crs(originPointsTrue) <- raster::crs(originSites)
-  raster::crs(targetPointsTrue) <- raster::crs(targetSites)
-  originPointsObs <- originPointsTrue
-  targetPointsObs <- targetPointsTrue
-  if (any(releasedOrigin)) {
-    geoBias2 <- array(rep(geoBias, sum(releasedOrigin)), c(2, sum(releasedOrigin)))
-    point.sample <- array(apply(targetPointsTrue@coords[releasedOrigin, , drop = FALSE], 1,
-                                MASS::mvrnorm, n=1, Sigma=geoVCov),
-                          c(2, sum(releasedOrigin))) + geoBias2
-    targetPointsObs@coords[releasedOrigin,] <- t(point.sample)
-  }
-  if (any(!releasedOrigin)) {
-    geoBias2 <- array(rep(geoBiasReverse, sum(!releasedOrigin)),
-                      c(2, sum(!releasedOrigin)))
-    point.sample <- array(apply(originPointsTrue@coords[!releasedOrigin, , drop = FALSE], 1,
-                                MASS::mvrnorm, n=1, Sigma=geoVCovReverse),
-                          c(2, sum(!releasedOrigin))) + geoBias2
-    originPointsObs@coords[!releasedOrigin, ] <- t(point.sample)
+  oaTest <- list(1:2); taTest <- list(2:3)
+  while (any(lengths(oaTest)>1) || any(lengths(taTest)>1)) {
+    originPointsTrue <- mapply(FUN = sf::st_sample,
+                               x = split(originSites[originAssignment, ],
+                                         1:nAnimals),
+                               size = 1,
+                               type = "random")
+    originPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, originPointsTrue)),
+                                     coords = c("lon","lat"),
+                                     crs = sf::st_crs(originSites))
+    targetPointsTrue <- mapply(FUN = sf::st_sample,
+                               x = split(targetSites[targetAssignment, ],
+                                         1:nAnimals),
+                               size = 1,
+                               type = "random")
+    targetPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, targetPointsTrue)),
+                                     coords = c("lon","lat"),
+                                     crs = sf::st_crs(targetSites))
+    originPointsObs <- array(NA, c(sum(recaptured), 2),
+                             dimnames = list(NULL, c("x","y")))
+    targetPointsObs <- array(NA, c(sum(recaptured), 2),
+                             dimnames = list(NULL, c("x","y")))
+    linkerOrigin <- which(recaptured == 1) %in%
+      which(captured=="origin" & recaptured == 1)
+    linkerTarget <- which(recaptured == 1) %in%
+      which(captured=="target" & recaptured == 1)
+    if (any(captured=="origin" & recaptured == 1)) {
+      geoBias2 <- array(rep(geoBias, sum(captured=="origin" & recaptured == 1)),
+                        c(2, sum(captured=="origin" & recaptured == 1)))
+      targetPointsObs[linkerOrigin, ] <-
+        t(array(apply(sf::st_coordinates(targetPointsTrue)[captured=="origin" & recaptured == 1, , drop = FALSE], 1,
+                      MASS::mvrnorm, n=1, Sigma=geoVCov),
+                c(2, sum(captured=="origin" & recaptured == 1))) + geoBias2)
+      originPointsObs[linkerOrigin, ] <-
+        sf::st_coordinates(originPointsTrue)[captured=="origin" & recaptured == 1, ,
+                                             drop = FALSE]
+    }
+    if (any(captured == "target" & recaptured == 1)) {
+      geoBias2 <- array(rep(geoBiasOrigin, sum(captured == "target" & recaptured == 1)),
+                        c(2, sum(captured == "target" & recaptured == 1)))
+      originPointsObs[linkerTarget, ] <-
+        t(array(apply(sf::st_coordinates(originPointsTrue)[captured == "target" & recaptured == 1, , drop = FALSE], 1,
+                      MASS::mvrnorm, n=1, Sigma=geoVCovOrigin),
+                c(2, sum(captured == "target" & recaptured == 1))) + geoBias2)
+      targetPointsObs[linkerTarget, ] <-
+        sf::st_coordinates(targetPointsTrue)[captured=="target" & recaptured == 1, ,
+                                             drop = FALSE]
+    }
+    targetPointsObs <- sf::st_as_sf(data.frame(targetPointsObs),
+                                    coords = c("x","y"),
+                                    crs = sf::st_crs(targetSites))
+    originPointsObs <- sf::st_as_sf(data.frame(originPointsObs),
+                                    coords = c("x","y"),
+                                    crs = sf::st_crs(originSites))
+    oaTest <- suppressMessages(unclass(sf::st_intersects(x = originPointsObs,
+                                                         y = originSites,
+                                                         sparse = TRUE)))
+    taTest <- suppressMessages(unclass(sf::st_intersects(x = targetPointsObs,
+                                                         y = targetSites,
+                                                         sparse = TRUE)))
   }
   return(list(originAssignment = originAssignment,
               targetAssignment = targetAssignment,
@@ -397,13 +464,16 @@ simGL <- function(psi, originRelAbund, sampleSize,
               targetPointsTrue = targetPointsTrue,
               originPointsObs = originPointsObs,
               targetPointsObs = targetPointsObs,
+              lived = lived,
+              recaptured = recaptured,
               input = list(psi = psi, originRelAbund = originRelAbund,
                            originSites = originSites,
                            targetSites = targetSites,
-                           releasedOrigin = releasedOrigin,
+                           captured = captured,
                            geoBias = geoBias, geoVCov = geoVCov,
-                           geoBiasReverse = geoBiasReverse,
-                           geoVCovReverse = geoVCovReverse)))
+                           geoBiasOrigin = geoBiasOrigin,
+                           geoVCovOrigin = geoVCovOrigin,
+                           S = S, p = p)))
 }
 
 

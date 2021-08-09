@@ -5,6 +5,7 @@ Steps for Making Future Updates
 the version of master on our GitHub repository.
 2. In RStudio (or wherever), create a new development branch. If you use an old
 branch name (such as "develop"), you may have to delete the old branch first.
+Create it from the Shell (Tools > Shell) and type git checkout -b develop.
 3. Make your changes, documenting and performing your own tests along the way.
 4. Commit and push to your development branch of our GitHub repository as things
 progress.  This push may have be done through the shell: Git | More | Shell...
