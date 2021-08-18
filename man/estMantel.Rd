@@ -5,19 +5,28 @@
 \title{Estimate Mantel correlation (rM) from geolocator and/or GPS data.}
 \usage{
 estMantel(
-  targetPoints,
-  originPoints,
+  targetPoints = NULL,
+  originPoints = NULL,
   isGL,
   geoBias = NULL,
   geoVCov = NULL,
   targetSites = NULL,
   nBoot = 1000,
-  nSim = 1000,
+  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000,
+    ifelse(any(isRaster), 10, 1))),
   verbose = 0,
   alpha = 0.05,
   resampleProjection = "ESRI:102010",
   maxTries = 300,
-  maintainLegacyOutput = FALSE
+  maintainLegacyOutput = FALSE,
+  originSites = NULL,
+  isTelemetry = !isGL,
+  isRaster = FALSE,
+  captured = "origin",
+  geoBiasOrigin = NULL,
+  geoVCovOrigin = NULL,
+  targetRaster = NULL,
+  originRaster = NULL
 )
 }
 \arguments{

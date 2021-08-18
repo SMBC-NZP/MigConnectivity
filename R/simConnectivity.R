@@ -353,7 +353,8 @@ simGL <- function(psi, originRelAbund, sampleSize,
                   captured = "origin",
                   geoBias = NULL, geoVCov = NULL,
                   geoBiasOrigin=NULL, geoVCovOrigin=NULL,
-                  S = 1, p = list(1, 1)) {
+                  S = 1, p = list(1, 1),
+                  requireEveryOrigin = FALSE) {
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
   rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
@@ -375,28 +376,38 @@ simGL <- function(psi, originRelAbund, sampleSize,
   recaptured <- rep(1, nAnimals)
   if (length(sampleSize[[1]])>1){
     originAssignment[captured=="origin"] <- rep(1:nOriginSites, sampleSize[[1]])
+    if (requireEveryOrigin && is.null(sampleSize[[2]])){
+      if (any(sampleSize[[1]] < 1))
+        stop("Some origin site or sites have no samples ", sampleSize[[1]])
+    }
   }
   if (length(sampleSize[[2]])>1){
     targetAssignment[captured=="target"] <- rep(1:nTargetSites, sampleSize[[2]])
   }
 
-
-  for (a in 1:nAnimals) {
-    if (captured[a]=="origin") {
-      if (is.na(originAssignment[a]))
-        originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
-      targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
-      lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
-      recaptured[a] <- rbinom(1, 1, lived[a] * p[[1]][originAssignment[a]])
+  runWell <- FALSE
+  while (!runWell){
+    for (a in 1:nAnimals) {
+      if (captured[a]=="origin") {
+        if (is.na(originAssignment[a]))
+          originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+        lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
+        recaptured[a] <- rbinom(1, 1, lived[a] * p[[1]][originAssignment[a]])
+      }
+      else {
+        if (is.na(targetAssignment[a]))
+          targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+        originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+        lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
+        recaptured[a] <- rbinom(1, 1, lived[a] * p[[2]][targetAssignment[a]])
+      }
     }
-    else {
-      if (is.na(targetAssignment[a]))
-        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
-      originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
-      lived[a] <- rbinom(1, 1, S[originAssignment[a], targetAssignment[a]])
-      recaptured[a] <- rbinom(1, 1, lived[a] * p[[2]][targetAssignment[a]])
-    }
+    runWell <- !requireEveryOrigin || any(captured=="target") ||
+      all.equal(unique(originAssignment), 1:nOriginSites)
   }
+
+
   oaTest <- list(1:2); taTest <- list(2:3)
   while (any(lengths(oaTest)>1) || any(lengths(taTest)>1)) {
     originPointsTrue <- mapply(FUN = sf::st_sample,
@@ -451,12 +462,12 @@ simGL <- function(psi, originRelAbund, sampleSize,
     originPointsObs <- sf::st_as_sf(data.frame(originPointsObs),
                                     coords = c("x","y"),
                                     crs = sf::st_crs(originSites))
-    oaTest <- suppressMessages(unclass(sf::st_intersects(x = originPointsObs,
-                                                         y = originSites,
-                                                         sparse = TRUE)))
-    taTest <- suppressMessages(unclass(sf::st_intersects(x = targetPointsObs,
-                                                         y = targetSites,
-                                                         sparse = TRUE)))
+    # oaTest <- suppressMessages(unclass(sf::st_intersects(x = originPointsObs,
+    #                                                      y = originSites,
+    #                                                      sparse = TRUE)))
+    # taTest <- suppressMessages(unclass(sf::st_intersects(x = targetPointsObs,
+    #                                                      y = targetSites,
+    #                                                      sparse = TRUE)))
   }
   return(list(originAssignment = originAssignment,
               targetAssignment = targetAssignment,
@@ -483,72 +494,87 @@ simGL <- function(psi, originRelAbund, sampleSize,
 ###############################################################################
 #' Simulates genetic population rasters from input polygons
 #'
-#' This code simulates rasters analagous to the genetic surfaces created from
+#' This code simulates rasters analogous to the genetic surfaces created from
 #' the bird genoscape project
 #'
-#' @param popBoundaries - a list containing polygons that represent the boundaries of each region
-#' @param npts - number of random points used to generate a kernel density surface within each region
+#' @param popBoundaries - a list containing polygons that represent the
+#'   boundaries of each region
+#' @param npts - number of random points used to generate a kernel density
+#'   surface within each region
 #' @param res - the desired resolution of the output raster
-#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each region to avoid or increase overlap
-#' @param bufferDist - Desired buffer distance in meters. Positive values enlarge regions, negative buffers make regions smaller
-#' @param popNames - a vector the same length as popBoundaries 
+#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
+#'   region to avoid or increase overlap
+#' @param bufferDist - Desired buffer distance in meters. Positive values
+#'   enlarge regions, negative buffers make regions smaller
+#' @param popNames - a vector the same length as popBoundaries
 #'
 #' @return returns a rasterStack probability surface.
+#' @export
 
 simGeneticPops <- function(popBoundaries,
                            npts = 1000,
 						   res = c(0.0833,0.0833), #change to match isotope resolution
 						   bufferRegions = FALSE,
-						   bufferDist = NULL,
-						   popNames = NULL){
-						   
-						   
-# merge the polygons to make an empty raster for the state-space # 
-if(is.null(popNames)){
-popNames <- paste0("pop.",1:length(popBoundaries))} 
+						   bufferDist = -50000,
+						   popNames = NULL,
+						   verbose = 0){
 
-if(bufferRegions){
-cat('Creating buffers ... \n')
-popBoundaries <- lapply(popBoundaries, 
-                     FUN = function(x){
-                     z <- sf::st_transform(x, "ESRI:102010")
-                     z1 <- sf::st_buffer(z, -50000) # 50km buffer from edge
-                     z2 <- sf::st_transform(z1, 4326)
-                     return(z2)})
-}
+  if(is.null(popNames)){
+    popNames <- paste0("pop.",1:length(popBoundaries))
+  }
 
-crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox)) 
+  # merge the polygons to make an empty raster for the state-space #
 
-emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
-                            xmx = max(crdsParams[,3]),
-							ymn = min(crdsParams[,2]),
-							ymx = max(crdsParams[,4]),
-							res = res)
+  if(bufferRegions){
+    if (verbose > 0)
+      cat('Creating buffers ... \n')
+    popBoundaries <- lapply(popBoundaries,
+                            FUN = function(x){
+                              z <- sf::st_transform(x, "ESRI:102010")
+                              z1 <- sf::st_buffer(z, bufferDist)
+                              z2 <- sf::st_transform(z1, 4326)
+                              return(z2)})
+  }
 
-							
-# No buffer applied to edges i.e., some probability overlap
-popKDE <- lapply(popBoundaries,
-                 FUN = function(x){
-                  # generate random points 
-                     z <- sf::st_sample(x, 
-                                       size = npts,
-                                       type = "random")
+  if (verbose > 0)
+    cat('Preparing data ... \n')
+
+  crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox))
+
+  emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
+                              xmx = max(crdsParams[,3]),
+                              ymn = min(crdsParams[,2]),
+                              ymx = max(crdsParams[,4]),
+                              res = res)
+
+
+  if (verbose > 0)
+    cat('Generating KDE ... \n')
+  # No buffer applied to edges i.e., some probability overlap
+  popKDE <- lapply(popBoundaries,
+                   FUN = function(x){
+                     # generate random points
+                     z <- sf::st_sample(x,
+                                        size = npts,
+                                        type = "random")
                      z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
                                                   h = ks::Hlscv(sf::st_coordinates(z))))
-                   # convert to probability
+                     # convert to probability
                      z1 <- z1/cellStats(z1, stat = 'sum', na.rm = TRUE)
-      		 # resample to larger raster 
-       		   y <- raster::resample(z1, emptyRast)
+                     # resample to larger raster
+                     y <- raster::resample(z1, emptyRast)
                      y[is.na(y)] <- 0
                      y[y<0] <- 0
-                 return(y)})
+                     return(y)})
 
-# Stack the rasters # 
-genStack <- stack(popKDE)
+  if (verbose > 0)
+    cat('Stacking rasters ... \n')
+  # Stack the rasters #
+  genStack <- raster::stack(popKDE)
 
-# rename the stack to identify the groups 
-names(genStack) <- popNames
+  # rename the stack to identify the groups
+  names(genStack) <- popNames
 
-return(genStack)
-} 
+  return(genStack)
+}
 
