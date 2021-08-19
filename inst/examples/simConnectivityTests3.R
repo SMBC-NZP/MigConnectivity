@@ -21,7 +21,7 @@ scenarios <- c('Proportional Released Origin',
                'Small Origin Release East; Target Release West')
 nScenarios <- length(scenarios)
 nOriginSites <- 3
-nTargetSites <- 6
+nTargetSites <- 5
 psiTrue <- Combined$psi$mean
 psiTrue[2, 3] <- psiTrue[2, 1]
 psiTrue <- psiTrue[, -1]
@@ -42,6 +42,10 @@ originSitesPABU
 rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
 sf::st_crs(originSitesPABU)
+genPops <- simGeneticPops(popBoundaries = list(OVENdata$originSites[1, ],
+                                               OVENdata$originSites[2, ]),
+                          popNames = OVENdata$originNames, res = c(10000, 10000),
+                          verbose = 1)
 genPops <- simGeneticPops(popBoundaries = list(originSitesPABU[1, ],
                                                originSitesPABU[2, ],
                                                originSitesPABU[3, ]),
@@ -59,9 +63,9 @@ sampleSize[[1]] <- list(30, NULL)
 sampleSize[[2]] <- list(NULL, 300)
 sampleSize[[3]] <- list(30, 300)
 sampleSize[[4]] <- list(c(10, 10, 10), NULL)
-sampleSize[[5]] <- list(NULL, rep(50, nTargetSites))
-sampleSize[[6]] <- list(c(30, 0, 0), c(75, 75, 75, 75, 0, 0))
-sampleSize[[7]] <- list(c(5, 0, 0), c(75, 75, 75, 75, 0, 0))
+sampleSize[[5]] <- list(NULL, rep(60, nTargetSites))
+sampleSize[[6]] <- list(c(30, 0, 0), c(100, 100, 100, 0, 0))
+sampleSize[[7]] <- list(c(5, 0, 0), c(100, 100, 100, 0, 0))
 sampleSizeGL <- lapply(sampleSize, function(x) x[[2]] <- NULL)
 sampleSizeGeno <- lapply(sampleSize, function(x) x[[2]])
 
@@ -157,7 +161,7 @@ for (sim in 1:nSims) {
     dataStore[[sim]][[sc]] <- data1
     cat(sc)
     save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sampleSizes, sim, sc,
-         dataStore, file = 'testGL2b.RData')
+         dataStore, file = 'testConnectivity3a.RData')
   }
   cat("\n")
 }
