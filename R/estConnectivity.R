@@ -445,12 +445,8 @@ estTransitionBoot <- function(originSites = NULL,
                               alpha = 0.05,
                               resampleProjection = 'ESRI:102010',#MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
-                              maxTries = 300) {
-  # CURRENTLY assumes input is from isoAssign BUILD IN FLEXIBILITY FROM
-  # CONTINAS- isotope assignment
-  # COULD ALSO BE A GENETIC RASTER OR A COMBINATION #
-
-  # ORIGIN RASTER NEEDS WORK
+                              maxTries = 300,
+                              dataOverlapSetting = "dummy") {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -464,6 +460,18 @@ estTransitionBoot <- function(originSites = NULL,
     stop("Need to define either originAssignment or originSites and originRaster or originPoints")}
   if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) && is.null(targetAssignment)){
     stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")}
+  # if (dataOverlapSetting != "dummy") {
+  #   temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
+  #                        originPoints = originPoints,
+  #                        targetPoints = targetPoints,
+  #                        originAssignment = originAssignment,
+  #                        targetAssignment = targetAssignment,
+  #                        isGL = isGL, isTelemetry = isTelemetry,
+  #                        isRaster = isRaster, isProb = isProb,
+  #                        captured = captured,
+  #                        targetRaster = targetRaster,
+  #                        originRaster = originRaster)
+  # }
   if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
     stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
   if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
@@ -1088,7 +1096,9 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                                         ifelse(any(isGL), 1000,
                                                ifelse(any(isRaster), 10, 1))),
                           maxTries = 300,
-                          nBurnin = 5000, nChains = 3, nThin = 1) {
+                          nBurnin = 5000, nChains = 3, nThin = 1,
+                          dataOverlapSetting = c("dummy", "none", "named")) {
+  dataOverlapSetting <- match.arg(dataOverlapSetting)
   if (is.null(banded)) {
     psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
                              isRaster = isRaster, isProb = isProb,
@@ -1096,16 +1106,18 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              geoBiasOrigin = geoBiasOrigin,
                              geoVCovOrigin=geoVCovOrigin,
                              targetPoints=targetPoints, targetSites=targetSites,
-                     targetAssignment=targetAssignment,
-                     originPoints=originPoints, originSites=originSites,
-                     originAssignment=originAssignment,
-                     originNames=originNames, targetNames=targetNames,
-                     targetRaster = targetRaster, originRaster = originRaster,
-                     captured = captured,
-                     nBoot = nSamples, verbose=verbose,
-                     nSim = nSim, alpha = alpha,
-                     resampleProjection = resampleProjection,
-                     maxTries = maxTries)
+                             targetAssignment=targetAssignment,
+                             originPoints=originPoints, originSites=originSites,
+                             originAssignment=originAssignment,
+                             originNames=originNames, targetNames=targetNames,
+                             targetRaster = targetRaster,
+                             originRaster = originRaster,
+                             captured = captured,
+                             nBoot = nSamples, verbose=verbose,
+                             nSim = nSim, alpha = alpha,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             dataOverlapSetting = dataOverlapSetting)
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
