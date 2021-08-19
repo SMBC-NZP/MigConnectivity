@@ -513,11 +513,11 @@ simGL <- function(psi, originRelAbund, sampleSize,
 
 simGeneticPops <- function(popBoundaries,
                            npts = 1000,
-						   res = NULL, #c(0.0833,0.0833), #change to match isotope resolution
-						   bufferRegions = FALSE,
-						   bufferDist = -50000,
-						   popNames = NULL,
-						   verbose = 0){
+						               res = NULL, #change to match isotope resolution
+						               bufferRegions = FALSE,
+						               bufferDist = -50000,
+						               popNames = NULL,
+						               verbose = 0){
 
   if(is.null(popNames)){
     popNames <- paste0("pop.",1:length(popBoundaries))
@@ -570,16 +570,32 @@ simGeneticPops <- function(popBoundaries,
                      y[is.na(y)] <- 0
                      y[y<0] <- 0
                      return(y)})
+  # convert the probability of assignment within each population to 1
+  # i.e., they can be assigned anywhere within that population if
+  # assigned there - following gaiah package
+
+  popBinary <- lapply(popBoundaries,
+                      FUN = function(x){
+                      popRast <- rasterize(as(x,'Spatial'),
+                                           emptyRast,
+                                           field = 1,
+                                           background=0)
+                      return(popRast)
+                      })
 
   if (verbose > 0)
     cat('Stacking rasters ... \n')
+
   # Stack the rasters #
   genStack <- raster::stack(popKDE)
+  popBinary <- raster::stack(popBinary)
 
   # rename the stack to identify the groups
   names(genStack) <- popNames
+  names(popBinary) <- popNames
 
-  return(genStack)
+  return(list(genStack = genStack,
+              popRast = popBinary))
 }
 
 #' Simulate animal genoscape data for estimating migratory connectivity
@@ -597,10 +613,15 @@ simGeneticPops <- function(popBoundaries,
 #' @export
 #'
 # @examples
-simGeneticData <- function(genPops, psi, originRelAbund, sampleSize,
-                           originSites = NULL, targetSites = NULL,
+simGeneticData <- function(genPops,
+                           psi,
+                           originRelAbund,
+                           sampleSize,
+                           originSites = NULL,
+                           targetSites = NULL,
                            captured = "target",
                            requireEveryOrigin = FALSE) {
+
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
   rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
@@ -658,10 +679,42 @@ simGeneticData <- function(genPops, psi, originRelAbund, sampleSize,
                                    coords = c("lon","lat"),
                                    crs = sf::st_crs(targetSites))
   if (captured == "target") {
-    genProbs <- raster::extract(genPops, sf::st_coordinates(originPointsTrue))
+    genProbs <- raster::extract(genPops$genStack,
+                                sf::st_coordinates(originPointsTrue))
+
+    # convert to probability
+    genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
+
+    # split out inds to list #
+    indGP <- split(genProbs, f=1:nrow(genProbs))
+
+    # use genProbs to create a raster probability surface
+    Ncell <- raster::cellStats(genPops$popRast, sum)
+
+    indRasts <- stack(
+                lapply(indGp,
+                       function(x){
+                        raster::calc(x*genPops$popRast / Ncell, fun = sum)
+                       }))
   }
   else {
-    genProbs <- raster::extract(genPops, sf::st_coordinates(targetPointsTrue))
+    genProbs <- raster::extract(genPops$genStack,
+                                sf::st_coordinates(targetPointsTrue))
+
+    # convert to probability
+    genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
+
+    # split out inds to list #
+    indGP <- split(genProbs, f=1:nrow(genProbs))
+
+    # use genProbs to create a raster probability surface
+    Ncell <- raster::cellStats(genPops$popRast, sum)
+
+    indRasts <- stack(
+            lapply(indGp,
+             function(x){
+               raster::calc(x*genPops$popRast / Ncell, fun = sum)
+             }))
   }
 
   return(list(originAssignment = originAssignment,
@@ -669,7 +722,9 @@ simGeneticData <- function(genPops, psi, originRelAbund, sampleSize,
               originPointsTrue = originPointsTrue,
               targetPointsTrue = targetPointsTrue,
               genProbs = genProbs,
-              input = list(genPops = genPops, psi = psi,
+              genAssign = indRasts,
+              input = list(genPops = genPops,
+                           psi = psi,
                            originRelAbund = originRelAbund,
                            originSites = originSites,
                            targetSites = targetSites,
