@@ -692,7 +692,7 @@ simGeneticData <- function(genPops,
     Ncell <- raster::cellStats(genPops$popRast, sum)
 
     indRasts <- stack(
-                lapply(indGp,
+                lapply(indGP,
                        function(x){
                         raster::calc(x*genPops$popRast / Ncell, fun = sum)
                        }))
