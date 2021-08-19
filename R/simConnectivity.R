@@ -513,7 +513,7 @@ simGL <- function(psi, originRelAbund, sampleSize,
 
 simGeneticPops <- function(popBoundaries,
                            npts = 1000,
-						   res = c(0.0833,0.0833), #change to match isotope resolution
+						   res = NULL, #c(0.0833,0.0833), #change to match isotope resolution
 						   bufferRegions = FALSE,
 						   bufferDist = -50000,
 						   popNames = NULL,
@@ -540,6 +540,10 @@ simGeneticPops <- function(popBoundaries,
     cat('Preparing data ... \n')
 
   crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox))
+
+  if(is.null(res)){
+    res <- rep((crdsParams[,3]-crdsParams[,1])/20,2)
+  }
 
   emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
                               xmx = max(crdsParams[,3]),
