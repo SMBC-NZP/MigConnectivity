@@ -16,7 +16,8 @@ simGL(
   geoBiasOrigin = NULL,
   geoVCovOrigin = NULL,
   S = 1,
-  p = list(1, 1)
+  p = list(1, 1),
+  requireEveryOrigin = FALSE
 )
 }
 \arguments{

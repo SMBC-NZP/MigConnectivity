@@ -347,7 +347,7 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 #' @return
 #' @export
 #'
-#' @examples
+# @examples
 simGL <- function(psi, originRelAbund, sampleSize,
                   originSites = NULL, targetSites = NULL,
                   captured = "origin",
@@ -462,12 +462,12 @@ simGL <- function(psi, originRelAbund, sampleSize,
     originPointsObs <- sf::st_as_sf(data.frame(originPointsObs),
                                     coords = c("x","y"),
                                     crs = sf::st_crs(originSites))
-    # oaTest <- suppressMessages(unclass(sf::st_intersects(x = originPointsObs,
-    #                                                      y = originSites,
-    #                                                      sparse = TRUE)))
-    # taTest <- suppressMessages(unclass(sf::st_intersects(x = targetPointsObs,
-    #                                                      y = targetSites,
-    #                                                      sparse = TRUE)))
+    oaTest <- suppressMessages(unclass(sf::st_intersects(x = originPointsObs,
+                                                         y = originSites,
+                                                         sparse = TRUE)))
+    taTest <- suppressMessages(unclass(sf::st_intersects(x = targetPointsObs,
+                                                         y = targetSites,
+                                                         sparse = TRUE)))
   }
   return(list(originAssignment = originAssignment,
               targetAssignment = targetAssignment,
@@ -578,3 +578,96 @@ simGeneticPops <- function(popBoundaries,
   return(genStack)
 }
 
+#' Simulate animal genoscape data for estimating migratory connectivity
+#'
+#' @param genPops
+#' @param psi
+#' @param originRelAbund
+#' @param sampleSize
+#' @param originSites
+#' @param targetSites
+#' @param captured
+#' @param requireEveryOrigin
+#'
+#' @return
+#' @export
+#'
+# @examples
+simGeneticData <- function(genPops, psi, originRelAbund, sampleSize,
+                           originSites = NULL, targetSites = NULL,
+                           captured = "target",
+                           requireEveryOrigin = FALSE) {
+  nOriginSites <- nrow(psi)
+  nTargetSites <- ncol(psi)
+  rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
+  gamma <- rev$gamma
+  targetRelAbund <- rev$targetRelAbund
+  nAnimals <- sum(sampleSize)
+  if (length(captured)>1)
+    captured <- captured[1]
+  targetAssignment <- rep(NA, nAnimals)
+  originAssignment <- rep(NA, nAnimals)
+  if (captured=="origin" && length(sampleSize)>1){
+    originAssignment <- rep(1:nOriginSites, sampleSize)
+    if (requireEveryOrigin){
+      if (any(sampleSize < 1))
+        stop("Some origin site or sites have no samples ", sampleSize)
+    }
+  }
+  if (captured=="target" && length(sampleSize)>1){
+    targetAssignment <- rep(1:nTargetSites, sampleSize)
+  }
+
+  runWell <- FALSE
+  while (!runWell){
+    for (a in 1:nAnimals) {
+      if (captured=="origin") {
+        if (is.na(originAssignment[a]))
+          originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+      }
+      else {
+        if (is.na(targetAssignment[a]))
+          targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+        originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+      }
+    }
+    runWell <- !requireEveryOrigin || captured=="target" ||
+      all.equal(unique(originAssignment), 1:nOriginSites)
+  }
+
+
+  originPointsTrue <- mapply(FUN = sf::st_sample,
+                             x = split(originSites[originAssignment, ],
+                                       1:nAnimals),
+                             size = 1,
+                             type = "random")
+  originPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, originPointsTrue)),
+                                   coords = c("lon","lat"),
+                                   crs = sf::st_crs(originSites))
+  targetPointsTrue <- mapply(FUN = sf::st_sample,
+                             x = split(targetSites[targetAssignment, ],
+                                       1:nAnimals),
+                             size = 1,
+                             type = "random")
+  targetPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, targetPointsTrue)),
+                                   coords = c("lon","lat"),
+                                   crs = sf::st_crs(targetSites))
+  if (captured == "target") {
+    genProbs <- raster::extract(genPops, sf::st_coordinates(originPointsTrue))
+  }
+  else {
+    genProbs <- raster::extract(genPops, sf::st_coordinates(targetPointsTrue))
+  }
+
+  return(list(originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              originPointsTrue = originPointsTrue,
+              targetPointsTrue = targetPointsTrue,
+              genProbs = genProbs,
+              input = list(genPops = genPops, psi = psi,
+                           originRelAbund = originRelAbund,
+                           originSites = originSites,
+                           targetSites = targetSites,
+                           captured = captured)))
+}

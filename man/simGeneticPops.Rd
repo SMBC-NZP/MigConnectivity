@@ -9,8 +9,9 @@ simGeneticPops(
   npts = 1000,
   res = c(0.0833, 0.0833),
   bufferRegions = FALSE,
-  bufferDist = NULL,
-  popNames = NULL
+  bufferDist = -50000,
+  popNames = NULL,
+  verbose = 0
 )
 }
 \arguments{
