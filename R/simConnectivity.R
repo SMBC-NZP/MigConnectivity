@@ -354,7 +354,8 @@ simGL <- function(psi, originRelAbund, sampleSize,
                   geoBias = NULL, geoVCov = NULL,
                   geoBiasOrigin=NULL, geoVCovOrigin=NULL,
                   S = 1, p = list(1, 1),
-                  requireEveryOrigin = FALSE) {
+                  requireEveryOrigin = FALSE,
+                  verbose = 0) {
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
   rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
@@ -403,8 +404,11 @@ simGL <- function(psi, originRelAbund, sampleSize,
         recaptured[a] <- rbinom(1, 1, lived[a] * p[[2]][targetAssignment[a]])
       }
     }
+    oa1 <- sort(unique(originAssignment))
     runWell <- !requireEveryOrigin || any(captured=="target") ||
-      all.equal(unique(originAssignment), 1:nOriginSites)
+      isTRUE(all.equal(oa1, 1:nOriginSites))
+    if (!runWell && verbose > 0)
+      cat(oa1, "\n")
   }
 
 
@@ -722,7 +726,7 @@ simGeneticData <- function(genPops,
               originPointsTrue = originPointsTrue,
               targetPointsTrue = targetPointsTrue,
               genProbs = genProbs,
-              genAssign = indRasts,
+              genRaster = indRasts,
               input = list(genPops = genPops,
                            psi = psi,
                            originRelAbund = originRelAbund,

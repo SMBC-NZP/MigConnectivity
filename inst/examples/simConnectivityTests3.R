@@ -22,34 +22,36 @@ scenarios <- c('Proportional Released Origin',
 nScenarios <- length(scenarios)
 nOriginSites <- 3
 nTargetSites <- 5
-psiTrue <- Combined$psi$mean
-psiTrue[2, 3] <- psiTrue[2, 1]
-psiTrue <- psiTrue[, -1]
-psiTrue <- round(psiTrue, 1)
+psiTrue <- psiPABU$psi$mean
+if (ncol(psiTrue)>nTargetSites) {
+  psiTrue[, nTargetSites] <- rowSums(psiTrue[ , nTargetSites:ncol(psiTrue)])
+  psiTrue <- psiTrue[, 1:nTargetSites]
+}
 rowSums(psiTrue)
 originNames <- LETTERS[1:nOriginSites]
 targetNames <- as.character(1:nTargetSites)
 dimnames(psiTrue) <- list(originNames, targetNames)
-geoBias <- OVENdata$geo.bias
-geoVCov <- OVENdata$geo.vcov
+geoBias <- c(-33457.21, 159906.9)
+geoVCov <- matrix(c(95917504, -20182252, -20182252, 179951061),
+                  nrow = 2, ncol = 2, byrow = TRUE)
 # Changed these from PABU estimates so we'd average at least one GL per
 # population in first and third scenario
 originRelAbund <- c(1/30, 2/30, 27/30)
-originSites <- OVENdata$originSites
-targetSites <- OVENdata$targetSites[2:3, ]
-originSitesPABU
+originSites <- originSitesPABU
+targetSites <- targetSitesPABU
+if (nrow(targetSites)>nTargetSites) {
+  targetSites <- targetSites[1:nTargetSites, ]
+}
+
 
 rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
 sf::st_crs(originSitesPABU)
-genPops <- simGeneticPops(popBoundaries = list(OVENdata$originSites[1, ],
-                                               OVENdata$originSites[2, ]),
-                          popNames = OVENdata$originNames, res = c(10000, 10000),
-                          verbose = 1)
-genPops <- simGeneticPops(popBoundaries = list(originSitesPABU[1, ],
-                                               originSitesPABU[2, ],
-                                               originSitesPABU[3, ]),
-                          popNames = originNamesPABU, res = c(10000, 10000),
+genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
+                                               originSites[2, ],
+                                               originSites[3, ]),
+                          popNames = originNames, res = c(50000, 50000),
+                          bufferRegions = T, bufferDist = 1000,
                           verbose = 1)
 
 S <- vector("list", nScenarios)
@@ -66,19 +68,34 @@ sampleSize[[4]] <- list(c(10, 10, 10), NULL)
 sampleSize[[5]] <- list(NULL, rep(60, nTargetSites))
 sampleSize[[6]] <- list(c(30, 0, 0), c(100, 100, 100, 0, 0))
 sampleSize[[7]] <- list(c(5, 0, 0), c(100, 100, 100, 0, 0))
-sampleSizeGL <- lapply(sampleSize, function(x) x[[2]] <- NULL)
+sampleSizeGL <- lapply(sampleSize, function(x) list(x[[1]], NULL))
 sampleSizeGeno <- lapply(sampleSize, function(x) x[[2]])
 
 captured <- vector("list", nScenarios)
+isGL <- vector("list", nScenarios); isTelemetry <- vector("list", nScenarios)
+isRaster <- vector("list", nScenarios); isProb <- vector("list", nScenarios)
 for (i in 1:nScenarios) {
-  if (!is.null(sampleSize[[i]][[1]]))
+  if (!is.null(sampleSize[[i]][[1]])) {
     captured[[i]] <- rep("origin", sum(sampleSize[[i]][[1]]))
-  if (!is.null(sampleSize[[i]][[2]]))
+    isGL[[i]] <- rep(TRUE, sum(sampleSize[[i]][[1]]))
+    isRaster[[i]] <- rep(FALSE, sum(sampleSize[[i]][[1]]))
+    isTelemetry[[i]] <- rep(FALSE, sum(sampleSize[[i]][[1]]))
+    isProb[[i]] <- rep(FALSE, sum(sampleSize[[i]][[1]]))
+  }
+  if (!is.null(sampleSize[[i]][[2]])){
     captured[[i]] <- c(captured[[i]], rep("target", sum(sampleSize[[i]][[2]])))
+    isGL[[i]] <- c(isGL[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
+    isRaster[[i]] <- c(isRaster[[i]], rep(TRUE, sum(sampleSize[[i]][[2]])))
+    isTelemetry[[i]] <- c(isTelemetry[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
+    isProb[[i]] <- c(isProb[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
+  }
 }
+targetCenters <- st_centroid(targetSites)
+targetDist <- distFromPos(st_coordinates(targetCenters$geometry))
+originSites2 <- st_transform(originSites, 4326)
+originCenters <- st_centroid(originSites2)
+originDist <- distFromPos(st_coordinates(originCenters$geometry))
 
-originDist <- OVENdata$originDist
-targetDist <- OVENdata$targetDist[-1,-1]
 MCtrue <- calcMC(originDist, targetDist, originRelAbund, psiTrue)
 
 psiEst <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
@@ -101,26 +118,40 @@ for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
   for (sc in 1:nScenarios) {
-    if (!is.null(sampleSizeGL[[sc]][[1]]))
+    or <- NULL
+    if (!is.null(sampleSizeGL[[sc]][[1]])){
       data1 <- simGL(psi = psiTrue, originRelAbund = originRelAbund,
                      sampleSize = sampleSizeGL[[sc]],
                      originSites = originSites, targetSites = targetSites,
                      captured = captured[[sc]],
                      geoBias, geoVCov, geoBiasOrigin, geoVCovOrigin,
                      S = S[[sc]], p = p[[sc]],
-                     requireEveryOrigin = is.null(sampleSizeGeno[[sc]]))
-    else
+                     requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
+                     verbose = 1)
+      op <- data1$originPointsObs
+      tp <- data1$targetPointsObs
+    }else{
       data1 <- NULL
-    if (!is.null(sampleSizeGeno[[sc]]))
+      op <- NULL
+      tp <- NULL
+    }
+    if (!is.null(sampleSizeGeno[[sc]])){
       data2 <- simGeneticData(genPops = genPops, psi = psiTrue,
                               originRelAbund = originRelAbund,
                               sampleSize = sampleSizeGeno[[sc]],
                               originSites = originSites,
                               targetSites = targetSites,
                               captured = captured[[sc]])
-    else
+      tp <- rbind(tp, data2$targetPointsTrue)
+      or <- data2$genRaster
+      mean(apply(data2$genProbs, 1, sd))
+      mean(apply(originAssignmentPABU[breeders, ], 1, sd))
+      mean(apply(data2$genProbs, 1, max)>0.99999)
+      originSites <- sf::st_transform(originSites, crs(or, TRUE))
+      crs(or) <- sf::st_crs(targetSites)
+    }else{
       data2 <- NULL
-
+    }
     # test1 <- MigConnectivity:::locSample(rep(T, sum(data1$recaptured)),
     #                                      rep(F, sum(data1$recaptured)),
     #                                      rep(F, sum(data1$recaptured)),
@@ -132,15 +163,16 @@ for (sim in 1:nSims) {
     #                                      resampleProjection = sf::st_crs(targetSites),
     #                                      nSim = 1000, maxTries = 300)
     est1 <- estTransition(originSites, targetSites,
-                          data1$originPointsObs, data1$targetPointsObs,
+                          op, tp, originRaster = or,
                           originNames = originNames, targetNames = targetNames,
-                          nSamples = 200, isGL = TRUE,
-                          captured = captured[[sc]][which(data1$recaptured==1)],
+                          nSamples = 50, isGL = isGL[[sc]],
+                          isTelemetry = isTelemetry[[sc]],
+                          isRaster = isRaster[[sc]], isProb = isProb[[sc]],
+                          captured = captured[[sc]],
                           geoBias = geoBias, geoVCov = geoVCov,
-                          geoBiasOrigin = geoBiasOrigin,
-                          geoVCovOrigin = geoVCovOrigin,
                           resampleProjection = sf::st_crs(targetSites),
-                          nSim = 400, verbose = 0)
+                          nSim = 400, verbose = 2,
+                          dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
                         est1)
