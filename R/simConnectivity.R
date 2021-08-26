@@ -534,9 +534,10 @@ simGeneticPops <- function(popBoundaries,
       cat('Creating buffers ... \n')
     popBoundaries <- lapply(popBoundaries,
                             FUN = function(x){
+                              origCRS <- sf::st_crs(x)
                               z <- sf::st_transform(x, "ESRI:102010")
                               z1 <- sf::st_buffer(z, bufferDist)
-                              z2 <- sf::st_transform(z1, 4326)
+                              z2 <- sf::st_transform(z1, origCRS)
                               return(z2)})
   }
 
