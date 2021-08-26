@@ -370,7 +370,7 @@ locSample <- function(isGL,
         # point.sample first valid point can be found.
         good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])+
           seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
-        cat(good.sample2, "\n")
+        #cat(good.sample2, "\n")
       }
       else {
         # Select nSim points for each animal still to be sampled
