@@ -460,24 +460,11 @@ estTransitionBoot <- function(originSites = NULL,
     stop("Need to define either originAssignment or originSites and originRaster or originPoints")}
   if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) && is.null(targetAssignment)){
     stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")}
-  # if (dataOverlapSetting != "dummy") {
-  #   temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
-  #                        originPoints = originPoints,
-  #                        targetPoints = targetPoints,
-  #                        originAssignment = originAssignment,
-  #                        targetAssignment = targetAssignment,
-  #                        isGL = isGL, isTelemetry = isTelemetry,
-  #                        isRaster = isRaster, isProb = isProb,
-  #                        captured = captured,
-  #                        targetRaster = targetRaster,
-  #                        originRaster = originRaster)
-  # }
-  if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
-    stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
-  if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
-    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
-
-# if targetRaster is NULL #
+  if(inherits(originSites,"SpatialPolygonsDataFrame")){
+    originSites <- sf::st_as_sf(originSites)}
+  if(inherits(targetSites,"SpatialPolygonsDataFrame")){
+    targetSites <- sf::st_as_sf(targetSites)}
+  # if targetRaster is NULL #
   if (is.null(targetRaster)){
     targetPointsAssigned <- FALSE
     targetSingleCell <- NULL
@@ -494,7 +481,7 @@ estTransitionBoot <- function(originSites = NULL,
       targetSingleCell <- targetRaster$SingleCell
     }else {
       stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-      }
+    }
     }
   }
 
@@ -513,11 +500,39 @@ estTransitionBoot <- function(originSites = NULL,
       originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
       originSingleCell <- originRaster$SingleCell
     }
-    else {
-      stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+      else {
+        stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
       }
     }
   }
+
+  if (dataOverlapSetting != "dummy") {
+    temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
+                         originPoints = originPoints,
+                         targetPoints = targetPoints,
+                         originAssignment = originAssignment,
+                         targetAssignment = targetAssignment,
+                         isGL = isGL, isTelemetry = isTelemetry,
+                         isRaster = isRaster, isProb = isProb,
+                         captured = captured,
+                         originRasterXYZ = originRasterXYZ,
+                         originSingleCell = originSingleCell,
+                         targetRasterXYZ = targetRasterXYZ,
+                         targetSingleCell = targetSingleCell)
+    originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
+    originAssignment <- temp$originAssignment
+    targetAssignment <- temp$targetAssignment
+    isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
+    isRaster <- temp$isRaster; isProb <- temp$isProb
+    originRasterXYZ <- temp$originRasterXYZ
+    originSingleCell <- temp$originSingleCell
+    targetRasterXYZ <- temp$targetRasterXYZ
+    targetSingleCell <- temp$targetSingleCell
+  }
+  if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
+  if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
 
   nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
                   length(isTelemetry), length(isRaster), length(isProb),
@@ -536,12 +551,6 @@ estTransitionBoot <- function(originSites = NULL,
   if (length(isRaster)==1){isRaster <- rep(isRaster, nAnimals)}
   if (length(isProb)==1){isProb <- rep(isProb, nAnimals)}
   if (length(captured)==1){captured <- rep(captured, nAnimals)}
-  if(inherits(originSites,"SpatialPolygonsDataFrame")){
-    originSites <- sf::st_as_sf(originSites)}
-    #originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if(inherits(targetSites,"SpatialPolygonsDataFrame")){
-    targetSites <- sf::st_as_sf(targetSites)}
-    #targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
 
 
   # IF originAssignment is NULL - we need to generate originAssignments from

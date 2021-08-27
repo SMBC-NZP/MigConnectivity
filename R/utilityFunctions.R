@@ -151,16 +151,6 @@ targetSample <- function(isGL,
               draws = draws))
 }
 
-randomPoints <- function(probs, xy, nSim) {
-  multidraw <- rmultinom(n = nSim,
-                         size = 1,
-                         prob = probs)
-  # save the xy coordinates of the 'possible' locations #
-  point.sample2a <- xy[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
-
-  return(point.sample2a)
-}
-
 # Function for sampling from geolocator, telemetry, and/or intrinsic location
 # uncertainty on either origin or target side
 locSample <- function(isGL,
@@ -736,3 +726,295 @@ distFromPos <- function(pos, surface = 'ellipsoid') {
   }
   return(dist)
 }
+
+reassignInds <- function(dataOverlapSetting = "none",
+                         originPoints = NULL, targetPoints = NULL,
+                         originAssignment = NULL, targetAssignment = NULL,
+                         isGL = FALSE, isTelemetry = FALSE,
+                         isRaster = FALSE, isProb = FALSE,
+                         captured = "origin",
+                         originRasterXYZ = NULL, originSingleCell = NULL,
+                         targetRasterXYZ = NULL, targetSingleCell = NULL) {
+  if (dataOverlapSetting != "none") {
+    stop('dataOverlapSetting "named" not set up yet')
+  }
+  if (is.null(targetPoints))
+    nTargetPoints <- 0
+  else
+    nTargetPoints <- nrow(targetPoints)
+  if (is.null(originPoints))
+    nOriginPoints <- 0
+  else
+    nOriginPoints <- nrow(originPoints)
+  if (any(isGL) || any(isTelemetry)) {
+    nPoints <- max(nTargetPoints, nOriginPoints)
+  }
+  else {
+    nPoints <- 0
+  }
+  if (any(isRaster)) {
+    if (!is.null(originRasterXYZ)) {
+      dimORast <- dim(originRasterXYZ)
+      nORast <- dimORast[2] - 2
+    }
+    else
+      nORast <- 0
+    if (!is.null(targetRasterXYZ)) {
+      dimTRast <- dim(targetRasterXYZ)
+      nTRast <- dimTRast[2] - 2
+    }
+    else
+      nTRast <- 0
+  }
+  else {
+    nORast <- nTRast <- 0
+  }
+  if (any(isProb)) {
+    if (is.null(originAssignment)){
+      nOAss <- 0
+      dimOAss <- NULL
+    }
+    else {
+      dimOAss <- dim(originAssignment)
+      if (is.null(dimOAss))
+        nOAss <- length(originAssignment)
+      else
+        nOAss <- dimOAss[1]
+    }
+    if (is.null(targetAssignment)){
+      nTAss <- 0
+      dimTAss <- NULL
+    }
+    else {
+      dimTAss <- dim(targetAssignment)
+      if (is.null(dimTAss))
+        nTAss <- length(targetAssignment)
+      else
+        nTAss <- dimTAss[1]
+    }
+  }
+  nTotal <- max(length(isGL), length(isTelemetry), length(isRaster),
+                length(isProb))
+  if (nTotal < 2) {
+    nTotal <- length(captured)
+    if (nTotal < 2 &&
+        ((any(isGL) + any(isTelemetry) + any(isRaster) + any(isProb)) > 1)) {
+      warning("For multiple datasets, we recommend having an entry in captured, isGL, isTelemetry, etc. for each animal")
+      nTotal <- nPoints + nORast + nTRast + max(nOAss, nTAss)
+    }
+  }
+  if (length(isGL)==1)
+    isGL <- rep(isGL, nTotal)
+  if (length(isTelemetry)==1)
+    isTelemetry <- rep(isTelemetry, nTotal)
+  if (length(isRaster)==1)
+    isRaster <- rep(isRaster, nTotal)
+  if (length(isProb)==1)
+    isProb <- rep(isProb, nTotal)
+  if (length(captured)==1)
+    captured <- rep(captured, nTotal)
+  if (nTargetPoints > 0 || nOriginPoints > 0) {
+    if (is.null(targetPoints)) {
+      targetPoints2 <- NULL
+    }
+    else {
+      if (nTargetPoints < nTotal) {
+        dummyPoint <- targetPoints[1, ]
+        targetPoints2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isGL[i] || isTelemetry[i] || captured[i] == "target") {
+            place <- place + 1
+            targetPoints2 <- rbind(targetPoints2,
+                                   targetPoints[place, ])
+          }
+          else
+            targetPoints2 <- rbind(targetPoints2,
+                                   dummyPoint)
+        }
+      }
+      else
+        targetPoints2 <- targetPoints
+    }
+    if (is.null(originPoints)) {
+      originPoints2 <- NULL
+    }
+    else {
+      if (nOriginPoints < nTotal) {
+        dummyPoint <- originPoints[1, ]
+        originPoints2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isGL[i] || isTelemetry[i] || captured[i] == "origin") {
+            place <- place + 1
+            originPoints2 <- rbind(originPoints2,
+                                   originPoints[place, ])
+          }
+          else
+            originPoints2 <- rbind(originPoints2,
+                                   dummyPoint)
+        }
+      }
+      else
+        originPoints2 <- originPoints
+    }
+  }
+  else {
+    originPoints2 <- originPoints; targetPoints2 <- targetPoints
+  }
+  if (any(isRaster)) {
+    if (!is.null(originRasterXYZ)) {
+      if (all(isRaster & captured != "origin")) {
+        originRasterXYZ2 <- originRasterXYZ
+      }
+      else {
+        originRasterXYZ2 <- originRasterXYZ[, 1:2]
+        column <- 2
+        for (i in 1:nTotal) {
+          if (isRaster[i] && captured[i] != "origin") {
+            column <- column + 1
+            originRasterXYZ2 <- cbind(originRasterXYZ2,
+                                      originRasterXYZ[, column])
+          }
+          else
+            originRasterXYZ2 <- cbind(originRasterXYZ2,
+                                      array(1/dimORast[1], c(dimORast[1], 1)))
+
+        }
+        if (!is.null(originSingleCell)) {
+          dimOCell <- dim(originSingleCell)
+          dummyVals <- c(originSingleCell[ , , 1])
+          originSingleCell2 <- NULL
+          place <- 0
+          for (i in 1:nTotal) {
+            if (isRaster[i] && captured[i] != "origin") {
+              place <- place + 1
+              originSingleCell2 <- c(originSingleCell2, originSingleCell[,,place])
+            }
+            else
+              originSingleCell2 <- c(originSingleCell2, dummyVals)
+
+          }
+          originSingleCell <- array(originSingleCell2,
+                                    c(dimOCell[1], dimOCell[2], nTotal))
+        }
+      }
+    }
+    else
+      originRasterXYZ2 <- NULL
+    if (!is.null(targetRasterXYZ)) {
+      if (all(isRaster & captured != "target")) {
+        targetRasterXYZ2 <- targetRasterXYZ
+      }
+      else {
+        targetRasterXYZ2 <- targetRasterXYZ[, 1:2]
+        column <- 2
+        for (i in 1:nTotal) {
+          if (isRaster[i] && captured[i] != "target") {
+            column <- column + 1
+            targetRasterXYZ2 <- cbind(targetRasterXYZ2,
+                                      targetRasterXYZ[, column])
+          }
+          else
+            targetRasterXYZ2 <- cbind(targetRasterXYZ2,
+                                      array(1/dimTRast[1], c(dimTRast[1], 1)))
+
+        }
+        if (!is.null(targetSingleCell)) {
+          dimTCell <- dim(targetSingleCell)
+          dummyVals <- c(targetSingleCell[ , , 1])
+          targetSingleCell2 <- NULL
+          place <- 0
+          for (i in 1:nTotal) {
+            if (isRaster[i] && captured[i] != "target") {
+              place <- place + 1
+              targetSingleCell2 <- c(targetSingleCell2, targetSingleCell[,,place])
+            }
+            else
+              targetSingleCell2 <- c(targetSingleCell2, dummyVals)
+
+          }
+          targetSingleCell <- array(targetSingleCell2,
+                                    c(dimTCell[1], dimTCell[2], nTotal))
+        }
+      }
+    }
+    else
+      targetRasterXYZ2 <- NULL
+  }
+  else {
+    originRasterXYZ2 <- originRasterXYZ; targetRasterXYZ2 <- targetRasterXYZ
+  }
+  if (any(isProb)) {
+    if (is.null(dimTAss)) {
+      targetAssignment2 <- NULL
+    }
+    else {
+      if (dimTAss[1] < nTotal) {
+        dummyAss <- targetAssignment[1, ]
+        targetAssignment2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isProb[i] && captured[i] != "target") {
+            place <- place + 1
+            targetAssignment2 <- rbind(targetAssignment2,
+                                       targetAssignment[place, ])
+          }
+          else
+            targetAssignment2 <- rbind(targetAssignment2,
+                                       dummyAss)
+        }
+      }
+      else
+        targetAssignment2 <- targetAssignment
+    }
+    if (is.null(dimOAss)) {
+      originAssignment2 <- NULL
+    }
+    else {
+      if (dimOAss[1] < nTotal) {
+        dummyAss <- originAssignment[1, ]
+        originAssignment2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isProb[i] && captured[i] != "origin") {
+            place <- place + 1
+            originAssignment2 <- rbind(originAssignment2,
+                                       originAssignment[place, ])
+          }
+          else
+            originAssignment2 <- rbind(originAssignment2,
+                                       dummyAss)
+        }
+      }
+      else
+        originAssignment2 <- originAssignment
+    }
+  }
+  else {
+    originAssignment2 <- originAssignment
+    targetAssignment2 <- targetAssignment
+  }
+  return(list(originPoints = originPoints2, targetPoints = targetPoints2,
+              originAssignment = originAssignment2,
+              targetAssignment = targetAssignment2,
+              isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster,
+              isProb = isProb, captured = captured,
+              originRasterXYZ = originRasterXYZ2,
+              originSingleCell = originSingleCell,
+              targetRasterXYZ = targetRasterXYZ2,
+              targetSingleCell = targetSingleCell))
+}
+
+# Return randomly sampled points from sites, based on assignment
+randomPoints <- function(sites, assignment, geomName = "geometry") {
+  nSites <- nrow(sites)
+  assignmentSum <- c(table(factor(assignment, levels = 1:nSites)))
+  points <- sf::st_sample(sites, assignmentSum)
+  points <- points[order(rank(assignment, ties.method = "first")), ]
+  points <- sf::st_as_sf(points)
+  names(points)[1] <- geomName
+  sf::st_geometry(points) <- geomName
+  return(points)
+}
+
