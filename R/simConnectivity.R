@@ -520,11 +520,7 @@ simGeneticPops <- function(popBoundaries,
       cat('Creating buffers ... \n')
     popBoundaries <- lapply(popBoundaries,
                             FUN = function(x){
-<<<<<<< HEAD
-                              origCRS <- sf::st_crs(popBoundaries)
-=======
                               origCRS <- sf::st_crs(x)
->>>>>>> 4c2b544cea9ad74b9fff293aebd9ccf737e05dd6
                               z <- sf::st_transform(x, "ESRI:102010")
                               z1 <- sf::st_buffer(z, bufferDist)
                               z2 <- sf::st_transform(z1, origCRS)
@@ -545,7 +541,10 @@ simGeneticPops <- function(popBoundaries,
                               ymn = min(crdsParams[,2]),
                               ymx = max(crdsParams[,4]),
                               res = res)
+ # give raster same projection as it was made with
+  popBcrs <- sf::st_crs(popBoundaries[[1]], parameters = TRUE)
 
+  crs(emptyRast) <- sp::CRS(popBcrs$proj4string)
 
   if (verbose > 0)
     cat('Generating KDE ... \n')
@@ -584,6 +583,9 @@ simGeneticPops <- function(popBoundaries,
   # Stack the rasters #
   genStack <- raster::stack(popKDE)
   popBinary <- raster::stack(popBinary)
+
+  # assign crs to rasters
+  crs(genStack) <- crs(popBinary) <- crs(emptyRast)
 
   # rename the stack to identify the groups
   names(genStack) <- popNames
