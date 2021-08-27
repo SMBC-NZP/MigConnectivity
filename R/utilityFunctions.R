@@ -151,16 +151,6 @@ targetSample <- function(isGL,
               draws = draws))
 }
 
-randomPoints <- function(probs, xy, nSim) {
-  multidraw <- rmultinom(n = nSim,
-                         size = 1,
-                         prob = probs)
-  # save the xy coordinates of the 'possible' locations #
-  point.sample2a <- xy[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
-
-  return(point.sample2a)
-}
-
 # Function for sampling from geolocator, telemetry, and/or intrinsic location
 # uncertainty on either origin or target side
 locSample <- function(isGL,
@@ -780,8 +770,10 @@ reassignInds <- function(dataOverlapSetting = "none",
     nORast <- nTRast <- 0
   }
   if (any(isProb)) {
-    if (is.null(originAssignment))
+    if (is.null(originAssignment)){
       nOAss <- 0
+      dimOAss <- NULL
+    }
     else {
       dimOAss <- dim(originAssignment)
       if (is.null(dimOAss))
@@ -789,8 +781,10 @@ reassignInds <- function(dataOverlapSetting = "none",
       else
         nOAss <- dimOAss[1]
     }
-    if (is.null(targetAssignment))
+    if (is.null(targetAssignment)){
       nTAss <- 0
+      dimTAss <- NULL
+    }
     else {
       dimTAss <- dim(targetAssignment)
       if (is.null(dimTAss))
@@ -971,6 +965,8 @@ reassignInds <- function(dataOverlapSetting = "none",
                                        dummyAss)
         }
       }
+      else
+        targetAssignment2 <- targetAssignment
     }
     if (is.null(dimOAss)) {
       originAssignment2 <- NULL
@@ -991,6 +987,8 @@ reassignInds <- function(dataOverlapSetting = "none",
                                        dummyAss)
         }
       }
+      else
+        originAssignment2 <- originAssignment
     }
   }
   else {
@@ -1007,3 +1005,16 @@ reassignInds <- function(dataOverlapSetting = "none",
               targetRasterXYZ = targetRasterXYZ2,
               targetSingleCell = targetSingleCell))
 }
+
+# Return randomly sampled points from sites, based on assignment
+randomPoints <- function(sites, assignment, geomName = "geometry") {
+  nSites <- nrow(sites)
+  assignmentSum <- c(table(factor(assignment, levels = 1:nSites)))
+  points <- sf::st_sample(sites, assignmentSum)
+  points <- points[order(rank(assignment, ties.method = "first")), ]
+  points <- sf::st_as_sf(points)
+  names(points)[1] <- geomName
+  sf::st_geometry(points) <- geomName
+  return(points)
+}
+

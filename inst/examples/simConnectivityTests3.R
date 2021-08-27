@@ -51,7 +51,8 @@ genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
                                                originSites[2, ],
                                                originSites[3, ]),
                           popNames = originNames, res = c(50000, 50000),
-                          bufferRegions = T, bufferDist = 1000,
+                          bufferRegions = T, bufferDist = 200000,
+                          npts = 5000,
                           verbose = 1)
 
 S <- vector("list", nScenarios)
@@ -85,9 +86,9 @@ for (i in 1:nScenarios) {
   if (!is.null(sampleSize[[i]][[2]])){
     captured[[i]] <- c(captured[[i]], rep("target", sum(sampleSize[[i]][[2]])))
     isGL[[i]] <- c(isGL[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    isRaster[[i]] <- c(isRaster[[i]], rep(TRUE, sum(sampleSize[[i]][[2]])))
+    isRaster[[i]] <- c(isRaster[[i]], rep(F, sum(sampleSize[[i]][[2]])))
     isTelemetry[[i]] <- c(isTelemetry[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    isProb[[i]] <- c(isProb[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
+    isProb[[i]] <- c(isProb[[i]], rep(T, sum(sampleSize[[i]][[2]])))
   }
 }
 targetCenters <- st_centroid(targetSites)
@@ -123,7 +124,7 @@ for (sim in 1:nSims) {
       data1 <- simGL(psi = psiTrue, originRelAbund = originRelAbund,
                      sampleSize = sampleSizeGL[[sc]],
                      originSites = originSites, targetSites = targetSites,
-                     captured = captured[[sc]],
+                     captured = "origin",
                      geoBias, geoVCov, geoBiasOrigin, geoVCovOrigin,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
@@ -141,16 +142,23 @@ for (sim in 1:nSims) {
                               sampleSize = sampleSizeGeno[[sc]],
                               originSites = originSites,
                               targetSites = targetSites,
-                              captured = captured[[sc]])
+                              captured = "target",
+                              verbose = 1)
       tp <- rbind(tp, data2$targetPointsTrue)
       or <- data2$genRaster
-      mean(apply(data2$genProbs, 1, sd))
-      mean(apply(originAssignmentPABU[breeders, ], 1, sd))
+      ot <- data2$genProbs
+      mean(apply(data2$genProbs, 1, var))
+      mean(apply(originAssignmentPABU[-breeders, ], 1, var))
       mean(apply(data2$genProbs, 1, max)>0.99999)
-      originSites <- sf::st_transform(originSites, crs(or, TRUE))
-      crs(or) <- sf::st_crs(targetSites)
+      mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99999)
+      mean(apply(data2$genProbs, 1, max)>0.99)
+      mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99)
+      #originSites <- sf::st_transform(originSites, crs(or, TRUE))
+      #crs(or) <- sf::st_crs(originSites)
     }else{
       data2 <- NULL
+      or <- NULL
+      ot <- NULL
     }
     # test1 <- MigConnectivity:::locSample(rep(T, sum(data1$recaptured)),
     #                                      rep(F, sum(data1$recaptured)),
@@ -163,15 +171,15 @@ for (sim in 1:nSims) {
     #                                      resampleProjection = sf::st_crs(targetSites),
     #                                      nSim = 1000, maxTries = 300)
     est1 <- estTransition(originSites, targetSites,
-                          op, tp, originRaster = or,
+                          op, tp, originAssignment = ot, #originRaster = or, #
                           originNames = originNames, targetNames = targetNames,
-                          nSamples = 50, isGL = isGL[[sc]],
+                          nSamples = 1000, isGL = isGL[[sc]],
                           isTelemetry = isTelemetry[[sc]],
                           isRaster = isRaster[[sc]], isProb = isProb[[sc]],
                           captured = captured[[sc]],
                           geoBias = geoBias, geoVCov = geoVCov,
                           resampleProjection = sf::st_crs(targetSites),
-                          nSim = 400, verbose = 2,
+                          nSim = 100, verbose = 3,
                           dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,

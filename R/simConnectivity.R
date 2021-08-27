@@ -414,22 +414,8 @@ simGL <- function(psi, originRelAbund, sampleSize,
 
   oaTest <- list(1:2); taTest <- list(2:3)
   while (any(lengths(oaTest)>1) || any(lengths(taTest)>1)) {
-    originPointsTrue <- mapply(FUN = sf::st_sample,
-                               x = split(originSites[originAssignment, ],
-                                         1:nAnimals),
-                               size = 1,
-                               type = "random")
-    originPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, originPointsTrue)),
-                                     coords = c("lon","lat"),
-                                     crs = sf::st_crs(originSites))
-    targetPointsTrue <- mapply(FUN = sf::st_sample,
-                               x = split(targetSites[targetAssignment, ],
-                                         1:nAnimals),
-                               size = 1,
-                               type = "random")
-    targetPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, targetPointsTrue)),
-                                     coords = c("lon","lat"),
-                                     crs = sf::st_crs(targetSites))
+    originPointsTrue <- randomPoints(originSites, originAssignment)
+    targetPointsTrue <- randomPoints(targetSites, targetAssignment)
     originPointsObs <- array(NA, c(sum(recaptured), 2),
                              dimnames = list(NULL, c("x","y")))
     targetPointsObs <- array(NA, c(sum(recaptured), 2),
@@ -625,8 +611,10 @@ simGeneticData <- function(genPops,
                            originSites = NULL,
                            targetSites = NULL,
                            captured = "target",
-                           requireEveryOrigin = FALSE) {
-
+                           requireEveryOrigin = FALSE,
+                           verbose = 0) {
+  if (verbose > 0)
+    cat("Setting up...\n")
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
   rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
@@ -648,6 +636,8 @@ simGeneticData <- function(genPops,
     targetAssignment <- rep(1:nTargetSites, sampleSize)
   }
 
+  if (verbose > 0)
+    cat("Assigning sites to animals...\n")
   runWell <- FALSE
   while (!runWell){
     for (a in 1:nAnimals) {
@@ -665,62 +655,47 @@ simGeneticData <- function(genPops,
     runWell <- !requireEveryOrigin || captured=="target" ||
       all.equal(unique(originAssignment), 1:nOriginSites)
   }
+  # originAssignment <- sort(originAssignment)
+  # targetAssignment <- sort(targetAssignment)
 
+  if (verbose > 0)
+    cat("Assigning points to animals...\n")
+  originPointsTrue <- randomPoints(originSites, originAssignment)
+  targetPointsTrue <- randomPoints(targetSites,targetAssignment)
+  if (verbose > 0)
+    cat("Assigning genProbs...\n")
 
-  originPointsTrue <- mapply(FUN = sf::st_sample,
-                             x = split(originSites[originAssignment, ],
-                                       1:nAnimals),
-                             size = 1,
-                             type = "random")
-  originPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, originPointsTrue)),
-                                   coords = c("lon","lat"),
-                                   crs = sf::st_crs(originSites))
-  targetPointsTrue <- mapply(FUN = sf::st_sample,
-                             x = split(targetSites[targetAssignment, ],
-                                       1:nAnimals),
-                             size = 1,
-                             type = "random")
-  targetPointsTrue <- sf::st_as_sf(data.frame(do.call(rbind, targetPointsTrue)),
-                                   coords = c("lon","lat"),
-                                   crs = sf::st_crs(targetSites))
   if (captured == "target") {
+
     genProbs <- raster::extract(genPops$genStack,
                                 sf::st_coordinates(originPointsTrue))
-
-    # convert to probability
-    genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
-
-    # split out inds to list #
-    indGP <- split(genProbs, f=1:nrow(genProbs))
-
-    # use genProbs to create a raster probability surface
-    Ncell <- raster::cellStats(genPops$popRast, sum)
-
-    indRasts <- stack(
-                lapply(indGP,
-                       function(x){
-                        raster::calc(x*genPops$popRast / Ncell, fun = sum)
-                       }))
   }
   else {
     genProbs <- raster::extract(genPops$genStack,
                                 sf::st_coordinates(targetPointsTrue))
-
-    # convert to probability
-    genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
-
-    # split out inds to list #
-    indGP <- split(genProbs, f=1:nrow(genProbs))
-
-    # use genProbs to create a raster probability surface
-    Ncell <- raster::cellStats(genPops$popRast, sum)
-
-    indRasts <- stack(
-            lapply(indGp,
-             function(x){
-               raster::calc(x*genPops$popRast / Ncell, fun = sum)
-             }))
   }
+  # convert to probability
+  genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
+
+  # split out inds to list #
+  if (verbose > 0)
+    cat("Splitting genProbs to list...\n")
+  indGP <- split(genProbs, f=1:nrow(genProbs))
+
+  # use genProbs to create a raster probability surface
+  if (verbose > 0)
+    cat("Creating raster probability surface...\n")
+  Ncell <- raster::cellStats(genPops$popRast, sum)
+
+  indRasts <- stack(
+              lapply(indGP,
+                     function(x){
+                      raster::calc(x*genPops$popRast / Ncell, fun = sum)
+                     }))
+  if (captured=="target")
+    crs(indRasts) <- sf::st_crs(targetSites)
+  else
+    crs(indRasts) <- sf::st_crs(originSites)
 
   return(list(originAssignment = originAssignment,
               targetAssignment = targetAssignment,
