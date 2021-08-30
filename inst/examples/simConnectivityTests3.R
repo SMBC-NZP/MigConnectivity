@@ -19,10 +19,31 @@ scenarios <- c('Proportional Released Origin',
                'Equal Released Target',
                'Origin Release East; Target Release West',
                'Small Origin Release East; Target Release West')
+
 nScenarios <- length(scenarios)
 nOriginSites <- 3
 nTargetSites <- 5
-psiTrue <- psiPABU$psi$mean
+
+#                         [,1]      [,2]         [,3]         [,4]        [,5]       [,6]
+#East Coast        0.000000000 0.0000000 0.0002314051 0.0001219829 0.000012500 0.14009284
+#Louisiana         0.007979644 0.0000625 0.0609539466 0.8783123863 0.001062638 0.01709982
+#Central/Southwest 0.026096224 0.0369566 0.0524682507 0.7141783131 0.021990071 0.09840055
+#[,7]
+#East Coast        0.85954127
+#Louisiana         0.03452907
+#Central/Southwest 0.04990998
+
+psiTrue <- array(0, c(3,7))
+psiTrue[1,] <- c(0.000000000,0.0000000,0.0002314051,
+                 0.0001219829,0.000012500,0.14009284,0.85954127)
+psiTrue[2,] <- c(0.007979644,0.0000625,0.0609539466,
+                 0.8783123863,0.001062638,0.01709982,0.03452907)
+psiTrue[3,] <- c(0.026096224,0.0369566,0.0524682507,
+                 0.7141783131,0.021990071,0.09840055,0.04990998)
+rownames(psiTrue) <- c("East Coast","Louisiana","Central/Southwest")
+
+# psiTrue <- psiPABU$psi$mean
+
 if (ncol(psiTrue)>nTargetSites) {
   psiTrue[, nTargetSites] <- rowSums(psiTrue[ , nTargetSites:ncol(psiTrue)])
   psiTrue <- psiTrue[, 1:nTargetSites]
@@ -37,8 +58,12 @@ geoVCov <- matrix(c(95917504, -20182252, -20182252, 179951061),
 # Changed these from PABU estimates so we'd average at least one GL per
 # population in first and third scenario
 originRelAbund <- c(1/30, 2/30, 27/30)
-originSites <- originSitesPABU
-targetSites <- targetSitesPABU
+
+originSites <- sf::st_read("data-raw/PABU_breeding_regions.shp")
+targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
+
+#originSites <- originSitesPABU
+# targetSites <- targetSitesPABU
 if (nrow(targetSites)>nTargetSites) {
   targetSites <- targetSites[1:nTargetSites, ]
 }
@@ -46,7 +71,12 @@ if (nrow(targetSites)>nTargetSites) {
 
 rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
-sf::st_crs(originSitesPABU)
+# sf::st_crs(originSitesPABU)
+
+# looks like originSites needs to be projected
+originSites <- sf::st_transform(originSites, "ESRI:102010")
+targetSites <- sf::st_transform(targetSites, "ESRI:102010")
+
 genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
                                                originSites[2, ],
                                                originSites[3, ]),
@@ -86,12 +116,14 @@ for (i in 1:nScenarios) {
   if (!is.null(sampleSize[[i]][[2]])){
     captured[[i]] <- c(captured[[i]], rep("target", sum(sampleSize[[i]][[2]])))
     isGL[[i]] <- c(isGL[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    isRaster[[i]] <- c(isRaster[[i]], rep(F, sum(sampleSize[[i]][[2]])))
+    # isRaster[[i]] <- c(isRaster[[i]], rep(F, sum(sampleSize[[i]][[2]])))
+    isRaster[[i]] <- c(isRaster[[i]], rep(T, sum(sampleSize[[i]][[2]])))
     isTelemetry[[i]] <- c(isTelemetry[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    isProb[[i]] <- c(isProb[[i]], rep(T, sum(sampleSize[[i]][[2]])))
+    #isProb[[i]] <- c(isProb[[i]], rep(T, sum(sampleSize[[i]][[2]])))
+    isProb[[i]] <- c(isProb[[i]], rep(F, sum(sampleSize[[i]][[2]])))
   }
 }
-targetCenters <- st_centroid(targetSites)
+targetCenters <- sf::st_transform(targetSites, 4326) %>% st_centroid()
 targetDist <- distFromPos(st_coordinates(targetCenters$geometry))
 originSites2 <- st_transform(originSites, 4326)
 originCenters <- st_centroid(originSites2)
@@ -114,7 +146,10 @@ MantelCI <- array(NA, c(2, nScenarios, nSims),
               list(c("lower", "upper"), scenarios, NULL))
 sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
                 list(originNames, targetNames, scenarios, NULL))
+
 dataStore <- vector("list", nSims)
+
+
 for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
@@ -170,12 +205,18 @@ for (sim in 1:nSims) {
     #                                      sites = targetSites,
     #                                      resampleProjection = sf::st_crs(targetSites),
     #                                      nSim = 1000, maxTries = 300)
-    est1 <- estTransition(originSites, targetSites,
-                          op, tp, originAssignment = ot, #originRaster = or, #
-                          originNames = originNames, targetNames = targetNames,
+    est1 <- estTransition(originSites,
+                          targetSites,
+                          op,
+                          tp,
+                          #originAssignment = ot,
+                          originRaster = or, #
+                          originNames = originNames,
+                          targetNames = targetNames,
                           nSamples = 1000, isGL = isGL[[sc]],
                           isTelemetry = isTelemetry[[sc]],
-                          isRaster = isRaster[[sc]], isProb = isProb[[sc]],
+                          isRaster = isRaster[[sc]],
+                          isProb = isProb[[sc]],
                           captured = captured[[sc]],
                           geoBias = geoBias, geoVCov = geoVCov,
                           resampleProjection = sf::st_crs(targetSites),
