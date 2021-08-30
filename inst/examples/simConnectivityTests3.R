@@ -105,12 +105,12 @@ for (i in 1:nScenarios)
   p[[i]] <- list(1, 1)
 
 sampleSize <- vector("list", nScenarios)
-sampleSize[[1]] <- list(30, NULL)
+sampleSize[[1]] <- list(30 * originRelAbund, NULL)
 sampleSize[[2]] <- list(NULL, 300)
-sampleSize[[3]] <- list(30, 300)
+sampleSize[[3]] <- list(30 * originRelAbund, 300)
 sampleSize[[4]] <- list(c(10, 10, 10), NULL)
 sampleSize[[5]] <- list(NULL, rep(60, nTargetSites))
-sampleSize[[6]] <- list(c(30, 0, 0), c(100, 100, 100, 0, 0))
+sampleSize[[6]] <- list(c(0, 0, 30), c(100, 100, 100, 0, 0))
 sampleSize[[7]] <- list(c(5, 0, 0), c(100, 100, 100, 0, 0))
 sampleSizeGL <- lapply(sampleSize, function(x) list(x[[1]], NULL))
 sampleSizeGeno <- lapply(sampleSize, function(x) x[[2]])
@@ -204,16 +204,6 @@ for (sim in 1:nSims) {
       or <- NULL
       ot <- NULL
     }
-    # test1 <- MigConnectivity:::locSample(rep(T, sum(data1$recaptured)),
-    #                                      rep(F, sum(data1$recaptured)),
-    #                                      rep(F, sum(data1$recaptured)),
-    #                                      rep(F, sum(data1$recaptured)),
-    #                                      geoBias = geoBias,
-    #                                      geoVCov = geoVCov,
-    #                                      points = data1$targetPointsObs,
-    #                                      sites = targetSites,
-    #                                      resampleProjection = sf::st_crs(targetSites),
-    #                                      nSim = 1000, maxTries = 300)
     est1 <- estTransition(originSites,
                           targetSites,
                           op,
@@ -222,7 +212,7 @@ for (sim in 1:nSims) {
                           originRaster = or, #
                           originNames = originNames,
                           targetNames = targetNames,
-                          nSamples = 100, isGL = isGL[[sc]],
+                          nSamples = 1000, isGL = isGL[[sc]],
                           isTelemetry = isTelemetry[[sc]],
                           isRaster = isRaster[[sc]],
                           isProb = isProb[[sc]],
@@ -231,11 +221,28 @@ for (sim in 1:nSims) {
                           resampleProjection = sf::st_crs(targetSites),
                           nSim = 80, verbose = 3,
                           dataOverlapSetting = "none")
+    est1a <- estTransition(originSites,
+                          targetSites,
+                          op,
+                          tp,
+                          originAssignment = ot,
+                          #originRaster = or, #
+                          originNames = originNames,
+                          targetNames = targetNames,
+                          nSamples = 1000, isGL = isGL[[sc]],
+                          isTelemetry = isTelemetry[[sc]],
+                          isRaster = isProb[[sc]],
+                          isProb = isRaster[[sc]],
+                          captured = captured[[sc]],
+                          geoBias = geoBias, geoVCov = geoVCov,
+                          resampleProjection = sf::st_crs(targetSites),
+                          nSim = 80, verbose = 1,
+                          dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
                         est1)
     est3 <- estMantel(tp, op, isGL[[sc]],
-                      geoBias, geoVCov, targetSites, 100, 80, 3,
+                      geoBias, geoVCov, targetSites, 10, 80, 3,
                       resampleProjection = sf::st_crs(targetSites),
                       originSites = originSites,
                       captured = captured[[sc]],
