@@ -161,6 +161,7 @@ locSample <- function(isGL,
                       geoVCov = NULL,
                       points = NULL,
                       matvals = NULL,
+                      matvals_crs = NULL,
                       singleCell = NULL,
                       pointsInSites = FALSE,
                       overlap1 = NULL,
@@ -318,9 +319,11 @@ locSample <- function(isGL,
         #dimnames(point.sample2)[[2]] <- c("x","y")
 
         # Convert those to SpatialPoints
+        #cat("------ I MADE IT TO POINTSAMPLE 2 --------\n")
         point.sample2 <- sf::st_as_sf(as.data.frame(point.sample2),
                                       coords = c("x","y"),
-                                      crs = 4326)
+                                      #crs = 4326)
+                                      crs = sf::st_crs(matvals_crs))
 
         # point.sample2 <- apply(point.sample2,
         #                        FUN = function(x){
@@ -733,8 +736,12 @@ reassignInds <- function(dataOverlapSetting = "none",
                          isGL = FALSE, isTelemetry = FALSE,
                          isRaster = FALSE, isProb = FALSE,
                          captured = "origin",
-                         originRasterXYZ = NULL, originSingleCell = NULL,
-                         targetRasterXYZ = NULL, targetSingleCell = NULL) {
+                         originRasterXYZ = NULL,
+                         originRasterXYZcrs = NULL,
+                         originSingleCell = NULL,
+                         targetRasterXYZ = NULL,
+                         targetRasterXYZcrs = NULL,
+                         targetSingleCell = NULL) {
   if (dataOverlapSetting != "none") {
     stop('dataOverlapSetting "named" not set up yet')
   }
