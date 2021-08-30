@@ -40,7 +40,6 @@ psiTrue[2,] <- c(0.007979644,0.0000625,0.0609539466,
                  0.8783123863,0.001062638,0.01709982,0.03452907)
 psiTrue[3,] <- c(0.026096224,0.0369566,0.0524682507,
                  0.7141783131,0.021990071,0.09840055,0.04990998)
-rownames(psiTrue) <- c("East Coast","Louisiana","Central/Southwest")
 
 # psiTrue <- psiPABU$psi$mean
 
@@ -160,8 +159,8 @@ MantelEst <- array(NA, c(nScenarios, nSims),
                list(scenarios, NULL))
 MantelCI <- array(NA, c(2, nScenarios, nSims),
               list(c("lower", "upper"), scenarios, NULL))
-sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
-                list(originNames, targetNames, scenarios, NULL))
+# sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
+#                 list(originNames, targetNames, scenarios, NULL))
 
 dataStore <- vector("list", nSims)
 
@@ -198,12 +197,6 @@ for (sim in 1:nSims) {
       tp <- rbind(tp, data2$targetPointsTrue)
       or <- data2$genRaster
       ot <- data2$genProbs
-      mean(apply(data2$genProbs, 1, var))
-      mean(apply(originAssignmentPABU[-breeders, ], 1, var))
-      mean(apply(data2$genProbs, 1, max)>0.99999)
-      mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99999)
-      mean(apply(data2$genProbs, 1, max)>0.99)
-      mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99)
       #originSites <- sf::st_transform(originSites, crs(or, TRUE))
       #crs(or) <- sf::st_crs(originSites)
     }else{
@@ -229,7 +222,7 @@ for (sim in 1:nSims) {
                           originRaster = or, #
                           originNames = originNames,
                           targetNames = targetNames,
-                          nSamples = 1000, isGL = isGL[[sc]],
+                          nSamples = 100, isGL = isGL[[sc]],
                           isTelemetry = isTelemetry[[sc]],
                           isRaster = isRaster[[sc]],
                           isProb = isProb[[sc]],
@@ -241,23 +234,26 @@ for (sim in 1:nSims) {
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
                         est1)
-    est3 <- estMantel(data1$targetPointsObs, data1$originPointsObs, T,
-                      geoBias, geoVCov, targetSites, 200, 300, 0,
+    est3 <- estMantel(tp, op, isGL[[sc]],
+                      geoBias, geoVCov, targetSites, 100, 80, 3,
                       resampleProjection = sf::st_crs(targetSites),
-                      geoBiasOrigin = geoBiasOrigin,
-                      geoVCovOrigin = geoVCovOrigin, originSites = originSites,
-                      captured = captured[[sc]][which(data1$recaptured==1)])
+                      originSites = originSites,
+                      captured = captured[[sc]],
+                      isTelemetry = isTelemetry[[sc]],
+                      isRaster = isRaster[[sc]],
+                      originRaster = or,
+                      dataOverlapSetting = "none")
     psiEst[,,sc,sim] <- est1$psi$mean
     psiCI[,,,sc,sim] <- est1$psi$simpleCI
     MCest[sc,sim] <- est2$MC$mean
     MCCI[,sc,sim] <- est2$MC$simpleCI
     MantelEst[sc,sim] <- est3$corr$mean
     MantelCI[,sc,sim] <- est3$corr$simpleCI
-    sampleSizes[,,sc,sim] <- table(data1$originAssignment[which(data1$recaptured==1)],
-                                   data1$targetAssignment[which(data1$recaptured==1)])
-    dataStore[[sim]][[sc]] <- data1
+    # sampleSizes[,,sc,sim] <- table(data1$originAssignment[which(data1$recaptured==1)],
+    #                                data1$targetAssignment[which(data1$recaptured==1)])
+    dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
     cat(sc)
-    save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sampleSizes, sim, sc,
+    save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc,#sampleSizes,
          dataStore, file = 'testConnectivity3a.RData')
   }
   cat("\n")
