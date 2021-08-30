@@ -469,9 +469,12 @@ estTransitionBoot <- function(originSites = NULL,
     targetPointsAssigned <- FALSE
     targetSingleCell <- NULL
     targetRasterXYZ <- NULL
+    targetRasterXYZcrs <- NULL
   }else{
     if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
-       if(is.na(raster::crs(targetRaster))){stop("Please provide a crs for targetRaster\n")}
+      if(is.na(raster::crs(targetRaster))){
+        stop("Please provide a crs for targetRaster\n")
+      }
       targetRasterXYZ <- raster::rasterToPoints(targetRaster)
       targetRasterXYZcrs <- raster::crs(targetRaster)
       targetSingleCell <- NULL
@@ -492,23 +495,27 @@ estTransitionBoot <- function(originSites = NULL,
     originPointsAssigned <- FALSE
     originSingleCell <- NULL
     originRasterXYZ <- NULL
-  }else {
+    originRasterXYZcrs <- NULL
+  }
+  else {
     if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
-      if(is.na(raster::crs(originRaster))){stop("Please provide a crs for originRaster\n")}
+      if(is.na(raster::crs(originRaster))){
+        stop("Please provide a crs for originRaster\n")
+      }
       originRasterXYZ <- raster::rasterToPoints(originRaster)
       originRasterXYZcrs <- raster::crs(originRaster)
       originSingleCell <- NULL
       originPointsAssigned <- FALSE
-    }else { if (inherits(originRaster, "isoAssign")) {
+    }
+    else if (inherits(originRaster, "isoAssign")) {
       originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
                                   is.na(originRaster$SingleCell))
       originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
       originRasterXYZcrs <- raster::crs(originRaster$probassign)
       originSingleCell <- originRaster$SingleCell
     }
-      else {
-        stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-      }
+    else {
+      stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
     }
   }
 
@@ -522,10 +529,10 @@ estTransitionBoot <- function(originSites = NULL,
                          isRaster = isRaster, isProb = isProb,
                          captured = captured,
                          originRasterXYZ = originRasterXYZ,
-                         originRasterXYZcrs = originRasterXYZcrs,
+                         #originRasterXYZcrs = originRasterXYZcrs,
                          originSingleCell = originSingleCell,
                          targetRasterXYZ = targetRasterXYZ,
-                         targetRasterXYZcrs = targetRasterXYZcrs,
+                         #targetRasterXYZcrs = targetRasterXYZcrs,
                          targetSingleCell = targetSingleCell)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
     originAssignment <- temp$originAssignment
@@ -2170,8 +2177,9 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                       originSites = NULL, isTelemetry = !isGL, isRaster = FALSE,
                       captured = "origin", geoBiasOrigin = NULL,
                       geoVCovOrigin = NULL,
-                      targetRaster = NULL, originRaster = NULL) {
-
+                      targetRaster = NULL, originRaster = NULL,
+                      dataOverlapSetting = c("dummy", "none", "named")) {
+  dataOverlapSetting <- match.arg(dataOverlapSetting)
   # double check that spatial data coming in is in sf format #
   if (inherits(targetPoints, "SpatialPoints"))
     targetPoints <- sf::st_as_sf(targetPoints)
@@ -2191,10 +2199,15 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     targetPointsAssigned <- FALSE
     targetSingleCell <- NULL
     targetRasterXYZ <- NULL
+    targetRasterXYZcrs <- NULL
   }
   else{
     if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
+      if(is.na(raster::crs(targetRaster))){
+        stop("Please provide a crs for targetRaster\n")
+      }
       targetRasterXYZ <- raster::rasterToPoints(targetRaster)
+      targetRasterXYZcrs <- raster::crs(targetRaster)
       targetSingleCell <- NULL
       targetPointsAssigned <- FALSE
     }
@@ -2203,6 +2216,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
         targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
                                     is.na(targetRaster$SingleCell))
         targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
+        targetRasterXYZcrs <- raster::crs(targetRaster$probassign)
         targetSingleCell <- targetRaster$SingleCell
       }
       else {
@@ -2215,22 +2229,27 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     originPointsAssigned <- FALSE
     originSingleCell <- NULL
     originRasterXYZ <- NULL
-  }else {
-    if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
-      originRasterXYZ <- raster::rasterToPoints(originRaster)
-      originSingleCell <- NULL
-      originPointsAssigned <- FALSE
-    }else { if (inherits(originRaster, "isoAssign")) {
-      originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
-                                  is.na(originRaster$SingleCell))
-      originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
-      originSingleCell <- originRaster$SingleCell
-    }
-      else {
-        stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-      }
-    }
+    originRasterXYZcrs <- NULL
   }
+  else if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
+    if(is.na(raster::crs(originRaster))){
+      stop("Please provide a crs for originRaster\n")
+    }
+    originRasterXYZ <- raster::rasterToPoints(originRaster)
+    originRasterXYZcrs <- raster::crs(originRaster)
+    originSingleCell <- NULL
+    originPointsAssigned <- FALSE
+  }else if (inherits(originRaster, "isoAssign")) {
+    originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
+                                is.na(originRaster$SingleCell))
+    originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
+    originRasterXYZcrs <- raster::crs(originRaster$probassign)
+    originSingleCell <- originRaster$SingleCell
+  }
+  else {
+    stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
+  }
+
 
   if (is.null(targetPoints)) {
     if (any(isGL) || any(isTelemetry) || !all(captured=="origin") ||
@@ -2252,6 +2271,30 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   else if (is.na(sf::st_crs(originPoints))) {
     stop('Coordinate system definition needed for originPoints')
   }
+  if (dataOverlapSetting != "dummy") {
+    temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
+                         originPoints = originPoints,
+                         targetPoints = targetPoints,
+                         isGL = isGL, isTelemetry = isTelemetry,
+                         isRaster = isRaster, isProb = FALSE,
+                         captured = captured,
+                         originRasterXYZ = originRasterXYZ,
+                         #originRasterXYZcrs = originRasterXYZcrs,
+                         originSingleCell = originSingleCell,
+                         targetRasterXYZ = targetRasterXYZ,
+                         #targetRasterXYZcrs = targetRasterXYZcrs,
+                         targetSingleCell = targetSingleCell)
+    originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
+    originAssignment <- temp$originAssignment
+    targetAssignment <- temp$targetAssignment
+    isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
+    isRaster <- temp$isRaster; isProb <- temp$isProb
+    originRasterXYZ <- temp$originRasterXYZ
+    originSingleCell <- temp$originSingleCell
+    targetRasterXYZ <- temp$targetRasterXYZ
+    targetSingleCell <- temp$targetSingleCell
+  }
+
   nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
                   length(isTelemetry), length(isRaster),
                   ifelse(is.null(targetRaster), 0,
@@ -2392,6 +2435,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          geoVCov = geoVCovOrigin,
                          points = originPoints[animal.sample, ],
                          matvals = originRasterXYZ[, c(1:2, animal.sample + 2)],
+                         matvals_crs = originRasterXYZcrs,
                          singleCell = originSingleCell[,,animal.sample],
                          overlap1 = originCon[,animal.sample],
                          pointsInSites = originPointsInSites,
@@ -2423,6 +2467,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          geoBias = geoBias, geoVCov = geoVCov,
                          points = targetPoints[animal.sample, ],
                          matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
+                         matvals_crs = targetRasterXYZcrs,
                          singleCell = targetSingleCell[,,animal.sample],
                          pointsInSites = targetPointsInSites,
                          overlap1 = targetCon[, animal.sample],
