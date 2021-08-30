@@ -471,13 +471,16 @@ estTransitionBoot <- function(originSites = NULL,
     targetRasterXYZ <- NULL
   }else{
     if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
+       if(is.na(raster::crs(targetRaster))){stop("Please provide a crs for targetRaster\n")}
       targetRasterXYZ <- raster::rasterToPoints(targetRaster)
+      targetRasterXYZcrs <- raster::crs(targetRaster)
       targetSingleCell <- NULL
       targetPointsAssigned <- FALSE
     }else{if (inherits(targetRaster, "isoAssign")) {
       targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
                                   is.na(targetRaster$SingleCell))
       targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
+      targetRasterXYZcrs <- raster::crs(targetRaster$probassign)
       targetSingleCell <- targetRaster$SingleCell
     }else {
       stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
@@ -491,13 +494,16 @@ estTransitionBoot <- function(originSites = NULL,
     originRasterXYZ <- NULL
   }else {
     if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
+      if(is.na(raster::crs(originRaster))){stop("Please provide a crs for originRaster\n")}
       originRasterXYZ <- raster::rasterToPoints(originRaster)
+      originRasterXYZcrs <- raster::crs(originRaster)
       originSingleCell <- NULL
       originPointsAssigned <- FALSE
     }else { if (inherits(originRaster, "isoAssign")) {
       originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
                                   is.na(originRaster$SingleCell))
       originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
+      originRasterXYZcrs <- raster::crs(originRaster$probassign)
       originSingleCell <- originRaster$SingleCell
     }
       else {
@@ -516,8 +522,10 @@ estTransitionBoot <- function(originSites = NULL,
                          isRaster = isRaster, isProb = isProb,
                          captured = captured,
                          originRasterXYZ = originRasterXYZ,
+                         originRasterXYZcrs = originRasterXYZcrs,
                          originSingleCell = originSingleCell,
                          targetRasterXYZ = targetRasterXYZ,
+                         targetRasterXYZcrs = targetRasterXYZcrs,
                          targetSingleCell = targetSingleCell)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
     originAssignment <- temp$originAssignment
@@ -583,7 +591,13 @@ estTransitionBoot <- function(originSites = NULL,
       xyOriginRast <- t(xyOriginRast)
       colnames(xyOriginRast) <- c("x","y")
       # right now the assignment CRS is WGS84 - should be the same as the origin raster
-      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast), coords = c("x","y"), crs = 4326)
+
+      cat("--originRasterXYZcrs -- \n")
+      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast),
+                                       coords = c("x","y"),
+                                       crs = originRasterXYZcrs)
+                                       # crs = sf::st_crs(originRasterXYZcrs))
+                                      # crs = 4326)
       # transform to match originSites
       originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
       originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
@@ -625,7 +639,11 @@ estTransitionBoot <- function(originSites = NULL,
       xyTargetRast <- t(xyTargetRast)
       colnames(xyTargetRast) <- c("x","y")
       # right now the assignment CRS is WGS84 - should be the same as the origin raster
-      targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast), coords = c("x","y"), crs = 4326)
+      targetAssignRast <- sf::st_as_sf(data.frame(xyTargetRast),
+                                       coords = c("x","y"),
+                                       crs = targetRasterXYZcrs)
+                                      # crs = sf::st_crs(targetRasterXYZcrs))
+                                       #crs = 4326)
       # transform to match originSites
       targetSites_wgs <- sf::st_transform(targetSites, 4326)
       #targetAssignRast <- sf::st_transform(targetAssignRast, sf::st_crs(targetSites))
@@ -806,6 +824,7 @@ estTransitionBoot <- function(originSites = NULL,
                            geoVCov = geoVCovOrigin,
                            points = originPoints[animal.sample, ],
                            matvals = originRasterXYZ[, c(1:2, animal.sample + 2)],
+                           matvals_crs = originRasterXYZcrs,
                            singleCell = originSingleCell[,,animal.sample],
                            overlap1 = originCon[,animal.sample],
                            pointsInSites = originPointsInSites,
@@ -836,6 +855,7 @@ estTransitionBoot <- function(originSites = NULL,
                          geoBias = geoBias, geoVCov = geoVCov,
                          points = targetPoints[animal.sample, ],
                          matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
+                         matvals_crs = targetRasterXYZcrs,
                          singleCell = targetSingleCell[,,animal.sample],
                          pointsInSites = targetPointsInSites,
                          overlap1 = targetCon[, animal.sample],
