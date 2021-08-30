@@ -1011,8 +1011,8 @@ randomPoints <- function(sites, assignment, geomName = "geometry") {
   nSites <- nrow(sites)
   assignmentSum <- c(table(factor(assignment, levels = 1:nSites)))
   points <- sf::st_sample(sites, assignmentSum)
-  points <- points[order(rank(assignment, ties.method = "first")), ]
   points <- sf::st_as_sf(points)
+  points <- points[rank(assignment, ties.method = "first"), ]
   names(points)[1] <- geomName
   sf::st_geometry(points) <- geomName
   return(points)

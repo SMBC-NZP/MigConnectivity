@@ -36,9 +36,11 @@ geoVCov <- matrix(c(95917504, -20182252, -20182252, 179951061),
                   nrow = 2, ncol = 2, byrow = TRUE)
 # Changed these from PABU estimates so we'd average at least one GL per
 # population in first and third scenario
-originRelAbund <- c(1/30, 2/30, 27/30)
+originRelAbund <- c(27/30, 2/30, 1/30)
 originSites <- originSitesPABU
+originSites$originSite <- factor(originNames)
 targetSites <- targetSitesPABU
+targetSites$targetSite <- factor(targetNames)
 if (nrow(targetSites)>nTargetSites) {
   targetSites <- targetSites[1:nTargetSites, ]
 }
@@ -51,10 +53,24 @@ genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
                                                originSites[2, ],
                                                originSites[3, ]),
                           popNames = originNames, res = c(50000, 50000),
-                          bufferRegions = T, bufferDist = 200000,
-                          npts = 5000,
+                          bufferRegions = F, bufferDist = 200000,
+                          npts = 1000,
                           verbose = 1)
-
+calibSampleSize <- table(factor(unlist(overlapT2)[-breeders],
+                                levels = 1:nTargetSites))
+data2 <- simGeneticData(genPops = genPops, psi = psiTrue,
+                        originRelAbund = originRelAbund,
+                        sampleSize = calibSampleSize,
+                        originSites = originSites,
+                        targetSites = targetSites,
+                        captured = "target",
+                        verbose = 1)
+mean(apply(data2$genProbs, 1, var))
+mean(apply(originAssignmentPABU[-breeders, ], 1, var))
+mean(apply(data2$genProbs, 1, max)>0.99999)
+mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99999)
+mean(apply(data2$genProbs, 1, max)>0.99)
+mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99)
 S <- vector("list", nScenarios)
 S[[1]] <- S[[2]] <- S[[3]] <- S[[4]] <- S[[5]] <- S[[6]] <- S[[7]] <- 1
 p <- vector("list", nScenarios)
@@ -92,9 +108,10 @@ for (i in 1:nScenarios) {
   }
 }
 targetCenters <- st_centroid(targetSites)
+targetCenters <- st_transform(targetCenters, crs = 4326)
 targetDist <- distFromPos(st_coordinates(targetCenters$geometry))
-originSites2 <- st_transform(originSites, 4326)
-originCenters <- st_centroid(originSites2)
+originCenters <- st_centroid(originSites)
+originCenters <- st_transform(originCenters, 4326)
 originDist <- distFromPos(st_coordinates(originCenters$geometry))
 
 MCtrue <- calcMC(originDist, targetDist, originRelAbund, psiTrue)
@@ -125,7 +142,7 @@ for (sim in 1:nSims) {
                      sampleSize = sampleSizeGL[[sc]],
                      originSites = originSites, targetSites = targetSites,
                      captured = "origin",
-                     geoBias, geoVCov, geoBiasOrigin, geoVCovOrigin,
+                     geoBias, geoVCov,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
                      verbose = 1)
@@ -179,7 +196,7 @@ for (sim in 1:nSims) {
                           captured = captured[[sc]],
                           geoBias = geoBias, geoVCov = geoVCov,
                           resampleProjection = sf::st_crs(targetSites),
-                          nSim = 100, verbose = 3,
+                          nSim = 80, verbose = 3,
                           dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
@@ -314,3 +331,33 @@ plot2
 png('simGL_MC_hists2.png', height = 4, width = 6, units = "in", res = 1200)
 plot2
 dev.off()
+
+oa <- factor(data2$originAssignment, labels = originNames)
+ggplot() +
+  geom_sf(data = originSites, aes(fill = originSite)) +
+  geom_sf(data = data2$originPointsTrue, size = 2,
+          aes(shape = oa)) +
+  ggtitle("Breeding Sites") +
+  coord_sf()
+ta <- factor(data2$targetAssignment, labels = targetNames)
+ggplot() +
+  geom_sf(data = targetSites, aes(fill = targetSite)) +
+  geom_sf(data = data2$targetPointsTrue, size = 2,
+          aes(shape = ta)) +
+  ggtitle("Wintering Sites") +
+  coord_sf()
+oa1 <- factor(data1$originAssignment, labels = originNames)
+ggplot() +
+  geom_sf(data = originSites, aes(fill = originSite)) +
+  geom_sf(data = data1$originPointsTrue, size = 2,
+          aes(shape = oa1)) +
+  ggtitle("Breeding Sites") +
+  coord_sf()
+test <- MigConnectivity:::randomPoints(sites = originSites,
+                                       assignment = data1$originAssignment)
+ggplot() +
+  geom_sf(data = originSites, aes(fill = originSite)) +
+  geom_sf(data = test, size = 2,
+          aes(shape = oa1)) +
+  ggtitle("Breeding Sites") +
+  coord_sf()
