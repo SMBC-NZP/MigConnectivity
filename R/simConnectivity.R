@@ -541,7 +541,10 @@ simGeneticPops <- function(popBoundaries,
                               ymn = min(crdsParams[,2]),
                               ymx = max(crdsParams[,4]),
                               res = res)
+ # give raster same projection as it was made with
+  popBcrs <- sf::st_crs(popBoundaries[[1]], parameters = TRUE)
 
+  crs(emptyRast) <- sp::CRS(popBcrs$proj4string)
 
   if (verbose > 0)
     cat('Generating KDE ... \n')
@@ -580,6 +583,9 @@ simGeneticPops <- function(popBoundaries,
   # Stack the rasters #
   genStack <- raster::stack(popKDE)
   popBinary <- raster::stack(popBinary)
+
+  # assign crs to rasters
+  crs(genStack) <- crs(popBinary) <- crs(emptyRast)
 
   # rename the stack to identify the groups
   names(genStack) <- popNames
@@ -692,11 +698,13 @@ simGeneticData <- function(genPops,
                      function(x){
                       raster::calc(x*genPops$popRast / Ncell, fun = sum)
                      }))
-  if (captured=="target")
-    crs(indRasts) <- sf::st_crs(targetSites)
-  else
-    crs(indRasts) <- sf::st_crs(originSites)
-
+  if (captured=="target"){
+    tsCRS <- sf::st_crs(targetSites, parameters = TRUE)
+    crs(indRasts) <- sp::CRS(tsCRS$proj4string) # sf::st_crs(targetSites)
+  }else{
+    osCRS <- sf::st_crs(originSites, parameters = TRUE)
+    crs(indRasts) <- sp::CRS(osCRS$proj4string) #sf::st_crs(originSites)
+    }
   return(list(originAssignment = originAssignment,
               targetAssignment = targetAssignment,
               originPointsTrue = originPointsTrue,
