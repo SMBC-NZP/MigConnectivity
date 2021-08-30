@@ -599,7 +599,7 @@ estTransitionBoot <- function(originSites = NULL,
       colnames(xyOriginRast) <- c("x","y")
       # right now the assignment CRS is WGS84 - should be the same as the origin raster
 
-      cat("--originRasterXYZcrs -- \n")
+      #cat("--originRasterXYZcrs -- \n")
       originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast),
                                        coords = c("x","y"),
                                        crs = originRasterXYZcrs)

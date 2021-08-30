@@ -221,23 +221,6 @@ for (sim in 1:nSims) {
                           resampleProjection = sf::st_crs(targetSites),
                           nSim = 80, verbose = 3,
                           dataOverlapSetting = "none")
-    est1a <- estTransition(originSites,
-                          targetSites,
-                          op,
-                          tp,
-                          originAssignment = ot,
-                          #originRaster = or, #
-                          originNames = originNames,
-                          targetNames = targetNames,
-                          nSamples = 1000, isGL = isGL[[sc]],
-                          isTelemetry = isTelemetry[[sc]],
-                          isRaster = isProb[[sc]],
-                          isProb = isRaster[[sc]],
-                          captured = captured[[sc]],
-                          geoBias = geoBias, geoVCov = geoVCov,
-                          resampleProjection = sf::st_crs(targetSites),
-                          nSim = 80, verbose = 1,
-                          dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
                         est1)
@@ -260,11 +243,138 @@ for (sim in 1:nSims) {
     #                                data1$targetAssignment[which(data1$recaptured==1)])
     dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
     cat(sc)
-    save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc,#sampleSizes,
+    save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc, #sampleSizes,
          dataStore, file = 'testConnectivity3a.RData')
   }
   cat("\n")
 }
+
+# nSims <- 20
+# psiEstRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
+#                       list(originNames, targetNames, NULL))
+# psiSDRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
+#                       list(originNames, targetNames, NULL))
+# psiCIRaster <- array(NA, c(2, nOriginSites, nTargetSites, nSims),
+#                      list(c("lower", "upper"), originNames, targetNames, NULL))
+# psiEstProb <- array(NA, c(nOriginSites, nTargetSites, nSims),
+#                     list(originNames, targetNames, NULL))
+# psiSDProb <- array(NA, c(nOriginSites, nTargetSites, nSims),
+#                     list(originNames, targetNames, NULL))
+# psiCIProb <- array(NA, c(2, nOriginSites, nTargetSites, nSims),
+#                    list(c("lower", "upper"), originNames, targetNames, NULL))
+# for (sim in 1:nSims) {
+#   cat("Simulation", sim, "of", nSims, "at", date(), " ")
+#   for (sc in 5) {
+#     or <- NULL
+#     if (!is.null(sampleSizeGL[[sc]][[1]])){
+#       data1 <- simGL(psi = psiTrue, originRelAbund = originRelAbund,
+#                      sampleSize = sampleSizeGL[[sc]],
+#                      originSites = originSites, targetSites = targetSites,
+#                      captured = "origin",
+#                      geoBias, geoVCov,
+#                      S = S[[sc]], p = p[[sc]],
+#                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
+#                      verbose = 0)
+#       op <- data1$originPointsObs
+#       tp <- data1$targetPointsObs
+#     }else{
+#       data1 <- NULL
+#       op <- NULL
+#       tp <- NULL
+#     }
+#     if (!is.null(sampleSizeGeno[[sc]])){
+#       data2 <- simGeneticData(genPops = genPops, psi = psiTrue,
+#                               originRelAbund = originRelAbund,
+#                               sampleSize = sampleSizeGeno[[sc]],
+#                               originSites = originSites,
+#                               targetSites = targetSites,
+#                               captured = "target",
+#                               verbose = 0)
+#       tp <- rbind(tp, data2$targetPointsTrue)
+#       or <- data2$genRaster
+#       ot <- data2$genProbs
+#       #originSites <- sf::st_transform(originSites, crs(or, TRUE))
+#       #crs(or) <- sf::st_crs(originSites)
+#     }else{
+#       data2 <- NULL
+#       or <- NULL
+#       ot <- NULL
+#     }
+#     est1 <- estTransition(originSites,
+#                           targetSites,
+#                           op,
+#                           tp,
+#                           #originAssignment = ot,
+#                           originRaster = or, #
+#                           originNames = originNames,
+#                           targetNames = targetNames,
+#                           nSamples = 1000, isGL = isGL[[sc]],
+#                           isTelemetry = isTelemetry[[sc]],
+#                           isRaster = isRaster[[sc]],
+#                           isProb = isProb[[sc]],
+#                           captured = captured[[sc]],
+#                           geoBias = geoBias, geoVCov = geoVCov,
+#                           resampleProjection = sf::st_crs(targetSites),
+#                           nSim = 80, verbose = 1,
+#                           dataOverlapSetting = "none")
+#     est1a <- estTransition(originSites,
+#                            targetSites,
+#                            op,
+#                            tp,
+#                            originAssignment = ot,
+#                            #originRaster = or, #
+#                            originNames = originNames,
+#                            targetNames = targetNames,
+#                            nSamples = 1000, isGL = isGL[[sc]],
+#                            isTelemetry = isTelemetry[[sc]],
+#                            isRaster = isProb[[sc]],
+#                            isProb = isRaster[[sc]],
+#                            captured = captured[[sc]],
+#                            geoBias = geoBias, geoVCov = geoVCov,
+#                            resampleProjection = sf::st_crs(targetSites),
+#                            nSim = 80, verbose = 0,
+#                            dataOverlapSetting = "none")
+#     psiEstRaster[,,sim] <- est1$psi$mean
+#     psiCIRaster[,,,sim] <- est1$psi$simpleCI
+#     psiSDRaster[,,sim] <- est1$psi$se
+#     psiEstProb[,,sim] <- est1a$psi$mean
+#     psiSDProb[,,sim] <- est1a$psi$se
+#     psiCIProb[,,,sim] <- est1a$psi$simpleCI
+#     dataStore[[sim]] <- list(data1 = data1, data2 = data2)
+#     save(psiEstRaster, psiCIRaster, psiSDRaster, psiEstProb, psiCIProb, psiSDProb,#sampleSizes,
+#          dataStore, file = 'testRasterProb3a.RData')
+#   }
+#   cat("\n")
+# }
+#
+# nSimsDone <- sim - 1
+# psiEstRaster <- psiEstRaster[,,1:nSimsDone]
+# psiCIRaster <- psiCIRaster[,,,1:nSimsDone]
+# psiSDRaster <- psiSDRaster[,,1:nSimsDone]
+# psiEstProb <- psiEstProb[,,1:nSimsDone]
+# psiCIProb <- psiCIProb[,,,1:nSimsDone]
+# psiSDProb <- psiSDProb[,,1:nSimsDone]
+# psiEstAll <- array(c(psiEstRaster, psiEstProb),
+#                    c(nOriginSites, nTargetSites, nSimsDone, 2),
+#                    list(originNames, targetNames, NULL, c("Raster", "Prob")))
+#
+# psiEstRasterSD <- apply(psiEstRaster, 1:2, sd)
+# psiEstProbSD <- apply(psiEstProb, 1:2, sd)
+# psiEstAllSD <- (psiEstRasterSD + psiEstProbSD) / 2
+# psiEstSDAll <- apply(apply(psiEstAll, c(1,2,3), sd), 1:2, mean)
+# psiEstAllSD
+# # Average sd between simulations
+# #              1           2          3           4           5
+# # A 0.0007509665 0.000000000 0.01306195 0.008530197 0.018982294
+# # B 0.0454965864 0.005774737 0.02549208 0.038386530 0.003482010
+# # C 0.0304489928 0.008777679 0.01751065 0.025716835 0.004284463
+# psiEstSDAll
+# # Average sd between data types
+# #              1            2            3            4            5
+# # A 0.0000433691 0.0000000000 0.0005234190 0.0002079959 3.692237e-04
+# # B 0.0018138104 0.0001174937 0.0012673675 0.0013989689 1.313988e-04
+# # C 0.0009039616 0.0010716161 0.0007846056 0.0007073056 7.510227e-05
+# # More variation between simulations than between data types (good!)
 
 nSimsDone <- sim
 psiEst <- psiEst[,,,1:nSimsDone]
