@@ -169,7 +169,8 @@ locSample <- function(isGL,
                       sites = NULL,
                       resampleProjection = 'ESRI:53027',
                       nSim = 1000,
-                      maxTries = 300) {
+                      maxTries = 300,
+                      target = TRUE) {
   #cat("Starting locSample\n")
   # points should come in as sf object #
   nAnimals <- length(isGL)
@@ -274,6 +275,7 @@ locSample <- function(isGL,
       # will be NA for those that don't.  For those that do, it will location in
       # point.sample first valid point can be found.
       good.sample0 <- apply(site.sample0, 2, function(x) which(!is.na(x))[1])
+     # cat(good.sample0, "\n")
     }
     if (any(isProb & toSampleBool)) {
       #print(assignment)
@@ -534,9 +536,26 @@ locSample <- function(isGL,
     }
     toSample <- which(is.na(site.sample))
   }
-  if (!is.null(maxTries) && draws > maxTries)
-    stop(paste0('maxTries (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
-#  }
+  if (!is.null(maxTries) && draws > maxTries){
+    notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],
+                          isRaster = isRaster[toSample], isProb = isProb[toSample],
+                          isTelemetry = isTelemetry[toSample])
+    print(notfind, row.names = FALSE)
+    stop('maxTries (',maxTries,') reached during ',
+         ifelse(target, "target", "origin"),
+         ' location sampling, exiting. Animal(s) where location sampling failed to fall in sites:\n',
+         paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+         '\nExamine ', ifelse(target, "target", "origin"), 'Sites',
+         ifelse(any(isGL & toSampleBool) && target,
+                ', geoBias, geoVcov, targetPoints', ''),
+         ifelse(any(isGL & toSampleBool && !target),
+                ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
+         ifelse(any(isRaster & toSampleBool) && target,
+                ', targetRaster', ''),
+         ifelse(any(isRaster & toSampleBool) && !target,
+                ', originRaster', ''),
+         ', and resampleProjection to determine why sampled points fell outside sites.')
+  }
   return(list(site.sample = site.sample, point.sample = point.sample,
               draws = draws))
 }

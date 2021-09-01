@@ -839,7 +839,7 @@ estTransitionBoot <- function(originSites = NULL,
                            sites = originSites,
                            resampleProjection = resampleProjection,
                            nSim = nSim,
-                           maxTries = maxTries)
+                           maxTries = maxTries, target = FALSE)
         #origin.point.sample <- oSamp$target.point.sample
         origin.sample <- oSamp$site.sample
         if (verbose > 2)
@@ -869,7 +869,7 @@ estTransitionBoot <- function(originSites = NULL,
                          sites = targetSites,
                          assignment = assignment,
                          resampleProjection = resampleProjection, nSim = nSim,
-                         maxTries = maxTries)
+                         maxTries = maxTries, target = TRUE)
       target.sample <- tSamp$site.sample
       #target.point.sample <- tSamp$target.point.sample
       if (verbose > 2)
@@ -2443,7 +2443,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          sites = originSites,
                          resampleProjection = resampleProjection,
                          nSim = nSim,
-                         maxTries = maxTries)
+                         maxTries = maxTries, target = FALSE)
       origin.point.sample <- oSamp$point.sample
       origin.point.sample <- sf::st_as_sf(data.frame(origin.point.sample),
                                           coords = c("x","y"),
@@ -2473,7 +2473,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          overlap1 = targetCon[, animal.sample],
                          sites = targetSites,
                          resampleProjection = resampleProjection, nSim = nSim,
-                         maxTries = maxTries)
+                         maxTries = maxTries, target = TRUE)
       target.point.sample <- tSamp$point.sample
       target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
                                           coords = c("x","y"),
