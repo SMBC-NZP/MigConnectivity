@@ -169,8 +169,7 @@ locSample <- function(isGL,
                       sites = NULL,
                       resampleProjection = 'ESRI:53027',
                       nSim = 1000,
-                      maxTries = 300,
-                      target = TRUE) {
+                      maxTries = 300) {
   #cat("Starting locSample\n")
   # points should come in as sf object #
   nAnimals <- length(isGL)
@@ -540,21 +539,8 @@ locSample <- function(isGL,
     notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],
                           isRaster = isRaster[toSample], isProb = isProb[toSample],
                           isTelemetry = isTelemetry[toSample])
-    print(notfind, row.names = FALSE)
-    stop('maxTries (',maxTries,') reached during ',
-         ifelse(target, "target", "origin"),
-         ' location sampling, exiting. Animal(s) where location sampling failed to fall in sites:\n',
-         paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
-         '\nExamine ', ifelse(target, "target", "origin"), 'Sites',
-         ifelse(any(isGL & toSampleBool) && target,
-                ', geoBias, geoVcov, targetPoints', ''),
-         ifelse(any(isGL & toSampleBool && !target),
-                ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
-         ifelse(any(isRaster & toSampleBool) && target,
-                ', targetRaster', ''),
-         ifelse(any(isRaster & toSampleBool) && !target,
-                ', originRaster', ''),
-         ', and resampleProjection to determine why sampled points fell outside sites.')
+    return(list(site.sample = NULL, point.sample = point.sample,
+                draws = draws, notfind = notfind))
   }
   return(list(site.sample = site.sample, point.sample = point.sample,
               draws = draws))

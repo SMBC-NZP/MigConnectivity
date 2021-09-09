@@ -839,8 +839,20 @@ estTransitionBoot <- function(originSites = NULL,
                            sites = originSites,
                            resampleProjection = resampleProjection,
                            nSim = nSim,
-                           maxTries = maxTries, target = FALSE)
-        #origin.point.sample <- oSamp$target.point.sample
+                           maxTries = maxTries)
+        if (!is.null(oSamp$notfind)) {
+          oSamp$notfind$Animal <- animal.sample[oSamp$notfind$Animal]
+          notfind <- unique(oSamp$notfind)
+          stop('maxTries (',maxTries,') reached during origin location sampling, exiting. ',
+               'Animal(s) where location sampling failed to fall in sites:\n',
+               paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+               '\nExamine originSites',
+               ifelse(any(notfind$isGL),
+                      ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
+               ifelse(any(notfind$isRaster), ', originRaster', ''),
+               ifelse(any(notfind$isTelemetry), ', originPoints/captured', ''),
+               ', and resampleProjection to determine why sampled points fell outside sites.')
+        }
         origin.sample <- oSamp$site.sample
         if (verbose > 2)
           cat(' ', oSamp$draws, 'origin draws (of length', nSim, 'and of', maxTries, 'possible).\n')
@@ -869,7 +881,20 @@ estTransitionBoot <- function(originSites = NULL,
                          sites = targetSites,
                          assignment = assignment,
                          resampleProjection = resampleProjection, nSim = nSim,
-                         maxTries = maxTries, target = TRUE)
+                         maxTries = maxTries)
+      if (!is.null(tSamp$notfind)) {
+        tSamp$notfind$Animal <- animal.sample[tSamp$notfind$Animal]
+        notfind <- unique(tSamp$notfind)
+        stop('maxTries (',maxTries,') reached during target location sampling, exiting. ',
+             'Animal(s) where location sampling failed to fall in sites:\n',
+             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             '\nExamine targetSites',
+             ifelse(any(notfind$isGL),
+                    ', geoBiasOrigin, geoVcovOrigin, targetPoints', ''),
+             ifelse(any(notfind$isRaster), ', targetRaster', ''),
+             ifelse(any(notfind$isTelemetry), ', targetPoints/captured', ''),
+             ', and resampleProjection to determine why sampled points fell outside sites.')
+      }
       target.sample <- tSamp$site.sample
       #target.point.sample <- tSamp$target.point.sample
       if (verbose > 2)
@@ -2443,7 +2468,20 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          sites = originSites,
                          resampleProjection = resampleProjection,
                          nSim = nSim,
-                         maxTries = maxTries, target = FALSE)
+                         maxTries = maxTries)
+      if (!is.null(oSamp$notfind)) {
+        oSamp$notfind$Animal <- animal.sample[oSamp$notfind$Animal]
+        notfind <- unique(oSamp$notfind)
+        stop('maxTries (',maxTries,') reached during origin location sampling, exiting. ',
+             'Animal(s) where location sampling failed to fall in sites:\n',
+             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             '\nExamine originSites',
+             ifelse(any(notfind$isGL),
+                    ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
+             ifelse(any(notfind$isRaster), ', originRaster', ''),
+             ifelse(any(notfind$isTelemetry), ', originPoints/captured', ''),
+             ', and resampleProjection to determine why sampled points fell outside sites.')
+      }
       origin.point.sample <- oSamp$point.sample
       origin.point.sample <- sf::st_as_sf(data.frame(origin.point.sample),
                                           coords = c("x","y"),
@@ -2473,7 +2511,20 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          overlap1 = targetCon[, animal.sample],
                          sites = targetSites,
                          resampleProjection = resampleProjection, nSim = nSim,
-                         maxTries = maxTries, target = TRUE)
+                         maxTries = maxTries)
+      if (!is.null(tSamp$notfind)) {
+        tSamp$notfind$Animal <- animal.sample[tSamp$notfind$Animal]
+        notfind <- unique(tSamp$notfind)
+        stop('maxTries (',maxTries,') reached during target location sampling, exiting. ',
+             'Animal(s) where location sampling failed to fall in sites:\n',
+             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             '\nExamine targetSites',
+             ifelse(any(notfind$isGL),
+                    ', geoBiasOrigin, geoVcovOrigin, targetPoints', ''),
+             ifelse(any(notfind$isRaster), ', targetRaster', ''),
+             ifelse(any(notfind$isTelemetry), ', targetPoints/captured', ''),
+             ', and resampleProjection to determine why sampled points fell outside sites.')
+      }
       target.point.sample <- tSamp$point.sample
       target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
                                           coords = c("x","y"),

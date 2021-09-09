@@ -24,51 +24,40 @@ nScenarios <- length(scenarios)
 nOriginSites <- 3
 nTargetSites <- 5
 
-#                         [,1]      [,2]         [,3]         [,4]        [,5]       [,6]
-#East Coast        0.000000000 0.0000000 0.0002314051 0.0001219829 0.000012500 0.14009284
-#Louisiana         0.007979644 0.0000625 0.0609539466 0.8783123863 0.001062638 0.01709982
-#Central/Southwest 0.026096224 0.0369566 0.0524682507 0.7141783131 0.021990071 0.09840055
-#[,7]
-#East Coast        0.85954127
-#Louisiana         0.03452907
-#Central/Southwest 0.04990998
+# Transition probability (psi) estimates (mean):
+#            Pacific and Interior Mexico Atlantic Lowland Mexico Central America
+# Central                        0.10529                  0.1068       0.7878945
+# Louisiana                      0.05526                  0.4737       0.4710340
+# East Coast                     0.00000                  0.0000       0.0001181
+#            Southeastern US Caribbean
+# Central             0.0000    0.0000
+# Louisiana           0.0000    0.0000
+# East Coast          0.5433    0.4566
 
-psiTrue <- array(0, c(3,7))
-psiTrue[1,] <- c(0.000000000,0.0000000,0.0002314051,
-                 0.0001219829,0.000012500,0.14009284,0.85954127)
-psiTrue[2,] <- c(0.007979644,0.0000625,0.0609539466,
-                 0.8783123863,0.001062638,0.01709982,0.03452907)
-psiTrue[3,] <- c(0.026096224,0.0369566,0.0524682507,
-                 0.7141783131,0.021990071,0.09840055,0.04990998)
-
+psiTrue <- array(0, c(nOriginSites, nTargetSites))
+psiTrue[1,] <- c(0.10529, 0.10682, 0.78789, 0, 0)
+psiTrue[2,] <- c(0.05526, 0.47371, 0.47103, 0, 0)
+psiTrue[3,] <- c(0, 0, 0.00012, 0.54331, 0.45657)
+rowSums(psiTrue)
 # psiTrue <- psiPABU$psi$mean
 
-if (ncol(psiTrue)>nTargetSites) {
-  psiTrue[, nTargetSites] <- rowSums(psiTrue[ , nTargetSites:ncol(psiTrue)])
-  psiTrue <- psiTrue[, 1:nTargetSites]
-}
-rowSums(psiTrue)
 originNames <- LETTERS[1:nOriginSites]
 targetNames <- as.character(1:nTargetSites)
 dimnames(psiTrue) <- list(originNames, targetNames)
-geoBias <- c(-33457.21, 159906.9)
-geoVCov <- matrix(c(95917504, -20182252, -20182252, 179951061),
-                  nrow = 2, ncol = 2, byrow = TRUE)
+geoBias <- c(22250.92, -32407.14)
+geoVCov <- matrix(c(5637340653, -2692682155, -2692682155, 6012336962),
+                  nrow = 2, ncol = 2)
 # Changed these from PABU estimates so we'd average at least one GL per
 # population in first and third scenario
 
 originRelAbund <- c(27/30, 2/30, 1/30)
 
+rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
+
 originSites <- sf::st_read("data-raw/PABU_breeding_regions.shp")
 targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
-
-
-if (nrow(targetSites)>nTargetSites) {
-  targetSites <- targetSites[1:nTargetSites, ]
-}
-
-
-rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
+originSites$originSite <- originNames
+targetSites$targetSite <- targetNames
 
 # sf::st_crs(originSitesPABU)
 
@@ -106,12 +95,12 @@ for (i in 1:nScenarios)
 
 sampleSize <- vector("list", nScenarios)
 sampleSize[[1]] <- list(30 * originRelAbund, NULL)
-sampleSize[[2]] <- list(NULL, 300)
-sampleSize[[3]] <- list(30 * originRelAbund, 300)
+sampleSize[[2]] <- list(NULL, round(rev$targetRelAbund * 300))
+sampleSize[[3]] <- list(30 * originRelAbund, round(rev$targetRelAbund * 300))
 sampleSize[[4]] <- list(c(10, 10, 10), NULL)
 sampleSize[[5]] <- list(NULL, rep(60, nTargetSites))
 sampleSize[[6]] <- list(c(0, 0, 30), c(100, 100, 100, 0, 0))
-sampleSize[[7]] <- list(c(5, 0, 0), c(100, 100, 100, 0, 0))
+sampleSize[[7]] <- list(c(0, 0, 5), c(100, 100, 100, 0, 0))
 sampleSizeGL <- lapply(sampleSize, function(x) list(x[[1]], NULL))
 sampleSizeGeno <- lapply(sampleSize, function(x) x[[2]])
 
