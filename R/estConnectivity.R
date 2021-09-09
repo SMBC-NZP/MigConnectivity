@@ -855,7 +855,7 @@ estTransitionBoot <- function(originSites = NULL,
         }
         origin.sample <- oSamp$site.sample
         if (verbose > 2)
-          cat(' ', oSamp$draws, 'origin draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+          cat(' ', oSamp$draws, 'origin draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
       }
       else {
         # Get origin population for each animal sampled
@@ -898,7 +898,7 @@ estTransitionBoot <- function(originSites = NULL,
       target.sample <- tSamp$site.sample
       #target.point.sample <- tSamp$target.point.sample
       if (verbose > 2)
-        cat(' ', tSamp$draws, 'target draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+        cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     }
     else {
       # Get target population for each animal sampled
@@ -1335,7 +1335,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2)
-      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+      cat(' ', tSamp$draws, 'draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
     sites <- table(origin.sample, target.sample)
     sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
@@ -1675,7 +1675,7 @@ estMCisotope <- function(targetDist=NULL,
     target.sample <- tSamp$target.sample
     target.point.sample <- tSamp$target.point.sample
     if (verbose > 2 & !pointsInSites)
-      cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+      cat(' ', tSamp$draws, 'draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
     sites <- table(origin.sample, target.sample)
     sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
@@ -2487,7 +2487,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                                           coords = c("x","y"),
                                           crs = resampleProjection)
       if (verbose > 2)
-        cat(' ', oSamp$draws, 'origin draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+        cat(' ', oSamp$draws, 'origin draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     }
     else {
       # Get origin point for each animal sampled
@@ -2530,7 +2530,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                                           coords = c("x","y"),
                                           crs = resampleProjection)
       if (verbose > 2)
-        cat(' ', tSamp$draws, 'target draws (of length', nSim, 'and of', maxTries, 'possible).\n')
+        cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     }
     else {
       # Get target point for each animal sampled

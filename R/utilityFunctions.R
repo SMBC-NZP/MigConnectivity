@@ -223,7 +223,7 @@ locSample <- function(isGL,
   toSample <- which(!isTelemetry)
   draws <- 0
   # Loop until all animals have valid sample or have exceeded maxTries
-  while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
+  while (length(toSample) > 0 && (is.null(maxTries) || draws < maxTries)) {
     draws <- draws + 1
     # Convert toSample (numbers) into T/F, so can combine with other T/F
     toSampleBool <- 1:nAnimals %in% toSample
@@ -535,11 +535,11 @@ locSample <- function(isGL,
     }
     toSample <- which(is.na(site.sample))
   }
-  if (!is.null(maxTries) && draws > maxTries){
+  if (length(toSample) > 0){
     notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],
                           isRaster = isRaster[toSample], isProb = isProb[toSample],
                           isTelemetry = isTelemetry[toSample])
-    return(list(site.sample = NULL, point.sample = point.sample,
+    return(list(site.sample = site.sample, point.sample = point.sample,
                 draws = draws, notfind = notfind))
   }
   return(list(site.sample = site.sample, point.sample = point.sample,
