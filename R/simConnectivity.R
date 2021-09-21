@@ -333,24 +333,62 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 
 #' Simulate geolocator data
 #'
-#' @param psi
-#' @param originRelAbund
-#' @param sampleSize
-#' @param originSites
-#' @param targetSites
-#' @param captured
-#' @param geoBias
-#' @param geoVCov
-#' @param geoBiasOrigin
-#' @param geoVCovOrigin
-#'
+#' @param psi Transition probabilities between B origin and W target sites.
+#'    A matrix with B rows and W columns where rows sum to 1.
+#' @param originRelAbund Relative abundances at B origin sites. Numeric vector
+#'    of length B that sums to 1.
+#' @param sampleSize List of length two. The first element is either a vector of
+#'    length B with the number of simulated animals to release with geolocators
+#'    at each of the B origin sites, a single integer with the total number of
+#'    simulated animals to release with geolocators at origin sites (in which
+#'    case, the origin sites will be sampled according to the relative
+#'    abundance), or NULL if all animals are released at target sites. The
+#'    second element is either a vector of length W with the number of simulated
+#'    animals to release with geolocators at each of the W target sites, a
+#'    single integer with the total number of simulated animals to release with
+#'    geolocators at target sites (in which case, the target sites will be
+#'    sampled according to their relative abundance), or NULL if all animals are
+#'    released at origin sites.
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#'    geographic representation of sites in the origin season.
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#'    geographic representation of sites in the target season.
+# @param captured
+#' @param geoBias Vector of length 2 indicating expected bias in longitude and
+#'    latitude of animals captured and released at origin sites, in
+#'    \code{targetSites} units.
+#' @param geoVCov 2x2 matrix with expected variance/covariance in longitude and
+#'    latitude of animals captured and released at origin sites, in
+#'    \code{targetSites} units.
+#' @param geoBiasOrigin Vector of length 2 indicating expected bias in longitude
+#'    and latitude of animals captured and released at target sites, in
+#'    \code{originSites} units.
+#' @param geoVCovOrigin 2x2 matrix with expected variance/covariance in
+#'    longitude and latitude of animals captured and released at target sites,
+#'    in \code{originSites} units.
+#' @param S Survival probabilities of released geolocator animals. Either a
+#'    matrix with B rows and W columns (if survival depends on both origin site
+#'    and target site), a vector of length W (if survival depends only on target
+#'    site), or a single number (if survival is the same for all animals).
+#'    Default 1 (all animals with geolocators survive a year).
+#' @param p Recapture probabilities of released geolocator animals; list of
+#'    length two. The first element is either a vector of length B (if recapture
+#'    depends on origin site), or a single number (if recapture is the same for
+#'    all animals released on origin sites). The second element is either a
+#'    vector of length W (if recapture depends on target site), or a single
+#'    number (if recapture is the same for all animals released on target
+#'    sites). Default list(1, 1) (all animals that survive are recaptured).
+#' @param requireEveryOrigin if TRUE, the function will throw an error if it
+#'    looks like at least one origin site has no animals released in or
+#'    migrating to it, or if it can, keep simulating until representation is
+#'    met. This helps estTransition or estMC not throw an error. Default FALSE.
 #' @return
 #' @export
 #'
 # @examples
-simGL <- function(psi, originRelAbund, sampleSize,
+simGLData <- function(psi, originRelAbund, sampleSize,
                   originSites = NULL, targetSites = NULL,
-                  captured = "origin",
+                  #captured = "origin",
                   geoBias = NULL, geoVCov = NULL,
                   geoBiasOrigin=NULL, geoVCovOrigin=NULL,
                   S = 1, p = list(1, 1),
@@ -369,8 +407,10 @@ simGL <- function(psi, originRelAbund, sampleSize,
   if (length(p[[2]]==1))
     p[[2]] <- rep(p[[2]], nTargetSites)
   nAnimals <- sum(sampleSize[[1]]) + sum(sampleSize[[2]])
-  if (length(captured)==1)
-    captured <- rep(captured, nAnimals)
+  captured <- rep(c("origin", "target"),
+                  c(sum(sampleSize[[1]]), sum(sampleSize[[2]])))
+  # if (length(captured)==1)
+  #   captured <- rep(captured, nAnimals)
   targetAssignment <- rep(NA, nAnimals)
   originAssignment <- rep(NA, nAnimals)
   lived <- rep(1, nAnimals)

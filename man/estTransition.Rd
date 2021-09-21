@@ -36,13 +36,18 @@ estTransition(
   maxTries = 300,
   nBurnin = 5000,
   nChains = 3,
-  nThin = 1
+  nThin = 1,
+  dataOverlapSetting = c("dummy", "none", "named")
 )
 }
 \arguments{
-\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.}
+\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
+SpatialPolygons) defining the geographic representation of sites in the
+origin season.}
 
-\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.}
+\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
+SpatialPolygons) defining the geographic representation of sites in the
+target season.}
 
 \item{originPoints}{A \code{sf} or \code{SpatialPoints} object, with number
 of rows or length being the number of animals tracked. Each point indicates

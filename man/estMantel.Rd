@@ -26,7 +26,8 @@ estMantel(
   geoBiasOrigin = NULL,
   geoVCovOrigin = NULL,
   targetRaster = NULL,
-  originRaster = NULL
+  originRaster = NULL,
+  dataOverlapSetting = c("dummy", "none", "named")
 )
 }
 \arguments{

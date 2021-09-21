@@ -194,10 +194,10 @@ for (sim in 1:nSims) {
   for (sc in 1:nScenarios) {
     or <- NULL
     if (!is.null(sampleSizeGL[[sc]][[1]])){
-      data1 <- simGL(psi = psiTrue, originRelAbund = originRelAbund,
+      data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
                      sampleSize = sampleSizeGL[[sc]],
                      originSites = originSites, targetSites = targetSites,
-                     captured = "origin",
+                     #captured = "origin",
                      geoBias, geoVCov,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
@@ -297,10 +297,10 @@ for (sim in 1:nSims) {
   for (sc in 5) {
     or <- NULL
     if (!is.null(sampleSizeGL[[sc]][[1]])){
-      data1 <- simGL(psi = psiTrue, originRelAbund = originRelAbund,
+      data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
                      sampleSize = sampleSizeGL[[sc]],
                      originSites = originSites, targetSites = targetSites,
-                     captured = "origin",
+                     #captured = "origin",
                      geoBias, geoVCov,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),

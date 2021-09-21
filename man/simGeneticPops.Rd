@@ -7,7 +7,7 @@
 simGeneticPops(
   popBoundaries,
   npts = 1000,
-  res = c(0.0833, 0.0833),
+  res = NULL,
   bufferRegions = FALSE,
   bufferDist = -50000,
   popNames = NULL,

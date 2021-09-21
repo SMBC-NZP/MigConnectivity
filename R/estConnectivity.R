@@ -968,8 +968,12 @@ estTransitionBoot <- function(originSites = NULL,
 #' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
 #' band/ring reencounter data.
 #'
-#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.
-#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
+#'  SpatialPolygons) defining the geographic representation of sites in the
+#'  origin season.
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
+#'  SpatialPolygons) defining the geographic representation of sites in the
+#'  target season.
 #' @param originPoints A \code{sf} or \code{SpatialPoints} object, with number
 #'  of rows or length being the number of animals tracked. Each point indicates
 #'  the origin location of an animal (or point estimate of same, for GL animals
