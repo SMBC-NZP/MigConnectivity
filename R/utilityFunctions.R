@@ -351,7 +351,8 @@ locSample <- function(isGL,
         len_intersect <- lengths(site.sample2)
         # quick check to ensure that all the points fall exactly in one site #
         if(any(len_intersect)>1){
-          stop("Overlapping targetSites or originSites not allowed \n")
+          warning("Overlapping targetSites or originSites may cause issues\n")
+          site.sample2 <- lapply(site.sample2, function (x) x[1])
         }
         site.sample2[lengths(site.sample2)==0] <- NA
         site.sample2 <- unlist(as.numeric(site.sample2))
@@ -385,7 +386,8 @@ locSample <- function(isGL,
         len_intersect <- lengths(site.sample2)
         # quick check to ensure that all the points fall exactly in one site #
         if(any(len_intersect)>1){
-          stop("Overlapping targetSites or originSites not allowed \n")
+          warning("Overlapping targetSites or originSites may cause issues\n")
+          site.sample2 <- lapply(site.sample2, function (x) x[1])
         }
         site.sample2[len_intersect==0] <- NA
         site.sample2 <- unlist(as.numeric(site.sample2))

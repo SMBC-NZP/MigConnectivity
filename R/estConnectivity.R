@@ -617,8 +617,10 @@ estTransitionBoot <- function(originSites = NULL,
                                                                  y = originSites,
                                                                 sparse = TRUE)))
     originAssignment[lengths(originAssignment)==0] <- NA
-    if (any(lengths(originAssignment)>1))
-      stop("Overlapping originSites not allowed\n")
+    if (any(lengths(originAssignment)>1)){
+      warning("Overlapping originSites may cause issues\n")
+      originAssignment <- lapply(originAssignment, function (x) x[1])
+    }
     originAssignment <- array(unlist(originAssignment))
   }
 
@@ -670,8 +672,10 @@ estTransitionBoot <- function(originSites = NULL,
                                                         y = targetSites,
                                                         sparse = TRUE)))
    targetAssignment[lengths(targetAssignment)==0] <- NA
-   if (any(lengths(targetAssignment)>1))
-     stop("Overlapping targetSites not allowed\n")
+   if (any(lengths(targetAssignment)>1)){
+     warning("Overlapping targetSites may cause issues\n")
+     targetAssignment <- lapply(targetAssignment, function(x) x[1])
+   }
    targetAssignment <- array(unlist(targetAssignment))
   }
   if(is.null(originSites)){
@@ -780,8 +784,8 @@ estTransitionBoot <- function(originSites = NULL,
 
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
-                                                    #targetNames))
-                                                    NULL))
+                                                    targetNames))
+                                                    #NULL))
   if (is.null(dim(originAssignment))){
     originAssignment <- array(originAssignment)}
   if (is.null(dim(targetAssignment))){
@@ -1238,8 +1242,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                                                                    y = originSites,
                                                                    sparse = TRUE)))
     originAssignment[lengths(originAssignment)==0] <- NA
-    if (any(lengths(originAssignment)>1))
+    if (any(lengths(originAssignment)>1)){
       stop("Overlapping originSites not allowed\n")
+    }
     originAssignment <- unlist(originAssignment)
   }
   if (is.null(targetAssignment)) {

@@ -188,7 +188,7 @@ MantelCI <- array(NA, c(2, nScenarios, nSims),
 dataStore <- vector("list", nSims)
 
 
-for (sim in 1:2) {
+for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
   for (sc in 1:nScenarios) {
@@ -201,7 +201,7 @@ for (sim in 1:2) {
                      geoBias, geoVCov,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
-                     verbose = 0)
+                     verbose = 1)
       op <- data1$originPointsObs
       tp <- data1$targetPointsObs
     }else{
@@ -216,7 +216,7 @@ for (sim in 1:2) {
                               originSites = originSites,
                               targetSites = targetSites,
                               captured = "target",
-                              verbose = 0)
+                              verbose = 1)
       tp <- rbind(tp, data2$targetPointsTrue)
       or <- data2$genRaster
       ot <- data2$genProbs
@@ -242,37 +242,44 @@ for (sim in 1:2) {
                           captured = captured[[sc]],
                           geoBias = geoBias, geoVCov = geoVCov,
                           resampleProjection = sf::st_crs(targetSites),
-                          nSim = 80, verbose = 0,
+                          nSim = 80, verbose = 3,
                           dataOverlapSetting = "none")
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
                         est1)
-    # est3 <- estMantel(tp, op, isGL[[sc]],
-    #                   geoBias, geoVCov, targetSites, 10, 80, 0,
-    #                   resampleProjection = sf::st_crs(targetSites),
-    #                   originSites = originSites,
-    #                   captured = captured[[sc]],
-    #                   isTelemetry = isTelemetry[[sc]],
-    #                   isRaster = isRaster[[sc]],
-    #                   originRaster = or,
-    #                   dataOverlapSetting = "none")
+    est3 <- estMantel(tp, op, isGL[[sc]],
+                      geoBias, geoVCov, targetSites, 10, 80, 3,
+                      resampleProjection = sf::st_crs(targetSites),
+                      originSites = originSites,
+                      captured = captured[[sc]],
+                      isTelemetry = isTelemetry[[sc]],
+                      isRaster = isRaster[[sc]],
+                      originRaster = or,
+                      dataOverlapSetting = "none")
     psiEst[,,sc,sim] <- est1$psi$mean
     psiCI[,,,sc,sim] <- est1$psi$simpleCI
     MCest[sc,sim] <- est2$MC$mean
     MCCI[,sc,sim] <- est2$MC$simpleCI
-    # MantelEst[sc,sim] <- est3$corr$mean
-    # MantelCI[,sc,sim] <- est3$corr$simpleCI
+    MantelEst[sc,sim] <- est3$corr$mean
+    MantelCI[,sc,sim] <- est3$corr$simpleCI
     # sampleSizes[,,sc,sim] <- table(data1$originAssignment[which(data1$recaptured==1)],
     #                                data1$targetAssignment[which(data1$recaptured==1)])
     dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
     cat(sc)
     save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc, #sampleSizes,
-         dataStore, file = 'testConnectivity3b.RData')
+         dataStore, file = 'testConnectivity3a.RData')
   }
   cat("\n")
 }
 
-nSims <- 20
+genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
+                                               originSites[2, ],
+                                               originSites[3, ]),
+                          popNames = originNames, res = c(50000, 50000),
+                          bufferRegions = T, bufferDist = 200000,
+                          npts = 1000,
+                          verbose = 0)
+nSims <- 6
 psiEstRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
                       list(originNames, targetNames, NULL))
 psiSDRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
@@ -365,12 +372,13 @@ for (sim in 1:nSims) {
     psiCIProb[,,,sim] <- est1a$psi$simpleCI
     dataStore[[sim]] <- list(data1 = data1, data2 = data2)
     save(psiEstRaster, psiCIRaster, psiSDRaster, psiEstProb, psiCIProb, psiSDProb,#sampleSizes,
-         dataStore, file = 'testRasterProb3b.RData')
+         dataStore, file = 'testRasterProb3c.RData')
   }
   cat("\n")
 }
 
-nSimsDone <- sim - 1
+psiEstRaster[1,1,]
+nSimsDone <- 6#sim - 1
 psiEstRaster <- psiEstRaster[,,1:nSimsDone]
 psiCIRaster <- psiCIRaster[,,,1:nSimsDone]
 psiSDRaster <- psiSDRaster[,,1:nSimsDone]
