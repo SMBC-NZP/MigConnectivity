@@ -715,13 +715,19 @@ simGeneticData <- function(genPops,
 
     genProbs <- raster::extract(genPops$genStack,
                                 sf::st_coordinates(originPointsTrue))
+    # convert from probability of being from location to probability of being
+    # from population
+    genProbs <- t(apply(genProbs, 1, FUN=function(x) x * originRelAbund /
+        sum(x * originRelAbund)))
   }
   else {
     genProbs <- raster::extract(genPops$genStack,
                                 sf::st_coordinates(targetPointsTrue))
+    # convert from probability of being from location to probability of being
+    # from population
+    genProbs <- t(apply(genProbs, 1, FUN=function(x) x * targetRelAbund /
+                          sum(x * targetRelAbund)))
   }
-  # convert to probability
-  genProbs <- t(apply(genProbs, 1, FUN=function(x){x/sum(x)})) # or could be max
 
   # split out inds to list #
   if (verbose > 0)
