@@ -379,7 +379,7 @@ for (sim in 1:nSims) {
 }
 
 psiEstRaster[1,1,]
-nSimsDone <- 5# 6#sim - 1
+nSimsDone <- 6# 6#sim - 1
 psiEstRaster <- psiEstRaster[,,1:nSimsDone]
 psiCIRaster <- psiCIRaster[,,,1:nSimsDone]
 psiSDRaster <- psiSDRaster[,,1:nSimsDone]
@@ -421,7 +421,12 @@ psiEstSDAll
 # B 0.010229874 0.093768508 0.02136793 0.036849980 0.038023254
 # C 0.004225287 0.003614558 0.00334605 0.008364995 0.005249952
 # Need to find out why, and which pattern is more general
-
+psiTrueRepeat <- array(psiTrue, c(nOriginSites, nTargetSites, nSimsDone),
+                       (list(originNames, targetNames, NULL)))
+psiEstErrorRaster <- psiEstRaster - psiTrueRepeat
+psiEstErrorProb <- psiEstProb - psiTrueRepeat
+(psiMAERaster <- apply(psiEstErrorRaster, 1:2, function(x) mean(abs(x))))
+(psiMAEProb <- apply(psiEstErrorProb, 1:2, function(x) mean(abs(x))))
 
 
 nSimsDone <- sim
