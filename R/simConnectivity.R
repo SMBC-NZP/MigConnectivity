@@ -535,7 +535,8 @@ simGLData <- function(psi, originRelAbund, sampleSize,
 #' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
 #'   region to avoid or increase overlap
 #' @param bufferDist - Desired buffer distance in meters. Positive values
-#'   enlarge regions, negative buffers make regions smaller
+#'   enlarge regions, negative buffers make regions smaller. Only used when
+#'   \code{bufferRegions=TRUE}.
 #' @param popNames - a vector the same length as popBoundaries
 #'
 #' @return returns a rasterStack probability surface.
@@ -596,21 +597,22 @@ simGeneticPops <- function(popBoundaries,
                                         size = npts,
                                         type = "random")
                      z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
-                                                  h = ks::Hlscv(sf::st_coordinates(z))))
+                                          h = ks::Hlscv(sf::st_coordinates(z))))
                      # convert to probability
-                     z1 <- z1/cellStats(z1, stat = 'sum', na.rm = TRUE)
+                     z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
                      # resample to larger raster
                      y <- raster::resample(z1, emptyRast)
                      y[is.na(y)] <- 0
                      y[y<0] <- 0
                      return(y)})
+
   # convert the probability of assignment within each population to 1
   # i.e., they can be assigned anywhere within that population if
   # assigned there - following gaiah package
 
   popBinary <- lapply(popBoundaries,
                       FUN = function(x){
-                      popRast <- rasterize(as(x,'Spatial'),
+                      popRast <- raster::rasterize(as(x,'Spatial'),
                                            emptyRast,
                                            field = 1,
                                            background=0)
