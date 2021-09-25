@@ -559,7 +559,7 @@ simGeneticPops <- function(popBoundaries,
   if(bufferRegions){
     if (verbose > 0)
       cat('Creating buffers ... \n')
-    popBoundaries <- lapply(popBoundaries,
+    popBoundariesBuff <- lapply(popBoundaries,
                             FUN = function(x){
                               origCRS <- sf::st_crs(x)
                               z <- sf::st_transform(x, "ESRI:102010")
@@ -570,7 +570,8 @@ simGeneticPops <- function(popBoundaries,
 
   if (verbose > 0)
     cat('Preparing data ... \n')
-
+  # keep original extent of popBoundaries - otherwise the extent is
+  # changed based on buffer - we don't want that.
   crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox))
 
   if(is.null(res)){
@@ -590,6 +591,23 @@ simGeneticPops <- function(popBoundaries,
   if (verbose > 0)
     cat('Generating KDE ... \n')
   # No buffer applied to edges i.e., some probability overlap
+  if (bufferRegions){
+    popKDE <- lapply(popBoundariesBuff,
+                     FUN = function(x){
+                       # generate random points
+                       z <- sf::st_sample(x,
+                                          size = npts,
+                                          type = "random")
+                       z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
+                                                    h = ks::Hlscv(sf::st_coordinates(z))))
+                       # convert to probability
+                       z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
+                       # resample to larger raster
+                       y <- raster::resample(z1, emptyRast)
+                       y[is.na(y)] <- 0
+                       y[y<0] <- 0
+                       return(y)})
+  }else{
   popKDE <- lapply(popBoundaries,
                    FUN = function(x){
                      # generate random points
@@ -605,7 +623,7 @@ simGeneticPops <- function(popBoundaries,
                      y[is.na(y)] <- 0
                      y[y<0] <- 0
                      return(y)})
-
+  }
   # convert the probability of assignment within each population to 1
   # i.e., they can be assigned anywhere within that population if
   # assigned there - following gaiah package
