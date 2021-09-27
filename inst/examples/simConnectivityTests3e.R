@@ -57,6 +57,7 @@ rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
 originSites <- sf::st_read("data-raw/PABU_breeding_regions.shp")
 targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
+
 originSites$originSite <- originNames
 targetSites$targetSite <- targetNames
 
