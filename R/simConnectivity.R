@@ -599,7 +599,7 @@ simGeneticPops <- function(popBoundaries,
                                           size = npts,
                                           type = "random")
                        z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
-                                                    h = ks::Hlscv(sf::st_coordinates(z))))
+                                            h = ks::Hlscv(sf::st_coordinates(z))))
                        # convert to probability
                        z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
                        # resample to larger raster
@@ -738,7 +738,7 @@ simGeneticData <- function(genPops,
     # convert from probability of being from location to probability of being
     # from population
     genProbs <- t(apply(genProbs, 1, FUN=function(x) x * originRelAbund /
-        sum(x * originRelAbund)))
+        sum(x * originRelAbund, na.rm = TRUE)))
   }
   else {
     genProbs <- raster::extract(genPops$genStack,
@@ -746,7 +746,19 @@ simGeneticData <- function(genPops,
     # convert from probability of being from location to probability of being
     # from population
     genProbs <- t(apply(genProbs, 1, FUN=function(x) x * targetRelAbund /
-                          sum(x * targetRelAbund)))
+                          sum(x * targetRelAbund, na.rm = TRUE)))
+  }
+
+  # Check to make sure genProbs doesn't contain any rows with all NA
+  if(any(is.na(genProbs))){
+    prob_na_rows <- which(is.na(genProbs), arr.ind = TRUE)
+    prob_na_rows_id <- unique(prob_na_rows[,1])
+
+    cat("\n Warning: NA values detected in genetic probability assignments\n",
+       "the following individuals have NA values: ", print(prob_na_rows_id),"\n",
+       "Equal probability of assignment was applied to all regions \n")
+
+    genProbs[prob_na_rows_id,] <- 1/dim(genProbs)[2]
   }
 
   # split out inds to list #
