@@ -738,7 +738,7 @@ simGeneticData <- function(genPops,
     # convert from probability of being from location to probability of being
     # from population
     genProbs <- t(apply(genProbs, 1, FUN=function(x) x * originRelAbund /
-        sum(x * originRelAbund, na.rm = TRUE))
+        sum(x * originRelAbund, na.rm = TRUE)))
   }
   else {
     genProbs <- raster::extract(genPops$genStack,
@@ -746,7 +746,7 @@ simGeneticData <- function(genPops,
     # convert from probability of being from location to probability of being
     # from population
     genProbs <- t(apply(genProbs, 1, FUN=function(x) x * targetRelAbund /
-                          sum(x * targetRelAbund)))
+                          sum(x * targetRelAbund, na.rm = TRUE)))
   }
 
   # Check to make sure genProbs doesn't contain any rows with all NA
