@@ -533,9 +533,12 @@ estTransitionBoot <- function(originSites = NULL,
                          originSingleCell = originSingleCell,
                          targetRasterXYZ = targetRasterXYZ,
                          #targetRasterXYZcrs = targetRasterXYZcrs,
-                         targetSingleCell = targetSingleCell)
+                         targetSingleCell = targetSingleCell,
+                         targetSites = targetSites, originSites = originSites)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
     originAssignment <- temp$originAssignment
+    # print(head(originAssignment))
+    # cat("**************************************\n")
     targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
     isRaster <- temp$isRaster; isProb <- temp$isProb
@@ -827,6 +830,7 @@ estTransitionBoot <- function(originSites = NULL,
           assignment <- originAssignment[animal.sample, , drop = FALSE]
         else
           assignment <- originAssignment[animal.sample, drop = FALSE]
+        #print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
         oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                            isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                            isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),

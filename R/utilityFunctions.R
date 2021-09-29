@@ -213,7 +213,8 @@ locSample <- function(isGL,
   point.sample <- matrix(NA, nAnimals, 2, dimnames = list(NULL, c('x', 'y')))
   # Fill in telemetry/GPS values (no location uncertainty)
   if (length(dim(assignment))==2){
-    site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ], 1,
+    site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ,
+                                                        drop = FALSE], 1,
                                                   which.max)
   }else{
     site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]}
@@ -748,7 +749,9 @@ reassignInds <- function(dataOverlapSetting = "none",
                          originSingleCell = NULL,
                          targetRasterXYZ = NULL,
                          targetRasterXYZcrs = NULL,
-                         targetSingleCell = NULL) {
+                         targetSingleCell = NULL,
+                         originSites = NULL,
+                         targetSites = NULL) {
   if (dataOverlapSetting != "none") {
     stop('dataOverlapSetting "named" not set up yet')
   }
@@ -965,7 +968,7 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else {
       if (dimTAss[1] < nTotal) {
-        dummyAss <- targetAssignment[1, ]
+        dummyAss <- array(1/dimTAss[2], c(1, dimTAss[2]))
         targetAssignment2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
@@ -974,9 +977,15 @@ reassignInds <- function(dataOverlapSetting = "none",
             targetAssignment2 <- rbind(targetAssignment2,
                                        targetAssignment[place, ])
           }
-          else
-            targetAssignment2 <- rbind(targetAssignment2,
-                                       dummyAss)
+          else {
+            if (captured[i] == "target")
+              targetAssignment2 <- rbind(targetAssignment2,
+                                       sf::st_intersects(x = targetPoints[i,],
+                                                         y = targetSites,
+                                                         sparse = FALSE))
+            else
+              targetAssignment2 <- rbind(targetAssignment2, dummyAss)
+          }
         }
       }
       else
@@ -987,7 +996,7 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else {
       if (dimOAss[1] < nTotal) {
-        dummyAss <- originAssignment[1, ]
+        dummyAss <- array(1/dimOAss[2], c(1, dimOAss[2]))
         originAssignment2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
@@ -996,9 +1005,17 @@ reassignInds <- function(dataOverlapSetting = "none",
             originAssignment2 <- rbind(originAssignment2,
                                        originAssignment[place, ])
           }
-          else
-            originAssignment2 <- rbind(originAssignment2,
-                                       dummyAss)
+          else {
+            if (captured[i] == "origin")
+              originAssignment2 <- rbind(originAssignment2,
+                                         sf::st_intersects(x = originPoints[i,],
+                                                           y = originSites,
+                                                           sparse = FALSE))
+            else
+              originAssignment2 <- rbind(originAssignment2,
+                                         dummyAss)
+          }
+
         }
       }
       else
