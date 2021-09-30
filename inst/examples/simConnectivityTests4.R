@@ -6,12 +6,13 @@
 ################################################################################
 library(raster)
 library(sf)
-library(ks)
 library(MigConnectivity)
-# library(spdep)
-# library(mapview)
+library(methods)
+args <- commandArgs(TRUE)
+instance <- as.integer(args[1])
+set.seed(instance)
 
-nSims <- 5
+nSims <- 20
 scenarios <- c('Proportional Released Origin',
                'Proportional Released Target',
                'Proportional Released Both',
@@ -60,72 +61,13 @@ targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
 originSites$originSite <- originNames
 targetSites$targetSite <- targetNames
 
-# sf::st_crs(originSitesPABU)
 
 # looks like originSites needs to be projected
 originSites <- sf::st_transform(originSites, "ESRI:102010")
 targetSites <- sf::st_transform(targetSites, "ESRI:102010")
 
-# Pick out a single genPops set for all simulations, based on looking similar to
-# real PABU data
-nSims <- 500
-nMetrics <- 7
-nTrials <- 5
-buffers <- c(50000, 100000, 150000, 200000)
-nBuffers <- length(buffers)
-calibSampleSize <- table(factor(unlist(overlapT2)[-breeders],
-                                levels = 1:nTargetSites))
-genPopsList <- vector("list", nBuffers)
-genPopsMetrics <- array(NA, c(nBuffers, nSims, nTrials, nMetrics),
-                        list(buffers, NULL, NULL,
-                             c("Var", "Ones", "The 99%", originNames, "Total")))
-for (k in 1:nBuffers) {
-  cat("*** Buffer", buffers[k], "***\n")
-  for (i in 1:nSims) {
-    cat("Sim", i, "of", nSims, "at", date(), "\n")
-    genPopsList[[k]] <- vector("list", nSims)
-    genPopsList[[k]][[i]] <- simGeneticPops(popBoundaries = list(originSites[1, ],
-                                                 originSites[2, ],
-                                                 originSites[3, ]),
-                            popNames = originNames, res = c(50000, 50000),
-                            bufferRegions = T, bufferDist = buffers[k],
-                            npts = 500,
-                            verbose = 0)
-  for (j in 1:nTrials) {
-    data2 <- simGeneticData(genPops = genPopsList[[k]][[i]], psi = psiTrue,
-                            originRelAbund = originRelAbund,
-                            sampleSize = calibSampleSize,
-                            originSites = originSites,
-                            targetSites = targetSites,
-                            captured = "target",
-                            verbose = 0)
-    genPopsMetrics[k,i,j,1] <- mean(apply(data2$genProbs, 1, var))
-    genPopsMetrics[k,i,j,2] <- mean(apply(data2$genProbs, 1, max)>0.99999)
-    genPopsMetrics[k,i,j,3] <- mean(apply(data2$genProbs, 1, max)>0.99)
-    genPopsMetrics[k,i,j,4:6] <- colMeans(data2$genProbs)
-    genPopsMetrics[k,i,j,7] <- abs(genPopsMetrics[k,i,j,1] -
-          mean(apply(originAssignmentPABU[-breeders, ], 1, var))) * 5 +
-      abs(genPopsMetrics[k,i,j,2] -
-            mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99999)) +
-      abs(genPopsMetrics[k,i,j,3] -
-            mean(apply(originAssignmentPABU[-breeders, ], 1, max)>0.99)) * 2 +
-      sum(abs(genPopsMetrics[k,i,j,4:6] - colMeans(originAssignmentPABU[-breeders, ])))
-  }
-}
-}
-genPopsMetricsMean <- apply(genPopsMetrics, c(1, 3), mean)
-summary(genPopsMetricsMean)
-which.min(genPopsMetricsMean[,4])
-genPopsMetricsMean[which.min(genPopsMetricsMean[,4]), ]
-genPopsMetrics[which.min(genPopsMetricsMean[,4]), , ]
-genPopsMetricsMax <- apply(genPopsMetrics, c(1, 3), max)
-summary(genPopsMetricsMax)
-which.min(genPopsMetricsMax[,4])
-genPopsMetricsMax[which.min(genPopsMetricsMax[,4]), ]
-genPopsMetrics[which.min(genPopsMetricsMax[,4]), , ]
-
-genPops <- genPopsList[[which.min(genPopsMetricsMean[,4])]]
-save(genPops, file = "data-raw/genPopsSim.RData")
+# Load in genPops
+load(file = "data-raw/genPopsSim.RData")
 
 S <- vector("list", nScenarios)
 S[[1]] <- S[[2]] <- S[[3]] <- S[[4]] <- S[[5]] <- S[[6]] <- S[[7]] <- 1
@@ -184,10 +126,10 @@ MCest <- array(NA, c(nScenarios, nSims),
                list(scenarios, NULL))
 MCCI <- array(NA, c(2, nScenarios, nSims),
               list(c("lower", "upper"), scenarios, NULL))
-MantelEst <- array(NA, c(nScenarios, nSims),
-               list(scenarios, NULL))
-MantelCI <- array(NA, c(2, nScenarios, nSims),
-              list(c("lower", "upper"), scenarios, NULL))
+# MantelEst <- array(NA, c(nScenarios, nSims),
+#                list(scenarios, NULL))
+# MantelCI <- array(NA, c(2, nScenarios, nSims),
+#               list(c("lower", "upper"), scenarios, NULL))
 # sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
 #                 list(originNames, targetNames, scenarios, NULL))
 
@@ -198,7 +140,7 @@ for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
   for (sc in 1:nScenarios) {
-    cat(sc, date(), " ")
+    cat(sc, format(Sys.time(), "%H:%M:%S"), " ")
     or <- NULL
     if (!is.null(sampleSizeGL[[sc]][[1]])){
       data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
@@ -269,291 +211,9 @@ for (sim in 1:nSims) {
     MCCI[,sc,sim] <- est2$MC$simpleCI
     # MantelEst[sc,sim] <- est3$corr$mean
     # MantelCI[,sc,sim] <- est3$corr$simpleCI
-    # sampleSizes[,,sc,sim] <- table(data1$originAssignment[which(data1$recaptured==1)],
-    #                                data1$targetAssignment[which(data1$recaptured==1)])
     dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc, #sampleSizes,
-         dataStore, file = 'testConnectivity4a.RData')
+    save(psiEst, psiCI, MCest, MCCI, sim, sc, dataStore,
+         file = paste('testConnectivity4', instance, 'RData', sep = '.'))
   }
   cat("\n")
 }
-
-nSims <- 20
-psiEstRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
-                      list(originNames, targetNames, NULL))
-psiSDRaster <- array(NA, c(nOriginSites, nTargetSites, nSims),
-                      list(originNames, targetNames, NULL))
-psiCIRaster <- array(NA, c(2, nOriginSites, nTargetSites, nSims),
-                     list(c("lower", "upper"), originNames, targetNames, NULL))
-psiEstProb <- array(NA, c(nOriginSites, nTargetSites, nSims),
-                    list(originNames, targetNames, NULL))
-psiSDProb <- array(NA, c(nOriginSites, nTargetSites, nSims),
-                    list(originNames, targetNames, NULL))
-psiCIProb <- array(NA, c(2, nOriginSites, nTargetSites, nSims),
-                   list(c("lower", "upper"), originNames, targetNames, NULL))
-for (sim in 1:nSims) {
-  cat("Simulation", sim, "of", nSims, "at", date(), "\n")
-  for (sc in 5) {
-    or <- NULL
-    if (!is.null(sampleSizeGL[[sc]][[1]])){
-      data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
-                     sampleSize = sampleSizeGL[[sc]],
-                     originSites = originSites, targetSites = targetSites,
-                     #captured = "origin",
-                     geoBias, geoVCov,
-                     S = S[[sc]], p = p[[sc]],
-                     requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
-                     verbose = 0)
-      op <- data1$originPointsObs
-      tp <- data1$targetPointsObs
-    }else{
-      data1 <- NULL
-      op <- NULL
-      tp <- NULL
-    }
-    if (!is.null(sampleSizeGeno[[sc]])){
-      data2 <- simGeneticData(genPops = genPops, psi = psiTrue,
-                              originRelAbund = originRelAbund,
-                              sampleSize = sampleSizeGeno[[sc]],
-                              originSites = originSites,
-                              targetSites = targetSites,
-                              captured = "target",
-                              verbose = 0)
-      tp <- rbind(tp, data2$targetPointsTrue)
-      or <- data2$genRaster
-      ot <- data2$genProbs
-      #originSites <- sf::st_transform(originSites, crs(or, TRUE))
-      #crs(or) <- sf::st_crs(originSites)
-    }else{
-      data2 <- NULL
-      or <- NULL
-      ot <- NULL
-    }
-    est1 <- estTransition(originSites,
-                          targetSites,
-                          op,
-                          tp,
-                          #originAssignment = ot,
-                          originRaster = or, #
-                          originNames = originNames,
-                          targetNames = targetNames,
-                          nSamples = 1000, isGL = isGL[[sc]],
-                          isTelemetry = isTelemetry[[sc]],
-                          isRaster = isRaster[[sc]],
-                          isProb = isProb[[sc]],
-                          captured = captured[[sc]],
-                          geoBias = geoBias, geoVCov = geoVCov,
-                          resampleProjection = sf::st_crs(targetSites),
-                          nSim = 80, verbose = 1,
-                          dataOverlapSetting = "none")
-    est1a <- estTransition(originSites,
-                           targetSites,
-                           op,
-                           tp,
-                           originAssignment = ot,
-                           #originRaster = or, #
-                           originNames = originNames,
-                           targetNames = targetNames,
-                           nSamples = 1000, isGL = isGL[[sc]],
-                           isTelemetry = isTelemetry[[sc]],
-                           isRaster = isProb[[sc]],
-                           isProb = isRaster[[sc]],
-                           captured = captured[[sc]],
-                           geoBias = geoBias, geoVCov = geoVCov,
-                           resampleProjection = sf::st_crs(targetSites),
-                           nSim = 80, verbose = 0,
-                           dataOverlapSetting = "none")
-    psiEstRaster[,,sim] <- est1$psi$mean
-    psiCIRaster[,,,sim] <- est1$psi$simpleCI
-    psiSDRaster[,,sim] <- est1$psi$se
-    psiEstProb[,,sim] <- est1a$psi$mean
-    psiSDProb[,,sim] <- est1a$psi$se
-    psiCIProb[,,,sim] <- est1a$psi$simpleCI
-    dataStore[[sim]] <- list(data1 = data1, data2 = data2)
-    save(psiEstRaster, psiCIRaster, psiSDRaster, psiEstProb, psiCIProb, psiSDProb,#sampleSizes,
-         dataStore, file = 'testRasterProb3b.RData')
-  }
-  cat("\n")
-}
-
-nSimsDone <- sim - 1
-psiEstRaster <- psiEstRaster[,,1:nSimsDone]
-psiCIRaster <- psiCIRaster[,,,1:nSimsDone]
-psiSDRaster <- psiSDRaster[,,1:nSimsDone]
-psiEstProb <- psiEstProb[,,1:nSimsDone]
-psiCIProb <- psiCIProb[,,,1:nSimsDone]
-psiSDProb <- psiSDProb[,,1:nSimsDone]
-psiEstAll <- array(c(psiEstRaster, psiEstProb),
-                   c(nOriginSites, nTargetSites, nSimsDone, 2),
-                   list(originNames, targetNames, NULL, c("Raster", "Prob")))
-
-psiEstRasterSD <- apply(psiEstRaster, 1:2, sd)
-psiEstProbSD <- apply(psiEstProb, 1:2, sd)
-psiEstAllSD <- (psiEstRasterSD + psiEstProbSD) / 2
-psiEstSDAll <- apply(apply(psiEstAll, c(1,2,3), sd), 1:2, mean)
-psiEstAllSD
-# Average sd between simulations
-#              1           2          3           4           5
-# A 0.0007509665 0.000000000 0.01306195 0.008530197 0.018982294
-# B 0.0454965864 0.005774737 0.02549208 0.038386530 0.003482010
-# C 0.0304489928 0.008777679 0.01751065 0.025716835 0.004284463
-psiEstSDAll
-# Average sd between data types
-#              1            2            3            4            5
-# A 0.0000433691 0.0000000000 0.0005234190 0.0002079959 3.692237e-04
-# B 0.0018138104 0.0001174937 0.0012673675 0.0013989689 1.313988e-04
-# C 0.0009039616 0.0010716161 0.0007846056 0.0007073056 7.510227e-05
-# More variation between simulations than between data types (good!)
-# UPDATE: Ran again, no longer the case!
-psiEstAllSD
-# Average sd between simulations
-#              1           2          3           4           5
-# A 0.003714411 0.006774504 0.003976726 0.005023336 0.001842869
-# B 0.015575844 0.020412255 0.022239421 0.019294893 0.013103962
-# C 0.001219607 0.004125801 0.001432452 0.007792130 0.009338288
-psiEstSDAll
-# Average sd between data types
-#             1           2          3           4           5
-# A 0.028585892 0.013231944 0.03231447 0.037971102 0.036161200
-# B 0.010229874 0.093768508 0.02136793 0.036849980 0.038023254
-# C 0.004225287 0.003614558 0.00334605 0.008364995 0.005249952
-# Need to find out why, and which pattern is more general
-
-nSimsDone <- sim
-psiEst <- psiEst[,,,1:nSimsDone]
-psiCI <- psiCI[,,,,1:nSimsDone]
-psiTrue2 <- array(c(psiTrue), c(nOriginSites, nTargetSites, nScenarios, nSimsDone),
-                  list(originNames, targetNames, scenarios, NULL))
-all(psiTrue2[,,2,2]==psiTrue)
-psiEstError <- psiEst - psiTrue2
-(psiEstBias <- apply(psiEstError, 1:3, mean))
-(psiEstMAE <- apply(psiEstError, 1:3, function(x) mean(abs(x))))
-(psiSimpleCover <- apply(psiCI[1,,,,] <= psiTrue2 & psiCI[2,,,,] >= psiTrue2,
-                        1:3, mean))
-(psiEstMAE2 <- apply(psiEstMAE, 3, mean))
-
-MCest <- MCest[,1:nSimsDone]
-MCCI <- MCCI[,,1:nSimsDone]
-MCestError <- MCest - MCtrue
-(MCestBias <- apply(MCestError, 1, mean))
-(MCestMAE <- apply(MCestError, 1, function(x) mean(abs(x))))
-(MCsimpleCover <- apply(MCCI[1,,] <= MCtrue & MCCI[2,,] >= MCtrue,
-                         1, mean))
-
-library(ggplot2)
-psiEst.df <- data.frame(origin = factor(rep(originNames, nTargetSites * nScenarios * nSimsDone),
-                                        levels = originNames),
-                        target = factor(rep(targetNames, nScenarios*nSimsDone, each = nOriginSites),
-                                        levels = targetNames),
-                        scenario = factor(rep(scenarios, nSimsDone, each=nOriginSites*nTargetSites),
-                                          levels = scenarios),
-                        psi = c(psiEst))
-summary(psiEst.df)
-psiTrue.df <- data.frame(origin = factor(rep(originNames, nTargetSites),
-                                         levels = originNames),
-                         target = factor(rep(targetNames, each = nOriginSites),
-                                         levels = targetNames),
-                         psi = c(psiTrue))
-bias.df <- data.frame(origin = factor(rep(originNames, nTargetSites * nScenarios),
-                                      levels = originNames),
-                      target = factor(rep(targetNames, nScenarios, each = nOriginSites),
-                                      levels = targetNames),
-                      scenario = factor(rep(scenarios, each=nOriginSites*nTargetSites),
-                                        levels = scenarios),
-                      bias = paste("Bias =", format(psiEstBias, digits = 1)),
-                      x = 0.5, y = 50)
-mae.df <- data.frame(origin = factor(rep(originNames, nTargetSites * nScenarios),
-                                      levels = originNames),
-                      target = factor(rep(targetNames, nScenarios, each = nOriginSites),
-                                      levels = targetNames),
-                      scenario = factor(rep(scenarios, each=nOriginSites*nTargetSites),
-                                        levels = scenarios),
-                      x = 0.5, y = 42,
-                      mae = paste("MAE =", format(psiEstMAE, digits = 2)))
-cov1.df <- data.frame(origin = factor(rep(originNames, nTargetSites * nScenarios),
-                                      levels = originNames),
-                      target = factor(rep(targetNames, nScenarios, each = nOriginSites),
-                                      levels = targetNames),
-                      scenario = factor(rep(scenarios, each=nOriginSites*nTargetSites),
-                                        levels = scenarios),
-                      x = 0.5, y = 34,
-                      coverSimple = paste("C (q) =", format(psiSimpleCover, digits = 2)),
-                      cover = paste("C =", format(psiSimpleCover, digits = 2)))
-cov2.df <- data.frame(origin = factor(rep(originNames, nTargetSites * nScenarios),
-                                      levels = originNames),
-                      target = factor(rep(targetNames, nScenarios, each = nOriginSites),
-                                      levels = targetNames),
-                      scenario = factor(rep(scenarios, each=nOriginSites*nTargetSites),
-                                        levels = scenarios),
-                      x = 0.5, y = 34,
-                      coverBC = paste("C (bc) =", format(psibcCover, digits = 2)),
-                      cover = paste("C =", format(psibcCover, digits = 2)))
-plot1 <- ggplot(subset(psiEst.df), aes(psi)) +#, scenario == "released origin"
-  geom_histogram() + theme_bw() + facet_grid(origin + scenario ~ target) +
-  geom_vline(aes(xintercept = psi), psiTrue.df) +
-  geom_text(aes(x = x, y = y, label = bias), data = bias.df, size = 3) +
-  geom_text(aes(x = x, y = y, label = mae), data = mae.df, size = 3) +
-#  geom_text(aes(x = x, y = y, label = coverSimple), data = cov1.df, size = 3) +
-  geom_text(aes(x = x, y = y, label = cover), data = cov2.df, size = 3)
-plot1
-png('simGL_psi_hists2.png', height = 8, width = 6, units = "in", res = 1200)
-plot1
-dev.off()
-MCest.df <- data.frame(scenario = factor(rep(scenarios, nSimsDone),
-                                         levels = scenarios),
-                       MC = c(MCest))
-MCbias.df <- data.frame(scenario = factor(scenarios, levels = scenarios),
-                        bias = paste("Bias =", format(MCestBias, digits = 1)),
-                        x = 0.5, y = 30)
-MCmae.df <- data.frame(scenario = factor(scenarios, levels = scenarios),
-                       x = 0.5, y = 28,
-                       mae = paste("MAE =", format(MCestMAE, digits = 2)))
-MCcov1.df <- data.frame(scenario = factor(scenarios, levels = scenarios),
-                        x = 0.5, y = 26,
-                        coverSimple = paste("C (q) =", format(MCsimpleCover, digits = 2)),
-                        cover = paste("C =", format(MCsimpleCover, digits = 2)))
-MCcov2.df <- data.frame(scenario = factor(scenarios, levels = scenarios),
-                        x = 0.5, y = 26,
-                        coverSimple = paste("C (q) =", format(MCbcCover, digits = 2)),
-                        cover = paste("C =", format(MCbcCover, digits = 2)))
-plot2 <- ggplot(MCest.df, aes(MC)) +#, scenario == "released origin"
-  geom_histogram() + theme_bw() + facet_grid(. ~ scenario) +
-  geom_vline(xintercept = MCtrue) +
-  geom_text(aes(x = x, y = y, label = bias), data = MCbias.df, size = 4) +
-  geom_text(aes(x = x, y = y, label = mae), data = MCmae.df, size = 4) +
-  #  geom_text(aes(x = x, y = y, label = coverSimple), data = cov1.df, size = 3) +
-  geom_text(aes(x = x, y = y, label = cover), data = MCcov2.df, size = 4)
-plot2
-png('simGL_MC_hists2.png', height = 4, width = 6, units = "in", res = 1200)
-plot2
-dev.off()
-
-oa <- factor(data2$originAssignment, labels = originNames)
-ggplot() +
-  geom_sf(data = originSites, aes(fill = originSite)) +
-  geom_sf(data = data2$originPointsTrue, size = 2,
-          aes(shape = oa)) +
-  ggtitle("Breeding Sites") +
-  coord_sf()
-ta <- factor(data2$targetAssignment, labels = targetNames)
-ggplot() +
-  geom_sf(data = targetSites, aes(fill = targetSite)) +
-  geom_sf(data = data2$targetPointsTrue, size = 2,
-          aes(shape = ta)) +
-  ggtitle("Wintering Sites") +
-  coord_sf()
-oa1 <- factor(data1$originAssignment, labels = originNames)
-ggplot() +
-  geom_sf(data = originSites, aes(fill = originSite)) +
-  geom_sf(data = data1$originPointsTrue, size = 2,
-          aes(shape = oa1)) +
-  ggtitle("Breeding Sites") +
-  coord_sf()
-test <- MigConnectivity:::randomPoints(sites = originSites,
-                                       assignment = data1$originAssignment)
-ggplot() +
-  geom_sf(data = originSites, aes(fill = originSite)) +
-  geom_sf(data = test, size = 2,
-          aes(shape = oa1)) +
-  ggtitle("Breeding Sites") +
-  coord_sf()

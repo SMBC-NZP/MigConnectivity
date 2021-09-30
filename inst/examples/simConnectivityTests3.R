@@ -68,10 +68,10 @@ targetSites <- sf::st_transform(targetSites, "ESRI:102010")
 
 # Pick out a single genPops set for all simulations, based on looking similar to
 # real PABU data
-nSims <- 500
+nSims <- 200
 nMetrics <- 7
 nTrials <- 5
-buffers <- c(50000, 100000, 150000, 200000)
+buffers <- c(250000, 300000, 350000) #50000, 100000,
 nBuffers <- length(buffers)
 calibSampleSize <- table(factor(unlist(overlapT2)[-breeders],
                                 levels = 1:nTargetSites))
@@ -81,15 +81,15 @@ genPopsMetrics <- array(NA, c(nBuffers, nSims, nTrials, nMetrics),
                              c("Var", "Ones", "The 99%", originNames, "Total")))
 for (k in 1:nBuffers) {
   cat("*** Buffer", buffers[k], "***\n")
+  genPopsList[[k]] <- vector("list", nSims)
   for (i in 1:nSims) {
     cat("Sim", i, "of", nSims, "at", date(), "\n")
-    genPopsList[[k]] <- vector("list", nSims)
     genPopsList[[k]][[i]] <- simGeneticPops(popBoundaries = list(originSites[1, ],
                                                  originSites[2, ],
                                                  originSites[3, ]),
                             popNames = originNames, res = c(50000, 50000),
                             bufferRegions = T, bufferDist = buffers[k],
-                            npts = 500,
+                            npts = 200,
                             verbose = 0)
   for (j in 1:nTrials) {
     data2 <- simGeneticData(genPops = genPopsList[[k]][[i]], psi = psiTrue,
@@ -115,12 +115,15 @@ for (k in 1:nBuffers) {
 }
 
 genPopsMetricsMean <- apply(genPopsMetrics, c(1, 2, 4), mean)
-summary(genPopsMetricsMean[nBuffers,,])
+summary(genPopsMetricsMean[1,,])
+summary(genPopsMetricsMean[2,,])
+summary(genPopsMetricsMean[3,,])
 (bestOne <- which(genPopsMetricsMean[,,nMetrics]==min(genPopsMetricsMean[,,nMetrics]),
       arr.ind = T))
 genPopsMetricsMean[bestOne[1], bestOne[2], ]
 genPopsMetrics[bestOne[1], bestOne[2], , ]
-
+class(genPopsList[[bestOne[1]]][[bestOne[2]]])
+str(genPopsList[[3]][[6]])
 genPops <- genPopsList[[bestOne[1]]][[bestOne[2]]]
 save(genPops, file = "data-raw/genPopsSim.RData")
 
