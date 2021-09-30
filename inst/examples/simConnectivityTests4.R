@@ -11,7 +11,7 @@ library(MigConnectivity)
 # library(spdep)
 # library(mapview)
 
-nSims <- 1000
+nSims <- 5
 scenarios <- c('Proportional Released Origin',
                'Proportional Released Target',
                'Proportional Released Both',
@@ -113,15 +113,18 @@ for (k in 1:nBuffers) {
   }
 }
 }
+genPopsMetricsMean <- apply(genPopsMetrics, c(1, 3), mean)
+summary(genPopsMetricsMean)
+which.min(genPopsMetricsMean[,4])
+genPopsMetricsMean[which.min(genPopsMetricsMean[,4]), ]
+genPopsMetrics[which.min(genPopsMetricsMean[,4]), , ]
+genPopsMetricsMax <- apply(genPopsMetrics, c(1, 3), max)
+summary(genPopsMetricsMax)
+which.min(genPopsMetricsMax[,4])
+genPopsMetricsMax[which.min(genPopsMetricsMax[,4]), ]
+genPopsMetrics[which.min(genPopsMetricsMax[,4]), , ]
 
-genPopsMetricsMean <- apply(genPopsMetrics, c(1, 2, 4), mean)
-summary(genPopsMetricsMean[nBuffers,,])
-(bestOne <- which(genPopsMetricsMean[,,nMetrics]==min(genPopsMetricsMean[,,nMetrics]),
-      arr.ind = T))
-genPopsMetricsMean[bestOne[1], bestOne[2], ]
-genPopsMetrics[bestOne[1], bestOne[2], , ]
-
-genPops <- genPopsList[[bestOne[1]]][[bestOne[2]]]
+genPops <- genPopsList[[which.min(genPopsMetricsMean[,4])]]
 save(genPops, file = "data-raw/genPopsSim.RData")
 
 S <- vector("list", nScenarios)
@@ -155,11 +158,11 @@ for (i in 1:nScenarios) {
   if (!is.null(sampleSize[[i]][[2]])){
     captured[[i]] <- c(captured[[i]], rep("target", sum(sampleSize[[i]][[2]])))
     isGL[[i]] <- c(isGL[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    # isRaster[[i]] <- c(isRaster[[i]], rep(F, sum(sampleSize[[i]][[2]])))
-    isRaster[[i]] <- c(isRaster[[i]], rep(T, sum(sampleSize[[i]][[2]])))
+    isRaster[[i]] <- c(isRaster[[i]], rep(F, sum(sampleSize[[i]][[2]])))
+    #isRaster[[i]] <- c(isRaster[[i]], rep(T, sum(sampleSize[[i]][[2]])))
     isTelemetry[[i]] <- c(isTelemetry[[i]], rep(FALSE, sum(sampleSize[[i]][[2]])))
-    #isProb[[i]] <- c(isProb[[i]], rep(T, sum(sampleSize[[i]][[2]])))
-    isProb[[i]] <- c(isProb[[i]], rep(F, sum(sampleSize[[i]][[2]])))
+    isProb[[i]] <- c(isProb[[i]], rep(T, sum(sampleSize[[i]][[2]])))
+    #isProb[[i]] <- c(isProb[[i]], rep(F, sum(sampleSize[[i]][[2]])))
   }
 }
 
@@ -191,10 +194,11 @@ MantelCI <- array(NA, c(2, nScenarios, nSims),
 dataStore <- vector("list", nSims)
 
 
-for (sim in 1:2) {
+for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
   for (sc in 1:nScenarios) {
+    cat(sc, date(), " ")
     or <- NULL
     if (!is.null(sampleSizeGL[[sc]][[1]])){
       data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
@@ -234,8 +238,8 @@ for (sim in 1:2) {
                           targetSites,
                           op,
                           tp,
-                          #originAssignment = ot,
-                          originRaster = or, #
+                          originAssignment = ot,
+                          #originRaster = or, #
                           originNames = originNames,
                           targetNames = targetNames,
                           nSamples = 1000, isGL = isGL[[sc]],
@@ -268,9 +272,8 @@ for (sim in 1:2) {
     # sampleSizes[,,sc,sim] <- table(data1$originAssignment[which(data1$recaptured==1)],
     #                                data1$targetAssignment[which(data1$recaptured==1)])
     dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    cat(sc)
     save(psiEst, psiCI, MCest, MCCI, MantelEst, MantelCI, sim, sc, #sampleSizes,
-         dataStore, file = 'testConnectivity3b.RData')
+         dataStore, file = 'testConnectivity4a.RData')
   }
   cat("\n")
 }

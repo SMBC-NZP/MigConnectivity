@@ -277,7 +277,7 @@ genPops <- simGeneticPops(popBoundaries = list(originSites[1, ],
                                                originSites[2, ],
                                                originSites[3, ]),
                           popNames = originNames, res = c(50000, 50000),
-                          bufferRegions = F, #bufferDist = 200000,
+                          bufferRegions = F, bufferDist = 200000,
                           npts = 1000,
                           verbose = 1)
 nSims <- 5
@@ -373,13 +373,13 @@ for (sim in 1:nSims) {
     psiCIProb[,,,sim] <- est1a$psi$simpleCI
     dataStore[[sim]] <- list(data1 = data1, data2 = data2)
     save(psiEstRaster, psiCIRaster, psiSDRaster, psiEstProb, psiCIProb, psiSDProb,#sampleSizes,
-         dataStore, file = 'testRasterProb3f.RData')
+         dataStore, file = 'testRasterProb3h.RData')
   }
   cat("\n")
 }
 
 psiEstRaster[1,1,]
-nSimsDone <- 6# 6#sim - 1
+nSimsDone <- 5# 6#sim - 1
 psiEstRaster <- psiEstRaster[,,1:nSimsDone]
 psiCIRaster <- psiCIRaster[,,,1:nSimsDone]
 psiSDRaster <- psiSDRaster[,,1:nSimsDone]
