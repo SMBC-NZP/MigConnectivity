@@ -123,7 +123,7 @@ summary(genPopsMetricsMean[3,,])
 genPopsMetricsMean[bestOne[1], bestOne[2], ]
 genPopsMetrics[bestOne[1], bestOne[2], , ]
 class(genPopsList[[bestOne[1]]][[bestOne[2]]])
-str(genPopsList[[3]][[6]])
+str(genPopsList[[bestOne[1]]][[bestOne[2]]], max.level = 2)
 genPops <- genPopsList[[bestOne[1]]][[bestOne[2]]]
 save(genPops, file = "data-raw/genPopsSim.RData")
 

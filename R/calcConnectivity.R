@@ -277,7 +277,7 @@ reversePsiRelAbund <- function(psi, originRelAbund) {
     if (length(originRelAbund) != nOriginSites ||
         !isTRUE(all.equal(sum(originRelAbund), 1, tolerance = 1e-6)))
       stop('originRelAbund must be a vector with [number of origin sites/number of rows in psi] values that sum to 1.')
-    gamma <- t(proportions(sweep(psi, 1, originRelAbund, "*"), 2))
+    gamma <- t(prop.table(sweep(psi, 1, originRelAbund, "*"), 2))
     targetRelAbund <- colSums(apply(psi, 2, "*", originRelAbund))
     rownames(gamma) <- names(targetRelAbund) <- colnames(psi)
     return(list(gamma = gamma, targetRelAbund = targetRelAbund))

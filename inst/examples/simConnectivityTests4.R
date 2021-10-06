@@ -180,7 +180,7 @@ for (sim in 1:nSims) {
                           targetSites,
                           op,
                           tp,
-                          originAssignment = ot,
+                          originAssignment = ot, maxTries = 1000,
                           #originRaster = or, #
                           originNames = originNames,
                           targetNames = targetNames,
