@@ -286,7 +286,8 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
 estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                             nSamples = 1000, verbose=0,
                             originNames = NULL, targetNames = NULL,
-                            nThin = 1, nBurnin = 5000, nChains = 3) {
+                            nThin = 1, nBurnin = 5000, nChains = 3,
+                            fixedZero = NULL) {
   nDim <- length(dim(reencountered))
   if (is.null(originNames))
     originNames <- dimnames(reencountered)[[1]]
@@ -319,6 +320,13 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
     # Data
     jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
                       ndest = nTargetSites, nreleased = banded)
+  }
+  if (!is.null(fixedZero)) {
+    psiFixed <- matrix(NA, nOriginSites, nTargetSites)
+    for (i in 1:nrow(fixedZero)) {
+      psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
+    }
+    jags.data$psi <- psiFixed
   }
   # Initial values
   jags.inits <- function()list()
@@ -446,7 +454,8 @@ estTransitionBoot <- function(originSites = NULL,
                               resampleProjection = 'ESRI:102010',#MigConnectivity::projections$EquidistConic,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300,
-                              dataOverlapSetting = "dummy") {
+                              dataOverlapSetting = "dummy",
+                              fixedZero = NULL) {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -520,6 +529,8 @@ estTransitionBoot <- function(originSites = NULL,
   }
 
   if (dataOverlapSetting != "dummy") {
+    if (verbose > 0)
+      cat("Adjusting data overlap settings\n")
     temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
                          originPoints = originPoints,
                          targetPoints = targetPoints,
@@ -574,6 +585,8 @@ estTransitionBoot <- function(originSites = NULL,
   # IF originAssignment is NULL - we need to generate originAssignments from
   # the data provided
   if (is.null(originAssignment)){
+    if (verbose > 0)
+      cat("Creating originAssignment\n")
     # if geolocator, telemetry and captured in origin then simply get the origin site
     if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
       if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
@@ -629,6 +642,8 @@ estTransitionBoot <- function(originSites = NULL,
 
 
   if (is.null(targetAssignment)){
+    if (verbose > 0)
+      cat("Creating targetAssignment\n")
     if (all(isGL | isTelemetry | captured != "origin")) {
       targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
                                                     y = targetSites,
@@ -794,7 +809,14 @@ estTransitionBoot <- function(originSites = NULL,
   if (is.null(dim(targetAssignment))){
     targetAssignment <- array(targetAssignment)}
 
-
+  if (is.null(fixedZero)) {
+    nFixedZero <- 0
+  }
+  else {
+    nFixedZero <- nrow(fixedZero)
+  }
+  countFailed <- 0
+  failed <- FALSE
 
   if (length(dim(originAssignment))==2){
     pointOriginAssignment <- apply(originAssignment, 1, which.max)
@@ -914,11 +936,36 @@ estTransitionBoot <- function(originSites = NULL,
     }
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
     sites <- table(origin.sample, target.sample)
-    sites.array[boot, as.integer(rownames(sites)), as.integer(colnames(sites))] <- sites
+    sites.array[boot, as.integer(rownames(sites)),
+                as.integer(colnames(sites))] <- sites
+    if (nFixedZero > 0) {
+      for (i in 1:nFixedZero) {
+        if (sites.array[boot, fixedZero[i, 1], fixedZero[i, 2]] > 0) {
+          failed <- TRUE
+          countFailed <- countFailed + 1
+          if (countFailed > nBoot)
+            stop("estTransition stopped because getting very high number of bootstrap runs:",
+                 countFailed, "where animals use transitions fixed to zero.",
+                 "You should examine fixedZero and the data to make sure those",
+                 "transition probabilities are really zero")
+          sites.array[boot,,] <- 0
+          break
+        }
+      }
+      if (failed) {
+        failed <- FALSE
+        next
+      }
+    }
     # Create psi matrix as proportion of those from each breeding site that went to each NB site
     psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
     boot <- boot + 1
   }
+  if (countFailed > 0)
+    warning(countFailed, "bootstrap runs of", nBoot,
+            "total were rerun due to animals using transitions fixed at zero.",
+            "If this proportion is high, you should examine fixedZero and the",
+            "data to make sure those transition probabilities are really zero")
   meanPsi <- apply(psi.array, 2:3, mean)
   medianPsi <- apply(psi.array, 2:3, median)
   sePsi <- apply(psi.array, 2:3, sd)
@@ -1109,6 +1156,8 @@ estTransitionBoot <- function(originSites = NULL,
 #' @param nThin For band return data, \code{estTransition} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the thinning rate.
 #'  Default 1
+#' @param dataOverlapSetting
+#' @param fixedZero
 #'
 #' @return \code{estTransition} returns a list with the elements:
 #' \describe{
@@ -1170,7 +1219,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                                                ifelse(any(isRaster), 10, 1))),
                           maxTries = 300,
                           nBurnin = 5000, nChains = 3, nThin = 1,
-                          dataOverlapSetting = c("dummy", "none", "named")) {
+                          dataOverlapSetting = c("dummy", "none", "named"),
+                          fixedZero = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   if (is.null(banded)) {
     psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
@@ -1190,14 +1240,16 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              nSim = nSim, alpha = alpha,
                              resampleProjection = resampleProjection,
                              maxTries = maxTries,
-                             dataOverlapSetting = dataOverlapSetting)
+                             dataOverlapSetting = dataOverlapSetting,
+                             fixedZero = fixedZero)
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
                          alpha = alpha,
                          nSamples = nSamples, verbose = verbose,
                          originNames = originNames, targetNames = targetNames,
-                         nBurnin = nBurnin, nThin = nThin, nChains = nChains)
+                         nBurnin = nBurnin, nThin = nThin, nChains = nChains,
+                         fixedZero = fixedZero)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)
