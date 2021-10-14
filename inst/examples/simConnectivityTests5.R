@@ -12,12 +12,13 @@ args <- commandArgs(TRUE)
 instance <- as.integer(args[1])
 set.seed(instance)
 
-nSims <- 20
-scenarios <- c('Proportional Released Origin',
-               'Proportional Released Target',
-               'Proportional Released Both',
-               'Equal Released Origin',
-               'Equal Released Target',
+nSims <- 2
+scenarios <- c('Proportional Release Origin',
+               'Proportional Release Target',
+               'Proportional Release Both',
+               'Equal Release Origin',
+               'Equal Release Target',
+               'Equal Release Both',
                'Origin Release East; Target Release West',
                'Small Origin Release East; Target Release West')
 
@@ -72,10 +73,11 @@ targetSites <- sf::st_transform(targetSites, "ESRI:102010")
 load(file = "data-raw/genPopsSim.RData")
 
 S <- vector("list", nScenarios)
-S[[1]] <- S[[2]] <- S[[3]] <- S[[4]] <- S[[5]] <- S[[6]] <- S[[7]] <- 1
 p <- vector("list", nScenarios)
-for (i in 1:nScenarios)
+for (i in 1:nScenarios){
   p[[i]] <- list(1, 1)
+  S[[i]] <- 1
+}
 
 sampleSize <- vector("list", nScenarios)
 sampleSize[[1]] <- list(60 * originRelAbund, NULL)
@@ -83,8 +85,9 @@ sampleSize[[2]] <- list(NULL, round(rev$targetRelAbund * 300))
 sampleSize[[3]] <- list(60 * originRelAbund, round(rev$targetRelAbund * 300))
 sampleSize[[4]] <- list(c(20, 20, 20), NULL)
 sampleSize[[5]] <- list(NULL, rep(60, nTargetSites))
-sampleSize[[6]] <- list(c(0, 0, 60), c(100, 100, 100, 0, 0))
-sampleSize[[7]] <- list(c(0, 0, 6), c(100, 100, 100, 0, 0))
+sampleSize[[6]] <- list(rep(20, nOriginSites), rep(60, nTargetSites))
+sampleSize[[7]] <- list(c(0, 0, 60), c(100, 100, 100, 0, 0))
+sampleSize[[8]] <- list(c(0, 0, 6), c(100, 100, 100, 0, 0))
 sampleSizeGL <- lapply(sampleSize, function(x) list(x[[1]], NULL))
 sampleSizeGeno <- lapply(sampleSize, function(x) x[[2]])
 
@@ -141,7 +144,7 @@ dataStore <- vector("list", nSims)
 for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
   dataStore[[sim]] <- vector("list", nScenarios)
-  for (sc in 1:nScenarios) {
+  for (sc in 1:nScenarios) { #
     cat(sc, format(Sys.time(), "%H:%M:%S"), " ")
     or <- NULL
     if (!is.null(sampleSizeGL[[sc]][[1]])){
