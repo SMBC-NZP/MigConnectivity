@@ -742,7 +742,7 @@ simGeneticPops_Overlap <- function(
   crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox))
 
   if(is.null(res)){
-    res <- rep((crdsParams[,3]-crdsParams[,1])/20,2)
+    res <- rep((crdsParams[,3]-crdsParams[,1])/100,2)
   }
 
   emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
@@ -859,7 +859,9 @@ simGeneticPops_Overlap <- function(
 #' @param targetSites
 #' @param captured
 #' @param requireEveryOrigin
-#'
+#' @param resampleNAs if TRUE (default) re-samples locations until no NAs
+#'                    found in the genetic probabilities. If \code{FALSE} equal
+#'                    probability is assigned to all regions.
 #' @return
 #' @export
 #'
@@ -872,6 +874,7 @@ simGeneticData <- function(genPops,
                            targetSites = NULL,
                            captured = "target",
                            requireEveryOrigin = FALSE,
+                           resampleNAs = TRUE,
                            verbose = 0) {
   if (verbose > 0)
     cat("Setting up...\n")
@@ -921,7 +924,7 @@ simGeneticData <- function(genPops,
   if (verbose > 0)
     cat("Assigning points to animals...\n")
   originPointsTrue <- randomPoints(originSites, originAssignment)
-  targetPointsTrue <- randomPoints(targetSites,targetAssignment)
+  targetPointsTrue <- randomPoints(targetSites, targetAssignment)
   if (verbose > 0)
     cat("Assigning genProbs...\n")
 
@@ -952,7 +955,52 @@ simGeneticData <- function(genPops,
        "the following individuals have NA values: ", print(prob_na_rows_id),"\n",
        "Equal probability of assignment was applied to all regions \n")
 
+    if(!resampleNAs){
     genProbs[prob_na_rows_id,] <- 1/dim(genProbs)[2]
+    }else{
+
+    NA_in_genProbs <- TRUE
+    while(NA_in_genProbs){
+      prob_na_rows <- which(is.na(genProbs), arr.ind = TRUE)
+      prob_na_rows_id <- unique(prob_na_rows[,1])
+    # here resampleNAs set to TRUE
+
+     if(verbose > 0){cat("Resampling locations for ",length(prob_na_rows_id),
+                         "individuals \n")}
+     # Update locations for individuals with NA genProbs #
+        # a) resample locations for just those individuals
+        # b) extract genProbs from new locations
+      if (verbose > 0)
+        cat("Assigning points to animals...\n")
+      originPointsTrueNew <- randomPoints(originSites, originAssignment[prob_na_rows_id])
+      targetPointsTrueNew <- randomPoints(targetSites, targetAssignment[prob_na_rows_id])
+
+      originPointsTrue[prob_na_rows_id,] <- originPointsTrueNew
+      targetPointsTrue[prob_na_rows_id,] <- targetPointsTrueNew
+
+      if (verbose > 0)
+        cat("Assigning genProbs...\n")
+
+      if (captured == "target") {
+
+        genProbs[prob_na_rows_id,] <- raster::extract(genPops$genStack,
+                                    sf::st_coordinates(originPointsTrueNew))
+        # convert from probability of being from location to probability of being
+        # from population
+        genProbs <- t(apply(genProbs, 1, FUN=function(x) x * originRelAbund /
+                              sum(x * originRelAbund, na.rm = TRUE)))
+      }
+      else {
+        genProbs[prob_na_rows_id,] <- raster::extract(genPops$genStack,
+                                    sf::st_coordinates(targetPointsTrueNew))
+        # convert from probability of being from location to probability of being
+        # from population
+        genProbs <- t(apply(genProbs, 1, FUN=function(x) x * targetRelAbund /
+                              sum(x * targetRelAbund, na.rm = TRUE)))
+      }
+      NA_in_genProbs <- any(is.na(genProbs))
+       } #end while loop
+      }
   }
 
   # split out inds to list #
