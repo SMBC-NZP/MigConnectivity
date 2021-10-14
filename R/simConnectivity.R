@@ -533,7 +533,7 @@ simGLData <- function(psi, originRelAbund, sampleSize,
 #'   surface within each region
 #' @param res - the desired resolution of the output raster
 #' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
-#'   region to avoid or increase overlap
+#'   region to avoid or increase overlap.
 #' @param bufferDist - Desired buffer distance in meters. Positive values
 #'   enlarge regions, negative buffers make regions smaller. Only used when
 #'   \code{bufferRegions=TRUE}.
@@ -556,16 +556,28 @@ simGeneticPops <- function(popBoundaries,
 
   # merge the polygons to make an empty raster for the state-space #
 
-  if(bufferRegions){
+  if(any(bufferRegions)){
     if (verbose > 0)
       cat('Creating buffers ... \n')
-    popBoundariesBuff <- lapply(popBoundaries,
-                            FUN = function(x){
+    # convert bufferRegions into vector
+    buff_these_regions <- ifelse(length(bufferRegions)==length(popBoundaries),
+                                 bufferRegions,
+                                 rep(TRUE,length(popBoundaries)))
+    # convert bufferDist into vector
+    buff_distances <- ifelse(length(bufferDist)==length(popBoundaries),
+                             bufferDist,
+                             rep(bufferDist,length(popBoundaries)))
+
+    popBoundariesBuff <- mapply(x = popBoundaries[[buff_these_regions]],
+                                y = buff_distance,
+                            FUN = function(x,y){
                               origCRS <- sf::st_crs(x)
                               z <- sf::st_transform(x, "ESRI:102010")
-                              z1 <- sf::st_buffer(z, bufferDist)
+                              #z1 <- sf::st_buffer(z, bufferDist)
+                              z1 <- sf::st_buffer(z, y)
                               z2 <- sf::st_transform(z1, origCRS)
-                              return(z2)})
+                              return(z2)},
+                            SIMPLIFY = FALSE)
   }
 
   if (verbose > 0)
@@ -591,7 +603,7 @@ simGeneticPops <- function(popBoundaries,
   if (verbose > 0)
     cat('Generating KDE ... \n')
   # No buffer applied to edges i.e., some probability overlap
-  if (bufferRegions){
+  if (any(bufferRegions)){
     popKDE <- lapply(popBoundariesBuff,
                      FUN = function(x){
                        # generate random points
@@ -654,7 +666,189 @@ simGeneticPops <- function(popBoundaries,
   return(list(genStack = genStack,
               popRast = popBinary))
 }
+###############################################################################
+# Simulate genetic populations
+###############################################################################
+#' Simulates genetic population rasters from input polygons
+#'
+#' This code simulates rasters analogous to the genetic surfaces created from
+#' the bird genoscape project
+#'
+#' @param popBoundaries - a list containing polygons that represent the
+#'   boundaries of each region
+#'
+#' @param bufferedBoundaries = buffers applied to populations to increase assignment
+#'                      uncertainty. Users need to remove potential overlapping
+#'                      regions where assignment is not possible
+#'
+#' @param maskBoundaries = list of polygons that confines genetic uncertainty.
+#'                  length of list = length of bufferedBoundaries/popBoundaries
+#'                  The same polygon could be used for multiple 'populations' to
+#'                  ensure overlap.
+#'
+#' @param popBoundaries = population boundaries - no buffers applied.
+#' @param npts - number of random points used to generate a kernel density
+#'   surface within each region
+#' @param res - the desired resolution of the output raster
+#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
+#'   region to avoid or increase overlap.
+#' @param bufferDist - Desired buffer distance in meters. Positive values
+#'   enlarge regions, negative buffers make regions smaller. Only used when
+#'   \code{bufferRegions=TRUE}.
+#' @param popNames - a vector the same length as popBoundaries
+#'
+#' @return returns a rasterStack probability surface.
+#' @export
 
+
+simGeneticPops_Overlap <- function(
+                          bufferedBoundaries = NULL,
+                          maskBoundaries = NULL,
+                          popBoundaries,
+                          npts = 1000,
+                          res = NULL, #change to match isotope resolution
+                          bufferRegions = FALSE,
+                          bufferDist = -50000,
+                          popNames = NULL,
+                          verbose = 0){
+
+  if(is.null(popNames)){
+    popNames <- paste0("pop.",1:length(popBoundaries))
+  }
+
+  # merge the polygons to make an empty raster for the state-space #
+
+  if(bufferRegions){
+    if (verbose > 0)
+      cat('Creating buffers ... \n')
+    # convert bufferRegions into vector
+
+    popBoundariesBuff <- lapply(x = popBoundaries,
+                                FUN = function(x){
+                                  origCRS <- sf::st_crs(x)
+                                  z <- sf::st_transform(x, "ESRI:102010")
+                                  z1 <- sf::st_buffer(z, bufferDist)
+                                  #z1 <- sf::st_buffer(z, y)
+                                  z2 <- sf::st_transform(z1, origCRS)
+                                  return(z2)},
+                                SIMPLIFY = FALSE)
+  }
+
+
+  if (verbose > 0)
+    cat('Preparing data ... \n')
+  # keep original extent of popBoundaries - otherwise the extent is
+  # changed based on buffer - we don't want that.
+  crdsParams <- do.call(rbind,lapply(popBoundaries,sf::st_bbox))
+
+  if(is.null(res)){
+    res <- rep((crdsParams[,3]-crdsParams[,1])/20,2)
+  }
+
+  emptyRast <- raster::raster(xmn = min(crdsParams[,1]),
+                              xmx = max(crdsParams[,3]),
+                              ymn = min(crdsParams[,2]),
+                              ymx = max(crdsParams[,4]),
+                              res = res)
+  # give raster same projection as it was made with
+  popBcrs <- sf::st_crs(popBoundaries[[1]], parameters = TRUE)
+
+  crs(emptyRast) <- sp::CRS(popBcrs$proj4string)
+
+  if (verbose > 0)
+    cat('Generating KDE ... \n')
+  # No buffer applied to edges i.e., some probability overlap
+  if (bufferRegions){
+    popKDE <- lapply(popBoundariesBuff,
+                     FUN = function(x){
+                       # generate random points
+                       z <- sf::st_sample(x,
+                                          size = npts,
+                                          type = "random")
+                       z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
+                                                    h = ks::Hlscv(sf::st_coordinates(z))))
+                       # convert to probability
+                       z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
+                       # resample to larger raster
+                       y <- raster::resample(z1, emptyRast)
+                       y[is.na(y)] <- 0
+                       y[y<0] <- 0
+                       return(y)})
+  }
+  if(!is.null(bufferedBoundaries)){
+    popKDE <- lapply(bufferedBoundaries,
+                     FUN = function(x){
+                       # generate random points
+                       z <- sf::st_sample(x,
+                                          size = npts,
+                                          type = "random")
+                       z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
+                                                    h = ks::Hlscv(sf::st_coordinates(z))))
+                       # convert to probability
+                       z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
+                       # resample to larger raster
+                       y <- raster::resample(z1, emptyRast)
+                       y[is.na(y)] <- 0
+                       y[y<0] <- 0
+                       return(y)})
+
+    popKDE <- mapply(x = popKDE,
+                     y = maskBoundaries,
+                     FUN = function(x,y){
+                       z <- raster::mask(x,y)
+                       z[is.na(z)] <- 0
+                       z[z<0] <- 0
+                       return(z)
+                     })
+
+  }
+  if(is.null(bufferedBoundaries) & !bufferRegions){
+    popKDE <- lapply(popBoundaries,
+                     FUN = function(x){
+                       # generate random points
+                       z <- sf::st_sample(x,
+                                          size = npts,
+                                          type = "random")
+                       z1 <- raster::raster(ks::kde(sf::st_coordinates(z),
+                                                    h = ks::Hlscv(sf::st_coordinates(z))))
+                       # convert to probability
+                       z1 <- z1/raster::cellStats(z1, stat = 'sum', na.rm = TRUE)
+                       # resample to larger raster
+                       y <- raster::resample(z1, emptyRast)
+                       y[is.na(y)] <- 0
+                       y[y<0] <- 0
+                       return(y)})
+  }
+  # convert the probability of assignment within each population to 1
+  # i.e., they can be assigned anywhere within that population if
+  # assigned there - following gaiah package
+
+  popBinary <- lapply(popBoundaries,
+                      FUN = function(x){
+                        popRast <- raster::rasterize(as(x,'Spatial'),
+                                                     emptyRast,
+                                                     field = 1,
+                                                     background=0)
+                        return(popRast)
+                      })
+
+  if (verbose > 0)
+    cat('Stacking rasters ... \n')
+
+  # Stack the rasters #
+  genStack <- raster::stack(popKDE)
+  popBinary <- raster::stack(popBinary)
+
+  # assign crs to rasters
+  crs(genStack) <- crs(popBinary) <- crs(emptyRast)
+
+  # rename the stack to identify the groups
+  names(genStack) <- popNames
+  names(popBinary) <- popNames
+
+  return(list(genStack = genStack,
+              popRast = popBinary))
+}
 #' Simulate animal genoscape data for estimating migratory connectivity
 #'
 #' @param genPops
