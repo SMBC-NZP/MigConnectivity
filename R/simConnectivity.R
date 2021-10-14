@@ -796,6 +796,8 @@ simGeneticPops_Overlap <- function(
                      y = maskBoundaries,
                      FUN = function(x,y){
                        z <- raster::mask(x,y)
+                       z[is.na(z)] <- 0
+                       z[z<0] <- 0
                        return(z)
                      })
 
