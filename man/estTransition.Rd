@@ -37,7 +37,8 @@ estTransition(
   nBurnin = 5000,
   nChains = 3,
   nThin = 1,
-  dataOverlapSetting = c("dummy", "none", "named")
+  dataOverlapSetting = c("dummy", "none", "named"),
+  fixedZero = NULL
 )
 }
 \arguments{
@@ -207,6 +208,8 @@ chains (to test for convergence). Default 3}
 \item{nThin}{For band return data, \code{estTransition} runs a \code{JAGS}
 multinomial non-Markovian model, for which it needs the thinning rate.
 Default 1}
+
+\item{fixedZero}{}
 }
 \value{
 \code{estTransition} returns a list with the elements:

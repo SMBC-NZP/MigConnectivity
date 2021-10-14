@@ -24,10 +24,11 @@ surface within each region}
 \item{res}{- the desired resolution of the output raster}
 
 \item{bufferRegions}{boolean if \code{TRUE} a buffer is applied to each
-region to avoid or increase overlap}
+region to avoid or increase overlap.}
 
 \item{bufferDist}{- Desired buffer distance in meters. Positive values
-enlarge regions, negative buffers make regions smaller}
+enlarge regions, negative buffers make regions smaller. Only used when
+\code{bufferRegions=TRUE}.}
 
 \item{popNames}{- a vector the same length as popBoundaries}
 }
