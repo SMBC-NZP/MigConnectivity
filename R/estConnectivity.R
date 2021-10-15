@@ -944,9 +944,9 @@ estTransitionBoot <- function(originSites = NULL,
           failed <- TRUE
           countFailed <- countFailed + 1
           if (countFailed > nBoot)
-            stop("estTransition stopped because getting very high number of bootstrap runs:",
-                 countFailed, "where animals use transitions fixed to zero.",
-                 "You should examine fixedZero and the data to make sure those",
+            stop("estTransition stopped because getting very high number of bootstrap runs:\n",
+                 countFailed, " where animals use transitions fixed to zero.\n",
+                 "You should examine fixedZero and the data to make sure those\n",
                  "transition probabilities are really zero")
           sites.array[boot,,] <- 0
           break

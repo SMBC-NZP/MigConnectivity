@@ -155,7 +155,7 @@ for (sim in 1:nSims) {
                      geoBias, geoVCov,
                      S = S[[sc]], p = p[[sc]],
                      requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
-                     verbose = 1)
+                     verbose = 0)
       op <- data1$originPointsObs
       tp <- data1$targetPointsObs
     }else{

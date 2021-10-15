@@ -951,12 +951,13 @@ simGeneticData <- function(genPops,
     prob_na_rows <- which(is.na(genProbs), arr.ind = TRUE)
     prob_na_rows_id <- unique(prob_na_rows[,1])
 
-    cat("\n Warning: NA values detected in genetic probability assignments\n",
-       "the following individuals have NA values: ", print(prob_na_rows_id),"\n",
-       "Equal probability of assignment was applied to all regions \n")
+
 
     if(!resampleNAs){
-    genProbs[prob_na_rows_id,] <- 1/dim(genProbs)[2]
+      genProbs[prob_na_rows_id,] <- 1/dim(genProbs)[2]
+      warning("NA values detected in genetic probability assignments\n",
+              "the following individuals have NA values: ", print(prob_na_rows_id),"\n",
+              "Equal probability of assignment was applied to all regions \n")
     }else{
 
     NA_in_genProbs <- TRUE
