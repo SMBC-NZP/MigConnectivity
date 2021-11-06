@@ -175,14 +175,12 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
   if (!is.null(targetDist))
     nAnimals <- dim(targetDist)[1]
   else {
+
+    if(!is.null(targetPoints) & !inherits(targetPoints, "sf")){
+     targetPoints <- sf::st_as_sf(targetPoints)}
     nAnimals <- nrow(targetPoints)
 
-    if(!is.null(targetPoints) & !("sf" %in% class(targetPoints))){
-     targetPoints <- sf::st_as_sf(targetPoints)}
-    if(!is.null(originPoints) & !("sf" %in% class(originPoints))){
-     originPoints <- sf::st_as_sf(originPoints)}
-
-     if(is.na(sf::st_crs(targetPoints))){
+    if(is.na(sf::st_crs(targetPoints))){
       stop('Coordinate system definition needed for targetPoints')
     }
     # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
@@ -206,6 +204,9 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     targetDist[lower.tri(targetDist)] <- targetDist0
   }
   if (is.null(originDist)) {
+    if(!is.null(originPoints) & !(inherits(originPoints, "sf"))){
+      originPoints <- sf::st_as_sf(originPoints)
+    }
     if(is.na(sf::st_crs(originPoints))) {
       stop('Coordinate system definition needed for originPoints')
     }

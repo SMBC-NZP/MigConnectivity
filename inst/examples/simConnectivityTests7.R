@@ -8,8 +8,10 @@ library(raster)
 library(sf)
 library(MigConnectivity)
 library(methods)
-args <- commandArgs(TRUE)
-instance <- as.integer(args[1])
+library(jagsUI)
+#args <- commandArgs(TRUE)
+#instance <- as.integer(args[1])
+instance <- 6444
 set.seed(instance)
 
 nSims <- 20
@@ -61,14 +63,27 @@ rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
 originSites <- sf::st_read("data-raw/PABU_breeding_regions.shp")
 targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
-originSites$originSite <- originNames
-targetSites$targetSite <- targetNames
+originSites$originSite <- factor(originNames, levels = originNames)
+targetSites$targetSite <- factor(targetNames, levels = targetNames)
 
 
 # looks like originSites needs to be projected
 originSites <- sf::st_transform(originSites, "ESRI:102010")
 targetSites <- sf::st_transform(targetSites, "ESRI:102010")
-
+bound <- sf::st_bbox(targetSites)
+rast <- raster(xmn = bound[1], ymn = bound[2], xmx = bound[3], ymx = bound[4],
+               res = 10000, crs = CRS("ESRI:102010"))
+s_rast <- raster::rasterize(as(targetSites, "Spatial"), rast,
+                            field = targetSites$targetSite)
+s_mat <- values(s_rast, format = "matrix")
+s_vec <- values(s_rast)
+rasterX <- xFromCol(s_rast)
+rasterY <- yFromRow(s_rast)
+locPrior <- matrix(0, length(s_vec), nTargetSites)
+for (i in 1:nTargetSites) {
+  cells <- which(s_vec==i)
+  locPrior[cells, i] <- 1/length(cells)
+}
 # Load in genPops
 load(file = "data-raw/genPopsSim.RData")
 
@@ -122,14 +137,14 @@ originDist <- distFromPos(st_coordinates(originCenters$geometry))
 
 MCtrue <- calcMC(originDist, targetDist, originRelAbund, psiTrue)
 
-psiEst <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
+psiEst7 <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
                 list(originNames, targetNames, scenarios, NULL))
-psiCI <- array(NA, c(2, nOriginSites, nTargetSites, nScenarios, nSims),
+psiCI7 <- array(NA, c(2, nOriginSites, nTargetSites, nScenarios, nSims),
                list(c("lower", "upper"), originNames, targetNames, scenarios,
                     NULL))
-MCest <- array(NA, c(nScenarios, nSims),
+MCest7 <- array(NA, c(nScenarios, nSims),
                list(scenarios, NULL))
-MCCI <- array(NA, c(2, nScenarios, nSims),
+MCCI7 <- array(NA, c(2, nScenarios, nSims),
               list(c("lower", "upper"), scenarios, NULL))
 # MantelEst <- array(NA, c(nScenarios, nSims),
 #                list(scenarios, NULL))
@@ -138,70 +153,106 @@ MCCI <- array(NA, c(2, nScenarios, nSims),
 # sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
 #                 list(originNames, targetNames, scenarios, NULL))
 
-dataStore <- vector("list", nSims)
+#dataStore <- vector("list", nSims)
+instances <- paste0(instance, '.', 1:nSims)
+filenames <- paste0("~/MC work/simConnectivity/testConnectivity5.", instances, ".RData")
 
+if (!is.null(fixedZero)) {
+  psiFixed <- matrix(NA, nOriginSites, nTargetSites)
+  for (i in 1:nrow(fixedZero)) {
+    psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
+  }
+}
+
+ncols <- ncol(s_mat)
+nrows <- nrow(s_mat)
+vecLoc <- 1:length(s_vec)
+trueCell <- matrix(NA, length(s_vec), 2)
+trueCell[,2] <- round(vecLoc / ncols + 0.499)
+trueCell[,1] <- vecLoc - (trueCell[,2] - 1) * ncols
+summary(trueCell)
+head(trueCell)
+any(duplicated(as.data.frame(trueCell)))
+trueCell[340:350, ]
 
 for (sim in 1:nSims) {
   cat("Simulation", sim, "of", nSims, "at", date(), " ")
-  dataStore[[sim]] <- vector("list", nScenarios)
-  for (sc in c(2,3,5,6,8)) { #1:nScenarios
+  load(filenames[i])
+  for (sc in 1:nScenarios) { #1:nScenarios
     cat(sc, format(Sys.time(), "%H:%M:%S"), " ")
     or <- NULL
+    data1 <- dataStore[[sc]]$data1
+    data2 <- dataStore[[sc]]$data2
+    jags.data <- list(npop = nOriginSites, ndest = nTargetSites,
+                      m0 = psiFixed)
     if (!is.null(sampleSizeGL[[sc]][[1]])){
-      data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
-                     sampleSize = sampleSizeGL[[sc]],
-                     originSites = originSites, targetSites = targetSites,
-                     #captured = "origin",
-                     geoBias, geoVCov,
-                     S = S[[sc]], p = p[[sc]],
-                     requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
-                     verbose = 0)
       op <- data1$originPointsObs
-      tp <- data1$targetPointsObs
+      tp <- st_coordinates(data1$targetPointsObs)
+      oa <- data1$originAssignment
+      jags.data$pop_gl <- oa
+      jags.data$bias <- geoBias
+      jags.data$Sigma <- geoVCov
+      jags.data$nGL <- nrow(tp)
+      jags.data$tpObs <- tp
+      jags.data$locPrior <- locPrior
+      jags.data$ncells <- length(s_vec)
+      jags.data$ncols <- ncol(s_mat)
+      jags.data$rasterY <- rasterY
+      jags.data$rasterX <- rasterX
     }else{
-      data1 <- NULL
       op <- NULL
       tp <- NULL
+      oa <- NULL
     }
     if (!is.null(sampleSizeGeno[[sc]])){
-      data2 <- simGeneticData(genPops = genPops, psi = psiTrue,
-                              originRelAbund = originRelAbund,
-                              sampleSize = sampleSizeGeno[[sc]],
-                              originSites = originSites,
-                              targetSites = targetSites,
-                              captured = "target",
-                              verbose = 0)
       tp <- rbind(tp, data2$targetPointsTrue)
       or <- data2$genRaster
       ot <- data2$genProbs
-      #originSites <- sf::st_transform(originSites, crs(or, TRUE))
-      #crs(or) <- sf::st_crs(originSites)
-    }else{
-      data2 <- NULL
+      ta <- data2$targetAssignment
+      jags.data$nProb <- nrow(ot)
+      jags.data$dest <- ta
+      jags.data$prob <- ot
+    } else{
       or <- NULL
-      ot <- NULL
+      ot <- matrix()
     }
-    est1 <- estTransition(originSites,
-                          targetSites,
-                          op,
-                          tp,
-                          originAssignment = ot, maxTries = 1000,
-                          #originRaster = or, #
-                          originNames = originNames,
-                          targetNames = targetNames,
-                          nSamples = 1000, isGL = isGL[[sc]],
-                          isTelemetry = isTelemetry[[sc]],
-                          isRaster = isRaster[[sc]],
-                          isProb = isProb[[sc]],
-                          captured = captured[[sc]],
-                          geoBias = geoBias, geoVCov = geoVCov,
-                          resampleProjection = sf::st_crs(targetSites),
-                          nSim = 100, verbose = 0,
-                          dataOverlapSetting = "none",
-                          fixedZero = fixedZero)
+    jags.inits <- function()list()
+    params <- 'psi'
+    file <- paste0(find.package('MigConnectivity'),
+                       ifelse(is.null(sampleSizeGL[[sc]]),
+                              "/JAGS/multinomial_prob_origin.txt",
+                              ifelse(is.null(sampleSizeGeno[[sc]]),
+                                     "/JAGS/multinomial_geolocator_target.txt",
+                              "/JAGS/multinomial_geolocator_target_prob_origin.txt")))
+    est1 <- jags(jags.data, jags.inits, params, file, n.chains = 3,
+                 n.iter = 2000, n.burnin = 1000, parallel = TRUE, DIC = FALSE)
+    maxRhat <- max(est1$Rhat, na.rm = TRUE)
+    if (maxRhat < 1.1)
+      cat("Successful convergence based on Rhat values (all < 1.1).\n")
+    else
+      cat("**WARNING** Rhat values indicate convergence failure.\n")
+
+    # est1 <- estTransition(originSites,
+    #                       targetSites,
+    #                       op,
+    #                       tp,
+    #                       originAssignment = ot, maxTries = 1000,
+    #                       #originRaster = or, #
+    #                       originNames = originNames,
+    #                       targetNames = targetNames,
+    #                       nSamples = 1000, isGL = isGL[[sc]],
+    #                       isTelemetry = isTelemetry[[sc]],
+    #                       isRaster = isRaster[[sc]],
+    #                       isProb = isProb[[sc]],
+    #                       captured = captured[[sc]],
+    #                       geoBias = geoBias, geoVCov = geoVCov,
+    #                       resampleProjection = sf::st_crs(targetSites),
+    #                       nSim = 100, verbose = 0,
+    #                       dataOverlapSetting = "none",
+    #                       fixedZero = fixedZero)
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
-                        est1)
+                        est1$sims.list$psi)
     # est3 <- estMantel(tp, op, isGL[[sc]],
     #                   geoBias, geoVCov, targetSites, 10, 80, 0,
     #                   resampleProjection = sf::st_crs(targetSites),
@@ -211,15 +262,16 @@ for (sim in 1:nSims) {
     #                   isRaster = isRaster[[sc]],
     #                   originRaster = or,
     #                   dataOverlapSetting = "none")
-    psiEst[,,sc,sim] <- est1$psi$mean
-    psiCI[,,,sc,sim] <- est1$psi$simpleCI
-    MCest[sc,sim] <- est2$MC$mean
-    MCCI[,sc,sim] <- est2$MC$simpleCI
+    psiEst7[,,sc,sim] <- est1$mean$psi
+    psiCI7[1,,,sc,sim] <- est1$q2.5$psi
+    psiCI7[2,,,sc,sim] <- est1$q97.5$psi
+    MCest7[sc,sim] <- est2$MC$mean
+    MCCI7[,sc,sim] <- est2$MC$simpleCI
     # MantelEst[sc,sim] <- est3$corr$mean
     # MantelCI[,sc,sim] <- est3$corr$simpleCI
-    dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    save(psiEst, psiCI, MCest, MCCI, sim, sc, dataStore,
-         file = paste('testConnectivity5', instance, 'RData', sep = '.'))
+    #dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
+    save(psiEst7, psiCI7, MCest7, MCCI7, sim, sc, #dataStore,
+         file = paste('testConnectivity7', instance, 'RData', sep = '.'))
   }
   cat("\n")
 }

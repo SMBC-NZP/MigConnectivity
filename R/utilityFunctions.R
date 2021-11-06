@@ -253,29 +253,35 @@ locSample <- function(isGL,
                              MARGIN = 3)
       #print(str(point.sample0))
       #point.sample <- lapply(point.sample1, st_as_sf)
-      # Find out which sampled points are in a target site
-      if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
-        sites <- sf::st_transform(sites, crs = resampleProjection)
-      }
-      # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
-      #                            sparse = TRUE)
-      # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
-      #                   sparse = TRUE)
-      # inter[lengths(inter)==0] <- 0
-      # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
-      # test <- as.numeric(unlist(unclass(inter)))
-      site.sample0 <- sapply(point.sample0, FUN = function(z){
-        inter <- sf::st_intersects(x = z, y = sites,
-                                   sparse = TRUE)
-        inter[lengths(inter)==0] <- NA
-        inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
-        as.numeric(unlist(unclass(inter)))})
+      if (!is.null(sites)) {
+        # Find out which sampled points are in a target site
+        if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
+          sites <- sf::st_transform(sites, crs = resampleProjection)
+        }
+        # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
+        #                            sparse = TRUE)
+        # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
+        #                   sparse = TRUE)
+        # inter[lengths(inter)==0] <- 0
+        # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+        # test <- as.numeric(unlist(unclass(inter)))
+        site.sample0 <- sapply(point.sample0, FUN = function(z){
+          inter <- sf::st_intersects(x = z, y = sites,
+                                     sparse = TRUE)
+          inter[lengths(inter)==0] <- NA
+          inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+          as.numeric(unlist(unclass(inter)))})
 
-      # Identify which animals have at least one valid sample point. good.sample0
-      # will be NA for those that don't.  For those that do, it will location in
-      # point.sample first valid point can be found.
-      good.sample0 <- apply(site.sample0, 2, function(x) which(!is.na(x))[1])
-     # cat(good.sample0, "\n")
+        # Identify which animals have at least one valid sample point. good.sample0
+        # will be NA for those that don't.  For those that do, it will location in
+        # point.sample first valid point can be found.
+        good.sample0 <- apply(site.sample0, 2, function(x) which(!is.na(x))[1])
+      }
+      else {
+        site.sample0 <- array(0, c(nSim, length(point.sample0)))
+        good.sample0 <- rep(1, length(point.sample0))
+      }
+      # cat(good.sample0, "\n")
     }
     if (any(isProb & toSampleBool)) {
       #print(assignment)
@@ -284,7 +290,7 @@ locSample <- function(isGL,
                             replace = TRUE)
     }
 # IF ALL THE POINTS ARE WITHIN SITES #
-    # walk throught this section #
+    # walk through this section #
     if (any(isRaster & toSampleBool)) {
       if (pointsInSites && !any(isRaster & toSampleBool & (isGL | isProb))) {
         samp <- sample.int(nrandomDraws,
@@ -334,39 +340,45 @@ locSample <- function(isGL,
         #                             crs = 4326)},
         #                        MARGIN = 2)
         #point.sample <- lapply(point.sample1, st_as_sf)
-        # Find out which sampled points are in a target site
-        if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
-          sites <- sf::st_transform(sites, crs = resampleProjection)
-          point.sample2 <- sf::st_transform(point.sample2,
-                                            crs = resampleProjection)
+        if (!is.null(sites)) {
+          # Find out which sampled points are in a target site
+          if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
+            sites <- sf::st_transform(sites, crs = resampleProjection)
+            point.sample2 <- sf::st_transform(point.sample2,
+                                              crs = resampleProjection)
+          }
+
+          # site.sample2 <- sapply(point.sample2, FUN = function(z){
+          #   suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
+          #                                        sparse = TRUE))))})
+          # Check which points are in target sites
+          site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
+                                                             y = sites))
+
+          # Give values without intersection an NA
+          len_intersect <- lengths(site.sample2)
+          # quick check to ensure that all the points fall exactly in one site #
+          if(any(len_intersect)>1){
+            warning("Overlapping targetSites or originSites may cause issues\n")
+            site.sample2 <- lapply(site.sample2, function (x) x[1])
+          }
+          site.sample2[lengths(site.sample2)==0] <- NA
+          site.sample2 <- unlist(as.numeric(site.sample2))
+
+          # Organize into matrix (separate by animal)
+          site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
+
+          # Identify which animals have at least one valid sample point. good.sample2
+          # will be NA for those that don't.  For those that do, it will location in
+          # point.sample first valid point can be found.
+          good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])+
+            seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
+          #cat(good.sample2, "\n")
         }
-
-        # site.sample2 <- sapply(point.sample2, FUN = function(z){
-        #   suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-        #                                        sparse = TRUE))))})
-        # Check which points are in target sites
-        site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
-                                                           y = sites))
-
-        # Give values without intersection an NA
-        len_intersect <- lengths(site.sample2)
-        # quick check to ensure that all the points fall exactly in one site #
-        if(any(len_intersect)>1){
-          warning("Overlapping targetSites or originSites may cause issues\n")
-          site.sample2 <- lapply(site.sample2, function (x) x[1])
+        else {
+          site.sample2 <- array(0, c(nSim, sum(isRaster & toSampleBool)))
+          good.sample2 <- rep(1, sum(isRaster & toSampleBool))
         }
-        site.sample2[lengths(site.sample2)==0] <- NA
-        site.sample2 <- unlist(as.numeric(site.sample2))
-
-        # Organize into matrix (separate by animal)
-        site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
-
-        # Identify which animals have at least one valid sample point. good.sample2
-        # will be NA for those that don't.  For those that do, it will location in
-        # point.sample first valid point can be found.
-        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])+
-          seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
-        #cat(good.sample2, "\n")
       }
       else {
         # Select nSim points for each animal still to be sampled
@@ -377,31 +389,39 @@ locSample <- function(isGL,
         samp2 <- samp + rep((1:nAnimals)[toSampleBool & isRaster] - 1, each = nSim) * nrandomDraws
 
         point.sample2 <- intrinsic2[samp2, ]
-        if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
-          point.sample2 <- sf::st_transform(point.sample2, crs = resampleProjection)
+        if (!is.null(sites)) {
+          if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
+            point.sample2 <- sf::st_transform(point.sample2,
+                                              crs = resampleProjection)
+          }
+          # Check which points are in target sites
+          site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
+                                                             y = sites))
+
+          # Give values without intersection an NA
+          len_intersect <- lengths(site.sample2)
+          # quick check to ensure that all the points fall exactly in one site #
+          if(any(len_intersect)>1){
+            warning("Overlapping targetSites or originSites may cause issues\n")
+            site.sample2 <- lapply(site.sample2, function (x) x[1])
+          }
+          site.sample2[len_intersect==0] <- NA
+          site.sample2 <- unlist(as.numeric(site.sample2))
+
+          # Organize into matrix (separate by animal)
+          site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
+          # Identify which animals have a valid point (inside a site).
+          # good.sample2, for those that don't, will be NA. For those that do, it
+          # will be location in point.sample where first valid point is.
+
+
+          good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]})+
+            seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
         }
-        # Check which points are in target sites
-        site.sample2 <- suppressMessages(sf::st_intersects(point.sample2, y = sites))
-
-        # Give values without intersection an NA
-        len_intersect <- lengths(site.sample2)
-        # quick check to ensure that all the points fall exactly in one site #
-        if(any(len_intersect)>1){
-          warning("Overlapping targetSites or originSites may cause issues\n")
-          site.sample2 <- lapply(site.sample2, function (x) x[1])
+        else {
+          site.sample2 <- array(0, c(nSim, sum(isRaster & toSampleBool)))
+          good.sample2 <- rep(1, sum(isRaster & toSampleBool))
         }
-        site.sample2[len_intersect==0] <- NA
-        site.sample2 <- unlist(as.numeric(site.sample2))
-
-        # Organize into matrix (separate by animal)
-        site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
-        # Identify which animals have a valid point (inside a site).
-        # good.sample2, for those that don't, will be NA. For those that do, it
-        # will be location in point.sample where first valid point is.
-
-
-        good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]})+
-          seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
       }
     }
     if (any(isProb & !isGL & !isRaster & toSampleBool)){

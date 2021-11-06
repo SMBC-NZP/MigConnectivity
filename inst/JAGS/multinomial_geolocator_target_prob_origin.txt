@@ -1,0 +1,28 @@
+model{
+for (i in 1:nGL){                # Number individuals
+  # Observation process
+  tpObs[i,1:2] ~ dmnorm.vcov(adjLoc[i,1:2], Sigma[1:2, 1:2])
+  adjLoc[i,1:2] <- trueLoc[i,1:2] + bias[1:2]
+  # Vague prior for true location, bounded by target site
+  trueCell[i,2] <- round(vecLoc[i] / ncols + 0.4999)
+  trueCell[i,1] <- vecLoc[i] - (trueCell[i,2] - 1) * ncols
+  trueLoc[i,1] <- rasterX[trueCell[i,1]]
+  trueLoc[i,2] <- rasterY[trueCell[i,2]]
+  vecLoc[i] ~ dcat(locPrior[1:ncells, dest_gl[i]])
+  dest_gl[i] ~ dcat(psi[pop_gl[i], 1:ndest])
+} #i
+
+# Probability table likelihood
+for(i in 1:nProb){
+  pop[i] ~ dcat(prob[i, 1:npop])
+  dest[i] ~ dcat(psi[pop[i], 1:ndest])
+}
+
+# priors
+for(i in 1:npop){
+  for(k in 1:ndest){
+    m0[i, k] ~ dbeta(1, 1)
+    psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+  } #k
+}#i
+}

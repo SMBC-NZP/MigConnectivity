@@ -154,11 +154,12 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
       stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
     psiFixed <- FALSE
     if (dim(psi)[2]!=nOriginSites || dim(psi)[3]!=nTargetSites)
-      stop('Size of psi array must be consistant with distance matrices')
+      stop('Size of psi array must be consistent with distance matrices')
     psiBase <- apply(psi, 2:3, mean)
     psiVCV <- NULL
     if (dim(psi)[1]>=nSamples)
-      psiSamples <- 1:nSamples
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
     else
       psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
     psiIn <- psi
@@ -326,22 +327,19 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
     for (i in 1:nrow(fixedZero)) {
       psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
     }
-    jags.data$psi <- psiFixed
+    jags.data$m0 <- psiFixed
   }
   # Initial values
   jags.inits <- function()list()
   # Parameters to monitor
   params <- c("psi", "r")
-  print(paste0(find.package('MigConnectivity'),
+  file <- paste0(find.package('MigConnectivity'),
                ifelse(nAges == 1,
                       "/JAGS/multinomial_banding_1age.txt",
-                      "/JAGS/multinomial_banding.txt")))
+                      "/JAGS/multinomial_banding.txt"))
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
                       #"inst/JAGS/multinomial_banding_1age.txt",
-                      paste0(find.package('MigConnectivity'),
-                             ifelse(nAges == 1,
-                                    "/JAGS/multinomial_banding_1age.txt",
-                                    "/JAGS/multinomial_banding.txt")),
+                      file,
                       n.chains = nChains, n.thin = nThin,
                       n.iter = nBurnin + ceiling(nSamples * nThin / nChains),
                       n.burnin = nBurnin, DIC = FALSE,
@@ -2594,8 +2592,10 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
       target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
                                           coords = c("x","y"),
                                           crs = resampleProjection)
-      if (verbose > 2)
+      if (verbose > 2){
         cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
+        #print(target.point.sample)
+      }
     }
     else {
       # Get target point for each animal sampled

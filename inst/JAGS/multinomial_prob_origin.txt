@@ -1,0 +1,16 @@
+model{
+# likelihood
+for(i in 1:nProb){
+  pop[i] ~ dcat(prob[i, 1:npop])
+  dest[i] ~ dcat(psi[pop[i], 1:ndest])
+}
+
+# priors
+
+for(i in 1:npop){
+  for(k in 1:ndest){
+    m0[i, k] ~ dbeta(1, 1)
+    psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+  } #k
+}#i
+}
