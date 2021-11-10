@@ -84,22 +84,33 @@ targetSample <- function(isGL,
   toSample <- which(isGL[animal.sample])
   # In this case, only have to sample each GL animal once, because no restrictions
   if (is.null(targetSites) && any(isGL[animal.sample])) {
-    draws <- 1
-    geoBias2 <- array(rep(geoBias, length(toSample)), c(2, length(toSample)))
+    draws <- 0
+    while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
+      draws <- draws + 1
+      geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
 
-    # generate sample and substract the bias
-    point.sample <- array(apply(sf::st_coordinates(targetPoints)[animal.sample[toSample], , drop = FALSE],
-                                MARGIN = 1,
-                                MASS::mvrnorm, n=1, Sigma=geoVCov),
-                          # dimensions of the array
-                          c(2, length(toSample))) - geoBias2 #subtract the bias
+      # generate sample and substract the bias
+      point.sample <- array(apply(sf::st_coordinates(targetPoints)[animal.sample[toSample], , drop = FALSE],
+                                  MARGIN = 1,
+                                  MASS::mvrnorm, n=nSim, Sigma=geoVCov),
+                            # dimensions of the array
+                            c(nSim, 2, length(toSample))) - geoBias2 #subtract the bias
 
-    # name so can
-    rownames(point.sample) <- c("x","y")
+      # name so can
+      dimnames(point.sample)[[2]] <- c("x","y")
 
-    point.sample <- sf::st_as_sf(data.frame(t(point.sample)), coords = c("x","y"), crs = resampleProjection)
+      point.sample <- apply(point.sample, FUN = function(x){
+        sf::st_as_sf(data.frame(x), coords = c("x","y"),
+                     crs = resampleProjection)}, MARGIN = 3)
+      good.sample <- apply(sapply(point.sample, sf::st_is_valid), 2,
+                           function(x) min(which(x)))
+      if (any(!is.na(good.sample)))
+        target.point.sample[toSample[!is.na(good.sample)], ]<- t(mapply(x = good.sample[!is.na(good.sample)],
+                                                                        y = point.sample[!is.na(good.sample)],
+                                                                        FUN = function(x, y){sf::st_coordinates(y[x,])}))
 
-    target.point.sample[toSample, ]<- t(sf::st_coordinates(point.sample))
+      toSample <- which(is.na(target.point.sample[,1]))
+    }
   }else {
     draws <- 0
     while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
@@ -113,7 +124,7 @@ targetSample <- function(isGL,
 
       dimnames(point.sample)[[2]] <- c("x","y")
 
-      # Convert those to SpatialPoints
+      # Convert those to sf
 
       point.sample <- apply(point.sample, FUN = function(x){
         sf::st_as_sf(data.frame(x), coords = c("x","y"),

@@ -2188,11 +2188,20 @@ estMantel <- function(targetPoints, originPoints, isGL, geoBias = NULL,
       cat(' ', tSamp$draws, 'draws (of length', nSim, 'and of', maxTries, 'possible).\n')
 
     originDist1 <- originDistStart[animal.sample, animal.sample]
-    #target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
-    target.point.sample <- sp::SpatialPoints(target.point.sample)
-    target.point.sample <- sf::st_as_sf(target.point.sample)
-    sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
-    corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr
+    #print(target.point.sample)
+    colnames(target.point.sample) <- c("x", "y")
+    target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
+                                        coords = c("x","y"),
+                                        crs = resampleProjection)
+    #target.point.sample <- sp::SpatialPoints(target.point.sample)
+    #print(target.point.sample)
+    #target.point.sample <- sf::st_as_sf(target.point.sample)
+    #print(target.point.sample)
+    #sf::st_crs(target.point.sample) <- sf::st_crs(resampleProjection)
+    #print(originDist1)
+    corr[boot] <- calcMantel(originDist = originDist1,
+                             targetPoints = target.point.sample)$pointCorr
+    #print(corr[boot])
     if (verbose > 1 || verbose == 1 && boot %% 10 == 0)
       cat(" Correlation mean:", mean(corr, na.rm=TRUE), "SD:", sd(corr, na.rm=TRUE),
           "low quantile:", quantile(corr, alpha/2, na.rm=TRUE),
