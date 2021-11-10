@@ -72,9 +72,10 @@ originSites <- sf::st_transform(originSites, "ESRI:102010")
 targetSites <- sf::st_transform(targetSites, "ESRI:102010")
 bound <- sf::st_bbox(targetSites)
 rast <- raster(xmn = bound[1], ymn = bound[2], xmx = bound[3], ymx = bound[4],
-               res = 10000, crs = CRS("ESRI:102010"))
+               res = 100000, crs = CRS("ESRI:102010"))
 s_rast <- raster::rasterize(as(targetSites, "Spatial"), rast,
                             field = targetSites$targetSite)
+plot(s_rast)
 s_mat <- values(s_rast, format = "matrix")
 s_vec <- values(s_rast)
 rasterX <- xFromCol(s_rast)
@@ -175,8 +176,8 @@ head(trueCell)
 any(duplicated(as.data.frame(trueCell)))
 trueCell[340:350, ]
 
-for (sim in 1:nSims) {
-  cat("Simulation", sim, "of", nSims, "at", date(), " ")
+for (sim7 in 1:nSims) {
+  cat("Simulation", sim7, "of", nSims, "at", date(), " ")
   load(filenames[i])
   for (sc in 1:nScenarios) { #1:nScenarios
     cat(sc, format(Sys.time(), "%H:%M:%S"), " ")
@@ -205,7 +206,7 @@ for (sim in 1:nSims) {
       oa <- NULL
     }
     if (!is.null(sampleSizeGeno[[sc]])){
-      tp <- rbind(tp, data2$targetPointsTrue)
+      #tp <- rbind(tp, data2$targetPointsTrue)
       or <- data2$genRaster
       ot <- data2$genProbs
       ta <- data2$targetAssignment
@@ -224,13 +225,14 @@ for (sim in 1:nSims) {
                               ifelse(is.null(sampleSizeGeno[[sc]]),
                                      "/JAGS/multinomial_geolocator_target.txt",
                               "/JAGS/multinomial_geolocator_target_prob_origin.txt")))
-    est1 <- jags(jags.data, jags.inits, params, file, n.chains = 3,
-                 n.iter = 2000, n.burnin = 1000, parallel = TRUE, DIC = FALSE)
-    maxRhat <- max(est1$Rhat$psi, na.rm = TRUE)
-    if (maxRhat < 1.1)
-      cat("Successful convergence based on Rhat values (all < 1.1).\n")
-    else
-      cat("**WARNING** Rhat values indicate convergence failure.\n")
+    est1 <- autojags(jags.data, jags.inits, params, file, n.chains = 3,
+                     iter.increment = 1000, parallel = TRUE, DIC = FALSE,
+                     verbose = FALSE)
+    # maxRhat <- max(est1$Rhat$psi, na.rm = TRUE)
+    # if (maxRhat < 1.1)
+    #   cat("Successful convergence based on Rhat values (all < 1.1).  ")
+    # else
+    #   cat("**WARNING** Rhat values indicate convergence failure.  ")
 
     # est1 <- estTransition(originSites,
     #                       targetSites,
@@ -262,16 +264,16 @@ for (sim in 1:nSims) {
     #                   isRaster = isRaster[[sc]],
     #                   originRaster = or,
     #                   dataOverlapSetting = "none")
-    psiEst7[,,sc,sim] <- est1$mean$psi
-    psiCI7[1,,,sc,sim] <- est1$q2.5$psi
-    psiCI7[2,,,sc,sim] <- est1$q97.5$psi
-    MCest7[sc,sim] <- est2$MC$mean
-    MCCI7[,sc,sim] <- est2$MC$simpleCI
+    psiEst7[,,sc,sim7] <- est1$mean$psi
+    psiCI7[1,,,sc,sim7] <- est1$q2.5$psi
+    psiCI7[2,,,sc,sim7] <- est1$q97.5$psi
+    MCest7[sc,sim7] <- est2$MC$mean
+    MCCI7[,sc,sim7] <- est2$MC$simpleCI
     # MantelEst[sc,sim] <- est3$corr$mean
     # MantelCI[,sc,sim] <- est3$corr$simpleCI
     #dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    save(psiEst7, psiCI7, MCest7, MCCI7, sim, sc, #dataStore,
-         file = paste('testConnectivity7', instance, 'RData', sep = '.'))
+    save(psiEst7, psiCI7, MCest7, MCCI7, sim7, sc, #dataStore,
+         file = paste('testConnectivity7a', instance, 'RData', sep = '.'))
   }
   cat("\n")
 }
