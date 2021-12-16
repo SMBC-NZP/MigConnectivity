@@ -1,20 +1,91 @@
-################################################################################
-# Simulation to test new estTransition/estMantel/estStrength options, including
-# data with location uncertainty on origin side
-# This version simulates GL data released on origin and genoscape data gathered
-# on the target side
-################################################################################
 library(raster)
 library(sf)
 library(MigConnectivity)
 library(methods)
-library(jagsUI)
-#args <- commandArgs(TRUE)
-#instance <- as.integer(args[1])
-instance <- 6444
+library(VGAM)
+instance <- 206# as.integer(args[1])
 set.seed(instance)
 
-nSims <- 20
+nSims <- 100
+
+simGenData <- function(psi,
+                       originRelAbund,
+                       sampleSize,
+                       shapes,
+                       captured = "target",
+                       requireEveryOrigin = FALSE,
+                       resampleNAs = TRUE,
+                       verbose = 0) {
+  if (verbose > 0)
+    cat("Setting up...\n")
+  nOriginSites <- nrow(psi)
+  nTargetSites <- ncol(psi)
+  rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
+  gamma <- rev$gamma
+  targetRelAbund <- rev$targetRelAbund
+  nAnimals <- sum(sampleSize)
+  if (length(captured)>1)
+    captured <- captured[1]
+  targetAssignment <- rep(NA, nAnimals)
+  originAssignment <- rep(NA, nAnimals)
+  if (captured=="origin" && length(sampleSize)>1){
+    originAssignment <- rep(1:nOriginSites, sampleSize)
+    if (requireEveryOrigin){
+      if (any(sampleSize < 1))
+        stop("Some origin site or sites have no samples ", sampleSize)
+    }
+  }
+  if (captured=="target" && length(sampleSize)>1){
+    targetAssignment <- rep(1:nTargetSites, sampleSize)
+  }
+
+  if (verbose > 0)
+    cat("Assigning sites to animals...\n")
+  runWell <- FALSE
+  while (!runWell){
+    for (a in 1:nAnimals) {
+      if (captured=="origin") {
+        if (is.na(originAssignment[a]))
+          originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+      }
+      else {
+        if (is.na(targetAssignment[a]))
+          targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+        originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+      }
+    }
+    runWell <- !requireEveryOrigin || captured=="target" ||
+      all.equal(unique(originAssignment), 1:nOriginSites)
+  }
+
+  if (verbose > 0)
+    cat("Assigning genProbs...\n")
+
+  if (captured == "target") {
+
+    genProbs <- array(NA, c(nAnimals, nOriginSites))
+    for (a in 1:nAnimals) {
+      genProbs[a, ] <- rdiric(1, shapes[originAssignment[a], ])
+    }
+  }
+  else {
+    genProbs <- array(NA, c(nAnimals, nTargetSites))
+    for (a in 1:nAnimals) {
+      genProbs[a, ] <- rdiric(1, shapes[targetAssignment[a], ])
+    }
+  }
+
+
+  return(list(originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              genProbs = genProbs,
+              input = list(psi = psi,
+                           originRelAbund = originRelAbund,
+                           captured = captured,
+                           shapes = shapes)))
+}
+
 scenarios <- c('Proportional Release Origin',
                'Proportional Release Target',
                'Proportional Release Both',
@@ -27,7 +98,7 @@ scenarios <- c('Proportional Release Origin',
 nScenarios <- length(scenarios)
 nOriginSites <- 3
 nTargetSites <- 5
-
+fastScenarios <- c(2, 5)
 # psiTrue <- psiPABU$psi$mean
 # Transition probability (psi) estimates (mean):
 #            Pacific and Interior Mexico Atlantic Lowland Mexico Central America
@@ -38,7 +109,6 @@ nTargetSites <- 5
 # Central             0.0000    0.0000
 # Louisiana           0.0000    0.0000
 # East Coast          0.5444    0.4554
-
 
 psiTrue <- array(0, c(nOriginSites, nTargetSites))
 psiTrue[1,] <- c(0.10608, 0.10856, 0.78536, 0, 0)
@@ -57,36 +127,21 @@ geoVCov <- matrix(c(5637340653, -2692682155, -2692682155, 6012336962),
 
 # Changed these slightly from PABU estimates so we'd have at least six GL per
 # population in first and third scenario
-originRelAbund <- c(45/60, 9/60, 6/60)
+# UPDATE: also reversed them
+originRelAbund <- c(20/60, 20/60, 20/60)
 
 rev <- MigConnectivity:::reversePsiRelAbund(psiTrue, originRelAbund)
 
 originSites <- sf::st_read("data-raw/PABU_breeding_regions.shp")
 targetSites <- sf::st_read("data-raw/PABU_nonbreeding_regions.shp")
-originSites$originSite <- factor(originNames, levels = originNames)
-targetSites$targetSite <- factor(targetNames, levels = targetNames)
+originSites$originSite <- originNames
+targetSites$targetSite <- targetNames
 
 
 # looks like originSites needs to be projected
 originSites <- sf::st_transform(originSites, "ESRI:102010")
 targetSites <- sf::st_transform(targetSites, "ESRI:102010")
-bound <- sf::st_bbox(targetSites)
-rast <- raster(xmn = bound[1], ymn = bound[2], xmx = bound[3], ymx = bound[4],
-               res = 100000, crs = CRS("ESRI:102010"))
-s_rast <- raster::rasterize(as(targetSites, "Spatial"), rast,
-                            field = targetSites$targetSite)
-plot(s_rast)
-s_mat <- values(s_rast, format = "matrix")
-s_vec <- values(s_rast)
-rasterX <- xFromCol(s_rast)
-rasterY <- yFromRow(s_rast)
-locPrior <- matrix(0, length(s_vec), nTargetSites)
-for (i in 1:nTargetSites) {
-  cells <- which(s_vec==i)
-  locPrior[cells, i] <- 1/length(cells)
-}
-# Load in genPops
-load(file = "data-raw/genPopsSim.RData")
+
 
 S <- vector("list", nScenarios)
 p <- vector("list", nScenarios)
@@ -138,14 +193,14 @@ originDist <- distFromPos(st_coordinates(originCenters$geometry))
 
 MCtrue <- calcMC(originDist, targetDist, originRelAbund, psiTrue)
 
-psiEst7 <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
+psiEst <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
                 list(originNames, targetNames, scenarios, NULL))
-psiCI7 <- array(NA, c(2, nOriginSites, nTargetSites, nScenarios, nSims),
+psiCI <- array(NA, c(2, nOriginSites, nTargetSites, nScenarios, nSims),
                list(c("lower", "upper"), originNames, targetNames, scenarios,
                     NULL))
-MCest7 <- array(NA, c(nScenarios, nSims),
+MCest <- array(NA, c(nScenarios, nSims),
                list(scenarios, NULL))
-MCCI7 <- array(NA, c(2, nScenarios, nSims),
+MCCI <- array(NA, c(2, nScenarios, nSims),
               list(c("lower", "upper"), scenarios, NULL))
 # MantelEst <- array(NA, c(nScenarios, nSims),
 #                list(scenarios, NULL))
@@ -154,109 +209,71 @@ MCCI7 <- array(NA, c(2, nScenarios, nSims),
 # sampleSizes <- array(NA, c(nOriginSites, nTargetSites, nScenarios, nSims),
 #                 list(originNames, targetNames, scenarios, NULL))
 
-#dataStore <- vector("list", nSims)
-instances <- paste0(instance, '.', 1:nSims)
-filenames <- paste0("~/MC work/simConnectivity/testConnectivity5.", instances, ".RData")
+dataStore <- vector("list", nSims)
 
-if (!is.null(fixedZero)) {
-  psiFixed <- matrix(NA, nOriginSites, nTargetSites)
-  for (i in 1:nrow(fixedZero)) {
-    psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
-  }
-}
 
-ncols <- ncol(s_mat)
-nrows <- nrow(s_mat)
-vecLoc <- 1:length(s_vec)
-trueCell <- matrix(NA, length(s_vec), 2)
-trueCell[,2] <- round(vecLoc / ncols + 0.499)
-trueCell[,1] <- vecLoc - (trueCell[,2] - 1) * ncols
-summary(trueCell)
-head(trueCell)
-any(duplicated(as.data.frame(trueCell)))
-trueCell[340:350, ]
+shapes <- matrix(c(5.5, 0.25, 0.01,
+                   0.25, 5.5, 0.01,
+                   0.004, 0.006, 5.75), 3, 3, byrow = T,
+                 dimnames = list(originNames, originNames))
+prop.table(shapes, 1)
 
-for (sim7 in 6:nSims) {
-  cat("Simulation", sim7, "of", nSims, "at", date(), " ")
-  load(filenames[sim7])
-  for (sc in 1:nScenarios) { #1:nScenarios
+for (sim in 1:nSims) {
+  cat("Simulation", sim, "of", nSims, "at", date(), " ")
+  dataStore[[sim]] <- vector("list", nScenarios)
+  for (sc in fastScenarios) { #1:nScenarios
     cat(sc, format(Sys.time(), "%H:%M:%S"), " ")
     or <- NULL
-    data1 <- dataStore[[sc]]$data1
-    data2 <- dataStore[[sc]]$data2
-    #print(str(data2, max.level = 2))
-    jags.data <- list(npop = nOriginSites, ndest = nTargetSites,
-                      m0 = psiFixed)
     if (!is.null(sampleSizeGL[[sc]][[1]])){
+      data1 <- simGLData(psi = psiTrue, originRelAbund = originRelAbund,
+                         sampleSize = sampleSizeGL[[sc]],
+                         originSites = originSites, targetSites = targetSites,
+                         #captured = "origin",
+                         geoBias, geoVCov,
+                         S = S[[sc]], p = p[[sc]],
+                         requireEveryOrigin = is.null(sampleSizeGeno[[sc]]),
+                         verbose = 0)
       op <- data1$originPointsObs
-      tp <- st_coordinates(data1$targetPointsObs)
-      oa <- data1$originAssignment
-      jags.data$pop_gl <- oa
-      jags.data$bias <- geoBias
-      jags.data$Sigma <- geoVCov
-      jags.data$nGL <- nrow(tp)
-      jags.data$tpObs <- tp
-      jags.data$locPrior <- locPrior
-      jags.data$ncells <- length(s_vec)
-      jags.data$ncols <- ncol(s_mat)
-      jags.data$rasterY <- rasterY
-      jags.data$rasterX <- rasterX
+      tp <- data1$targetPointsObs
     }else{
+      data1 <- NULL
       op <- NULL
       tp <- NULL
-      oa <- NULL
     }
     if (!is.null(sampleSizeGeno[[sc]])){
-      #tp <- rbind(tp, data2$targetPointsTrue)
-      or <- data2$genRaster
+      data2 <- simGenData(psi = psiTrue,
+                          originRelAbund = originRelAbund,
+                          sampleSize = sampleSizeGeno[[sc]],
+                          shapes = shapes,
+                          captured = "target",
+                          verbose = 0)
       ot <- data2$genProbs
       ta <- data2$targetAssignment
-      jags.data$nProb <- nrow(ot)
-      jags.data$dest <- ta
-      jags.data$prob <- ot
-    } else{
+      #originSites <- sf::st_transform(originSites, crs(or, TRUE))
+      #crs(or) <- sf::st_crs(originSites)
+    }else{
+      data2 <- NULL
       or <- NULL
-      ot <- matrix()
+      ot <- NULL
     }
-    jags.inits <- function()list()
-    params <- 'psi'
-    print(str(jags.data, max.level = 2))
-    file <- paste0(find.package('MigConnectivity'),
-                       ifelse(is.null(sampleSizeGL[[sc]][[1]]),
-                              "/JAGS/multinomial_prob_origin.txt",
-                              ifelse(is.null(sampleSizeGeno[[sc]]),
-                                     "/JAGS/multinomial_geolocator_target.txt",
-                              "/JAGS/multinomial_geolocator_target_prob_origin.txt")))
-    est1 <- autojags(jags.data, jags.inits, params, file, n.chains = 3,
-                     iter.increment = 1000, parallel = TRUE, DIC = FALSE,
-                     verbose = FALSE)
-    # maxRhat <- max(est1$Rhat$psi, na.rm = TRUE)
-    # if (maxRhat < 1.1)
-    #   cat("Successful convergence based on Rhat values (all < 1.1).  ")
-    # else
-    #   cat("**WARNING** Rhat values indicate convergence failure.  ")
-
-    # est1 <- estTransition(originSites,
-    #                       targetSites,
-    #                       op,
-    #                       tp,
-    #                       originAssignment = ot, maxTries = 1000,
-    #                       #originRaster = or, #
-    #                       originNames = originNames,
-    #                       targetNames = targetNames,
-    #                       nSamples = 1000, isGL = isGL[[sc]],
-    #                       isTelemetry = isTelemetry[[sc]],
-    #                       isRaster = isRaster[[sc]],
-    #                       isProb = isProb[[sc]],
-    #                       captured = captured[[sc]],
-    #                       geoBias = geoBias, geoVCov = geoVCov,
-    #                       resampleProjection = sf::st_crs(targetSites),
-    #                       nSim = 100, verbose = 0,
-    #                       dataOverlapSetting = "none",
-    #                       fixedZero = fixedZero)
+    est1 <- estTransition(originSites,
+                          targetSites,
+                          targetAssignment = ta,
+                          originAssignment = ot, maxTries = 1000,
+                          #originRaster = or, #
+                          originNames = originNames,
+                          targetNames = targetNames,
+                          nSamples = 1000, isGL = isGL[[sc]],
+                          isTelemetry = isTelemetry[[sc]],
+                          isRaster = isRaster[[sc]],
+                          isProb = isProb[[sc]],
+                          captured = captured[[sc]],
+                          geoBias = geoBias, geoVCov = geoVCov,
+                          resampleProjection = sf::st_crs(targetSites),
+                          nSim = 100, verbose = 0)
     est2 <- estStrength(originDist = originDist, targetDist = targetDist,
                         originRelAbund = originRelAbund,
-                        est1$sims.list$psi)
+                        est1)
     # est3 <- estMantel(tp, op, isGL[[sc]],
     #                   geoBias, geoVCov, targetSites, 10, 80, 0,
     #                   resampleProjection = sf::st_crs(targetSites),
@@ -266,17 +283,15 @@ for (sim7 in 6:nSims) {
     #                   isRaster = isRaster[[sc]],
     #                   originRaster = or,
     #                   dataOverlapSetting = "none")
-    psiEst7[,,sc,sim7] <- est1$mean$psi
-    psiCI7[1,,,sc,sim7] <- est1$q2.5$psi
-    psiCI7[2,,,sc,sim7] <- est1$q97.5$psi
-    MCest7[sc,sim7] <- est2$MC$mean
-    MCCI7[,sc,sim7] <- est2$MC$simpleCI
+    psiEst[,,sc,sim] <- est1$psi$mean
+    psiCI[,,,sc,sim] <- est1$psi$simpleCI
+    MCest[sc,sim] <- est2$MC$mean
+    MCCI[,sc,sim] <- est2$MC$simpleCI
     # MantelEst[sc,sim] <- est3$corr$mean
     # MantelCI[,sc,sim] <- est3$corr$simpleCI
-    #dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    cat(paste0("(", format(est2$MC$mean - MCtrue, digits = 2), ") "))
-    save(psiEst7, psiCI7, MCest7, MCCI7, sim7, sc, #dataStore,
-         file = paste('testConnectivity7a', instance, 'RData', sep = '.'))
+    dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
+    save(psiEst, psiCI, MCest, MCCI, sim, sc, dataStore,
+         file = paste('testConnectivity8', instance, 'RData', sep = '.'))
   }
   cat("\n")
 }

@@ -72,7 +72,7 @@ originSites <- sf::st_transform(originSites, "ESRI:102010")
 targetSites <- sf::st_transform(targetSites, "ESRI:102010")
 bound <- sf::st_bbox(targetSites)
 rast <- raster(xmn = bound[1], ymn = bound[2], xmx = bound[3], ymx = bound[4],
-               res = 100000, crs = CRS("ESRI:102010"))
+               res = 50000, crs = CRS("ESRI:102010"))
 s_rast <- raster::rasterize(as(targetSites, "Spatial"), rast,
                             field = targetSites$targetSite)
 plot(s_rast)
@@ -176,7 +176,7 @@ head(trueCell)
 any(duplicated(as.data.frame(trueCell)))
 trueCell[340:350, ]
 
-for (sim7 in 6:nSims) {
+for (sim7 in 1:nSims) {
   cat("Simulation", sim7, "of", nSims, "at", date(), " ")
   load(filenames[sim7])
   for (sc in 1:nScenarios) { #1:nScenarios
@@ -184,7 +184,6 @@ for (sim7 in 6:nSims) {
     or <- NULL
     data1 <- dataStore[[sc]]$data1
     data2 <- dataStore[[sc]]$data2
-    #print(str(data2, max.level = 2))
     jags.data <- list(npop = nOriginSites, ndest = nTargetSites,
                       m0 = psiFixed)
     if (!is.null(sampleSizeGL[[sc]][[1]])){
@@ -220,7 +219,6 @@ for (sim7 in 6:nSims) {
     }
     jags.inits <- function()list()
     params <- 'psi'
-    print(str(jags.data, max.level = 2))
     file <- paste0(find.package('MigConnectivity'),
                        ifelse(is.null(sampleSizeGL[[sc]][[1]]),
                               "/JAGS/multinomial_prob_origin.txt",
@@ -274,9 +272,9 @@ for (sim7 in 6:nSims) {
     # MantelEst[sc,sim] <- est3$corr$mean
     # MantelCI[,sc,sim] <- est3$corr$simpleCI
     #dataStore[[sim]][[sc]] <- list(data1 = data1, data2 = data2)
-    cat(paste0("(", format(est2$MC$mean - MCtrue, digits = 2), ") "))
     save(psiEst7, psiCI7, MCest7, MCCI7, sim7, sc, #dataStore,
-         file = paste('testConnectivity7a', instance, 'RData', sep = '.'))
+         file = paste('testConnectivity7b', instance, 'RData', sep = '.'))
   }
   cat("\n")
 }
+

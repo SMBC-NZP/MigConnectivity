@@ -960,10 +960,10 @@ estTransitionBoot <- function(originSites = NULL,
     boot <- boot + 1
   }
   if (countFailed > 0)
-    warning(countFailed, "bootstrap runs of", nBoot,
-            "total were rerun due to animals using transitions fixed at zero.",
-            "If this proportion is high, you should examine fixedZero and the",
-            "data to make sure those transition probabilities are really zero")
+    warning(countFailed, " bootstrap runs failed with ", nBoot,
+            "successful due to animals using transitions fixed at zero. ",
+            "If this ratio is high, you should examine fixedZero and the ",
+            "data to make sure those transition probabilities are really zero\n")
   meanPsi <- apply(psi.array, 2:3, mean)
   medianPsi <- apply(psi.array, 2:3, median)
   sePsi <- apply(psi.array, 2:3, sd)
