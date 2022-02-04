@@ -941,7 +941,7 @@ estTransitionBoot <- function(originSites = NULL,
         if (sites.array[boot, fixedZero[i, 1], fixedZero[i, 2]] > 0) {
           failed <- TRUE
           countFailed <- countFailed + 1
-          if (countFailed > nBoot)
+          if (countFailed > nBoot * 10)
             stop("estTransition stopped because getting very high number of bootstrap runs:\n",
                  countFailed, " where animals use transitions fixed to zero.\n",
                  "You should examine fixedZero and the data to make sure those\n",
@@ -960,10 +960,11 @@ estTransitionBoot <- function(originSites = NULL,
     boot <- boot + 1
   }
   if (countFailed > 0)
-    warning(countFailed, " bootstrap runs failed with ", nBoot,
-            "successful due to animals using transitions fixed at zero. ",
-            "If this ratio is high, you should examine fixedZero and the ",
-            "data to make sure those transition probabilities are really zero\n")
+    warning(countFailed, " bootstrap ",ifelse(countFailed>1, "runs", "run"),
+            " failed due to animals using transitions fixed at zero with ",
+            nBoot, " successful. If this ratio is high, you should examine ",
+            "fixedZero and the data to make sure those transition ",
+            "probabilities really are zero\n")
   meanPsi <- apply(psi.array, 2:3, mean)
   medianPsi <- apply(psi.array, 2:3, median)
   sePsi <- apply(psi.array, 2:3, sd)

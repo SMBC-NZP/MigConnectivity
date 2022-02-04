@@ -1,0 +1,28 @@
+model{
+# likelihood
+for(i in 1:nProbO){
+  pop[i] ~ dcat(probO[i, 1:npop])
+  assT[i] ~ dcat(psi[pop[i], 1:ndest])
+}
+
+for(i in 1:nProbT){
+  probT[i, 1:ndest] ~ ddirich(alpha[dest[i], 1:ndest])
+  dest[i] ~ dcat(psi[assO[i], 1:ndest])
+}#i
+
+# priors
+for(l in 1:nblock){
+  alpha0[l] ~ dgamma(1, 1)
+}#l
+for(j in 1:ndest){
+  for(k in 1:ndest){
+    alpha[j, k] <- alpha0[structT[j, k]]
+  } #k
+}#j
+for(j in 1:npop){
+  for(k in 1:ndest){
+    m0[j, k] ~ dgamma(1, 1)
+    psi[j, k] <- m0[j, k] / sum(m0[j, 1:ndest])
+  } #k
+}#j
+}
