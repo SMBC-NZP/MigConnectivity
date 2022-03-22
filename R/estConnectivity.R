@@ -16,8 +16,10 @@
 #' @param targetDist Distances between the W target sites. Symmetric W by W
 #'  matrix
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
-#'  a numeric vector of length B that sums to 1 or an mcmc object with at least
-#'  \code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'
+#'  a numeric vector of length B that sums to 1, or an mcmc object (such as is
+#'  produced by \code{\link{modelCountDataJAGS}}) or matrix with at least
+#'  \code{nSamples} rows. If there are more than B columns, the relevant columns
+#'  should be labeled "relN[1]" through "relN[B]"
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1, an array with
 #'  dimensions x, B, and W (with x samples of the transition probability matrix
@@ -39,8 +41,8 @@
 #' @param nSamples Number of times to resample \code{psi} and/or
 #'  \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
 #'  higher values here will do so with more precision
-#' @param row0 If \code{originRelAbund} is an mcmc object, this can be set
-#'  to 0 (default) or any greater integer to specify where to stop ignoring
+#' @param row0 If \code{originRelAbund} is an mcmc object or array, this can be
+#'  set to 0 (default) or any greater integer to specify where to stop ignoring
 #'  samples ("burn-in")
 #' @param verbose 0 (default) to 2. 0 prints no output during run. 1 prints
 #'  a progress update and summary every 100 samples. 2 prints a
@@ -118,10 +120,24 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
   nOriginSites <- nrow(originDist)
   nTargetSites <- nrow(targetDist)
   absAbund <- !is.null(sampleSize)
-  if (coda::is.mcmc(originRelAbund)) {
+  if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
+    originRelAbund <- as.matrix(originRelAbund)
+  }
+  if (is.matrix(originRelAbund) && dim(originRelAbund)[1]>1) {
     abundFixed <- FALSE
-    abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
-    abundBase <- colMeans(originRelAbund[row0 + 1:nSamples, abundParams])
+    if (dim(originRelAbund)[2]>nOriginSites)
+      abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
+    else if (dim(originRelAbund)[2]==nOriginSites)
+      abundParams <- 1:nOriginSites
+    else
+      stop('Number of origin sites must be constant between distance matrix and abundance')
+    if (dim(originRelAbund)[1] >= nSamples)
+      abundRows <- round(seq(from = row0 + 1, to = dim(originRelAbund)[1],
+                             length.out = nSamples))
+    else
+      stop("You need at least nSamples rows to originRelAbund")
+    originRelAbund <- as.matrix(originRelAbund[abundRows, abundParams])
+    abundBase <- colMeans(originRelAbund)
   }
   else {
     abundFixed <- TRUE
@@ -202,7 +218,7 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
     if (abundFixed)
       abundNew <- abundBase
     else
-      abundNew <- originRelAbund[row0 + i, abundParams]
+      abundNew <- originRelAbund[i, abundParams]
     # Calculate MC for new psis and relative breeding densities
     sampleMC[i] <- ifelse(absAbund,
                           calcMC(originDist, targetDist, originRelAbund = abundNew,
@@ -453,7 +469,8 @@ estTransitionBoot <- function(originSites = NULL,
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300,
                               dataOverlapSetting = "dummy",
-                              fixedZero = NULL) {
+                              fixedZero = NULL,
+                              targetRelAbund = NULL) {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -797,7 +814,79 @@ estTransitionBoot <- function(originSites = NULL,
     originCon <- NULL
   }
 
+  if (!is.null(targetRelAbund) && any(captured=="target")) {
+    if (coda::is.mcmc(targetRelAbund) || coda::is.mcmc.list(targetRelAbund)) {
+      targetRelAbund <- as.matrix(targetRelAbund)
+    }
+    if (is.matrix(targetRelAbund) && dim(targetRelAbund)[1]>1) {
+      abundFixed <- FALSE
+      if (dim(targetRelAbund)[2]>nTargetSites)
+        abundParams <- paste('relN[', 1:nTargetSites, ']', sep='')
+      else if (dim(targetRelAbund)[2]==nTargetSites)
+        abundParams <- 1:nTargetSites
+      else
+        stop('Number of target sites must be constant between sites and abundance')
+      if (dim(targetRelAbund)[1] >= nBoot)
+        abundRows <- round(seq(from = 1, to = dim(targetRelAbund)[1],
+                                      length.out = nBoot))
+      else
+        stop("You need at least nSamples rows to targetRelAbund")
+      targetRelAbund <- as.matrix(targetRelAbund[abundRows, abundParams])
+      abundBase <- colMeans(targetRelAbund)
+    }
+    else {
+      abundFixed <- TRUE
+      if (length(targetRelAbund)!=nTargetSites)
+        stop('Number of target sites must be constant between sites and abundance')
+      abundBase <- targetRelAbund
+      targetRelAbund <- matrix(targetRelAbund, nBoot, nTargetSites, TRUE)
+    }
 
+    weights <- array(0, c(nBoot, nAnimals))
+    if (length(dim(targetAssignment))==2) {
+      ta <- apply(targetAssignment, 1, which.max)
+    }
+    else
+      ta <- targetAssignment
+    nOriginAnimals <- sum(captured != "target")
+    nTargetAnimals <- rep(NA, nTargetSites)
+    for (i in 1:nTargetSites) {
+      nTargetAnimals[i] <- sum(captured=="target" & ta==i)
+      if (nTargetAnimals[i] > 0)
+        weights[ , captured=="target" & ta==i] <- targetRelAbund[ , i] /
+          nTargetAnimals[i] * (nAnimals - nOriginAnimals) / nAnimals
+    }
+    if (nOriginAnimals>0) {
+      if (all(nTargetAnimals>0))
+        weights[ , captured!="target"] <- 1/nAnimals
+      else {
+        t0 <- which(nTargetAnimals>0)
+        weights[ , captured!="target"] <- 1/nAnimals +
+          rowSums(targetRelAbund[ , t0]) *
+          sum(nTargetAnimals) / nAnimals / nOriginAnimals
+        # weights[captured!="target" & ta %in% t0] <- (1 - sum(weights)) /
+        #   sum(captured!="target" & ta %in% t0)
+        if (sum(captured!="target" & ta %in% t0) == 0)
+          warning("Not all target sites have likely data. Estimates will be biased.")
+        if (verbose > 0){
+          print(colMeans(weights))
+          print(rowSums(weights))
+        }
+      }
+    }
+    else if (any(nTargetAnimals==0)) {
+      warning("Not all target sites have data. Estimates will be biased.")
+    }
+  }
+  else {
+    weights <- NULL
+    if (any(captured!="origin"))
+      warning("Unless target site data were collected in proportion to abundance ",
+              "at those sites, estimates will be biased. We recommend including ",
+              "an estimate of target site relative abundance with the ",
+              "targetRelAbund argument, to allow resampling in proportion to ",
+              "abundance.")
+  }
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
@@ -844,7 +933,7 @@ estTransitionBoot <- function(originSites = NULL,
     origin.sample <- 'Filler' # Start with one origin site
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
-      animal.sample <- sample.int(nAnimals, replace=TRUE)
+      animal.sample <- sample.int(nAnimals, replace=TRUE, prob = weights[boot,])
       if (any(captured[animal.sample]!='origin')) {
         if (length(dim(originAssignment))==2)
           assignment <- originAssignment[animal.sample, , drop = FALSE]
@@ -1155,8 +1244,41 @@ estTransitionBoot <- function(originSites = NULL,
 #' @param nThin For band return data, \code{estTransition} runs a \code{JAGS}
 #'  multinomial non-Markovian model, for which it needs the thinning rate.
 #'  Default 1
-#' @param dataOverlapSetting
-#' @param fixedZero
+#' @param dataOverlapSetting When there is more than one type of data, this
+#'  setting allows the user some flexibility for clarifying which type(s) of
+#'  data apply to which animals. Setting "dummy" (the default) indicates that
+#'  there are dummy values within each dataset for the animals that isGL,
+#'  isTelemetry, etc. don't have that data type (FALSE values). If no animals
+#'  have a data type, no dummy values are required. If no animals have more than
+#'  one type of data, the user can simplify processing their data by choosing
+#'  setting "none" here. In this case, there should be no dummy values, and only
+#'  the animals with a type of data should be included in that dataset. The
+#'  third setting ("named") is not yet implemented, but will eventually allow
+#'  another way to allow animals with more than one type of data with named
+#'  animals linking records.
+#' @param fixedZero When the user has a priori reasons to believe one or more
+#'  transition probabilities are zero, they can indicate those here, and the
+#'  model will keep them fixed at zero. This argument should be a matrix with
+#'  two columns (for row and column of the transition probability matrix) and
+#'  number of transitions being fixed to zero rows. For MCMC modeling (banding
+#'  data), substantial evidence that a transition fixed to zero isn't zero may
+#'  cause an error. For bootstrap modeling (all other data types), a warning
+#'  will come up if any bootstrap runs generate the transition fixed to zero,
+#'  and the function will quit with an error if a very large number of runs do
+#'  (> 10 * nSamples). Fixing transitions to zero may also slow down the
+#'  bootstrap model somewhat.
+#' @param targetRelAbund When some/all data have location error at origin sites
+#'  (i.e., GL, raster, or probability table data with captured = "target" or
+#'  "none"), unless the data were collected in proportion to abundance at target
+#'  sites, simulation work indicates substantial bias in transition probability
+#'  estimates can result. However, if these data are resampled in proportion to
+#'  target site abundance, this bias is removed. This argument allows the user
+#'  to provide an estimate of relative abundance at the target sites. Either
+#'  a numeric vector of length [number target sites] that sums to 1, or an mcmc
+#'  object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
+#'  with at least \code{nSamples} rows. If there are more than [number target
+#'  sites] columns, the relevant columns should be labeled "relN[1]" through
+#'  "relN[number target sites]"
 #'
 #' @return \code{estTransition} returns a list with the elements:
 #' \describe{
@@ -1175,7 +1297,7 @@ estTransitionBoot <- function(originSites = NULL,
 #'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
 #'      for psi. May be preferable to \code{simpleCI} when \code{mean} is the
 #'      best estimate of psi. \code{simpleCI} is preferred when
-#'      \code{median} is a better estimator. When \code{meanMC==medianMC},
+#'      \code{median} is a better estimator. When the mean and median are equal,
 #'      these should be identical.  Estimated as the
 #'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
 #'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
@@ -1219,7 +1341,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           maxTries = 300,
                           nBurnin = 5000, nChains = 3, nThin = 1,
                           dataOverlapSetting = c("dummy", "none", "named"),
-                          fixedZero = NULL) {
+                          fixedZero = NULL,
+                          targetRelAbund = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   if (is.null(banded)) {
     psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
@@ -1240,7 +1363,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              resampleProjection = resampleProjection,
                              maxTries = maxTries,
                              dataOverlapSetting = dataOverlapSetting,
-                             fixedZero = fixedZero)
+                             fixedZero = fixedZero,
+                             targetRelAbund = targetRelAbund)
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,

@@ -16,8 +16,7 @@ simGLData(
   geoVCovOrigin = NULL,
   S = 1,
   p = list(1, 1),
-  requireEveryOrigin = FALSE,
-  verbose = 0
+  requireEveryOrigin = FALSE
 )
 }
 \arguments{
@@ -76,13 +75,31 @@ vector of length W (if recapture depends on target site), or a single
 number (if recapture is the same for all animals released on target
 sites). Default list(1, 1) (all animals that survive are recaptured).}
 
-\item{requireEveryOrigin}{if TRUE, the function will throw an error if it
+\item{requireEveryOrigin}{If TRUE, the function will throw an error if it
 looks like at least one origin site has no animals released in or
 migrating to it, or if it can, keep simulating until representation is
 met. This helps estTransition or estMC not throw an error. Default FALSE.}
 }
 \value{
-
+\code{simGLData} returns a list with the elements:
+\describe{
+  \item{\code{originAssignment}}{Vector with true origin site of each animal}
+  \item{\code{targetAssignment}}{Vector with true target site of each animal}
+  \item{\code{originPointsTrue}}{True origin location of each animal, type sf,
+   same projection as originSites}
+  \item{\code{targetPointsTrue}}{True target location of each animal, type sf,
+   same projection as targetSites}
+  \item{\code{originPointsObs}}{Observed origin location of each animal that
+   survived and was recaptured, type sf, same projection as originSites. Same
+   as originPointsTrue for animals captured at origin sites when S and p==1}
+  \item{\code{targetPointsObs}}{Observed target location of each animal that
+   survived and was recaptured, type sf, same projection as targetSites. Same
+   as targetPointsTrue for animals captured at target sites when S and p==1}
+  \item{\code{lived}}{0/1 vector for each animal, indicating which survived}
+  \item{\code{recaptured}}{0/1 vector for each animal, indicating which were
+   recaptured}
+  \item{\code{input}}{List containing the inputs to function}
+}
 }
 \description{
 Simulate geolocator data

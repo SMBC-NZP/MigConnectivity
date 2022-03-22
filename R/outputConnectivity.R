@@ -99,6 +99,32 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #   cat("   point calculation (not considering error):",
     #       format(x$pointCorr, digits = digits), '\n')
   }
+  if (inherits(x, "estGamma")) {
+    cat("\nReverse transition probability (gamma) estimates (mean):\n")
+    print(x$gamma$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$gamma$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$gamma$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$gamma$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$gamma$mean),
+                dimnames = list(x$input$targetNames, x$input$originNames)),
+          quote = FALSE)
+  }
+  if (inherits(x, "estTargetRelAbund")) {
+    cat("\nTarget site relative abundance estimates (mean):\n")
+    print(x$targetRelAbund$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$targetRelAbund$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$targetRelAbund$simpleCI[1,],digits = digits, trim = TRUE),
+                      format(x$targetRelAbund$simpleCI[2,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$gamma$mean)[1],
+                dimnames = list(x$input$targetNames)),
+          quote = FALSE)
+  }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estPsi"))
     cat("For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).\n")

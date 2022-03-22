@@ -288,6 +288,8 @@ locSample <- function(isGL,
       site.sample1 <- apply(assignment[isProb & toSampleBool, , drop = FALSE],
                             1, sample.int, n = ncol(assignment), size = nSim,
                             replace = TRUE)
+      if (is.null(dim(site.sample1)))
+        site.sample1 <- matrix(site.sample1, 1)
     }
 # IF ALL THE POINTS ARE WITHIN SITES #
     # walk through this section #
@@ -426,7 +428,7 @@ locSample <- function(isGL,
     }
     if (any(isProb & !isGL & !isRaster & toSampleBool)){
       site.sample[isProb & !isGL & !isRaster & toSampleBool] <-
-        site.sample1[1, !(which(isProb & toSampleBool) %in% which(isGL | isRaster))]
+        site.sample1[1, !(which(isProb & toSampleBool) %in% which(isGL | isRaster)), drop = FALSE]
     }
     if (any(!isProb & isGL & !isRaster & toSampleBool)){
       if (any(!is.na(good.sample0[!(which(isGL) %in% which(isProb | isRaster))]))){
@@ -1069,3 +1071,178 @@ randomPoints <- function(sites, assignment, geomName = "geometry") {
   return(points)
 }
 
+# Currently called through reversePsiRelAbund (in calcConnectivity.R)
+reverseEstPsiRelAbund <- function(psi, originRelAbund,
+                                  originSites=NULL, targetSites=NULL,
+                                  originNames = NULL, targetNames = NULL,
+                                  nSamples = 1000, row0 = 0, alpha = 0.05) {
+  if (is.matrix(psi)) {
+    psiFixed <- TRUE
+    psiVCV <- NULL
+    nOriginSites <- dim(psi)[1]
+    nTargetSites <- dim(psi)[2]
+    if (is.null(originNames)) {
+      originNames <- dimnames(psi)[[1]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(psi)[[2]]
+    }
+    psiBase <- psi
+    psiIn <- psi
+  }
+  else if (inherits(psi, "mark")) {
+    psiFixed <- FALSE
+    if (!is.numeric(originSites) || !is.numeric(targetSites))
+      stop('Must specify which RMark Psi parameters represent origin and target sites')
+    nOriginSites <- length(originSites)
+    nTargetSites <- length(targetSites)
+    psiVCV <- psi$results$beta.vcv
+    psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
+                                                       se=TRUE))[originSites,
+                                                                 targetSites]
+    if (any(diag(psi$results$beta.vcv) < 0))
+      stop("Can't sample model, negative beta variances")
+    psiIn <- psi
+  }
+  else if (is.array(psi)) {
+    if (length(dim(psi))!=3)
+      stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
+    psiFixed <- FALSE
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    if (is.null(originNames)) {
+      originNames <- dimnames(psi)[[2]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(psi)[[3]]
+    }
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    psiIn <- psi
+  }
+  else if (inherits(psi, "estPsi") || inherits(psi, "estMC")) {
+    psiFixed <- FALSE
+    if (is.null(originNames)) {
+      originNames <- psi$input$originNames
+    }
+    if (is.null(targetNames)) {
+      targetNames <- psi$input$targetNames
+    }
+    psiIn <- psi
+    psi <- psi$psi$sample
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+  }
+  originRelAbundIn <- originRelAbund
+  if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
+    originRelAbund <- as.matrix(originRelAbund)
+  }
+  if (is.matrix(originRelAbund) && dim(originRelAbund)[1]>1) {
+    abundFixed <- FALSE
+    if (dim(originRelAbund)[2]>nOriginSites)
+      abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
+    else if (dim(originRelAbund)[2]==nOriginSites)
+      abundParams <- 1:nOriginSites
+    else
+      stop('Number of origin sites must be constant between psi and abundance')
+    if (dim(originRelAbund)[1] >= nSamples)
+      abundRows <- round(seq(from = row0 + 1, to = dim(originRelAbund)[1],
+                                    length.out = nSamples))
+    else
+      abundRows <- sample((row0 + 1):dim(originRelAbund)[1], nSamples,
+                          replace = TRUE)
+    originRelAbund <- as.matrix(originRelAbund[abundRows, abundParams])
+    abundBase <- colMeans(originRelAbund)
+  }
+  else {
+    abundFixed <- TRUE
+    if (length(originRelAbund)!=nOriginSites)
+      stop('Number of origin sites must be constant between psi and abundance')
+    abundBase <- originRelAbund
+  }
+  pointRev <- reversePsiRelAbund(psi = psiBase, originRelAbund = abundBase)
+  pointGamma <- pointRev$gamma
+  pointAbund <- pointRev$targetRelAbund
+  gamma <- array(NA, c(nSamples, nTargetSites, nOriginSites),
+                 dimnames = list(NULL, targetNames, originNames))
+  targetRelAbund <- array(NA, c(nSamples, nTargetSites),
+                          dimnames = list(NULL, targetNames))
+  for (i in 1:nSamples) {
+    # Generate random transition probability matrices
+    if (psiFixed)
+      psiNew <- psiBase
+    else if (is.null(psiVCV))
+      psiNew <- psi[psiSamples[i],,]
+    else
+      psiNew <- makePsiRand(psi, originSites, targetSites)
+    # Point estimates of breeding densities
+    if (abundFixed)
+      abundNew <- abundBase
+    else
+      abundNew <- originRelAbund[i, abundParams]
+    # Reverse for new psis and relative breeding densities
+    sampleRev <- reversePsiRelAbund(psi = psiNew, originRelAbund = abundNew)
+    gamma[i, , ] <- sampleRev$gamma
+    targetRelAbund[i, ] <- sampleRev$targetRelAbund
+  }
+  meanGamma <- apply(gamma, 2:3, mean, na.rm=TRUE)
+  medianGamma <- apply(gamma, 2:3, median, na.rm=TRUE)
+  seGamma <- apply(gamma, 2:3, sd, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCIGamma <- apply(gamma, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE, type = 8, names = F)
+  bcCIGamma <- array(NA, dim = c(2, nTargetSites, nOriginSites),
+                     dimnames = list(NULL, targetNames, originNames))
+  for (i in 1:nTargetSites) {
+    for (j in 1:nOriginSites) {
+      gamma.z0 <- qnorm(sum(gamma[, i, j] < meanGamma[i, j], na.rm = T) /
+                        length(which(!is.na(gamma[, i, j]))))
+      bcCIGamma[ , i, j] <- quantile(gamma[, i, j],
+                                     pnorm(2 * gamma.z0 +
+                                             qnorm(c(alpha/2, 1-alpha/2))),
+                                     na.rm=TRUE, type = 8, names = F)
+    }
+  }
+  meanAbund <- apply(targetRelAbund, 2, mean, na.rm=TRUE)
+  medianAbund <- apply(targetRelAbund, 2, median, na.rm=TRUE)
+  seAbund <- apply(targetRelAbund, 2, sd, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCIAbund <- apply(targetRelAbund, 2, quantile,
+                         probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE, type = 8, names = F)
+  bcCIAbund <- array(NA, dim = c(2, nTargetSites),
+                     dimnames = list(NULL, targetNames))
+  for (i in 1:nTargetSites) {
+    abund.z0 <- qnorm(sum(targetRelAbund[, i] < meanAbund[i], na.rm = T) /
+                        length(which(!is.na(targetRelAbund[, i]))))
+    bcCIAbund[ , i] <- quantile(targetRelAbund[, i],
+                                pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                na.rm=TRUE, type = 8, names = F)
+  }
+  rev <- list(gamma = list(sample = gamma, mean = meanGamma, se = seGamma,
+                           simpleCI = simpleCIGamma, bcCI = bcCIGamma,
+                           median = medianGamma, point = pointGamma),
+              targetRelAbund = list(sample = targetRelAbund, mean = meanAbund,
+                                    se = seAbund, simpleCI = simpleCIAbund,
+                                    bcCI = bcCIAbund, median = medianAbund,
+                                    point = pointAbund),
+              input = list(psi = psiIn, originRelAbund = originRelAbundIn,
+                           originSites = originSites, targetSites = targetSites,
+                           originNames = originNames, targetNames = targetNames,
+                           nSamples = nSamples, row0 = row0, alpha = alpha))
+  class(rev) <- c("estGamma", "estTargetRelAbund", "estMigConnectivity")
+  return(rev)
+
+}

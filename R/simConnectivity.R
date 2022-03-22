@@ -378,11 +378,30 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 #'    vector of length W (if recapture depends on target site), or a single
 #'    number (if recapture is the same for all animals released on target
 #'    sites). Default list(1, 1) (all animals that survive are recaptured).
-#' @param requireEveryOrigin if TRUE, the function will throw an error if it
+#' @param requireEveryOrigin If TRUE, the function will throw an error if it
 #'    looks like at least one origin site has no animals released in or
 #'    migrating to it, or if it can, keep simulating until representation is
 #'    met. This helps estTransition or estMC not throw an error. Default FALSE.
-#' @return
+#' @return \code{simGLData} returns a list with the elements:
+#' \describe{
+#'   \item{\code{originAssignment}}{Vector with true origin site of each animal}
+#'   \item{\code{targetAssignment}}{Vector with true target site of each animal}
+#'   \item{\code{originPointsTrue}}{True origin location of each animal, type sf,
+#'    same projection as originSites}
+#'   \item{\code{targetPointsTrue}}{True target location of each animal, type sf,
+#'    same projection as targetSites}
+#'   \item{\code{originPointsObs}}{Observed origin location of each animal that
+#'    survived and was recaptured, type sf, same projection as originSites. Same
+#'    as originPointsTrue for animals captured at origin sites when S and p==1}
+#'   \item{\code{targetPointsObs}}{Observed target location of each animal that
+#'    survived and was recaptured, type sf, same projection as targetSites. Same
+#'    as targetPointsTrue for animals captured at target sites when S and p==1}
+#'   \item{\code{lived}}{0/1 vector for each animal, indicating which survived}
+#'   \item{\code{recaptured}}{0/1 vector for each animal, indicating which were
+#'    recaptured}
+#'   \item{\code{input}}{List containing the inputs to function}
+#' }
+
 #' @export
 #'
 # @examples
@@ -392,8 +411,7 @@ simGLData <- function(psi, originRelAbund, sampleSize,
                   geoBias = NULL, geoVCov = NULL,
                   geoBiasOrigin=NULL, geoVCovOrigin=NULL,
                   S = 1, p = list(1, 1),
-                  requireEveryOrigin = FALSE,
-                  verbose = 0) {
+                  requireEveryOrigin = FALSE) {
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
   rev <- MigConnectivity:::reversePsiRelAbund(psi, originRelAbund)
@@ -447,8 +465,6 @@ simGLData <- function(psi, originRelAbund, sampleSize,
     oa1 <- sort(unique(originAssignment))
     runWell <- !requireEveryOrigin || any(captured=="target") ||
       isTRUE(all.equal(oa1, 1:nOriginSites))
-    if (!runWell && verbose > 0)
-      cat(oa1, "\n")
   }
 
 
@@ -538,6 +554,8 @@ simGLData <- function(psi, originRelAbund, sampleSize,
 #'   enlarge regions, negative buffers make regions smaller. Only used when
 #'   \code{bufferRegions=TRUE}.
 #' @param popNames - a vector the same length as popBoundaries
+#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#'   gives updates on stage of process.
 #'
 #' @return returns a rasterStack probability surface.
 #' @export
@@ -676,16 +694,12 @@ simGeneticPops <- function(popBoundaries,
 #'
 #' @param popBoundaries - a list containing polygons that represent the
 #'   boundaries of each region
-#'
-#' @param bufferedBoundaries = buffers applied to populations to increase assignment
-#'                      uncertainty. Users need to remove potential overlapping
-#'                      regions where assignment is not possible
-#'
+#' @param bufferedBoundaries = buffers applied to populations to increase
+#'   assignment uncertainty. Users need to remove potential overlapping regions
+#'   where assignment is not possible
 #' @param maskBoundaries = list of polygons that confines genetic uncertainty.
-#'                  length of list = length of bufferedBoundaries/popBoundaries
-#'                  The same polygon could be used for multiple 'populations' to
-#'                  ensure overlap.
-#'
+#'   length of list = length of bufferedBoundaries/popBoundaries. The same
+#'   polygon could be used for multiple 'populations' to ensure overlap
 #' @param popBoundaries = population boundaries - no buffers applied.
 #' @param npts - number of random points used to generate a kernel density
 #'   surface within each region
@@ -696,6 +710,8 @@ simGeneticPops <- function(popBoundaries,
 #'   enlarge regions, negative buffers make regions smaller. Only used when
 #'   \code{bufferRegions=TRUE}.
 #' @param popNames - a vector the same length as popBoundaries
+#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#'   gives updates on stage of process.
 #'
 #' @return returns a rasterStack probability surface.
 #' @export
@@ -849,20 +865,44 @@ simGeneticPops_Overlap <- function(
   return(list(genStack = genStack,
               popRast = popBinary))
 }
+
 #' Simulate animal genoscape data for estimating migratory connectivity
 #'
-#' @param genPops
-#' @param psi
-#' @param originRelAbund
-#' @param sampleSize
-#' @param originSites
-#' @param targetSites
-#' @param captured
-#' @param requireEveryOrigin
+#' @param genPops Output of function \code{\link{simGeneticPops}}
+#' @param psi Transition probabilities between B origin sites and W target
+#'  sites. B by W matrix
+#' @param originRelAbund Vector of relative abundances at B origin sites
+#' @param sampleSize Either the total number of data points to simulate or a
+#'  vector with the number at each target or origin site. If only the total is
+#'  provided, sampling will be done in proportion to abundance
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#'  geographic representation of sites in the origin season
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#'  geographic representation of sites in the target season
+#' @param captured Either "target" (the default) or "origin", indicating which
+#'  side animal data were collected on
+#' @param requireEveryOrigin If TRUE, the function will throw an error if it
+#'    looks like at least one origin site has no animals released in or
+#'    migrating to it, or if it can, keep simulating until representation is
+#'    met. This helps estTransition or estMC not throw an error. Default FALSE.
 #' @param resampleNAs if TRUE (default) re-samples locations until no NAs
-#'                    found in the genetic probabilities. If \code{FALSE} equal
-#'                    probability is assigned to all regions.
-#' @return
+#'   found in the genetic probabilities. If \code{FALSE} equal probability is
+#'   assigned to all regions.
+#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#'   gives updates on stage of process.
+#' @return \code{simGeneticData} returns a list with the elements:
+#' \describe{
+#'   \item{\code{originAssignment}}{Vector with true origin site of each animal}
+#'   \item{\code{targetAssignment}}{Vector with true target site of each animal}
+#'   \item{\code{originPointsTrue}}{True origin location of each animal, type sf,
+#'    same projection as originSites}
+#'   \item{\code{targetPointsTrue}}{True target location of each animal, type sf,
+#'    same projection as targetSites}
+#'   \item{\code{genProbs}}{Table of assignment site probabilities for each
+#'    animal}
+#'   \item{\code{genRasters}}{raster stack?}
+#'   \item{\code{input}}{List containing the inputs to function}
+#' }
 #' @export
 #'
 # @examples
@@ -1043,3 +1083,105 @@ simGeneticData <- function(genPops,
                            targetSites = targetSites,
                            captured = captured)))
 }
+
+#' Simulate Dirichlet-based probability table data
+#'
+#' @param psi Transition probabilities between B origin sites and W target
+#'  sites. B by W matrix
+#' @param originRelAbund Vector of relative abundances at B origin sites
+#' @param sampleSize Either the total number of data points to simulate or a
+#'  vector with the number at each target or origin site. If only the total is
+#'  provided, sampling will be done in proportion to abundance
+#' @param shapes If captured == "target", a B by B matrix, each row of which is
+#'  the shape parameters for the Dirichlet distribution of an animal whose true
+#'  origin assignment is that row's. If captured == "origin", a W by W matrix,
+#'  each row of which is the shape parameters for the Dirichlet distribution of
+#'  an animal whose true target assignment is that row's.
+#' @param captured Either "target" (the default) or "origin", indicating which
+#'  side animal data were collected on
+#' @param requireEveryOrigin If TRUE, the function will throw an error if it
+#'    looks like at least one origin site has no animals released in or
+#'    migrating to it, or if it can, keep simulating until representation is
+#'    met. This helps estTransition or estMC not throw an error. Default FALSE
+#'
+#' @return \code{simProbData} returns a list with the elements:
+#' \describe{
+#'   \item{\code{originAssignment}}{Vector with true origin site of each animal}
+#'   \item{\code{targetAssignment}}{Vector with true target site of each animal}
+#'   \item{\code{genProbs}}{Table of assignment site probabilities for each
+#'    animal}
+#'   \item{\code{genRasters}}{raster stack?}
+#'   \item{\code{input}}{List containing the inputs to function}
+#' }
+
+#' @export
+#'
+#' @examples
+simProbData <- function(psi,
+                        originRelAbund,
+                        sampleSize,
+                        shapes,
+                        captured = "target",
+                        requireEveryOrigin = FALSE) {
+  nOriginSites <- nrow(psi)
+  nTargetSites <- ncol(psi)
+  rev <- reversePsiRelAbund(psi, originRelAbund)
+  gamma <- rev$gamma
+  targetRelAbund <- rev$targetRelAbund
+  nAnimals <- sum(sampleSize)
+  if (length(captured)>1)
+    captured <- captured[1]
+  targetAssignment <- rep(NA, nAnimals)
+  originAssignment <- rep(NA, nAnimals)
+  if (captured=="origin" && length(sampleSize)>1){
+    originAssignment <- rep(1:nOriginSites, sampleSize)
+    if (requireEveryOrigin){
+      if (any(sampleSize < 1))
+        stop("Some origin site or sites have no samples ", sampleSize)
+    }
+  }
+  if (captured=="target" && length(sampleSize)>1){
+    targetAssignment <- rep(1:nTargetSites, sampleSize)
+  }
+
+  runWell <- FALSE
+  while (!runWell){
+    for (a in 1:nAnimals) {
+      if (captured=="origin") {
+        if (is.na(originAssignment[a]))
+          originAssignment[a] <- sample.int(nOriginSites, 1, prob = originRelAbund)
+        targetAssignment[a] <- sample.int(nTargetSites, 1, prob = psi[originAssignment[a], ])
+      }
+      else {
+        if (is.na(targetAssignment[a]))
+          targetAssignment[a] <- sample.int(nTargetSites, 1, prob = targetRelAbund)
+        originAssignment[a] <- sample.int(nOriginSites, 1, prob = gamma[targetAssignment[a], ])
+      }
+    }
+    runWell <- !requireEveryOrigin || captured=="target" ||
+      all.equal(unique(originAssignment), 1:nOriginSites)
+  }
+
+  if (captured == "target") {
+    genProbs <- array(NA, c(nAnimals, nOriginSites))
+    for (a in 1:nAnimals) {
+      genProbs[a, ] <- VGAM::rdiric(1, shapes[originAssignment[a], ])
+    }
+  }
+  else {
+    genProbs <- array(NA, c(nAnimals, nTargetSites))
+    for (a in 1:nAnimals) {
+      genProbs[a, ] <- VGAM::rdiric(1, shapes[targetAssignment[a], ])
+    }
+  }
+
+  return(list(originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              genProbs = genProbs,
+              input = list(psi = psi,
+                           originRelAbund = originRelAbund,
+                           captured = captured,
+                           shapes = shapes)))
+}
+
+

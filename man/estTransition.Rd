@@ -38,7 +38,8 @@ estTransition(
   nChains = 3,
   nThin = 1,
   dataOverlapSetting = c("dummy", "none", "named"),
-  fixedZero = NULL
+  fixedZero = NULL,
+  targetRelAbund = NULL
 )
 }
 \arguments{
@@ -209,7 +210,43 @@ chains (to test for convergence). Default 3}
 multinomial non-Markovian model, for which it needs the thinning rate.
 Default 1}
 
-\item{fixedZero}{}
+\item{dataOverlapSetting}{When there is more than one type of data, this
+setting allows the user some flexibility for clarifying which type(s) of
+data apply to which animals. Setting "dummy" (the default) indicates that
+there are dummy values within each dataset for the animals that isGL,
+isTelemetry, etc. don't have that data type (FALSE values). If no animals
+have a data type, no dummy values are required. If no animals have more than
+one type of data, the user can simplify processing their data by choosing
+setting "none" here. In this case, there should be no dummy values, and only
+the animals with a type of data should be included in that dataset. The
+third setting ("named") is not yet implemented, but will eventually allow
+another way to allow animals with more than one type of data with named
+animals linking records.}
+
+\item{fixedZero}{When the user has a priori reasons to believe one or more
+transition probabilities are zero, they can indicate those here, and the
+model will keep them fixed at zero. This argument should be a matrix with
+two columns (for row and column of the transition probability matrix) and
+number of transitions being fixed to zero rows. For MCMC modeling (banding
+data), substantial evidence that a transition fixed to zero isn't zero may
+cause an error. For bootstrap modeling (all other data types), a warning
+will come up if any bootstrap runs generate the transition fixed to zero,
+and the function will quit with an error if a very large number of runs do
+(> 10 * nSamples). Fixing transitions to zero may also slow down the
+bootstrap model somewhat.}
+
+\item{targetRelAbund}{When some/all data have location error at origin sites
+(i.e., GL, raster, or probability table data with captured = "target" or
+"none"), unless the data were collected in proportion to abundance at target
+sites, simulation work indicates substantial bias in transition probability
+estimates can result. However, if these data are resampled in proportion to
+target site abundance, this bias is removed. This argument allows the user
+to provide an estimate of relative abundance at the target sites. Either
+a numeric vector of length [number target sites] that sums to 1, or an mcmc
+object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
+with at least \code{nSamples} rows. If there are more than [number target
+sites] columns, the relevant columns should be labeled "relN[1]" through
+"relN[number target sites]"}
 }
 \value{
 \code{estTransition} returns a list with the elements:
@@ -229,7 +266,7 @@ Default 1}
    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
      for psi. May be preferable to \code{simpleCI} when \code{mean} is the
      best estimate of psi. \code{simpleCI} is preferred when
-     \code{median} is a better estimator. When \code{meanMC==medianMC},
+     \code{median} is a better estimator. When the mean and median are equal,
      these should be identical.  Estimated as the
      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},

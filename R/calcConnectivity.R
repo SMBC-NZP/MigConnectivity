@@ -272,18 +272,107 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
   return(list(psi=psiMat, MC=MC))
 }
 
-reversePsiRelAbund <- function(psi, originRelAbund) {
+#' Reverse transition probabilities and origin relative abundance
+#'
+#' Reverse transition probabilities (psi) and origin relative abundance
+#' (originRelAbund) estimates to calculate or estimate target site to origin
+#' site transition probabilities (gamma) and target site relative abundances
+#' (targetRelAbund). If either psi or originRelAbund is an estimate with
+#' sampling uncertainty expressed, this function will propagate that
+#' uncertainty to provide true estimates of gamma and targetRelAbund; otherwise
+#' (if both are simple point estimates), it will also provide point estimates.
+#'
+#' @param psi Transition probabilities between B origin and W target sites.
+#'  Either a matrix with B rows and W columns where rows sum to 1, an array with
+#'  dimensions x, B, and W (with x samples of the transition probability matrix
+#'  from another model), an 'estPsi' object (result of calling estTransition),
+#'  or a MARK object with estimates of transition probabilities
+#' @param originRelAbund Relative abundance estimates at B origin sites. Either
+#'  a numeric vector of length B that sums to 1 or an mcmc object with at least
+#'  \code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'
+#' @param originSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are origin
+#' @param targetSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are target
+#' @param originNames Vector of names for the origin sites. If not provided, the
+#'  function will try to get them from psi
+#' @param targetNames Vector of names for the target sites. If not provided, the
+#'  function will try to get them from psi
+#' @param nSamples Number of times to resample \code{psi} and/or
+#'  \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
+#'  higher values here will do so with more precision
+#' @param row0 If \code{originRelAbund} is an mcmc object or array, this can be
+#'  set to 0 (default) or any greater integer to specify where to stop ignoring
+#'  samples (additional "burn-in")
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95 percent CI
+#'
+#' @return If both psi and originRelAbund are simple point estimates,
+#' \code{reversePsiRelAbund} returns a list with point estimates of gamma and
+#' targetRelAbund. Otherwise, it returns a list with the elements:
+#' \describe{
+#'   \item{\code{gamma}}{List containing estimates of reverse transition
+#'   probabilities:
+#'   \itemize{
+#'    \item{\code{sample}} Array of sampled values for gamma. \code{nSamples} x
+#'      [number of target sites] x [number of origin sites]. Provided to allow
+#'      the user to compute own summary statistics.
+#'    \item{\code{mean}} Main estimate of gamma matrix. [number of target sites]
+#'      x [number of origin sites].
+#'    \item{\code{se}} Standard error of gamma, estimated from SD of
+#'      \code{gamma$sample}.
+#'    \item{\code{simpleCI}} \code{1 - alpha} confidence interval for gamma,
+#'      estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'      \code{gamma$sample}.
+#'    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'      for gamma. May be preferable to \code{simpleCI} when \code{mean} is the
+#'      best estimate of gamma. \code{simpleCI} is preferred when
+#'      \code{median} is a better estimator. When the mean and median are equal,
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
+#'      where z0 is the proportion of \code{sample < mean}.
+#'    \item{\code{median}} Median estimate of gamma matrix.
+#'    \item{\code{point}} Simple point estimate of gamma matrix, not accounting
+#'      for sampling error.
+#'   }
+#'   }
+#'   \item{\code{targetRelAbund}}{List containing estimates of relative
+#'    abundance at target sites. Items within are the same as within gamma,
+#'    except for having one fewer dimensions.}
+#'   \item{\code{input}}{List containing the inputs to \code{reversePsiRelAbund}.}
+#' }
+#' @export
+#'
+#' @example inst/examples/reversePsiRelAbundExamples.R
+#'
+reversePsiRelAbund <- function(psi, originRelAbund,
+                               originSites=NULL, targetSites=NULL,
+                               originNames = NULL, targetNames = NULL,
+                               nSamples = 1000, row0 = 0, alpha = 0.05) {
   if (is.matrix(psi) && is.numeric(originRelAbund)) {
     nOriginSites <- nrow(psi)
+    if (is.null(originNames)) {
+      originNames <- dimnames(psi)[[1]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(psi)[[2]]
+    }
     if (length(originRelAbund) != nOriginSites ||
         !isTRUE(all.equal(sum(originRelAbund), 1, tolerance = 1e-6)))
       stop('originRelAbund must be a vector with [number of origin sites/number of rows in psi] values that sum to 1.')
     gamma <- t(prop.table(sweep(psi, 1, originRelAbund, "*"), 2))
     targetRelAbund <- colSums(apply(psi, 2, "*", originRelAbund))
-    rownames(gamma) <- names(targetRelAbund) <- colnames(psi)
+    rownames(gamma) <- names(targetRelAbund) <- targetNames
+    colnames(gamma) <- originNames
     return(list(gamma = gamma, targetRelAbund = targetRelAbund))
   }
-  # Future function?
-  # else
-  #   return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund))
+  else
+    return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund,
+                                 originSites=originSites,
+                                 targetSites=targetSites,
+                                 originNames = originNames,
+                                 targetNames = targetNames,
+                                 nSamples = nSamples, row0 = row0,
+                                 alpha = alpha))
 }
