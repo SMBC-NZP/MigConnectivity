@@ -1116,7 +1116,7 @@ simGeneticData <- function(genPops,
 
 #' @export
 #'
-#' @examples
+# @examples
 simProbData <- function(psi,
                         originRelAbund,
                         sampleSize,

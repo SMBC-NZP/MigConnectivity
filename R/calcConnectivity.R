@@ -274,13 +274,16 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 
 #' Reverse transition probabilities and origin relative abundance
 #'
-#' Reverse transition probabilities (psi) and origin relative abundance
-#' (originRelAbund) estimates to calculate or estimate target site to origin
-#' site transition probabilities (gamma) and target site relative abundances
-#' (targetRelAbund). If either psi or originRelAbund is an estimate with
-#' sampling uncertainty expressed, this function will propagate that
-#' uncertainty to provide true estimates of gamma and targetRelAbund; otherwise
-#' (if both are simple point estimates), it will also provide point estimates.
+#' Reverse transition probabilities (psi; sum to 1 for each origin site) and
+#' origin relative abundance (originRelAbund; sum to 1 overall) estimates to
+#' calculate or estimate target site to origin site transition probabilities
+#' (gamma; sum to 1 for each target site), target site relative abundances
+#' (targetRelAbund; sum to 1 overall), and origin/target site combination
+#' probabilities (pi; sum to 1 overall). If either psi or originRelAbund is an
+#' estimate with sampling uncertainty expressed, this function will propagate
+#' that uncertainty to provide true estimates of gamma, targetRelAbund, and pi;
+#' otherwise (if both are simple point estimates), it will also provide point
+#' estimates.
 #'
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1, an array with
@@ -339,7 +342,10 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 #'   }
 #'   \item{\code{targetRelAbund}}{List containing estimates of relative
 #'    abundance at target sites. Items within are the same as within gamma,
-#'    except for having one fewer dimensions.}
+#'    except for having one fewer dimension.}
+#'   \item{\code{pi}}{List containing estimates of origin/target site
+#'    combination probabilities (sum to 1). Items within are the same as within
+#'    gamma, except for reversing dimensions (same order as psi).}
 #'   \item{\code{input}}{List containing the inputs to \code{reversePsiRelAbund}.}
 #' }
 #' @export
@@ -361,11 +367,11 @@ reversePsiRelAbund <- function(psi, originRelAbund,
     if (length(originRelAbund) != nOriginSites ||
         !isTRUE(all.equal(sum(originRelAbund), 1, tolerance = 1e-6)))
       stop('originRelAbund must be a vector with [number of origin sites/number of rows in psi] values that sum to 1.')
-    gamma <- t(prop.table(sweep(psi, 1, originRelAbund, "*"), 2))
-    targetRelAbund <- colSums(apply(psi, 2, "*", originRelAbund))
-    rownames(gamma) <- names(targetRelAbund) <- targetNames
-    colnames(gamma) <- originNames
-    return(list(gamma = gamma, targetRelAbund = targetRelAbund))
+    pi <- sweep(psi, 1, originRelAbund, "*")
+    dimnames(pi) <- list(originNames, targetNames)
+    gamma <- t(prop.table(pi, 2))
+    targetRelAbund <- colSums(pi)
+    return(list(gamma = gamma, targetRelAbund = targetRelAbund, pi = pi))
   }
   else
     return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund,

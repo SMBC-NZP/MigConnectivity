@@ -1175,10 +1175,13 @@ reverseEstPsiRelAbund <- function(psi, originRelAbund,
   pointRev <- reversePsiRelAbund(psi = psiBase, originRelAbund = abundBase)
   pointGamma <- pointRev$gamma
   pointAbund <- pointRev$targetRelAbund
+  pointPi <- pointRev$pi
   gamma <- array(NA, c(nSamples, nTargetSites, nOriginSites),
                  dimnames = list(NULL, targetNames, originNames))
   targetRelAbund <- array(NA, c(nSamples, nTargetSites),
                           dimnames = list(NULL, targetNames))
+  pi <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+              dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nSamples) {
     # Generate random transition probability matrices
     if (psiFixed)
@@ -1196,6 +1199,7 @@ reverseEstPsiRelAbund <- function(psi, originRelAbund,
     sampleRev <- reversePsiRelAbund(psi = psiNew, originRelAbund = abundNew)
     gamma[i, , ] <- sampleRev$gamma
     targetRelAbund[i, ] <- sampleRev$targetRelAbund
+    pi[i, , ] <- sampleRev$pi
   }
   meanGamma <- apply(gamma, 2:3, mean, na.rm=TRUE)
   medianGamma <- apply(gamma, 2:3, median, na.rm=TRUE)
@@ -1231,6 +1235,22 @@ reverseEstPsiRelAbund <- function(psi, originRelAbund,
                                 pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
                                 na.rm=TRUE, type = 8, names = F)
   }
+  meanPi <- apply(pi, 2:3, mean)
+  medianPi <- apply(pi, 2:3, median)
+  sePi <- apply(pi, 2:3, sd)
+  simpleCIPi <- apply(pi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE, type = 8, names = F)
+  bcCIPi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                   dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      pi.z0 <- qnorm(sum(pi[, i, j] < meanPi[i, j], na.rm = T) /
+                        length(which(!is.na(pi[, i, j]))))
+      bcCIPi[ , i, j] <- quantile(pi[, i, j],
+                                   pnorm(2 * pi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, type = 8, names = F)
+    }
+  }
   rev <- list(gamma = list(sample = gamma, mean = meanGamma, se = seGamma,
                            simpleCI = simpleCIGamma, bcCI = bcCIGamma,
                            median = medianGamma, point = pointGamma),
@@ -1238,11 +1258,14 @@ reverseEstPsiRelAbund <- function(psi, originRelAbund,
                                     se = seAbund, simpleCI = simpleCIAbund,
                                     bcCI = bcCIAbund, median = medianAbund,
                                     point = pointAbund),
+              pi = list(sample = pi, mean = meanPi, se = sePi,
+                         simpleCI = simpleCIPi, bcCI = bcCIPi,
+                         median = medianPi, point = pointPi),
               input = list(psi = psiIn, originRelAbund = originRelAbundIn,
                            originSites = originSites, targetSites = targetSites,
                            originNames = originNames, targetNames = targetNames,
                            nSamples = nSamples, row0 = row0, alpha = alpha))
-  class(rev) <- c("estGamma", "estTargetRelAbund", "estMigConnectivity")
+  class(rev) <- c("estGamma", "estTargetRelAbund", "estPi", "estMigConnectivity")
   return(rev)
 
 }

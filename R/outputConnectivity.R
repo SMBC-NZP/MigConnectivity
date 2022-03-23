@@ -125,13 +125,30 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
                 dimnames = list(x$input$targetNames)),
           quote = FALSE)
   }
+  if (inherits(x, "estPi")) {
+    cat("\nOrigin/target site combination probability (pi) estimates (mean):\n")
+    print(x$pi$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$pi$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$pi$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$pi$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$pi$mean),
+                dimnames = list(x$input$originNames, x$input$targetNames)),
+          quote = FALSE)
+  }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estPsi"))
     cat("For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).\n")
   else if (inherits(x, "estMC"))
     cat("For more info, try ?estStrength or ?estMC or str(obj_name, max.levels = 2).\n")
-  else
+  else if (inherits(x, "estGamma"))
+    cat("For more info, try ?reversePsiRelAbund or str(obj_name, max.levels = 2).\n")
+  else if (inherits(x, "estMantel"))
     cat("For more info, try ?estMantel or str(obj_name, max.levels = 2).\n")
+  else # In case we left something out...
+    cat("For more info, try str(obj_name, max.levels = 2).\n")
 }
 
 #' @export

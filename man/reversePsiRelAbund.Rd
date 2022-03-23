@@ -83,18 +83,24 @@ targetRelAbund. Otherwise, it returns a list with the elements:
   }
   \item{\code{targetRelAbund}}{List containing estimates of relative
    abundance at target sites. Items within are the same as within gamma,
-   except for having one fewer dimensions.}
+   except for having one fewer dimension.}
+  \item{\code{pi}}{List containing estimates of origin/target site
+   combination probabilities (sum to 1). Items within are the same as within
+   gamma, except for reversing dimensions (same order as psi).}
   \item{\code{input}}{List containing the inputs to \code{reversePsiRelAbund}.}
 }
 }
 \description{
-Reverse transition probabilities (psi) and origin relative abundance
-(originRelAbund) estimates to calculate or estimate target site to origin
-site transition probabilities (gamma) and target site relative abundances
-(targetRelAbund). If either psi or originRelAbund is an estimate with
-sampling uncertainty expressed, this function will propagate that
-uncertainty to provide true estimates of gamma and targetRelAbund; otherwise
-(if both are simple point estimates), it will also provide point estimates.
+Reverse transition probabilities (psi; sum to 1 for each origin site) and
+origin relative abundance (originRelAbund; sum to 1 overall) estimates to
+calculate or estimate target site to origin site transition probabilities
+(gamma; sum to 1 for each target site), target site relative abundances
+(targetRelAbund; sum to 1 overall), and origin/target site combination
+probabilities (pi; sum to 1 overall). If either psi or originRelAbund is an
+estimate with sampling uncertainty expressed, this function will propagate
+that uncertainty to provide true estimates of gamma, targetRelAbund, and pi;
+otherwise (if both are simple point estimates), it will also provide point
+estimates.
 }
 \examples{
 for (i in 1:length(samplePsis)) {
