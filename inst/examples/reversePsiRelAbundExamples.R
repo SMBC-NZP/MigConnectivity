@@ -6,6 +6,7 @@ for (i in 1:length(samplePsis)) {
   print(reversePsiRelAbund(samplePsis[[i]], sampleOriginRelN[[j]]))
  }
 }
+
 COTE_banded <- c(10360, 1787, 2495, 336)
 COTE_reencountered <- matrix(c(12, 0, 38, 15,
                                111, 7, 6, 2,
@@ -18,7 +19,7 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = 60000, nBurnin = 20000)
+                          nSamples = 70000, nBurnin = 20000)
 COTE_psi
 COTE_rev <- reversePsiRelAbund(COTE_psi, sampleOriginRelN[[1]],
                                nSamples = 2000)

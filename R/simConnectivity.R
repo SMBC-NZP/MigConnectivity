@@ -538,27 +538,27 @@ simGLData <- function(psi, originRelAbund, sampleSize,
 ###############################################################################
 # Simulate genetic populations
 ###############################################################################
-#' Simulates genetic population rasters from input polygons
-#'
-#' This code simulates rasters analogous to the genetic surfaces created from
-#' the bird genoscape project
-#'
-#' @param popBoundaries - a list containing polygons that represent the
-#'   boundaries of each region
-#' @param npts - number of random points used to generate a kernel density
-#'   surface within each region
-#' @param res - the desired resolution of the output raster
-#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
-#'   region to avoid or increase overlap.
-#' @param bufferDist - Desired buffer distance in meters. Positive values
-#'   enlarge regions, negative buffers make regions smaller. Only used when
-#'   \code{bufferRegions=TRUE}.
-#' @param popNames - a vector the same length as popBoundaries
-#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
-#'   gives updates on stage of process.
-#'
-#' @return returns a rasterStack probability surface.
-#' @export
+# Simulates genetic population rasters from input polygons
+#
+# This code simulates rasters analogous to the genetic surfaces created from
+# the bird genoscape project
+#
+# @param popBoundaries - a list containing polygons that represent the
+#   boundaries of each region
+# @param npts - number of random points used to generate a kernel density
+#   surface within each region
+# @param res - the desired resolution of the output raster
+# @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
+#   region to avoid or increase overlap.
+# @param bufferDist - Desired buffer distance in meters. Positive values
+#   enlarge regions, negative buffers make regions smaller. Only used when
+#   \code{bufferRegions=TRUE}.
+# @param popNames - a vector the same length as popBoundaries
+# @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#   gives updates on stage of process.
+#
+# @return returns a rasterStack probability surface.
+# do not @export
 
 simGeneticPops <- function(popBoundaries,
                            npts = 1000,
@@ -687,34 +687,34 @@ simGeneticPops <- function(popBoundaries,
 ###############################################################################
 # Simulate genetic populations
 ###############################################################################
-#' Simulates genetic population rasters from input polygons
-#'
-#' This code simulates rasters analogous to the genetic surfaces created from
-#' the bird genoscape project
-#'
-#' @param popBoundaries - a list containing polygons that represent the
-#'   boundaries of each region
-#' @param bufferedBoundaries = buffers applied to populations to increase
-#'   assignment uncertainty. Users need to remove potential overlapping regions
-#'   where assignment is not possible
-#' @param maskBoundaries = list of polygons that confines genetic uncertainty.
-#'   length of list = length of bufferedBoundaries/popBoundaries. The same
-#'   polygon could be used for multiple 'populations' to ensure overlap
-#' @param popBoundaries = population boundaries - no buffers applied.
-#' @param npts - number of random points used to generate a kernel density
-#'   surface within each region
-#' @param res - the desired resolution of the output raster
-#' @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
-#'   region to avoid or increase overlap.
-#' @param bufferDist - Desired buffer distance in meters. Positive values
-#'   enlarge regions, negative buffers make regions smaller. Only used when
-#'   \code{bufferRegions=TRUE}.
-#' @param popNames - a vector the same length as popBoundaries
-#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
-#'   gives updates on stage of process.
-#'
-#' @return returns a rasterStack probability surface.
-#' @export
+# Simulates genetic population rasters from input polygons
+#
+# This code simulates rasters analogous to the genetic surfaces created from
+# the bird genoscape project
+#
+# @param popBoundaries - a list containing polygons that represent the
+#   boundaries of each region
+# @param bufferedBoundaries = buffers applied to populations to increase
+#   assignment uncertainty. Users need to remove potential overlapping regions
+#   where assignment is not possible
+# @param maskBoundaries = list of polygons that confines genetic uncertainty.
+#   length of list = length of bufferedBoundaries/popBoundaries. The same
+#   polygon could be used for multiple 'populations' to ensure overlap
+# @param popBoundaries = population boundaries - no buffers applied.
+# @param npts - number of random points used to generate a kernel density
+#   surface within each region
+# @param res - the desired resolution of the output raster
+# @param bufferRegions boolean if \code{TRUE} a buffer is applied to each
+#   region to avoid or increase overlap.
+# @param bufferDist - Desired buffer distance in meters. Positive values
+#   enlarge regions, negative buffers make regions smaller. Only used when
+#   \code{bufferRegions=TRUE}.
+# @param popNames - a vector the same length as popBoundaries
+# @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#   gives updates on stage of process.
+#
+# @return returns a rasterStack probability surface.
+# do not @export
 
 
 simGeneticPops_Overlap <- function(
@@ -866,45 +866,45 @@ simGeneticPops_Overlap <- function(
               popRast = popBinary))
 }
 
-#' Simulate animal genoscape data for estimating migratory connectivity
-#'
-#' @param genPops Output of function \code{\link{simGeneticPops}}
-#' @param psi Transition probabilities between B origin sites and W target
-#'  sites. B by W matrix
-#' @param originRelAbund Vector of relative abundances at B origin sites
-#' @param sampleSize Either the total number of data points to simulate or a
-#'  vector with the number at each target or origin site. If only the total is
-#'  provided, sampling will be done in proportion to abundance
-#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
-#'  geographic representation of sites in the origin season
-#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
-#'  geographic representation of sites in the target season
-#' @param captured Either "target" (the default) or "origin", indicating which
-#'  side animal data were collected on
-#' @param requireEveryOrigin If TRUE, the function will throw an error if it
-#'    looks like at least one origin site has no animals released in or
-#'    migrating to it, or if it can, keep simulating until representation is
-#'    met. This helps estTransition or estMC not throw an error. Default FALSE.
-#' @param resampleNAs if TRUE (default) re-samples locations until no NAs
-#'   found in the genetic probabilities. If \code{FALSE} equal probability is
-#'   assigned to all regions.
-#' @param verbose - if 0 (default) no output to screen is generated. If > 0,
-#'   gives updates on stage of process.
-#' @return \code{simGeneticData} returns a list with the elements:
-#' \describe{
-#'   \item{\code{originAssignment}}{Vector with true origin site of each animal}
-#'   \item{\code{targetAssignment}}{Vector with true target site of each animal}
-#'   \item{\code{originPointsTrue}}{True origin location of each animal, type sf,
-#'    same projection as originSites}
-#'   \item{\code{targetPointsTrue}}{True target location of each animal, type sf,
-#'    same projection as targetSites}
-#'   \item{\code{genProbs}}{Table of assignment site probabilities for each
-#'    animal}
-#'   \item{\code{genRasters}}{raster stack?}
-#'   \item{\code{input}}{List containing the inputs to function}
-#' }
-#' @export
-#'
+# Simulate animal genoscape data for estimating migratory connectivity
+#
+# @param genPops Output of function \code{\link{simGeneticPops}}
+# @param psi Transition probabilities between B origin sites and W target
+#  sites. B by W matrix
+# @param originRelAbund Vector of relative abundances at B origin sites
+# @param sampleSize Either the total number of data points to simulate or a
+#  vector with the number at each target or origin site. If only the total is
+#  provided, sampling will be done in proportion to abundance
+# @param originSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#  geographic representation of sites in the origin season
+# @param targetSites A polygon spatial layer (sf - MULTIPOLYGON) defining the
+#  geographic representation of sites in the target season
+# @param captured Either "target" (the default) or "origin", indicating which
+#  side animal data were collected on
+# @param requireEveryOrigin If TRUE, the function will throw an error if it
+#    looks like at least one origin site has no animals released in or
+#    migrating to it, or if it can, keep simulating until representation is
+#    met. This helps estTransition or estMC not throw an error. Default FALSE.
+# @param resampleNAs if TRUE (default) re-samples locations until no NAs
+#   found in the genetic probabilities. If \code{FALSE} equal probability is
+#   assigned to all regions.
+# @param verbose - if 0 (default) no output to screen is generated. If > 0,
+#   gives updates on stage of process.
+# @return \code{simGeneticData} returns a list with the elements:
+# \describe{
+#   \item{\code{originAssignment}}{Vector with true origin site of each animal}
+#   \item{\code{targetAssignment}}{Vector with true target site of each animal}
+#   \item{\code{originPointsTrue}}{True origin location of each animal, type sf,
+#    same projection as originSites}
+#   \item{\code{targetPointsTrue}}{True target location of each animal, type sf,
+#    same projection as targetSites}
+#   \item{\code{genProbs}}{Table of assignment site probabilities for each
+#    animal}
+#   \item{\code{genRasters}}{raster stack?}
+#   \item{\code{input}}{List containing the inputs to function}
+# }
+# do not @export
+#
 # @examples
 simGeneticData <- function(genPops,
                            psi,
