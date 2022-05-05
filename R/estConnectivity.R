@@ -300,11 +300,12 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
 }
 
 
-estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
-                            nSamples = 1000, verbose=0,
-                            originNames = NULL, targetNames = NULL,
-                            nThin = 1, nBurnin = 5000, nChains = 3,
-                            fixedZero = NULL) {
+estTransitionJAGS <- function (banded, reencountered,
+                               originAssignment = NULL, targetAssignment = NULL,
+                               alpha = 0.05, nSamples = 1000, verbose=0,
+                               originNames = NULL, targetNames = NULL,
+                               nThin = 1, nBurnin = 5000, nChains = 3,
+                               fixedZero = NULL) {
   nDim <- length(dim(reencountered))
   if (is.null(originNames))
     originNames <- dimnames(reencountered)[[1]]
@@ -322,6 +323,13 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
     # Data
     jags.data <- list(recmat = tmat, npop = nOriginSites,
                       ndest = nTargetSites, nreleased = banded)
+    if (!is.null(originAssignment)) {
+      telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
+                      factor(targetAssignment, levels = 1:nTargetSites))
+      jags.data$telmat <- telmat
+      jags.data$ntel <- as.vector(table(factor(originAssignment,
+                                               levels = 1:nOriginSites)))
+    }
   }
   else {
     nAges <- dim(banded)[2]
@@ -351,7 +359,9 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
   params <- c("psi", "r")
   file <- paste0(find.package('MigConnectivity'),
                ifelse(nAges == 1,
-                      "/JAGS/multinomial_banding_1age.txt",
+                      ifelse(is.null(originAssignment),
+                             "/JAGS/multinomial_banding_1age.txt",
+                             "/JAGS/multinomial_banding_telemetry_1age.txt"),
                       "/JAGS/multinomial_banding.txt"))
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
                       #"inst/JAGS/multinomial_banding_1age.txt",
@@ -432,9 +442,9 @@ estTransitionJAGS <- function (banded, reencountered, alpha = 0.05,
                                       probs = c(alpha/2, 1-alpha/2), type = 8),
                      bcCI = bcCIr, median = out$BUGSoutput$median$r)
   }
-  # adding this is to avoid error but needs to be checked
-  nReleased <- NA
-  results$input <- list(nReleased = nReleased, reencountered = reencountered,
+  results$input <- list(banded = banded, reencountered = reencountered,
+                        originAssignment = originAssignment,
+                        targetAssignment = targetAssignment,
                         sampleSize = sampleSize, alpha = alpha,
                         nSamples = nSamples, verbose=verbose,
                         originNames = originNames, targetNames = targetNames,
@@ -1105,7 +1115,8 @@ estTransitionBoot <- function(originSites = NULL,
 #' between origin sites in one phase of the annual cycle and target sites in
 #' another for migratory animals). Data can be from geolocators (GL) and/or
 #' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
-#' band/ring reencounter data.
+#' band/ring reencounter data. Update: you can now combine banding data with
+#' telemetry data, using the originAssignment and targetAssignment parameters.
 #'
 #' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
 #'  SpatialPolygons) defining the geographic representation of sites in the
@@ -1133,7 +1144,10 @@ estTransitionBoot <- function(originSites = NULL,
 #'  example from genetic population estimates from the rubias package.
 #'  Optional, but some combination of these inputs should be defined. Note that
 #'  if \code{originAssignment} is a probability table, animals with known origin
-#'  sites can have 1 in that column and 0s in all others
+#'  sites can have 1 in that column and 0s in all others. Also note that if
+#'  \code{banded} is supplied, anything in \code{originAssignment} and
+#'  \code{targetAssignment} will be assumed to represent animals tracked via
+#'  telemetry, with known origin and target sites.
 #' @param targetAssignment Assignment of animals to target season sites. Either
 #'  an integer vector with length number of animals tracked or a matrix of
 #'  probabilities with number of animals tracked rows and number of target sites
@@ -1368,11 +1382,14 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
-                         alpha = alpha,
-                         nSamples = nSamples, verbose = verbose,
-                         originNames = originNames, targetNames = targetNames,
-                         nBurnin = nBurnin, nThin = nThin, nChains = nChains,
-                         fixedZero = fixedZero)
+                             originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
+                             alpha = alpha,
+                             nSamples = nSamples, verbose = verbose,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             nBurnin = nBurnin, nThin = nThin,
+                             nChains = nChains, fixedZero = fixedZero)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)

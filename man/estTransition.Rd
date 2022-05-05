@@ -73,7 +73,10 @@ in the target sites where there is uncertainty about their origin site, for
 example from genetic population estimates from the rubias package.
 Optional, but some combination of these inputs should be defined. Note that
 if \code{originAssignment} is a probability table, animals with known origin
-sites can have 1 in that column and 0s in all others}
+sites can have 1 in that column and 0s in all others. Also note that if
+\code{banded} is supplied, anything in \code{originAssignment} and
+\code{targetAssignment} will be assumed to represent animals tracked via
+telemetry, with known origin and target sites.}
 
 \item{targetAssignment}{Assignment of animals to target season sites. Either
 an integer vector with length number of animals tracked or a matrix of
@@ -289,7 +292,8 @@ Estimation and resampling of uncertainty for psi (transition probabilities
 between origin sites in one phase of the annual cycle and target sites in
 another for migratory animals). Data can be from geolocators (GL) and/or
 telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
-band/ring reencounter data.
+band/ring reencounter data. Update: you can now combine banding data with
+telemetry data, using the originAssignment and targetAssignment parameters.
 }
 \examples{
 \dontrun{
