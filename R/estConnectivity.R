@@ -722,12 +722,28 @@ estTransitionBoot <- function(originSites = NULL,
    targetAssignment <- array(unlist(targetAssignment))
   }
   if(is.null(originSites)){
-  nOriginSites <- ncol(originAssignment)}else{
-  nOriginSites <- nrow(originSites)}
+    if (is.array(originAssignment)){
+      nOriginSites <- ncol(originAssignment)
+    }
+    else {
+      nOriginSites <- length(unique(originAssignment))
+    }
+  }
+  else{
+    nOriginSites <- nrow(originSites)
+  }
 
   if(is.null(targetSites)){
-  nTargetSites <- ncol(targetAssignment)}else{
-  nTargetSites <- nrow(targetSites)}
+    if (is.array(targetAssignment)){
+      nTargetSites <- ncol(targetAssignment)
+    }
+    else {
+      nTargetSites <- length(unique(targetAssignment))
+    }
+  }
+  else {
+    nTargetSites <- nrow(targetSites)
+  }
   # if (length(targetPoints)!=nAnimals &&
   #     dim(targetAssignment)[length(dim(targetAssignment))]!=nAnimals ||
   #     nrow(originAssignment)!=nAnimals)
