@@ -322,12 +322,15 @@ plot.estMigConnectivity <- function(x,
     plot.which <- "psi"
   if ((plot.which %in% c("strength", "Strength")))
     plot.which <- "MC"
-  if (!(plot.which %in% c("psi", "MC", "rM", "r", "gamma")))
-    stop("Set plot.which to psi, MC, rM, gamma, or r")
+  if ((plot.which %in% c("abund", "abundance", "relAbund")))
+    plot.which <- "targetRelAbund"
+  if (!(plot.which %in% c("psi", "MC", "rM", "r", "gamma", "pi",
+                          "targetRelAbund")))
+    stop("Set plot.which to psi, MC, rM, gamma, pi, targetRelAbund, or r")
   point <- match.arg(point)
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
-    if (is.null(x$psi)) {
+    if (is.null(x$psi) && !is.null(x$samplePsi)) {
       bcCIPsi <- array(NA, dim = c(2, dim(x$samplePsi)[2], dim(x$samplePsi)[3]))
       for (i in 1:dim(x$samplePsi)[2]) {
         for (j in 1:dim(x$samplePsi)[3]) {
@@ -355,10 +358,14 @@ plot.estMigConnectivity <- function(x,
                       targetNames = dimnames(x$samplePsi)[[3]])
     }
   }
-  else if (plot.which == "gamma" && !inherits(x, "estGamma"))
-    stop("This estimate does not include gamma - try setting plot.which to something else")
   else if (plot.which %in% c("psi", "MC") && !inherits(x, "estPsi"))
     stop("This estimate does not include psi or MC - try setting plot.which to rM")
+  if (plot.which == "gamma" && !inherits(x, "estGamma"))
+    stop("This estimate does not include gamma - try setting plot.which to something else")
+  if (plot.which == "pi" && !inherits(x, "estPi"))
+    stop("This estimate does not include pi - try setting plot.which to something else")
+  if (plot.which == "targetRelAbund" && !inherits(x, "estTargetRelAbund"))
+    stop("This estimate does not include targetRelAbund - try setting plot.which to something else")
   if (inherits(x, "estMantel")) {
     if (is.null(x$corr)) {
       x$corr <- list(sample = x$sampleCorr,
@@ -399,7 +406,7 @@ plot.estMigConnectivity <- function(x,
                                                 x$corr$simpleCI[2],
                                                 y + x$corr$se)))
   }
-  else if (plot.which == "psi" || plot.which == "gamma") {
+  else if (plot.which %in% c("psi", "gamma", "pi")) {
     if (is.null(originNames)) {
       if (is.null(x$input$originNames)) {
         if (is.null(dimnames(x$psi$sample)[2])) {
@@ -447,6 +454,27 @@ plot.estMigConnectivity <- function(x,
                             lower = c(yrange[1,,]),
                             upper = c(yrange[2,,]))
     }
+    else if (plot.which == "pi") {
+      y <- switch(point,
+                  mean = x$pi$mean,
+                  median = x$pi$median,
+                  point = x$pi$point)
+      yrange <- switch(range,
+                       bcCI = x$pi$bcCI,
+                       simpleCI = x$pi$simpleCI,
+                       se = aperm(array(c(y - x$pi$se, y + x$pi$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            From = factor(rep(originNames, nTargetSites),
+                                          levels = originNames),
+                            To = factor(rep(targetNames, each = nOriginSites),
+                                        levels = targetNames),
+                            FromTo = rep(1:nOriginSites, nTargetSites) +
+                              rep(1:nTargetSites, each = nOriginSites) /
+                              (nTargetSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+    }
     else {
       y <- switch(point,
                   mean = x$gamma$mean,
@@ -470,7 +498,7 @@ plot.estMigConnectivity <- function(x,
 
     }
   }
-  else if (plot.which == "r") {
+  else if (plot.which == "r" || plot.which == "targetRelAbund") {
     if (is.null(targetNames)) {
       if (is.null(x$input$targetNames)) {
         if (is.null(dimnames(x$psi$sample)[3])) {
@@ -484,44 +512,63 @@ plot.estMigConnectivity <- function(x,
         targetNames <- x$input$targetNames
     }
     nTargetSites <- length(targetNames)
-    y <- switch(point,
-                mean = x$r$mean,
-                median = x$r$median)
-    if (length(dim(y)) < 2){
-      nAges <- 1
+    if (plot.which == "r") {
+      y <- switch(point,
+                  mean = x$r$mean,
+                  median = x$r$median)
+      if (length(dim(y)) < 2){
+        nAges <- 1
+        yrange <- switch(range,
+                         bcCI = x$r$bcCI,
+                         simpleCI = x$r$simpleCI,
+                         se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                          c(length(y), 2)), c(2, 1)))
+        ests.df <- data.frame(y = c(y),
+                              To = 1:nTargetSites,
+                              lower = c(yrange[1,]),
+                              upper = c(yrange[2,]))
+      }
+      else{
+        nAges <- dim(y)[1]
+        if (is.null(ageNames))
+          ageNames <- 1:nAges
+        yrange <- switch(range,
+                         bcCI = x$r$bcCI,
+                         simpleCI = x$r$simpleCI,
+                         se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                          c(dim(y), 2)), c(3, 1, 2)))
+        ests.df <- data.frame(y = c(y),
+                              Age = rep(1:nAges, nTargetSites),
+                              To = rep(1:nTargetSites, each = nAges),
+                              AgeTo = rep(1:nAges, nTargetSites) +
+                                rep(1:nTargetSites, each = nAges) /
+                                (nTargetSites * 2) - 0.3,
+                              lower = c(yrange[1,,]),
+                              upper = c(yrange[2,,]))
+      }
+    }
+    else { # plotting targetRelAbund
+      y <- switch(point,
+                  mean = x$targetRelAbund$mean,
+                  median = x$targetRelAbund$median)
       yrange <- switch(range,
-                       bcCI = x$r$bcCI,
-                       simpleCI = x$r$simpleCI,
-                       se = aperm(array(c(y - x$r$se, y + x$r$se),
+                       bcCI = x$targetRelAbund$bcCI,
+                       simpleCI = x$targetRelAbund$simpleCI,
+                       se = aperm(array(c(y - x$targetRelAbund$se,
+                                          y + x$targetRelAbund$se),
                                         c(length(y), 2)), c(2, 1)))
       ests.df <- data.frame(y = c(y),
                             To = 1:nTargetSites,
                             lower = c(yrange[1,]),
                             upper = c(yrange[2,]))
-    }
-    else{
-      nAges <- dim(y)[1]
-      if (is.null(ageNames))
-        ageNames <- 1:nAges
-      yrange <- switch(range,
-                       bcCI = x$r$bcCI,
-                       simpleCI = x$r$simpleCI,
-                       se = aperm(array(c(y - x$r$se, y + x$r$se),
-                                        c(dim(y), 2)), c(3, 1, 2)))
-      ests.df <- data.frame(y = c(y),
-                            Age = rep(1:nAges, nTargetSites),
-                            To = rep(1:nTargetSites, each = nAges),
-                            AgeTo = rep(1:nAges, nTargetSites) +
-                              rep(1:nTargetSites, each = nAges) /
-                              (nTargetSites * 2) - 0.3,
-                            lower = c(yrange[1,,]),
-                            upper = c(yrange[2,,]))
+      nAges <- 1
+
     }
   }
   if (map) {
     warning("Map plotting not yet available")
   }
-  if (plot.which=="psi") {
+  if (plot.which %in% c("psi", "pi")) {
     if (is.null(col)) {
       col <- 1:nTargetSites
     }
@@ -579,7 +626,7 @@ plot.estMigConnectivity <- function(x,
       legend(legend, legend = originNames, col = col, pch = pch,
              pt.bg = col)
   }
-  else if (plot.which=="r") {
+  else if (plot.which=="r" || plot.which=="targetRelAbund") {
     if (nAges == 1) {
       if (is.null(col)) {
         col <- "black"
