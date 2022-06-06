@@ -291,14 +291,14 @@ locSample <- function(isGL,
       if (is.null(dim(site.sample1)))
         site.sample1 <- matrix(site.sample1, 1)
     }
-# IF ALL THE POINTS ARE WITHIN SITES #
     # walk through this section #
     if (any(isRaster & toSampleBool)) {
+      # some raster -
       if (pointsInSites && !any(isRaster & toSampleBool & (isGL | isProb))) {
+        # IF ALL THE POINTS ARE WITHIN SITES and no animals have two data types
         samp <- sample.int(nrandomDraws,
                            size = sum(isRaster & toSampleBool),
                            replace = T)
- # some raster -
       # GRAB LOCATIONS FROM RASTER #
         samp2 <- samp + ((1:nAnimals)[toSampleBool & isRaster] - 1) * nrandomDraws
 
@@ -312,7 +312,7 @@ locSample <- function(isGL,
 # We ULTIMATELY NEED POINTS BECAUSE THEY ONLY HAVE RASTER DATA
         if (!is.null(overlap1))
           # Grab the relevant sites
-          site.sample2 <- overlap1[1, samp2, drop = FALSE]
+          site.sample2 <- overlap1[samp, (1:nAnimals)[toSampleBool & isRaster], drop = FALSE]
         good.sample2 <- seq(from = 1, by = nSim,
               length.out = sum(isRaster & toSampleBool))
       }
@@ -935,7 +935,8 @@ reassignInds <- function(dataOverlapSetting = "none",
 
           }
           originSingleCell <- array(originSingleCell2,
-                                    c(dimOCell[1], dimOCell[2], nTotal))
+                                    c(dimOCell[1], dimOCell[2], nTotal),
+                                    list(NULL, c("Longitude", "Latitude"), NULL))
         }
       }
     }

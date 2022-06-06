@@ -555,7 +555,7 @@ estTransitionBoot <- function(originSites = NULL,
 
   if (dataOverlapSetting != "dummy") {
     if (verbose > 0)
-      cat("Adjusting data overlap settings\n")
+      cat("Configuring data overlap settings\n")
     temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
                          originPoints = originPoints,
                          targetPoints = targetPoints,
@@ -663,6 +663,17 @@ estTransitionBoot <- function(originSites = NULL,
       originAssignment <- lapply(originAssignment, function (x) x[1])
     }
     originAssignment <- array(unlist(originAssignment))
+    duds <- is.na(originAssignment) & captured=="origin"
+    if (any(duds)){
+      if (verbose > 0)
+        cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
+      warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
+              "Affects animals: ", paste(which(duds), collapse = ","))
+      originAssignment[duds] <-
+        sf::st_nearest_feature(x = originPoints[duds,],
+                               y = originSites)
+
+    }
   }
 
 
@@ -720,6 +731,17 @@ estTransitionBoot <- function(originSites = NULL,
      targetAssignment <- lapply(targetAssignment, function(x) x[1])
    }
    targetAssignment <- array(unlist(targetAssignment))
+   duds <- is.na(targetAssignment) & captured=="target"
+   if (any(duds)){
+     if (verbose > 0)
+       cat("Not all target capture locations are within targetSites. Assigning to closest site\n")
+     warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
+             "Affects animals: ", paste(which(duds), collapse = ","))
+     targetAssignment[duds] <-
+       sf::st_nearest_feature(x = targetPoints[duds,],
+                              y = targetSites)
+
+   }
   }
   if(is.null(originSites)){
     if (is.array(originAssignment)){
@@ -829,7 +851,8 @@ estTransitionBoot <- function(originSites = NULL,
     originCon <- sapply(originPointSample2, FUN = function(z){
       suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
                                            sparse = TRUE))))})
-
+    #print(dim(originCon))
+    #print(summary(originCon))
     if (!any(is.na(originCon)))
       originPointsInSites <- TRUE
     else if (verbose > 0){

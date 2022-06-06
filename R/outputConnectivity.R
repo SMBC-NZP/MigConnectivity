@@ -304,7 +304,9 @@ plot.estMigConnectivity <- function(x,
                                                         "psi",
                                                         ifelse(inherits(x, "estMC"),
                                                                "MC",
-                                                               "rM")),
+                                                               ifelse(inherits(x, "estGamma"),
+                                                                      "gamma",
+                                                                      "rM"))),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
                                     xlab = NULL, ylab = plot.which,
@@ -314,17 +316,14 @@ plot.estMigConnectivity <- function(x,
                                     gap = 0,
                                     sfrac = ifelse(range=="se", 0.01, 0),
                                     legend = FALSE, map = FALSE, ...) {
-  if (map) {
-    warning("Map plotting not yet available")
-  }
   if ((plot.which %in% c("corr", "Mantel")))
     plot.which <- "rM"
   if ((plot.which %in% c("transition", "Transition")))
     plot.which <- "psi"
   if ((plot.which %in% c("strength", "Strength")))
     plot.which <- "MC"
-  if (!(plot.which %in% c("psi", "MC", "rM", "r")))
-    stop("Set plot.which to psi, MC, rM, or r")
+  if (!(plot.which %in% c("psi", "MC", "rM", "r", "gamma")))
+    stop("Set plot.which to psi, MC, rM, gamma, or r")
   point <- match.arg(point)
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
@@ -356,7 +355,9 @@ plot.estMigConnectivity <- function(x,
                       targetNames = dimnames(x$samplePsi)[[3]])
     }
   }
-  else if (plot.which != "rM" && !inherits(x, "estPsi"))
+  else if (plot.which == "gamma" && !inherits(x, "estGamma"))
+    stop("This estimate does not include gamma - try setting plot.which to something else")
+  else if (plot.which %in% c("psi", "MC") && !inherits(x, "estPsi"))
     stop("This estimate does not include psi or MC - try setting plot.which to rM")
   if (inherits(x, "estMantel")) {
     if (is.null(x$corr)) {
@@ -398,7 +399,7 @@ plot.estMigConnectivity <- function(x,
                                                 x$corr$simpleCI[2],
                                                 y + x$corr$se)))
   }
-  else if (plot.which == "psi") {
+  else if (plot.which == "psi" || plot.which == "gamma") {
     if (is.null(originNames)) {
       if (is.null(x$input$originNames)) {
         if (is.null(dimnames(x$psi$sample)[2])) {
@@ -425,25 +426,49 @@ plot.estMigConnectivity <- function(x,
     }
     nTargetSites <- length(targetNames)
     nOriginSites <- length(originNames)
-    y <- switch(point,
-                mean = x$psi$mean,
-                median = x$psi$median,
-                point = x$psi$point)
-    yrange <- switch(range,
-                     bcCI = x$psi$bcCI,
-                     simpleCI = x$psi$simpleCI,
-                     se = aperm(array(c(y - x$psi$se, y + x$psi$se),
-                                      c(dim(y), 2)), c(3, 1, 2)))
-    ests.df <- data.frame(y = c(y),
-                          From = factor(rep(originNames, nTargetSites),
+    if (plot.which == "psi") {
+      y <- switch(point,
+                  mean = x$psi$mean,
+                  median = x$psi$median,
+                  point = x$psi$point)
+      yrange <- switch(range,
+                       bcCI = x$psi$bcCI,
+                       simpleCI = x$psi$simpleCI,
+                       se = aperm(array(c(y - x$psi$se, y + x$psi$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            From = factor(rep(originNames, nTargetSites),
+                                          levels = originNames),
+                            To = factor(rep(targetNames, each = nOriginSites),
+                                        levels = targetNames),
+                            FromTo = rep(1:nOriginSites, nTargetSites) +
+                              rep(1:nTargetSites, each = nOriginSites) /
+                              (nTargetSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+    }
+    else {
+      y <- switch(point,
+                  mean = x$gamma$mean,
+                  median = x$gamma$median,
+                  point = x$gamma$point)
+      yrange <- switch(range,
+                       bcCI = x$gamma$bcCI,
+                       simpleCI = x$gamma$simpleCI,
+                       se = aperm(array(c(y - x$gamma$se, y + x$gamma$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            From = factor(rep(targetNames, nOriginSites),
+                                          levels = targetNames),
+                            To = factor(rep(originNames, each = nTargetSites),
                                         levels = originNames),
-                          To = factor(rep(targetNames, each = nOriginSites),
-                                      levels = targetNames),
-                          FromTo = rep(1:nOriginSites, nTargetSites) +
-                            rep(1:nTargetSites, each = nOriginSites) /
-                            (nTargetSites * 2) - 0.3,
-                          lower = c(yrange[1,,]),
-                          upper = c(yrange[2,,]))
+                            FromTo = rep(1:nTargetSites, nOriginSites) +
+                              rep(1:nOriginSites, each = nTargetSites) /
+                              (nOriginSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+
+    }
   }
   else if (plot.which == "r") {
     if (is.null(targetNames)) {
@@ -493,6 +518,9 @@ plot.estMigConnectivity <- function(x,
                             upper = c(yrange[2,,]))
     }
   }
+  if (map) {
+    warning("Map plotting not yet available")
+  }
   if (plot.which=="psi") {
     if (is.null(col)) {
       col <- 1:nTargetSites
@@ -517,9 +545,38 @@ plot.estMigConnectivity <- function(x,
                    ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
                    sfrac = sfrac, ...)
     graphics::axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
-         labels = originNames)
+         labels = originNames, ...)
     if (!isFALSE(legend))
       legend(legend, legend = targetNames, col = col, pch = pch,
+             pt.bg = col)
+  }
+  else if (plot.which=="gamma") {
+    if (is.null(col)) {
+      col <- 1:nOriginSites
+    }
+    else if (length(col) < nOriginSites)
+      col <- rep_len(col, nOriginSites)
+    if (is.null(pch)) {
+      if (nOriginSites > 5)
+        pch <- c(21:25, 0:(nOriginSites - 6))
+      else
+        pch <- 20 + 1:nOriginSites
+    }
+    else if (length(pch) < nOriginSites)
+      pch <- rep_len(pch, nOriginSites)
+    if (is.null(xlab))
+      xlab <- "Target"
+    gplots::plotCI(ests.df$FromTo, ests.df$y, li = ests.df$lower,
+                   ui = ests.df$upper,
+                   pch = pch[as.integer(ests.df$To)],
+                   col = col[as.integer(ests.df$To)],
+                   pt.bg = col[as.integer(ests.df$To)],
+                   ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
+                   sfrac = sfrac, ...)
+    graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
+                   labels = targetNames, ...)
+    if (!isFALSE(legend))
+      legend(legend, legend = originNames, col = col, pch = pch,
              pt.bg = col)
   }
   else if (plot.which=="r") {
@@ -540,7 +597,7 @@ plot.estMigConnectivity <- function(x,
                      ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
                      sfrac = sfrac, ...)
       graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
-           labels = targetNames)
+           labels = targetNames, ...)
     }
     else {
       if (is.null(col)) {
@@ -565,7 +622,7 @@ plot.estMigConnectivity <- function(x,
                      pt.bg = col[as.integer(ests.df$To)],
                      ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
                      sfrac = sfrac, ...)
-      graphics::axis(1, at = 1:nAges, labels = ageNames)
+      graphics::axis(1, at = 1:nAges, labels = ageNames, ...)
       if (!isFALSE(legend))
         legend(legend, legend = targetNames, col = col, pch = pch,
                pt.bg = col)
@@ -587,4 +644,154 @@ plot.estMigConnectivity <- function(x,
                    ylab = ylab, xaxt = "n", xlab = xlab, ...)
   }
 }
+map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
+                       yOffset = NULL, col = NULL, maxWidth = 100000) {
+# #
+# # data(OVENdata) # Ovenbird
+# #
+# M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
+#          geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+#          geoVCov = OVENdata$geo.vcov, #Light-level geolocator covariance matrix
+#          targetDist = OVENdata$targetDist, # Target location distance matrix
+#          originDist = OVENdata$originDist, # Origin location distance matrix
+#          targetSites = OVENdata$targetSites, # Non-breeding / target sites
+#          originSites = OVENdata$originSites, # Breeding / origin sites
+#          originPoints = OVENdata$originPoints, # Capture Locations
+#          targetPoints = OVENdata$targetPoints, # Target locations from devices
+#          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
+#          resampleProjection = raster::projection(OVENdata$targetPoints),
+#          verbose = 0,   # output options - see help ??estMC
+#          nSamples = 10000) # This is set low for example
+#
+  nTargetSites <- nrow(targetSites)
+  nOriginSites <- nrow(originSites)
+# meanPsi <- apply(M$samplePsi, 2:3, mean)
+# lowPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.025)
+# highPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.975)
+# library(rgeos)
+# library(shape)
+# library(raster)
+# library(maptools)
+# library(rgdal)
+# data(wrld_simpl)
+# wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
+  # maxWidth <- 1000000
+  if (is.null(xOffset))
+    xOffset <- matrix(0, nOriginSites, nTargetSites)
+  if (is.null(yOffset))
+    yOffset <- matrix(0, nOriginSites, nTargetSites)
+  alpha <- 0.2
+  allSites <- rbind(originSites[, "geometry"], targetSites[, "geometry"])
+  if (is.null(col)) {
+    col <- 1:nTargetSites
+  }
+  # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
+  par(mar=c(0,0,0,0))
+  extent <- sf::st_bbox(allSites)
+  plot(allSites, xlim=c(extent[1],extent[3]),
+       ylim=c(extent[2], extent[4]), lwd = 1.5)
+  # plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
+  # plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
+  # plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
+  # legend("topleft",legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+  for (i in 1:nOriginSites) {
+    for (j in 1:nTargetSites) {
+      if (x$psi$simpleCI[2,i,j] > 0) {
+        xO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,1]
+        yO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,2]
+        xT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,1] + xOffset[i, j]
+        yT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,2] + yOffset[i, j]
+        angle <- atan((yT - yO)/(xT - xO))
+        if (is.nan(angle))
+          angle <- 0
+        if (xT < xO)
+          angle <- angle + pi
+        cosa <- cos(angle)
+        sina <- sin(angle)
+        polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                  xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                  xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                  xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                c(yO - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                  yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                  yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                  yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=alpha), border = NA)
+        polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                  xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                  xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                  xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                c(yO + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                  yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                  yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                  yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=alpha), border = NA)
+        lines(c(xO - x$psi$mean[i,j] * sina * maxWidth,
+                xT - x$psi$mean[i,j] * sina * maxWidth),
+              c(yO + x$psi$mean[i,j] * cosa * maxWidth,
+                yT + x$psi$mean[i,j] * cosa * maxWidth),
+              col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1))
+        lines(c(xO + x$psi$mean[i,j] * sina * maxWidth,
+                xT + x$psi$mean[i,j] * sina * maxWidth),
+              c(yO - x$psi$mean[i,j] * cosa * maxWidth,
+                yT - x$psi$mean[i,j] * cosa * maxWidth),
+              col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1))
+        shape::Arrowhead(xT, yT, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
+                         arr.type = 'curved', npoint = 15,
+                         lcol = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1), arr.adj = 0)
+      }
+    }
+  }
+# dev.off()
+# shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+#               gCentroid(OVENdata$originSites[1])@coords[,2],
+#               gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,
+#               extent(OVENdata$targetSites[2])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+#               gCentroid(OVENdata$originSites[1])@coords[,2],
+#               gCentroid(OVENdata$targetSites[3])@coords[,1],
+#               extent(OVENdata$targetSites[3])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+#               gCentroid(OVENdata$originSites[2])@coords[,2],
+#               gCentroid(OVENdata$targetSites[1])@coords[,1],
+#               extent(OVENdata$targetSites[1])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+#               gCentroid(OVENdata$originSites[2])@coords[,2],
+#               (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),
+#               extent(OVENdata$targetSites[2])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+#
+# box(which="plot")
+# #
+
+}
