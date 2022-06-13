@@ -917,10 +917,10 @@ estTransitionBoot <- function(originSites = NULL,
         #   sum(captured!="target" & ta %in% t0)
         if (sum(captured!="target" & ta %in% t0) == 0)
           warning("Not all target sites have likely data. Estimates will be biased.")
-        if (verbose > 0){
-          print(colMeans(weights))
-          print(rowSums(weights))
-        }
+        # if (verbose > 0){
+        #   print(colMeans(weights))
+        #   print(rowSums(weights))
+        # }
       }
     }
     else if (any(nTargetAnimals==0)) {

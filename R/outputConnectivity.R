@@ -692,7 +692,8 @@ plot.estMigConnectivity <- function(x,
   }
 }
 map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
-                       yOffset = NULL, col = NULL, maxWidth = 100000) {
+                       yOffset = NULL, col = NULL, maxWidth = 100000,
+                       alpha = 0.2, subsetOrigin = NULL, subsetTarget = NULL) {
 # #
 # # data(OVENdata) # Ovenbird
 # #
@@ -710,9 +711,15 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
 #          verbose = 0,   # output options - see help ??estMC
 #          nSamples = 10000) # This is set low for example
 #
-  nTargetSites <- nrow(targetSites)
-  nOriginSites <- nrow(originSites)
-# meanPsi <- apply(M$samplePsi, 2:3, mean)
+  nTargetSites <- ncol(x$psi$mean)
+  nOriginSites <- nrow(x$psi$mean)
+  if (is.null(subsetOrigin))
+    subsetOrigin <- 1:nOriginSites
+  if (is.null(subsetTarget))
+    subsetTarget <- 1:nTargetSites
+  originNames <- x$input$originNames
+  targetNames <- x$input$targetNames
+  # meanPsi <- apply(M$samplePsi, 2:3, mean)
 # lowPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.025)
 # highPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.975)
 # library(rgeos)
@@ -727,13 +734,12 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
     xOffset <- matrix(0, nOriginSites, nTargetSites)
   if (is.null(yOffset))
     yOffset <- matrix(0, nOriginSites, nTargetSites)
-  alpha <- 0.2
   allSites <- rbind(originSites[, "geometry"], targetSites[, "geometry"])
   if (is.null(col)) {
     col <- 1:nTargetSites
   }
   # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
-  par(mar=c(0,0,0,0))
+  op <- par(mar=c(0,0,0,0))
   extent <- sf::st_bbox(allSites)
   plot(allSites, xlim=c(extent[1],extent[3]),
        ylim=c(extent[2], extent[4]), lwd = 1.5)
@@ -742,11 +748,11 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
   # plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
   # legend("topleft",legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
-  for (i in 1:nOriginSites) {
-    for (j in 1:nTargetSites) {
+  for (i in subsetOrigin) {
+    xO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,1]
+    yO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,2]
+    for (j in subsetTarget) {
       if (x$psi$simpleCI[2,i,j] > 0) {
-        xO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,1]
-        yO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,2]
         xT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,1] + xOffset[i, j]
         yT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,2] + yOffset[i, j]
         angle <- atan((yT - yO)/(xT - xO))
@@ -840,5 +846,5 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
 #
 # box(which="plot")
 # #
-
+  par(op)
 }
