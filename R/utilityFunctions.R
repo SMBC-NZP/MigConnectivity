@@ -791,6 +791,9 @@ reassignInds <- function(dataOverlapSetting = "none",
   else {
     nPoints <- 0
   }
+  # capturePointsGL <- T
+  # if (any(isGL))
+  #   if (sum(captured[isGL]=="origin")>nOriginPoints)
   if (any(isRaster)) {
     if (!is.null(originRasterXYZ)) {
       dimORast <- dim(originRasterXYZ)
@@ -815,8 +818,15 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else {
       dimOAss <- dim(originAssignment)
-      if (is.null(dimOAss))
+      if (is.null(dimOAss)) {
         nOAss <- length(originAssignment)
+        tt2 <- matrix(0, nOAss, max(length(unique(originAssignment)),
+                                    nrow(originSites)))
+        for (i in 1:nOAss)
+          tt2[i, originAssignment[i]] <- 1
+        originAssignment <- tt2
+        dimOAss <- dim(originAssignment)
+      }
       else
         nOAss <- dimOAss[1]
     }
@@ -826,8 +836,16 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else {
       dimTAss <- dim(targetAssignment)
-      if (is.null(dimTAss))
+      if (is.null(dimTAss)){
         nTAss <- length(targetAssignment)
+        tt2 <- matrix(0, nTAss, max(length(unique(targetAssignment)),
+                                    nrow(targetSites)))
+        for (i in 1:nTAss)
+          tt2[i, targetAssignment[i]] <- 1
+        targetAssignment <- tt2
+        dimTAss <- dim(targetAssignment)
+        #print(targetAssignment)
+      }
       else
         nTAss <- dimTAss[1]
     }
@@ -852,6 +870,53 @@ reassignInds <- function(dataOverlapSetting = "none",
     isProb <- rep(isProb, nTotal)
   if (length(captured)==1)
     captured <- rep(captured, nTotal)
+  capturePoint <- rep(FALSE, nTotal)
+  nTPremain <- nTargetPoints
+  nOPremain <- nOriginPoints
+  if (any(isGL)){
+    nTPremain <- nTPremain - sum(captured[isGL]!="target")
+    nOPremain <- nOPremain - sum(captured[isGL]!="origin")
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isGL] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isGL]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isGL] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isGL]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isTelemetry)) {
+    nTPremain <- nTPremain - sum(captured[isTelemetry]!="target")
+    nOPremain <- nOPremain - sum(captured[isTelemetry]!="origin")
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isTelemetry] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isTelemetry]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isTelemetry] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isTelemetry]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isRaster)) {
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isRaster] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isRaster]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isRaster] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isRaster]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isProb)) {
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isProb] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isProb]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isProb] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isProb]=="origin")
+    }
+  }
   if (nTargetPoints > 0 || nOriginPoints > 0) {
     if (is.null(targetPoints)) {
       targetPoints2 <- NULL
@@ -862,7 +927,8 @@ reassignInds <- function(dataOverlapSetting = "none",
         targetPoints2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
-          if (isGL[i] || isTelemetry[i] || captured[i] == "target") {
+          if (isGL[i] || isTelemetry[i] || (captured[i] == "target" &&
+                                            capturePoint[i])) {
             place <- place + 1
             targetPoints2 <- rbind(targetPoints2,
                                    targetPoints[place, ])
@@ -884,7 +950,8 @@ reassignInds <- function(dataOverlapSetting = "none",
         originPoints2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
-          if (isGL[i] || isTelemetry[i] || captured[i] == "origin") {
+          if (isGL[i] || isTelemetry[i] || captured[i] == "origin" &&
+              capturePoint[i]) {
             place <- place + 1
             originPoints2 <- rbind(originPoints2,
                                    originPoints[place, ])
@@ -986,26 +1053,41 @@ reassignInds <- function(dataOverlapSetting = "none",
     originRasterXYZ2 <- originRasterXYZ; targetRasterXYZ2 <- targetRasterXYZ
   }
   if (any(isProb)) {
-    if (is.null(dimTAss)) {
+    if (nTAss == 0) {
       targetAssignment2 <- NULL
     }
     else {
-      if (dimTAss[1] < nTotal) {
+      if (nTAss < nTotal) {
         dummyAss <- array(1/dimTAss[2], c(1, dimTAss[2]))
         targetAssignment2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
-          if (isProb[i] && captured[i] != "target") {
+          if (isProb[i] && (captured[i] != "target" || !capturePoint[i])) {
             place <- place + 1
             targetAssignment2 <- rbind(targetAssignment2,
                                        targetAssignment[place, ])
           }
           else {
-            if (captured[i] == "target")
-              targetAssignment2 <- rbind(targetAssignment2,
-                                       sf::st_intersects(x = targetPoints[i,],
-                                                         y = targetSites,
-                                                         sparse = FALSE))
+            if (captured[i] == "target" && capturePoint[i]){
+              ass <- sf::st_intersects(x = targetPoints[i,], y = targetSites,
+                                       sparse = FALSE)
+              if (sum(ass)<1){
+                warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
+                        "Affects animal: ", i)
+                ass <- matrix(0, 1, dimTAss[2])
+                ass[sf::st_nearest_feature(x = targetPoints[i,],
+                                           y = targetSites)] <- 1
+              }
+              else if (sum(ass) > 1){
+                warning("Overlapping targetSites may cause issues\n")
+                ass0 <- sf::st_intersects(x = targetPoints[i,], y = targetSites,
+                                          sparse = TRUE)
+                ass <- matrix(0, 1, dimTAss[2])
+                ass[ass0[1]] <- 1
+              }
+              targetAssignment2 <- rbind(targetAssignment2, ass)
+            }
+
             else
               targetAssignment2 <- rbind(targetAssignment2, dummyAss)
           }
@@ -1023,17 +1105,32 @@ reassignInds <- function(dataOverlapSetting = "none",
         originAssignment2 <- NULL
         place <- 0
         for (i in 1:nTotal) {
-          if (isProb[i] && captured[i] != "origin") {
+          if (isProb[i] && (captured[i] != "origin" || !capturePoint[i])) {
             place <- place + 1
             originAssignment2 <- rbind(originAssignment2,
                                        originAssignment[place, ])
           }
           else {
-            if (captured[i] == "origin")
-              originAssignment2 <- rbind(originAssignment2,
-                                         sf::st_intersects(x = originPoints[i,],
-                                                           y = originSites,
-                                                           sparse = FALSE))
+            if (captured[i] == "origin" && capturePoint[i]){
+              ass <- sf::st_intersects(x = originPoints[i,], y = originSites,
+                                       sparse = FALSE)
+              if (sum(ass)<1){
+                warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
+                        "Affects animal: ", i)
+                ass <- matrix(0, 1, dimOAss[2])
+                ass[sf::st_nearest_feature(x = originPoints[i,],
+                                              y = originSites)] <- 1
+
+              }
+              else if (sum(ass) > 1){
+                warning("Overlapping originSites may cause issues\n")
+                ass0 <- sf::st_intersects(x = originPoints[i,], y = originSites,
+                                          sparse = TRUE)
+                ass <- matrix(0, 1, dimOAss[2])
+                ass[ass0[1]] <- 1
+              }
+              originAssignment2 <- rbind(originAssignment2, ass)
+            }
             else
               originAssignment2 <- rbind(originAssignment2,
                                          dummyAss)

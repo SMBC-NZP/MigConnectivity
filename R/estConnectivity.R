@@ -552,7 +552,7 @@ estTransitionBoot <- function(originSites = NULL,
       stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
     }
   }
-
+  #print(targetAssignment)
   if (dataOverlapSetting != "dummy") {
     if (verbose > 0)
       cat("Configuring data overlap settings\n")
@@ -573,7 +573,7 @@ estTransitionBoot <- function(originSites = NULL,
                          targetSites = targetSites, originSites = originSites)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
     originAssignment <- temp$originAssignment
-    # print(head(originAssignment))
+    #print(head(originAssignment, 10))
     # cat("**************************************\n")
     targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
@@ -583,6 +583,12 @@ estTransitionBoot <- function(originSites = NULL,
     targetRasterXYZ <- temp$targetRasterXYZ
     targetSingleCell <- temp$targetSingleCell
   }
+  # print(targetAssignment[58:62,])
+  # print(originAssignment[58:62,])
+  # print(targetPoints[58:62,])
+  # print(originPoints[58:62,])
+  # print(class(targetPoints))
+  # print(class(originPoints))
   if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
     stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
   if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
@@ -890,7 +896,7 @@ estTransitionBoot <- function(originSites = NULL,
       abundBase <- targetRelAbund
       targetRelAbund <- matrix(targetRelAbund, nBoot, nTargetSites, TRUE)
     }
-
+    #print(targetAssignment)
     weights <- array(0, c(nBoot, nAnimals))
     if (length(dim(targetAssignment))==2) {
       ta <- apply(targetAssignment, 1, which.max)
@@ -910,6 +916,7 @@ estTransitionBoot <- function(originSites = NULL,
         weights[ , captured!="target"] <- 1/nAnimals
       else {
         t0 <- which(nTargetAnimals>0)
+        #print(nTargetAnimals)
         weights[ , captured!="target"] <- 1/nAnimals +
           rowSums(targetRelAbund[ , t0]) *
           sum(nTargetAnimals) / nAnimals / nOriginAnimals

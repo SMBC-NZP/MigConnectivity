@@ -693,7 +693,9 @@ plot.estMigConnectivity <- function(x,
 }
 map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                        yOffset = NULL, col = NULL, maxWidth = 100000,
-                       alpha = 0.2, subsetOrigin = NULL, subsetTarget = NULL) {
+                       alpha.range = 0.2, alpha.point = 0,
+                       subsetOrigin = NULL, subsetTarget = NULL,
+                       doubled = FALSE) {
 # #
 # # data(OVENdata) # Ovenbird
 # #
@@ -762,37 +764,81 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
           angle <- angle + pi
         cosa <- cos(angle)
         sina <- sin(angle)
-        polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                  xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                  xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
-                  xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
-                c(yO - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                  yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                  yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
-                  yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=alpha), border = NA)
-        polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                  xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                  xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
-                  xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
-                c(yO + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                  yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                  yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
-                  yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=alpha), border = NA)
-        lines(c(xO - x$psi$mean[i,j] * sina * maxWidth,
-                xT - x$psi$mean[i,j] * sina * maxWidth),
-              c(yO + x$psi$mean[i,j] * cosa * maxWidth,
-                yT + x$psi$mean[i,j] * cosa * maxWidth),
-              col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1))
-        lines(c(xO + x$psi$mean[i,j] * sina * maxWidth,
-                xT + x$psi$mean[i,j] * sina * maxWidth),
-              c(yO - x$psi$mean[i,j] * cosa * maxWidth,
-                yT - x$psi$mean[i,j] * cosa * maxWidth),
-              col = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1))
+        if (doubled) {
+          polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+          polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+          polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth,
+                    xT - x$psi$mean[i,j] * sina * maxWidth,
+                    xT + x$psi$mean[i,j] * sina * maxWidth,
+                    xO + x$psi$mean[i,j] * sina * maxWidth),
+                  c(yO + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT - x$psi$mean[i,j] * cosa * maxWidth,
+                    yO - x$psi$mean[i,j] * cosa * maxWidth),
+                  col = rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.point),
+                  border = rgb(i/nOriginSites, j/nTargetSites,
+                               1 - (i + j) / (nOriginSites + nTargetSites),
+                               alpha=1))
+        }
+        else {
+          polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT + x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xO + x$psi$mean[i,j] * sina * maxWidth / 2),
+                  c(yO + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT - x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yO - x$psi$mean[i,j] * cosa * maxWidth / 2),
+                  col = rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.point),
+                  border = rgb(i/nOriginSites, j/nTargetSites,
+                               1 - (i + j) / (nOriginSites + nTargetSites),
+                               alpha=1))
+          polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
+                                              x$psi$mean[i,j] / 2),
+                    xT - (x$psi$simpleCI[2,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth,
+                    xT - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth,
+                    xO - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth),
+                  c(yO+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yT+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yT+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yO+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth),
+                  col = rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+
+        }
         shape::Arrowhead(xT, yT, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
                          arr.type = 'curved', npoint = 15,
-                         lcol = rgb(i/nOriginSites, j/nTargetSites, 1 - (i + j) / (nOriginSites + nTargetSites), alpha=1), arr.adj = 0)
+                         lcol = rgb(i/nOriginSites, j/nTargetSites,
+                                    1 - (i + j) / (nOriginSites + nTargetSites),
+                                    alpha=1), arr.adj = 0)
       }
     }
   }
