@@ -382,3 +382,55 @@ reversePsiRelAbund <- function(psi, originRelAbund,
                                  nSamples = nSamples, row0 = row0,
                                  alpha = alpha))
 }
+
+divCoefNLL <- function(psi_r, banded, reencountered, counts) {
+  nOriginSites <- nrow(reencountered)
+  nTargetSites <- ncol(reencountered)
+  psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
+                nTargetSites - 1)
+  for (o in 1:nOriginSites)
+    psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
+  psi <- cbind(psi, 1 - rowSums(psi))
+  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nOriginSites])
+  p <- sweep(psi, 2, r, "*")
+  p <- cbind(p, 1 - rowSums(p))
+  reencountered <- cbind(reencountered, banded - rowSums(reencountered))
+  d1 <- d <- rep(0, length = nOriginSites)
+  for (o in 1:nOriginSites) {
+    d[o] <- dmultinom(x = reencountered[o, ], size = banded[o], prob = p[o, ],
+                      log = TRUE)
+    if (!is.null(counts))
+      d1[o] <- dmultinom(x = counts[o, ], prob = psi[o, ], log = TRUE)
+  }
+  return(-sum(d) - sum(d1))
+}
+
+calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
+                           originAssignment = NULL, targetAssignment = NULL,
+                           originNames = NULL, targetNames = NULL,
+                           method = "Nelder-Mead") {
+  if (is.null(counts) && length(originAssignment)>0) {
+    counts <- table(originAssignment, targetAssignment)
+    names(counts) <- list(originNames, targetNames)
+  }
+  if (is.null(banded))
+    return(list(psi = prop.table(counts, 1)))
+  nOriginSites <- nrow(reencountered)
+  nTargetSites <- ncol(reencountered)
+  opt1 <- optim(fn = divCoefNLL,
+                par = rep(0, nOriginSites * nTargetSites),
+                method = method,
+                # lower = rep(0, (nOriginSites + 1) * nTargetSites),
+                # upper = rep(1, (nOriginSites + 1) * nTargetSites),
+                banded = banded, reencountered = reencountered, counts = counts)
+  psi_r <- opt1$par
+  psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
+                nTargetSites - 1)
+  for (o in 1:nOriginSites)
+    psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
+  psi <- cbind(psi, 1 - rowSums(psi))
+  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nOriginSites])
+  dimnames(psi) <- list(originNames, targetNames)
+  names(r) <- targetNames
+  return(list(psi = psi, r = r))
+}

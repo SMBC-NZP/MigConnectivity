@@ -306,45 +306,83 @@ estTransitionJAGS <- function (banded, reencountered,
                                originNames = NULL, targetNames = NULL,
                                nThin = 1, nBurnin = 5000, nChains = 3,
                                fixedZero = NULL) {
-  nDim <- length(dim(reencountered))
-  if (is.null(originNames))
-    originNames <- dimnames(reencountered)[[1]]
-  if (is.null(targetNames))
-    targetNames <- dimnames(reencountered)[[nDim]]
-  nTargetSites <- dim(reencountered)[nDim]
-  nOriginSites <- dim(reencountered)[1]
-  if (nDim == 2) {
-    nAges <- 1
-    if (length(banded)!=nOriginSites)
-      stop('Number of origin sites must be constant between reencountered and banded')
-    nfound <- apply(reencountered, 1, sum)
-    sampleSize <- sum(nfound)
-    tmat <- cbind(reencountered, banded - nfound)
-    # Data
-    jags.data <- list(recmat = tmat, npop = nOriginSites,
-                      ndest = nTargetSites, nreleased = banded)
-    if (!is.null(originAssignment)) {
-      telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
-                      factor(targetAssignment, levels = 1:nTargetSites))
-      jags.data$telmat <- telmat
-      jags.data$ntel <- as.vector(table(factor(originAssignment,
-                                               levels = 1:nOriginSites)))
+  jags.inits <- vector("list", nChains)
+  if (is.null(banded)) {
+    if (is.null(originAssignment) || is.null(targetAssignment)) {
+      stop("If running estTransition without bootstrap, need to provide banding and/or telemetry (through originAssignment and targetAssignment) data")
     }
+    nDim <- 0
+    nTargetSites <- length(unique(targetAssignment))
+    nOriginSites <- length(unique(originAssignment))
+    if (is.null(originNames))
+      originNames <- LETTERS[1:nOriginSites]
+    if (is.null(targetNames))
+      targetNames <- as.character(1:nTargetSites)
+    # Data
+    telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
+                    factor(targetAssignment, levels = 1:nTargetSites))
+    jags.data <- list(telmat = telmat, npop = nOriginSites,
+                      ndest = nTargetSites,
+                      ntel = as.vector(table(factor(originAssignment,
+                                                    levels = 1:nOriginSites))))
+    # Parameters to monitor
+    params <- c("psi")
+    for (i in 1:nChains)
+      jags.inits[[i]] <- list(m0 = matrix(runif(nOriginSites * nTargetSites),
+                                          nOriginSites, nTargetSites))
   }
   else {
-    nAges <- dim(banded)[2]
-    if (dim(banded)[1]!=nOriginSites)
-      stop('Number of origin sites must be consistant between reencountered and banded')
-    if (dim(reencountered)[2]!=nAges)
-      stop('Number of ages must be consistant between banded and reencountered')
-    nfound <- apply(reencountered, 1:2, sum)
-    sampleSize <- sum(nfound)
-    tmat <- array(NA, c(nOriginSites, nAges, nTargetSites + 1))
-    tmat[ , , 1:nTargetSites] <- reencountered
-    tmat[ , , 1 + nTargetSites] <- banded - nfound
-    # Data
-    jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
-                      ndest = nTargetSites, nreleased = banded)
+    nDim <- length(dim(reencountered))
+    if (is.null(originNames))
+      originNames <- dimnames(reencountered)[[1]]
+    if (is.null(targetNames))
+      targetNames <- dimnames(reencountered)[[nDim]]
+    nTargetSites <- dim(reencountered)[nDim]
+    nOriginSites <- dim(reencountered)[1]
+    if (nDim == 2) {
+      nAges <- 1
+      if (length(banded)!=nOriginSites)
+        stop('Number of origin sites must be constant between reencountered and banded')
+      nfound <- apply(reencountered, 1, sum)
+      sampleSize <- sum(nfound)
+      tmat <- cbind(reencountered, banded - nfound)
+      # Data
+      jags.data <- list(recmat = tmat, npop = nOriginSites,
+                        ndest = nTargetSites, nreleased = banded)
+      if (!is.null(originAssignment)) {
+        telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
+                        factor(targetAssignment, levels = 1:nTargetSites))
+        jags.data$telmat <- telmat
+        jags.data$ntel <- as.vector(table(factor(originAssignment,
+                                                 levels = 1:nOriginSites)))
+      }
+      for (i in 1:nChains)
+        jags.inits[[i]] <- list(m0 =  matrix(runif(nOriginSites * nTargetSites),
+                                             nOriginSites, nTargetSites),
+                                r = rbeta(nTargetSites, 1, 1))
+    }
+    else {
+      nAges <- dim(banded)[2]
+      if (dim(banded)[1]!=nOriginSites)
+        stop('Number of origin sites must be consistant between reencountered and banded')
+      if (dim(reencountered)[2]!=nAges)
+        stop('Number of ages must be consistant between banded and reencountered')
+      nfound <- apply(reencountered, 1:2, sum)
+      sampleSize <- sum(nfound)
+      tmat <- array(NA, c(nOriginSites, nAges, nTargetSites + 1))
+      tmat[ , , 1:nTargetSites] <- reencountered
+      tmat[ , , 1 + nTargetSites] <- banded - nfound
+      # Data
+      jags.data <- list(recmat = tmat, npop = nOriginSites, nages = nAges,
+                        ndest = nTargetSites, nreleased = banded)
+      for (i in 1:nChains)
+        jags.inits[[i]] <- list(m0 = matrix(runif(nOriginSites * nTargetSites),
+                                            nOriginSites, nTargetSites),
+                                r = matrix(rbeta(nTargetSites * nAges, 1, 1),
+                                           nAges, nTargetSites))
+    }
+    # Parameters to monitor
+    params <- c("psi", "r")
   }
   if (!is.null(fixedZero)) {
     psiFixed <- matrix(NA, nOriginSites, nTargetSites)
@@ -354,17 +392,20 @@ estTransitionJAGS <- function (banded, reencountered,
     jags.data$m0 <- psiFixed
   }
   # Initial values
-  jags.inits <- function()list()
-  # Parameters to monitor
-  params <- c("psi", "r")
+  #jags.inits <- function()list()
   file <- paste0(find.package('MigConnectivity'),
-               ifelse(nAges == 1,
-                      ifelse(is.null(originAssignment),
-                             "/JAGS/multinomial_banding_1age.txt",
-                             "/JAGS/multinomial_banding_telemetry_1age.txt"),
-                      "/JAGS/multinomial_banding.txt"))
+                 ifelse(is.null(banded),
+                        "/JAGS/telemetry.txt",
+                        ifelse(nAges == 1,
+                               ifelse(is.null(originAssignment),
+                                      "/JAGS/multinomial_banding_1age.txt",
+                                      "/JAGS/multinomial_banding_telemetry_1age.txt"),
+                               "/JAGS/multinomial_banding.txt")))
+  # print(file)
+  # print(jags.data)
+  # print(rowSums(jags.data$recmat))
+  # print(jags.inits)
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
-                      #"inst/JAGS/multinomial_banding_1age.txt",
                       file,
                       n.chains = nChains, n.thin = nThin,
                       n.iter = nBurnin + ceiling(nSamples * nThin / nChains),
@@ -382,7 +423,16 @@ estTransitionJAGS <- function (banded, reencountered,
   dimnames(psi) <- list(NULL, originNames, targetNames)
   meanPsi <- out$BUGSoutput$mean$psi
   simpleCIPsi <- apply(psi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, names = F)
+  psi.matrix <- array(c(psi), c(dim(psi)[[1]], nOriginSites * nTargetSites),
+                      list(NULL, paste(rep(originNames, nTargetSites),
+                                       rep(targetNames, each = nOriginSites),
+                                       sep = "#")))
+  psi.mcmc <- coda::as.mcmc(psi.matrix)
+  hpdCI <- coda::HPDinterval(psi.mcmc, 1-alpha)
+  hpdCI <- array(hpdCI, c(nOriginSites, nTargetSites, 2),
+                 list(originNames, targetNames, c("lower", "upper")))
+  hpdCI <- aperm(hpdCI, c(3, 1, 2))
   bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
                    dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nOriginSites) {
@@ -397,50 +447,53 @@ estTransitionJAGS <- function (banded, reencountered,
   results <- list(psi = list(sample = psi, mean = meanPsi,
                              se = out$BUGSoutput$sd$psi,
                              simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                             hpdCI = hpdCI,
                              median = out$BUGSoutput$median$psi))
-  if (nAges == 1) {
-    bcCIr <- array(NA, dim = c(2, nTargetSites),
-                   dimnames = list(NULL, targetNames))
-    for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
-                            out$BUGSoutput$mean$r[j], na.rm = T) /
-                        length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
-      bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
-                              pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                              na.rm=TRUE, type = 8, names = F)
-    }
-    colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
-      names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
-      targetNames
-    results$r <- list(sample = out$BUGSoutput$sims.list$r,
-                     mean = out$BUGSoutput$mean$r,
-                     se = out$BUGSoutput$sd$r,
-                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
-                                      probs = c(alpha/2, 1-alpha/2), type = 8),
-                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
-  }
-  else {
-    bcCIr <- array(NA, dim = c(2, nAges, nTargetSites),
-                   dimnames = list(NULL, NULL, targetNames))
-    for (i in 1:nAges) {
+  if (!is.null(out$BUGSoutput$sims.list$r)) {
+    if (nAges == 1) {
+      bcCIr <- array(NA, dim = c(2, nTargetSites),
+                     dimnames = list(NULL, targetNames))
       for (j in 1:nTargetSites) {
-        psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ , i, j] <
-                            out$BUGSoutput$mean$r[i, j], na.rm = T) /
-                        length(which(!is.na(out$BUGSoutput$sims.list$r[,i,j]))))
-        bcCIr[,i,j] <- quantile(out$BUGSoutput$sims.list$r[ , i, j],
-                                pnorm(2 * psi.z0 + qnorm(c(alpha/2,1-alpha/2))),
+        psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
+                              out$BUGSoutput$mean$r[j], na.rm = T) /
+                          length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
+        bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
+                                pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
                                 na.rm=TRUE, type = 8, names = F)
       }
+      colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
+        names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
+        targetNames
+      results$r <- list(sample = out$BUGSoutput$sims.list$r,
+                       mean = out$BUGSoutput$mean$r,
+                       se = out$BUGSoutput$sd$r,
+                       simpleCI = apply(out$BUGSoutput$sims.list$r, 2, quantile,
+                                        probs = c(alpha/2, 1-alpha/2), type = 8),
+                       bcCI = bcCIr, median = out$BUGSoutput$median$r)
     }
-    dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
-      colnames(out$BUGSoutput$sd$r) <- colnames(out$BUGSoutput$median$r) <-
-      targetNames
-    results$r <- list(sample = out$BUGSoutput$sims.list$r,
-                     mean = out$BUGSoutput$mean$r,
-                     se = out$BUGSoutput$sd$r,
-                     simpleCI = apply(out$BUGSoutput$sims.list$r, 2:3, quantile,
-                                      probs = c(alpha/2, 1-alpha/2), type = 8),
-                     bcCI = bcCIr, median = out$BUGSoutput$median$r)
+    else {
+      bcCIr <- array(NA, dim = c(2, nAges, nTargetSites),
+                     dimnames = list(NULL, NULL, targetNames))
+      for (i in 1:nAges) {
+        for (j in 1:nTargetSites) {
+          psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ , i, j] <
+                              out$BUGSoutput$mean$r[i, j], na.rm = T) /
+                          length(which(!is.na(out$BUGSoutput$sims.list$r[,i,j]))))
+          bcCIr[,i,j] <- quantile(out$BUGSoutput$sims.list$r[ , i, j],
+                                  pnorm(2 * psi.z0 + qnorm(c(alpha/2,1-alpha/2))),
+                                  na.rm=TRUE, type = 8, names = F)
+        }
+      }
+      dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
+        colnames(out$BUGSoutput$sd$r) <- colnames(out$BUGSoutput$median$r) <-
+        targetNames
+      results$r <- list(sample = out$BUGSoutput$sims.list$r,
+                       mean = out$BUGSoutput$mean$r,
+                       se = out$BUGSoutput$sd$r,
+                       simpleCI = apply(out$BUGSoutput$sims.list$r, 2:3, quantile,
+                                        probs = c(alpha/2, 1-alpha/2), type = 8),
+                       bcCI = bcCIr, median = out$BUGSoutput$median$r)
+    }
   }
   results$input <- list(banded = banded, reencountered = reencountered,
                         originAssignment = originAssignment,
@@ -480,7 +533,11 @@ estTransitionBoot <- function(originSites = NULL,
                               maxTries = 300,
                               dataOverlapSetting = "dummy",
                               fixedZero = NULL,
-                              targetRelAbund = NULL) {
+                              targetRelAbund = NULL,
+                              banded = NULL,
+                              reencountered = NULL,
+                              method = "bootstrap",
+                              m = NULL) {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -490,10 +547,15 @@ estTransitionBoot <- function(originSites = NULL,
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
   if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL & (captured == "origin" | captured == "neither"))){
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
-  if ((is.null(originPoints) && is.null(originRaster) || is.null(originSites)) && is.null(originAssignment)){
-    stop("Need to define either originAssignment or originSites and originRaster or originPoints")}
-  if ((is.null(targetPoints) && is.null(targetRaster) || is.null(targetSites)) && is.null(targetAssignment)){
-    stop("Need to define either targetAssignment or targetSites and targetRaster or targetPoints")}
+  if ((is.null(originPoints) && is.null(originRaster) && is.null(originSites)) &&
+      is.null(originAssignment) && is.null(banded)){
+    stop("Need to define either originAssignment, originSites, originRaster, originPoints, or banded")}
+  if ((is.null(targetPoints) && is.null(targetRaster) &&
+       is.null(targetSites)) && is.null(targetAssignment) && is.null(reencountered)){
+    stop("Need to define either targetAssignment, targetSites, targetRaster, targetPoints, or reencountered")}
+  if ((is.null(banded) && !is.null(reencountered) ||
+       !is.null(banded)) && is.null(reencountered)){
+    stop("Need to define both banded and reencountered")}
   if(inherits(originSites,"SpatialPolygonsDataFrame")){
     originSites <- sf::st_as_sf(originSites)}
   if(inherits(targetSites,"SpatialPolygonsDataFrame")){
@@ -583,18 +645,17 @@ estTransitionBoot <- function(originSites = NULL,
     targetRasterXYZ <- temp$targetRasterXYZ
     targetSingleCell <- temp$targetSingleCell
   }
-  # print(targetAssignment[58:62,])
-  # print(originAssignment[58:62,])
-  # print(targetPoints[58:62,])
-  # print(originPoints[58:62,])
-  # print(class(targetPoints))
-  # print(class(originPoints))
   if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
     stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
   if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
     stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
 
-  nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
+  if (is.null(targetPoints) && is.null(originPoints) &&
+      is.null(targetAssignment) && is.null(originAssignment) &&
+      is.null(targetRaster) && is.null(originRaster))
+    nAnimals <- 0
+  else
+    nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
                   length(isTelemetry), length(isRaster), length(isProb),
                   min(length(targetAssignment), dim(targetAssignment)[1]),
                   min(length(originAssignment), dim(originAssignment)[1]),
@@ -605,13 +666,32 @@ estTransitionBoot <- function(originSites = NULL,
                          ifelse(originPointsAssigned, dim(originSingleCell)[3],
                                 dim(originRasterXYZ)[2] - 2)),
                   length(captured))
+  nAnimalsTotal <- nAnimals + sum(reencountered)# + sum(banded)
+  isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
 
-  if (length(isGL)==1){isGL <- rep(isGL, nAnimals)}
-  if (length(isTelemetry)==1){isTelemetry <- rep(isTelemetry, nAnimals)}
-  if (length(isRaster)==1){isRaster <- rep(isRaster, nAnimals)}
-  if (length(isProb)==1){isProb <- rep(isProb, nAnimals)}
+  if (length(isGL)==1){
+    isGL <- c(rep(isGL, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  if (length(isTelemetry)==1){
+    isTelemetry <- c(rep(isTelemetry, nAnimals),
+                     rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  if (length(isRaster)==1){
+    isRaster <- c(rep(isRaster, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  if (length(isProb)==1){
+    isProb <- c(rep(isProb, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
   if (length(captured)==1){captured <- rep(captured, nAnimals)}
 
+  isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
+  if (!is.null(banded)) {
+    captured <- c(captured, rep("origin", nAnimalsTotal - nAnimals)) #sum(banded)
+  }
+  if (method=="m-out-of-n-bootstrap" && is.null(m))
+    m <- ceiling(nAnimalsTotal / 4) # don't know if this is a good default or not!
+  else if (method == "bootstrap")
+    m <- nAnimalsTotal
 
   # IF originAssignment is NULL - we need to generate originAssignments from
   # the data provided
@@ -658,28 +738,50 @@ estTransitionBoot <- function(originSites = NULL,
                                             y = originSites,
                                             sparse = TRUE)))
     }   # originAssignment <- what # need point assignment for raster (mean location?)
-    else
+    else if (!is.null(originPoints))
       # originAssignment <- what # points over where we have them, raster assignment otherwise
       originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                                  y = originSites,
                                                                 sparse = TRUE)))
-    originAssignment[lengths(originAssignment)==0] <- NA
-    if (any(lengths(originAssignment)>1)){
-      warning("Overlapping originSites may cause issues\n")
-      originAssignment <- lapply(originAssignment, function (x) x[1])
-    }
-    originAssignment <- array(unlist(originAssignment))
-    duds <- is.na(originAssignment) & captured=="origin"
-    if (any(duds)){
-      if (verbose > 0)
-        cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
-      warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
-              "Affects animals: ", paste(which(duds), collapse = ","))
-      originAssignment[duds] <-
-        sf::st_nearest_feature(x = originPoints[duds,],
-                               y = originSites)
+    else
+      originAssignment <- NULL
+    if (!is.null(originAssignment)) {
+      originAssignment[lengths(originAssignment)==0] <- NA
+      if (any(lengths(originAssignment)>1)){
+        warning("Overlapping originSites may cause issues\n")
+        originAssignment <- lapply(originAssignment, function (x) x[1])
+      }
+      originAssignment <- array(unlist(originAssignment))
+      duds <- is.na(originAssignment) & captured=="origin"
+      if (any(duds)){
+        if (verbose > 0)
+          cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
+        warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
+                "Affects animals: ", paste(which(duds), collapse = ","))
+        originAssignment[duds] <-
+          sf::st_nearest_feature(x = originPoints[duds,],
+                                 y = originSites)
 
+      }
     }
+    if (!is.null(reencountered)) {
+      originAssignment <- array(c(originAssignment,
+                                  rep(1:nOriginSites, rowSums(reencountered))))
+    }
+  }
+  else if (!is.null(reencountered)) {
+    if (is.array(originAssignment) && length(dim(originAssignment))>1){
+      originAssignment <- rbind(originAssignment,
+                                array(0, c(nAnimalsTotal - nAnimals)))
+      place <- nAnimals
+      for (i in 1:nOriginSites) {
+        originAssignment[place + 1:rowSums(reencountered)[i], i] <- 1
+        place <- place + rowSums(reencountered)[i]
+      }
+    }
+    else
+      originAssignment <- array(c(originAssignment,
+                                rep(1:nOriginSites, rowSums(reencountered))))
   }
 
 
@@ -726,31 +828,59 @@ estTransitionBoot <- function(originSites = NULL,
 
     # NEED TO ADD A CATCH HERE TO ASSIGN THE MAX_prob to CLOSEST TARGET REGION
     # IF INTERSECTS IS (empty)
-   }else
+    }
+    else if (!is.null(targetPoints))
    #   targetAssignment <- what # points over where we have them, raster assignment otherwise
       targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
                                                         y = targetSites,
                                                         sparse = TRUE)))
-   targetAssignment[lengths(targetAssignment)==0] <- NA
-   if (any(lengths(targetAssignment)>1)){
-     warning("Overlapping targetSites may cause issues\n")
-     targetAssignment <- lapply(targetAssignment, function(x) x[1])
-   }
-   targetAssignment <- array(unlist(targetAssignment))
-   duds <- is.na(targetAssignment) & captured=="target"
-   if (any(duds)){
-     if (verbose > 0)
-       cat("Not all target capture locations are within targetSites. Assigning to closest site\n")
-     warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
-             "Affects animals: ", paste(which(duds), collapse = ","))
-     targetAssignment[duds] <-
-       sf::st_nearest_feature(x = targetPoints[duds,],
-                              y = targetSites)
+    else
+      targetAssignment <- NULL
+   if (!is.null(targetAssignment)) {
+     targetAssignment[lengths(targetAssignment)==0] <- NA
+     if (any(lengths(targetAssignment)>1)){
+       warning("Overlapping targetSites may cause issues\n")
+       targetAssignment <- lapply(targetAssignment, function(x) x[1])
+     }
+     targetAssignment <- array(unlist(targetAssignment))
+     duds <- is.na(targetAssignment) & captured=="target"
+     if (any(duds)){
+       if (verbose > 0)
+         cat("Not all target capture locations are within targetSites. Assigning to closest site\n")
+       warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
+               "Affects animals: ", paste(which(duds), collapse = ","))
+       targetAssignment[duds] <-
+         sf::st_nearest_feature(x = targetPoints[duds,],
+                                y = targetSites)
 
+     }
+   }
+   if (!is.null(reencountered)) {
+     for (j in 1:nOriginSites)
+       targetAssignment <- array(c(targetAssignment,
+                                   rep(1:nTargetSites, reencountered[j, ])))
    }
   }
+  else if (!is.null(reencountered)) {
+    if (is.array(targetAssignment) && length(dim(targetAssignment))>1){
+      targetAssignment <- rbind(targetAssignment,
+                                array(0, c(nAnimalsTotal - nAnimals)))
+      place <- nAnimals
+      for (j in 1:nOriginSites)
+        for (i in 1:nTargetSites) {
+          targetAssignment[place + 1:reencountered[j, i], i] <- 1
+          place <- place + reencountered[j, i]
+        }
+    }
+    else {
+      for (j in 1:nOriginSites)
+        targetAssignment <- array(c(targetAssignment,
+                                    rep(1:nTargetSites, reencountered[j, ])))
+    }
+  }
+
   if(is.null(originSites)){
-    if (is.array(originAssignment)){
+    if (is.array(originAssignment) && length(dim(originAssignment))>1){
       nOriginSites <- ncol(originAssignment)
     }
     else {
@@ -762,7 +892,7 @@ estTransitionBoot <- function(originSites = NULL,
   }
 
   if(is.null(targetSites)){
-    if (is.array(targetAssignment)){
+    if (is.array(targetAssignment) && length(dim(targetAssignment))>1){
       nTargetSites <- ncol(targetAssignment)
     }
     else {
@@ -946,7 +1076,9 @@ estTransitionBoot <- function(originSites = NULL,
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
-                                                    #NULL))
+  if (!is.null(banded))
+    r.array <- array(0, c(nBoot, nTargetSites),
+                     dimnames = list(1:nBoot, targetNames))
   if (is.null(dim(originAssignment))){
     originAssignment <- array(originAssignment)}
   if (is.null(dim(targetAssignment))){
@@ -960,12 +1092,18 @@ estTransitionBoot <- function(originSites = NULL,
   }
   countFailed <- 0
   failed <- FALSE
-
+  #print(nAnimals)
   if (length(dim(originAssignment))==2){
     pointOriginAssignment <- apply(originAssignment, 1, which.max)
   }
   else{
     pointOriginAssignment <- as.vector(originAssignment)
+  }
+  if (length(pointOriginAssignment) > nAnimals){
+    if (nAnimals==0)
+      pointOriginAssignment <- NULL
+    else
+      pointOriginAssignment <- pointOriginAssignment[1:nAnimals]
   }
   if (length(dim(targetAssignment))==2){
     pointTargetAssignment <- apply(targetAssignment, 1, which.max)
@@ -973,15 +1111,30 @@ estTransitionBoot <- function(originSites = NULL,
   else{
     pointTargetAssignment <- as.vector(targetAssignment)
   }
+  if (length(pointTargetAssignment) > nAnimals) {
+    if (nAnimals==0)
+      pointTargetAssignment <- NULL
+    else
+      pointTargetAssignment <- pointTargetAssignment[1:nAnimals]
+  }
   if (length(pointTargetAssignment) == length(pointOriginAssignment)) {
-   pointSites <- table(pointOriginAssignment, pointTargetAssignment)
-
-   pointPsi <- prop.table(pointSites, 1)
+   #pointSites <- table(pointOriginAssignment, pointTargetAssignment)
+   psi_r <- calcTransition(banded, reencountered,
+                           originAssignment = pointOriginAssignment,
+                           targetAssignment = pointTargetAssignment,
+                           originNames = originNames,
+                           targetNames = targetNames,
+                           method = "SANN")
+   pointPsi <- psi_r$psi
+   point_r <- psi_r$r
   }
   else {
     pointPsi <- NULL
+    point_r <- NULL
   }
   boot <- 1
+  if (verbose > 0)
+    cat("Starting bootstrap\n")
   while (boot <= nBoot) {
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
@@ -989,17 +1142,20 @@ estTransitionBoot <- function(originSites = NULL,
     origin.sample <- 'Filler' # Start with one origin site
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
-      animal.sample <- sample.int(nAnimals, replace=TRUE, prob = weights[boot,])
+      animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
       if (any(captured[animal.sample]!='origin')) {
         if (length(dim(originAssignment))==2)
           assignment <- originAssignment[animal.sample, , drop = FALSE]
         else
           assignment <- originAssignment[animal.sample, drop = FALSE]
+        #print(assignment)
         #print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
         oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                            isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                            isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),
-                           isTelemetry = (isTelemetry[animal.sample] | captured[animal.sample]=='origin'),
+                           isTelemetry = (isTelemetry[animal.sample] |
+                                            isCMR[animal.sample] |
+                                            captured[animal.sample]=='origin'),
                            geoBias = geoBiasOrigin,
                            geoVCov = geoVCovOrigin,
                            points = originPoints[animal.sample, ],
@@ -1032,7 +1188,7 @@ estTransitionBoot <- function(originSites = NULL,
       }
       else {
         # Get origin population for each animal sampled
-        origin.sample <- pointOriginAssignment[animal.sample]
+        origin.sample <- originAssignment[animal.sample]
       }
     }
     if (any(captured[animal.sample]!="target")) {
@@ -1040,10 +1196,13 @@ estTransitionBoot <- function(originSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
+      #print(assignment)
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
-                         isTelemetry = (isTelemetry[animal.sample] | captured[animal.sample] == "target"),
+                         isTelemetry = (isTelemetry[animal.sample] |
+                                          isCMR[animal.sample] |
+                                          captured[animal.sample] == "target"),
                          geoBias = geoBias, geoVCov = geoVCov,
                          points = targetPoints[animal.sample, ],
                          matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
@@ -1100,8 +1259,31 @@ estTransitionBoot <- function(originSites = NULL,
         next
       }
     }
-    # Create psi matrix as proportion of those from each breeding site that went to each NB site
-    psi.array[boot, , ] <- prop.table(sites.array[boot, , ], 1)
+    if (is.null(banded)) {
+      banded.sample <- NULL
+      reencountered.sample <- NULL
+    }
+    else {
+      reencountered.sample <- table(origin.sample[isCMR[animal.sample]],
+                                    target.sample[isCMR[animal.sample]])
+      banded.sample <- rowSums(reencountered.sample) + banded -
+        rowSums(reencountered)
+    }
+    # Use new function that allows for CMR data
+    # print(reencountered.sample)
+    # print(banded.sample)
+    # print(origin.sample[!isCMR[animal.sample]])
+    # print(target.sample[!isCMR[animal.sample]])
+    psi_r <- calcTransition(banded.sample, reencountered.sample,
+                            originAssignment = origin.sample[!isCMR[animal.sample]],
+                            targetAssignment = target.sample[!isCMR[animal.sample]],
+                            originNames = originNames,
+                            targetNames = targetNames,
+                            method = "SANN")
+    psi.array[boot, , ] <- psi_r$psi
+    if (!is.null(banded))
+      r.array[boot, ] <- psi_r$r
+    #prop.table(sites.array[boot, , ], 1)
     boot <- boot + 1
   }
   if (countFailed > 0)
@@ -1110,26 +1292,68 @@ estTransitionBoot <- function(originSites = NULL,
             nBoot, " successful. If this ratio is high, you should examine ",
             "fixedZero and the data to make sure those transition ",
             "probabilities really are zero\n")
-  meanPsi <- apply(psi.array, 2:3, mean)
-  medianPsi <- apply(psi.array, 2:3, median)
-  sePsi <- apply(psi.array, 2:3, sd)
-  simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
-  bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
-                   dimnames = list(NULL, originNames, targetNames))
-  for (i in 1:nOriginSites) {
-    for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
-                        length(which(!is.na(psi.array[, i, j]))))
-      bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
-                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
+  if (method=="bootstrap") {
+    meanPsi <- apply(psi.array, 2:3, mean)
+    medianPsi <- apply(psi.array, 2:3, median)
+    sePsi <- apply(psi.array, 2:3, sd)
+    simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE, type = 8, names = F)
+    psi.matrix <- array(c(psi.array), c(nBoot, nOriginSites * nTargetSites),
+                        list(NULL, paste(rep(originNames, nTargetSites),
+                                         rep(targetNames, each = nOriginSites),
+                                         sep = "#")))
+    psi.mcmc <- coda::as.mcmc(psi.matrix)
+    hpdCI <- coda::HPDinterval(psi.mcmc, 1-alpha)
+    hpdCI <- array(hpdCI, c(nOriginSites, nTargetSites, 2),
+                   list(originNames, targetNames, c("lower", "upper")))
+    hpdCI <- aperm(hpdCI, c(3, 1, 2))
+    bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
+                     dimnames = list(NULL, originNames, targetNames))
+    for (i in 1:nOriginSites) {
+      for (j in 1:nTargetSites) {
+        psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+                          length(which(!is.na(psi.array[, i, j]))))
+        bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
+                                     pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                     na.rm=TRUE, type = 8, names = F)
+      }
     }
+    if (!is.null(r.array)){
+      mean.r <- apply(r.array, 2, mean)
+      median.r <- apply(r.array, 2, median)
+      se.r <- apply(r.array, 2, sd)
+      simpleCIr <- apply(r.array, 2, quantile, probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE, type = 8, names = F)
+      r.mcmc <- coda::as.mcmc(r.array)
+      hpdCIr <- coda::HPDinterval(r.mcmc, 1-alpha)
+      hpdCIr <- aperm(hpdCIr, c(2, 1))
+      bcCIr <- array(NA, dim = c(2, nTargetSites),
+                     dimnames = list(c("lower", "upper"), targetNames))
+      for (j in 1:nTargetSites) {
+        r.z0 <- qnorm(sum(r.array[ ,j] < mean.r[j], na.rm = T) /
+                          length(which(!is.na(r.array[ ,j]))))
+        bcCIr[ , j] <- quantile(r.array[ ,j],
+                                pnorm(2 * r.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                na.rm=TRUE, type = 8, names = F)
+      }
+      r <- list(sample = r.array, mean = mean.r,
+                se = se.r, simpleCI = simpleCIr,
+                bcCI = bcCIr, hpdCI = hpdCIr, median = median.r)
+    }
+    else
+      r <- NULL
+  }
+  else {
+    meanPsi <- apply(psi.array, 2:3, mean) * m / nAnimals
+    medianPsi <- apply(psi.array, 2:3, median)
+    sePsi <- apply(psi.array, 2:3, sd) * sqrt(m / nAnimals)
+    simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE, type = 8, names = F)
   }
   return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
-                         simpleCI = simpleCIPsi, bcCI = bcCIPsi,
+                         simpleCI = simpleCIPsi, bcCI = bcCIPsi, hpdCI = hpdCI,
                          median = medianPsi, point = pointPsi),
-              r = NULL,
+              r = r,
               input = list(sampleSize = nAnimals, originSites = originSites,
                            targetSites = targetSites,
                            originPoints = originPoints,
@@ -1402,9 +1626,15 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           nBurnin = 5000, nChains = 3, nThin = 1,
                           dataOverlapSetting = c("dummy", "none", "named"),
                           fixedZero = NULL,
-                          targetRelAbund = NULL) {
+                          targetRelAbund = NULL,
+                          method = ifelse(is.null(banded),
+                                          "bootstrap",
+                                          "MCMC"),
+                          m = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
-  if (is.null(banded)) {
+  if (!(method %in% c("bootstrap", "MCMC", "m-out-of-n-bootstrap")))
+    stop('method should be "bootstrap", "MCMC", or "m-out-of-n-bootstrap"')
+  if (method != "MCMC") {
     psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
                              isRaster = isRaster, isProb = isProb,
                              geoBias=geoBias, geoVCov=geoVCov,
@@ -1424,7 +1654,9 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              maxTries = maxTries,
                              dataOverlapSetting = dataOverlapSetting,
                              fixedZero = fixedZero,
-                             targetRelAbund = targetRelAbund)
+                             targetRelAbund = targetRelAbund,
+                             method = method, m = m,
+                             banded = banded, reencountered = reencountered)
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,

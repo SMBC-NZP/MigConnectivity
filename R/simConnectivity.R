@@ -1184,4 +1184,16 @@ simProbData <- function(psi,
                            shapes = shapes)))
 }
 
-
+simCMRData <- function(psi, banded, r) {
+  moved <- reencountered <- array(0, dim(psi), dimnames = dimnames(psi))
+  nOriginSites <- nrow(psi)
+  for (i in 1:nOriginSites) {
+    moved[i, ] <- stats::rmultinom(1, banded[i], psi[i, ])
+    for (j in 1:nTargetSites) {
+      reencountered[i,j] <- stats::rbinom(1, moved[i,j], r[j])
+    }
+  }
+  return(list(reencountered = reencountered,
+              migrated = moved,
+              input = list(psi = psi, banded = banded, r = r)))
+}

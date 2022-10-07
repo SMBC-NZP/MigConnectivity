@@ -3,8 +3,8 @@ title: '''MigConnectivity'' package'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::pdf_document: default
   rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
@@ -13,25 +13,11 @@ vignette: |
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>", tidy = FALSE)
 ```
+## Introduction
 
-##Introduction  
+NOTE: this vignette is a bit out of date. Everything in it should still work (let us know if it doesn't), but it doesn't highlight the new functions from versions 0.3 and 0.4, such as `estStrength`, `estTransition`, and `diffMC`. We are working on an updated (or new) vignette that will highlight the new features.
 
-NOTE: this vignette is a bit out of date. Everything in it should still work 
-(let us know if it doesn't), but it doesn't highlight the new functions from 
-versions 0.3 and 0.4, such as `estStrength`, `estTransition`, and `diffMC`. We 
-are working on an updated (or new) vignette that will highlight the new 
-features.
-
-Technological advancements have spurred rapid growth in the study of migratory connectivity,
-the spatial and temporal linkage of migratory populations throughout the annual cycle. However, 
-the lack of a quantitative definition for the strength of migratory connectivity (MC) has limited our ability to draw 
-inferences across species, studies, and data types about the seasonal co-occurrence of 
-populations. MC is a standardized metric to quantify migratory connectivity between two phases 
-of the annual cycle. It is independent of data type and accounts for the relative abundance of 
-populations distributed across a seasonal range. Negative values of MC indicate that individuals 
-close to each other in one season are further apart in the other season. If MC = 0, no relationship 
-exists between distances in one season and another; if MC = 1, the relative distances between 
-individuals in one season are the same in the other, although the scale can differ.  
+Technological advancements have spurred rapid growth in the study of migratory connectivity, the spatial and temporal linkage of migratory populations throughout the annual cycle. However, the lack of a quantitative definition for the strength of migratory connectivity (MC) has limited our ability to draw inferences across species, studies, and data types about the seasonal co-occurrence of populations. MC is a standardized metric to quantify migratory connectivity between two phases of the annual cycle. It is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. Negative values of MC indicate that individuals close to each other in one season are further apart in the other season. If MC = 0, no relationship exists between distances in one season and another; if MC = 1, the relative distances between individuals in one season are the same in the other, although the scale can differ.  
 
 Three data inputs are needed to calculate MC, and one is optional:   
 
