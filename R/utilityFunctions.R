@@ -216,8 +216,15 @@ locSample <- function(isGL,
     site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ,
                                                         drop = FALSE], 1,
                                                   which.max)
+    if (is.list(site.sample)) {
+      site.sample[lengths(site.sample)==0] <- 0
+      site.sample <- unlist(site.sample)
+    }
+
   }else{
-    site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]}
+    site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]
+    site.sample[which(isTelemetry) & is.na(site.sample)] <- 0
+  }
   if (!is.null(points))
     point.sample[which(isTelemetry), ] <- sf::st_coordinates(points[which(isTelemetry),])
   # Which to sample still
@@ -228,7 +235,8 @@ locSample <- function(isGL,
     draws <- draws + 1
     # Convert toSample (numbers) into T/F, so can combine with other T/F
     toSampleBool <- 1:nAnimals %in% toSample
-    #cat(toSample, '\n')
+    # cat(toSampleBool, '\n')
+    # cat(isGL[1:10], '\n')
     # Sample geolocator points
     if (any(isGL & toSampleBool)) {
       #cat("*************", sum(isGL & toSampleBool), "*************\n")

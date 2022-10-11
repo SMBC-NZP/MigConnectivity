@@ -666,22 +666,30 @@ estTransitionBoot <- function(originSites = NULL,
                          ifelse(originPointsAssigned, dim(originSingleCell)[3],
                                 dim(originRasterXYZ)[2] - 2)),
                   length(captured))
-  nAnimalsTotal <- nAnimals + sum(reencountered)# + sum(banded)
+  nAnimalsTotal <- nAnimals + sum(banded) #+ sum(reencountered)#
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
   # print(nAnimals); print(nAnimalsTotal)
   if (length(isGL)==1){
     isGL <- c(rep(isGL, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
   }
+  else
+    isGL <- c(isGL, rep(FALSE, nAnimalsTotal - nAnimals))
   if (length(isTelemetry)==1){
     isTelemetry <- c(rep(isTelemetry, nAnimals),
                      rep(FALSE, nAnimalsTotal - nAnimals))
   }
+  else
+    isTelemetry <- c(isTelemetry, rep(FALSE, nAnimalsTotal - nAnimals))
   if (length(isRaster)==1){
     isRaster <- c(rep(isRaster, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
   }
+  else
+    isRaster <- c(isRaster, rep(FALSE, nAnimalsTotal - nAnimals))
   if (length(isProb)==1){
     isProb <- c(rep(isProb, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
   }
+  else
+    isProb <- c(isProb, rep(FALSE, nAnimalsTotal - nAnimals))
   if (length(captured)==1){captured <- rep(captured, nAnimals)}
 
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
@@ -766,8 +774,7 @@ estTransitionBoot <- function(originSites = NULL,
     }
     if (!is.null(reencountered)) {
       originAssignment <- array(c(originAssignment,
-                                  rep(1:dim(reencountered)[1],
-                                      rowSums(reencountered))))
+                                  rep(1:length(banded), banded)))
     }
   }
   else if (!is.null(reencountered)) {
@@ -776,15 +783,15 @@ estTransitionBoot <- function(originSites = NULL,
                                 array(0, c(nAnimalsTotal - nAnimals,
                                            dim(originAssignment)[2])))
       place <- nAnimals
-      for (i in 1:dim(reencountered)[1]) {
-        originAssignment[place + 1:rowSums(reencountered)[i], i] <- 1
-        place <- place + rowSums(reencountered)[i]
+      for (i in 1:length(banded)) {
+        originAssignment[place + 1:banded[i], i] <- 1
+        place <- place + banded[i]
       }
     }
     else {
-      nOriginSites <- dim(reencountered)[1]
+      nOriginSites <- length(banded)
       originAssignment <- array(c(originAssignment,
-                                rep(1:nOriginSites, rowSums(reencountered))))
+                                rep(1:nOriginSites, banded)))
     }
   }
 
@@ -864,7 +871,9 @@ estTransitionBoot <- function(originSites = NULL,
      nOriginSites <- dim(reencountered)[1]
      for (j in 1:nOriginSites)
        targetAssignment <- array(c(targetAssignment,
-                                   rep(1:nTargetSites, reencountered[j, ])))
+                                   rep(c(1:nTargetSites, NA),
+                                       c(reencountered[j, ],
+                                         banded[j] - sum(reencountered[j, ])))))
    }
   }
   else if (!is.null(reencountered)) {
@@ -875,18 +884,23 @@ estTransitionBoot <- function(originSites = NULL,
                                 array(0,
                                       c(nAnimalsTotal - nAnimals, nTargetSites)))
       place <- nAnimals
-      for (j in 1:nOriginSites)
+      for (j in 1:nOriginSites) {
         for (i in 1:nTargetSites) {
           targetAssignment[place + 1:reencountered[j, i], i] <- 1
           place <- place + reencountered[j, i]
         }
+        targetAssignment[place + 1:(banded[j] - sum(reencountered[j, ])), ] <- NA
+        place <- place + banded[j] - sum(reencountered[j, ])
+      }
     }
     else {
       nTargetSites <- dim(reencountered)[2]
       nOriginSites <- dim(reencountered)[1]
       for (j in 1:nOriginSites)
         targetAssignment <- array(c(targetAssignment,
-                                    rep(1:nTargetSites, reencountered[j, ])))
+                                    rep(c(1:nTargetSites, NA),
+                                        c(reencountered[j, ],
+                                          banded[j] - sum(reencountered[j, ])))))
     }
   }
 
@@ -907,7 +921,7 @@ estTransitionBoot <- function(originSites = NULL,
       nTargetSites <- ncol(targetAssignment)
     }
     else {
-      nTargetSites <- length(unique(targetAssignment))
+      nTargetSites <- length(unique(targetAssignment[!is.na(targetAssignment)]))
     }
   }
   else {
@@ -1060,6 +1074,10 @@ estTransitionBoot <- function(originSites = NULL,
     weights <- array(0, c(nBoot, nAnimalsTotal))
     if (length(dim(targetAssignment))==2) {
       ta <- apply(targetAssignment, 1, which.max)
+      if (is.list(ta)) {
+        ta[lengths(ta)==0] <- NA
+        ta <- unlist(ta)
+      }
     }
     else
       ta <- targetAssignment
@@ -1106,6 +1124,9 @@ estTransitionBoot <- function(originSites = NULL,
               "targetRelAbund argument, to allow resampling in proportion to ",
               "abundance.")
   }
+
+  # print(nOriginSites); print(nTargetSites)
+  # print(unique(originAssignment)); print(unique(targetAssignment))
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
@@ -1221,7 +1242,15 @@ estTransitionBoot <- function(originSites = NULL,
       }
       else {
         # Get origin population for each animal sampled
-        origin.sample <- originAssignment[animal.sample]
+        if (length(dim(originAssignment))==2){
+          origin.sample <- apply(originAssignment[animal.sample], 1, which.max)
+          if (is.list(origin.sample)) {
+            origin.sample[lengths(origin.sample)==0] <- NA
+            origin.sample <- unlist(origin.sample)
+          }
+        }
+        else
+          origin.sample <- originAssignment[animal.sample]
       }
     }
     if (any(captured[animal.sample]!="target")) {
@@ -1229,7 +1258,7 @@ estTransitionBoot <- function(originSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
-      #print(assignment)
+      # print(isGL[animal.sample]); print(isGL); print(animal.sample)
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
@@ -1261,16 +1290,29 @@ estTransitionBoot <- function(originSites = NULL,
              ', and resampleProjection to determine why sampled points fell outside sites.')
       }
       target.sample <- tSamp$site.sample
+      target.sample[target.sample==0] <- NA
       #target.point.sample <- tSamp$target.point.sample
       if (verbose > 2)
         cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
     }
     else {
       # Get target population for each animal sampled
-      target.sample <- pointTargetAssignment[animal.sample]
+      if (length(dim(targetAssignment))==2){
+        target.sample <- apply(targetAssignment[animal.sample], 1, which.max)
+        if (is.list(target.sample)) {
+          target.sample[lengths(target.sample)==0] <- NA
+          target.sample <- unlist(target.sample)
+        }
+      }
+      else
+        target.sample <- targetAssignment[animal.sample]
     }
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
-    sites <- table(origin.sample, target.sample)
+    # print(class(origin.sample))
+    # print(class(target.sample))
+    sites <- table(origin.sample,
+                   target.sample,
+                   useNA = "no")
     sites.array[boot, as.integer(rownames(sites)),
                 as.integer(colnames(sites))] <- sites
     if (nFixedZero > 0) {
@@ -1298,9 +1340,14 @@ estTransitionBoot <- function(originSites = NULL,
     }
     else {
       reencountered.sample <- table(origin.sample[isCMR[animal.sample]],
-                                    target.sample[isCMR[animal.sample]])
-      banded.sample <- rowSums(reencountered.sample) + banded -
-        rowSums(reencountered)
+                                    target.sample[isCMR[animal.sample]],
+                                    useNA = "no")
+      # print(reencountered.sample)
+      # print(rowSums(reencountered.sample))
+      banded.sample <- table(origin.sample[isCMR[animal.sample]])
+      # print(banded.sample)
+        #rowSums(reencountered.sample) + banded -
+        #rowSums(reencountered)
     }
     # Use new function that allows for CMR data
     # print(reencountered.sample)
