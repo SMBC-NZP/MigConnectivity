@@ -1,4 +1,4 @@
-#' Generate probabilitistic isotope assignments
+#' Generate probabilistic isotope assignments
 #'
 #' The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
 #' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.

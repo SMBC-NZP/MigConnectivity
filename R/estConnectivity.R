@@ -668,7 +668,7 @@ estTransitionBoot <- function(originSites = NULL,
                   length(captured))
   nAnimalsTotal <- nAnimals + sum(reencountered)# + sum(banded)
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
-
+  # print(nAnimals); print(nAnimalsTotal)
   if (length(isGL)==1){
     isGL <- c(rep(isGL, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
   }
@@ -752,7 +752,7 @@ estTransitionBoot <- function(originSites = NULL,
         originAssignment <- lapply(originAssignment, function (x) x[1])
       }
       originAssignment <- array(unlist(originAssignment))
-      duds <- is.na(originAssignment) & captured=="origin"
+      duds <- is.na(originAssignment) & captured[1:nAnimals] == "origin"
       if (any(duds)){
         if (verbose > 0)
           cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
@@ -766,22 +766,26 @@ estTransitionBoot <- function(originSites = NULL,
     }
     if (!is.null(reencountered)) {
       originAssignment <- array(c(originAssignment,
-                                  rep(1:nOriginSites, rowSums(reencountered))))
+                                  rep(1:dim(reencountered)[1],
+                                      rowSums(reencountered))))
     }
   }
   else if (!is.null(reencountered)) {
     if (is.array(originAssignment) && length(dim(originAssignment))>1){
       originAssignment <- rbind(originAssignment,
-                                array(0, c(nAnimalsTotal - nAnimals)))
+                                array(0, c(nAnimalsTotal - nAnimals,
+                                           dim(originAssignment)[2])))
       place <- nAnimals
-      for (i in 1:nOriginSites) {
+      for (i in 1:dim(reencountered)[1]) {
         originAssignment[place + 1:rowSums(reencountered)[i], i] <- 1
         place <- place + rowSums(reencountered)[i]
       }
     }
-    else
+    else {
+      nOriginSites <- dim(reencountered)[1]
       originAssignment <- array(c(originAssignment,
                                 rep(1:nOriginSites, rowSums(reencountered))))
+    }
   }
 
 
@@ -843,7 +847,7 @@ estTransitionBoot <- function(originSites = NULL,
        targetAssignment <- lapply(targetAssignment, function(x) x[1])
      }
      targetAssignment <- array(unlist(targetAssignment))
-     duds <- is.na(targetAssignment) & captured=="target"
+     duds <- is.na(targetAssignment) & captured[1:nAnimals] == "target"
      if (any(duds)){
        if (verbose > 0)
          cat("Not all target capture locations are within targetSites. Assigning to closest site\n")
@@ -856,6 +860,8 @@ estTransitionBoot <- function(originSites = NULL,
      }
    }
    if (!is.null(reencountered)) {
+     nTargetSites <- dim(reencountered)[2]
+     nOriginSites <- dim(reencountered)[1]
      for (j in 1:nOriginSites)
        targetAssignment <- array(c(targetAssignment,
                                    rep(1:nTargetSites, reencountered[j, ])))
@@ -863,8 +869,11 @@ estTransitionBoot <- function(originSites = NULL,
   }
   else if (!is.null(reencountered)) {
     if (is.array(targetAssignment) && length(dim(targetAssignment))>1){
+      nTargetSites <- dim(reencountered)[2]
+      nOriginSites <- dim(reencountered)[1]
       targetAssignment <- rbind(targetAssignment,
-                                array(0, c(nAnimalsTotal - nAnimals)))
+                                array(0,
+                                      c(nAnimalsTotal - nAnimals, nTargetSites)))
       place <- nAnimals
       for (j in 1:nOriginSites)
         for (i in 1:nTargetSites) {
@@ -873,6 +882,8 @@ estTransitionBoot <- function(originSites = NULL,
         }
     }
     else {
+      nTargetSites <- dim(reencountered)[2]
+      nOriginSites <- dim(reencountered)[1]
       for (j in 1:nOriginSites)
         targetAssignment <- array(c(targetAssignment,
                                     rep(1:nTargetSites, reencountered[j, ])))
@@ -999,6 +1010,25 @@ estTransitionBoot <- function(originSites = NULL,
     originCon <- NULL
   }
 
+  # if (!is.null(targetPoints) && nAnimals < nAnimalsTotal) {
+  #   if (verbose > 0)
+  #     cat("Filling in dummy target points for CMR data")
+  #   dummyPoint <- targetPoints[1, ]
+  #   for (i in 1:(nAnimalsTotal - nAnimals)) {
+  #     targetPoints <- rbind(targetPoints,
+  #                           dummyPoint)
+  #   }
+  # }
+  # if (!is.null(originPoints) && nAnimals < nAnimalsTotal) {
+  #   if (verbose > 0)
+  #     cat("Filling in dummy origin points for CMR data")
+  #   dummyPoint <- originPoints[1, ]
+  #   for (i in 1:(nAnimalsTotal - nAnimals)) {
+  #     originPoints <- rbind(originPoints,
+  #                           dummyPoint)
+  #   }
+  # }
+
   if (!is.null(targetRelAbund) && any(captured=="target")) {
     if (coda::is.mcmc(targetRelAbund) || coda::is.mcmc.list(targetRelAbund)) {
       targetRelAbund <- as.matrix(targetRelAbund)
@@ -1026,30 +1056,33 @@ estTransitionBoot <- function(originSites = NULL,
       abundBase <- targetRelAbund
       targetRelAbund <- matrix(targetRelAbund, nBoot, nTargetSites, TRUE)
     }
-    #print(targetAssignment)
-    weights <- array(0, c(nBoot, nAnimals))
+    #print(targetAssignment); print(captured)
+    weights <- array(0, c(nBoot, nAnimalsTotal))
     if (length(dim(targetAssignment))==2) {
       ta <- apply(targetAssignment, 1, which.max)
     }
     else
       ta <- targetAssignment
+    # print(length(ta)); print(length(captured))
     nOriginAnimals <- sum(captured != "target")
     nTargetAnimals <- rep(NA, nTargetSites)
     for (i in 1:nTargetSites) {
+      # print(nTargetAnimals)
+      # print(i); print(sum(captured=="target" & ta==i))
       nTargetAnimals[i] <- sum(captured=="target" & ta==i)
       if (nTargetAnimals[i] > 0)
         weights[ , captured=="target" & ta==i] <- targetRelAbund[ , i] /
-          nTargetAnimals[i] * (nAnimals - nOriginAnimals) / nAnimals
+          nTargetAnimals[i] * (nAnimalsTotal - nOriginAnimals) / nAnimalsTotal
     }
     if (nOriginAnimals>0) {
       if (all(nTargetAnimals>0))
-        weights[ , captured!="target"] <- 1/nAnimals
+        weights[ , captured!="target"] <- 1/nAnimalsTotal
       else {
         t0 <- which(nTargetAnimals>0)
         #print(nTargetAnimals)
-        weights[ , captured!="target"] <- 1/nAnimals +
+        weights[ , captured!="target"] <- 1/nAnimalsTotal +
           rowSums(targetRelAbund[ , t0]) *
-          sum(nTargetAnimals) / nAnimals / nOriginAnimals
+          sum(nTargetAnimals) / nAnimalsTotal / nOriginAnimals
         # weights[captured!="target" & ta %in% t0] <- (1 - sum(weights)) /
         #   sum(captured!="target" & ta %in% t0)
         if (sum(captured!="target" & ta %in% t0) == 0)
@@ -1148,8 +1181,8 @@ estTransitionBoot <- function(originSites = NULL,
           assignment <- originAssignment[animal.sample, , drop = FALSE]
         else
           assignment <- originAssignment[animal.sample, drop = FALSE]
-        #print(assignment)
-        #print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
+        # print(assignment)
+        # print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
         oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                            isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                            isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),

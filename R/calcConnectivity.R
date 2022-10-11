@@ -391,7 +391,7 @@ divCoefNLL <- function(psi_r, banded, reencountered, counts) {
   for (o in 1:nOriginSites)
     psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
   psi <- cbind(psi, 1 - rowSums(psi))
-  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nOriginSites])
+  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites])
   p <- sweep(psi, 2, r, "*")
   p <- cbind(p, 1 - rowSums(p))
   reencountered <- cbind(reencountered, banded - rowSums(reencountered))
@@ -410,7 +410,10 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
                            originNames = NULL, targetNames = NULL,
                            method = "Nelder-Mead") {
   if (is.null(counts) && length(originAssignment)>0) {
-    counts <- table(originAssignment, targetAssignment)
+    nOriginSites <- length(originNames); nTargetSites <- length(targetNames)
+    counts <- table(factor(originAssignment, levels = 1:nOriginSites),
+                    factor(targetAssignment, levels = 1:nTargetSites),
+                    exclude = c())
     names(counts) <- list(originNames, targetNames)
   }
   if (is.null(banded))
@@ -429,7 +432,7 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
   for (o in 1:nOriginSites)
     psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
   psi <- cbind(psi, 1 - rowSums(psi))
-  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nOriginSites])
+  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites])
   dimnames(psi) <- list(originNames, targetNames)
   names(r) <- targetNames
   return(list(psi = psi, r = r))
