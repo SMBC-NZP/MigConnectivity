@@ -7,7 +7,7 @@
 \method{plot}{estMigConnectivity}(
   x,
   plot.which = ifelse(inherits(x, "estPsi"), "psi", ifelse(inherits(x, "estMC"), "MC",
-    "rM")),
+    ifelse(inherits(x, "estGamma"), "gamma", "rM"))),
   point = c("mean", "median", "point"),
   range = c("simpleCI", "bcCI", "se"),
   xlab = NULL,

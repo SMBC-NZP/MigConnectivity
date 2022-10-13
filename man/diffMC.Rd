@@ -2,9 +2,12 @@
 % Please edit documentation in R/estConnectivity.R
 \name{diffMC}
 \alias{diffMC}
+\alias{diffStrength}
 \title{Pairwise differences between two or more independent MC estimates}
 \usage{
 diffMC(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = F)
+
+diffStrength(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = F)
 }
 \arguments{
 \item{estimates}{List of at leat two MC estimates, provided by the estMC

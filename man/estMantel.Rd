@@ -2,6 +2,7 @@
 % Please edit documentation in R/estConnectivity.R
 \name{estMantel}
 \alias{estMantel}
+\alias{estCorr}
 \title{Estimate Mantel correlation (rM) from geolocator and/or GPS data.}
 \usage{
 estMantel(
@@ -29,41 +30,68 @@ estMantel(
   originRaster = NULL,
   dataOverlapSetting = c("dummy", "none", "named")
 )
+
+estCorr(
+  targetPoints = NULL,
+  originPoints = NULL,
+  isGL,
+  geoBias = NULL,
+  geoVCov = NULL,
+  targetSites = NULL,
+  nBoot = 1000,
+  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000,
+    ifelse(any(isRaster), 10, 1))),
+  verbose = 0,
+  alpha = 0.05,
+  resampleProjection = "ESRI:102010",
+  maxTries = 300,
+  maintainLegacyOutput = FALSE,
+  originSites = NULL,
+  isTelemetry = !isGL,
+  isRaster = FALSE,
+  captured = "origin",
+  geoBiasOrigin = NULL,
+  geoVCovOrigin = NULL,
+  targetRaster = NULL,
+  originRaster = NULL,
+  dataOverlapSetting = c("dummy", "none", "named")
+)
 }
 \arguments{
-\item{targetPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
-animals tracked.  Each point indicates the point estimate location in
-the non-release season}
+\item{targetPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf
+object, with length number of animals tracked.  Each point indicates the
+point estimate location in the non-release season.}
 
-\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf object, with length number of
-animals tracked.  Each point indicates the release location of an animal}
+\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf
+object, with length number of animals tracked.  Each point indicates the
+release location of an animal.}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators
 Should be either single TRUE or FALSE value, or vector with length of
-number of animals tracked, with TRUE for animals in
-\code{targetPoints} with geolocators and FALSE for animals with GPS.}
+number of animals tracked, with TRUE for animals in  \code{targetPoints}
+with geolocators and FALSE for animals without.}
 
 \item{geoBias}{For GL data, vector of length 2 indicating expected bias
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters)}
+\code{resampleProjection} units (default meters).}
 
 \item{geoVCov}{For GL data, 2x2 matrix with expected variance/covariance
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters)}
+\code{resampleProjection} units (default meters).}
 
 \item{targetSites}{A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
- or \code{POLYGONS} sf object indicating valid target location(s).  Not needed unless you want
-to mask out certain areas (e.g. water)}
+or \code{POLYGONS} sf object indicating valid target location(s). Not
+needed unless you want to mask out certain areas (e.g. water).}
 
-\item{nBoot}{Number of bootstrap runs. Animals are sampled with replacement for each,
-to estimate sampling uncertainty}
+\item{nBoot}{Number of bootstrap runs. Animals are sampled with replacement
+for each, to estimate sampling uncertainty.}
 
-\item{nSim}{Tuning parameter for GL data. Affects only the speed; 1000 seems
-to work well with our data.  Should be integer > 0}
+\item{nSim}{Tuning parameter for GL or raster data. Affects only the speed;
+1000 seems to work well with our GL data.  Should be integer > 0.}
 
 \item{verbose}{0 (default) to 3. 0 prints no output during run. 1 prints
 a line every 100 bootstraps.  2 prints a line every bootstrap.
-3 also prints the number of draws (for tuning nSim for GL data only)}
+3 also prints the number of draws (for tuning nSim only).}
 
 \item{alpha}{Level for confidence/credible intervals provided.}
 
@@ -71,17 +99,76 @@ a line every 100 bootstraps.  2 prints a line every bootstrap.
 bias/error. This projection needs units = m. Default is Equidistant
 Conic. The default setting preserves distances around latitude = 0 and
 longitude = 0. Other projections may work well, depending on the location
-of \code{targetSites}}
+of \code{targetPoints}.}
 
 \item{maxTries}{Maximum number of times to run a single GL bootstrap before
 exiting with an error.  Default is 300.  Set to NULL to never stop.  This
 parameter was added to prevent GL setups where some sample points never
-land on target sites from running indefinitely}
+land on target sites from running indefinitely.}
 
 \item{maintainLegacyOutput}{version 0.4.0 of \code{MigConnectivity}
 updated the structure of the estimates. If you have legacy code that refers
 to elements within a \code{estMigConnectivity} object, you can set this
-to TRUE to also keep the old structure. Defaults to FALSE}
+to TRUE to also keep the old structure. Defaults to FALSE.}
+
+\item{originSites}{A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
+or \code{POLYGONS} sf object indicating valid origin location(s). Not
+needed unless you want to mask out certain areas (e.g. water) and
+\code{captured} is "target".}
+
+\item{isTelemetry}{Indicates whether or which animals were tracked with
+telemetry/GPS (no location uncertainty on either end).
+Should be either single TRUE or FALSE value, or vector with length of
+number of animals tracked, with TRUE or FALSE for each animal in data.}
+
+\item{isRaster}{Indicates whether or which animals were tracked with
+intrinsic markers (e.g., genetics or isotopes), with location uncertainty
+expressed as a raster of probabilities by grid cells, either in
+\code{targetRaster} or \code{originRaster}. Should be either single TRUE or
+FALSE value, or vector with length of number of animals tracked, with TRUE
+or FALSE for each animal in data.}
+
+\item{captured}{Indicates whether or which animals were captured in the
+origin sites, the target sites, or neither (another phase of the annual
+cycle). Location uncertainty will only be applied where the animal was not
+captured. So this doesn't matter for telemetry data. Should be either single
+"origin" (default), "target", or "neither" value, or a character vector with
+length of number ofanimals tracked, with "origin", "target", or "neither"
+for each animal.}
+
+\item{geoBiasOrigin}{For GL data where \code{captured}!="origin", vector of
+length 2 indicating expected bias in longitude and latitude of
+\code{originPoints}, in \code{resampleProjection} units (default meters).}
+
+\item{geoVCovOrigin}{For GL data where \code{captured}!="origin", 2x2 matrix
+with expected variance/covariance in longitude and latitude of
+\code{targetPoints}, in \code{resampleProjection} units (default meters).}
+
+\item{targetRaster}{For intrinsic tracking data, the results of
+\code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+class \code{RasterBrick}/\code{RasterStack}, for example from the package
+\code{assignR}. In any case, it expresses location uncertainty on target
+range, through a raster of probabilities by grid cells.}
+
+\item{originRaster}{For intrinsic tracking data, the results of
+\code{isoAssign} or a similar function of class \code{intrinsicAssign} or
+class \code{RasterBrick}/\code{RasterStack}, for example from the package
+\code{assignR}. In any case, it expresses location uncertainty on origin
+range, through a raster of probabilities by grid cells.}
+
+\item{dataOverlapSetting}{When there is more than one type of data, this
+setting allows the user some flexibility for clarifying which type(s) of
+data apply to which animals. Setting "dummy" (the default) indicates that
+there are dummy values within each dataset for the animals that isGL,
+isTelemetry, etc. don't have that data type (FALSE values). If no animals
+have a data type, no dummy values are required. If no animals have more than
+one type of data, the user can simplify processing their data by choosing
+setting "none" here. In this case, there should be no dummy values, and only
+the animals with a type of data should be included in that dataset. The
+third setting ("named") is not yet implemented, but will eventually allow
+another way to allow animals with more than one type of data with named
+animals linking records. When there is only one type of data, it is fastest
+to leave this on the default.}
 }
 \value{
 \code{estMantel} returns a list with elements:

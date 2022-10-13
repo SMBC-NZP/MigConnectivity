@@ -15,7 +15,8 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = 60000, nBurnin = 20000)
+                          nSamples = 60000, nBurnin = 20000,
+                          method = "MCMC")
 COTE_psi
 
 COTE_banded2 <- matrix(rep(COTE_banded, 2), 4, 2)
@@ -30,7 +31,8 @@ COTE_psi2 <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded2,
                           reencountered = COTE_reencountered2,
                           verbose = 0,
-                          nSamples = 60000, nBurnin = 20000)
+                          nSamples = 60000, nBurnin = 20000,
+                          method = "MCMC")
 COTE_psi2
 
 ###############################################################################
@@ -153,7 +155,7 @@ system.time(psi3 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 5000, maxTries = 300,
+                            nSim = 10000, maxTries = 300,
                             originSites = originSites,
                             originPoints = originPoints,
                             captured = "origin",
@@ -180,13 +182,12 @@ isGL <- c(OVENdata$isGL, rep(FALSE, 6))
 isTelemetry <- c(!OVENdata$isGL, rep(FALSE, 6))
 isRaster <- rep(FALSE, nAnimals)
 isProb <- rep(FALSE, nAnimals)
-targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[c(1:4,6:7),])
+targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[c(1:3,19,23,31),])
 targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
 assignment0 <- unclass(sf::st_intersects(x = targetPoints, y = targetSites,
                                          sparse = TRUE))
 assignment0[sapply(assignment0, function(x) length(x)==0)] <- 0
 assignment0 <- array(unlist(assignment0), nAnimals)
-assignment0[nAnimals] <- 3
 for (ani in 1:nAnimals) {
   if (assignment0[ani]>0)
     targetAssignment[ani, assignment0[ani]] <- 1
@@ -231,14 +232,15 @@ system.time(psi4 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 5000, maxTries = 300,
+                            nSim = 10000, maxTries = 300,
                             originSites = originSites,
                             originAssignment = originAssignment,
                             captured = captured,
                             originNames = OVENdata$originNames,
                             targetNames = OVENdata$targetNames,
                             verbose = 3,
-                            nSamples = nSamplesTry))
+                            nSamples = nSamplesTry,
+                            targetRelAbund = c(0.1432, 0.3577, 0.4991)))
 psi4
 
 plot(psi4, legend = "top",

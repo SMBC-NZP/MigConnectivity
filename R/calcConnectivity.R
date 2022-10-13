@@ -386,12 +386,16 @@ reversePsiRelAbund <- function(psi, originRelAbund,
 divCoefNLL <- function(psi_r, banded, reencountered, counts) {
   nOriginSites <- nrow(reencountered)
   nTargetSites <- ncol(reencountered)
+  # print(psi_r)
   psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
                 nTargetSites - 1)
   for (o in 1:nOriginSites)
     psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
   psi <- cbind(psi, 1 - rowSums(psi))
+  psi[psi<0] <- 0
+  # print(psi)
   r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites])
+  # print(r)
   p <- sweep(psi, 2, r, "*")
   p <- cbind(p, 1 - rowSums(p))
   reencountered <- cbind(reencountered, banded - rowSums(reencountered))
@@ -412,17 +416,30 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
   if (is.null(counts) && length(originAssignment)>0) {
     nOriginSites <- length(originNames); nTargetSites <- length(targetNames)
     counts <- table(factor(originAssignment, levels = 1:nOriginSites),
-                    factor(targetAssignment, levels = 1:nTargetSites),
-                    exclude = c())
+                    factor(targetAssignment, levels = 1:nTargetSites))
     names(counts) <- list(originNames, targetNames)
   }
   if (is.null(banded))
     return(list(psi = prop.table(counts, 1)))
   nOriginSites <- nrow(reencountered)
   nTargetSites <- ncol(reencountered)
+  startPsiR <- sweep(reencountered, 1, banded, "/") + 0.00001
+  startPsi <- prop.table(startPsiR, 1)
+  if (!is.null(counts))
+    startPsi <- (startPsi * sum(reencountered3) +
+                   prop.table(counts + 0.00001, 1) * sum(counts)) /
+    (sum(reencountered3) + sum(counts))
+  startR <- colSums(startPsiR)
+  startR[startR>0.9999] <- 0.9999
+  # print(startPsi); print(startR)
+  startPar <- c(log(sweep(startPsi[, -nTargetSites], 1, startPsi[, nTargetSites], "/")),
+                stats::qlogis(startR))
   opt1 <- optim(fn = divCoefNLL,
-                par = rep(0, nOriginSites * nTargetSites),
+                par = startPar,
+                  #rep(0, nOriginSites * nTargetSites),
                 method = method,
+                # control = list(ndeps = rep(0.002, nOriginSites * nTargetSites),
+                #                maxit = 5000),
                 # lower = rep(0, (nOriginSites + 1) * nTargetSites),
                 # upper = rep(1, (nOriginSites + 1) * nTargetSites),
                 banded = banded, reencountered = reencountered, counts = counts)
@@ -437,3 +454,11 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
   names(r) <- targetNames
   return(list(psi = psi, r = r))
 }
+
+#' @rdname reversePsiRelAbund
+#' @export
+reverseTransitionRelAbund <- reversePsiRelAbund
+
+#' @rdname reversePsiRelAbund
+#' @export
+reverseTransition <- reversePsiRelAbund

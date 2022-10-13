@@ -2,9 +2,35 @@
 % Please edit documentation in R/calcConnectivity.R
 \name{reversePsiRelAbund}
 \alias{reversePsiRelAbund}
+\alias{reverseTransitionRelAbund}
+\alias{reverseTransition}
 \title{Reverse transition probabilities and origin relative abundance}
 \usage{
 reversePsiRelAbund(
+  psi,
+  originRelAbund,
+  originSites = NULL,
+  targetSites = NULL,
+  originNames = NULL,
+  targetNames = NULL,
+  nSamples = 1000,
+  row0 = 0,
+  alpha = 0.05
+)
+
+reverseTransitionRelAbund(
+  psi,
+  originRelAbund,
+  originSites = NULL,
+  targetSites = NULL,
+  originNames = NULL,
+  targetNames = NULL,
+  nSamples = 1000,
+  row0 = 0,
+  alpha = 0.05
+)
+
+reverseTransition(
   psi,
   originRelAbund,
   originSites = NULL,
@@ -103,6 +129,8 @@ otherwise (if both are simple point estimates), it will also provide point
 estimates.
 }
 \examples{
+## Example 1: sample psis and relative abundances from Cohen et al. (2018)
+## (no uncertainty in psi or relative abundance)
 for (i in 1:length(samplePsis)) {
  for (j in 1:length(sampleOriginRelN)){
   cat("For psi:\n")
@@ -112,6 +140,8 @@ for (i in 1:length(samplePsis)) {
  }
 }
 
+## Example 2: Common tern banding example (uncertainty in psi, not relative
+## abundance)
 COTE_banded <- c(10360, 1787, 2495, 336)
 COTE_reencountered <- matrix(c(12, 0, 38, 15,
                                111, 7, 6, 2,
@@ -124,12 +154,14 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = 70000, nBurnin = 20000)
+                          nSamples = 70000, nBurnin = 20000,
+                          method = "MCMC")
 COTE_psi
 COTE_rev <- reversePsiRelAbund(COTE_psi, sampleOriginRelN[[1]],
                                nSamples = 2000)
 COTE_rev
 
+## Example 3: Uncertainty in both psi and relative abundance
 # Number of populations
 nOriginSites <- 3; originNames <- LETTERS[1:nOriginSites]
 nTargetSites <- 4; targetNames <- 1:nTargetSites
@@ -155,7 +187,6 @@ nb. <- 500 # reduced for example speed
 # Number of MCMC chains
 nc. <- 1 # reduced for example speed
 
-# Simulation ---
 # Simulate data
 sim_data <- simCountData(nPops = nOriginSites, routePerPop = routePerPop.,
                          nYears = nYears., alphaPop = alphaPop.,
@@ -178,23 +209,11 @@ sim_data2 <- simCountData(nPops = nTargetSites, routePerPop = routePerPop.,
 # Estimate population-level abundance
 out_mcmc <- modelCountDataJAGS(count_data = sim_data, ni = ni., nt = nt.,
                                nb = nb., nc = nc.)
-# Estimate winter abundance
+# Estimate winter abundance (needed for movement data collected in winter,
+# genoscape probabilities in this case)
 out_mcmc2 <- modelCountDataJAGS(count_data = sim_data2, ni = ni., nt = nt.,
                                 nb = nb., nc = nc.)
-originDist <- matrix(c(0, 624.3587, 1497.2287,
-                       624.3587, 0, 942.2186,
-                       1497.2287, 942.2186, 0),
-                     nOriginSites, nOriginSites,
-                     dimnames = list(originNames, originNames))
-targetDist <- matrix(c(0, 1505.0301, 2256.9304, 2299.9251,
-                       1505.0301, 0, 1795.6660, 1261.6037,
-                       2256.9304, 1795.6660, 0, 860.5803,
-                       2299.9251, 1261.6037, 860.5803, 0),
-                     nTargetSites, nTargetSites,
-                     dimnames = list(targetNames, targetNames))
 sampleSize <- list(rep(20, nOriginSites), rep(75, nTargetSites))
-
-MCtrue <- calcMC(originDist, targetDist, originRelAbund, psiTrue)
 
 shapesO <- matrix(c(5.5, 0.25, 0.01,
                     0.25, 5.5, 0.01,
@@ -202,13 +221,6 @@ shapesO <- matrix(c(5.5, 0.25, 0.01,
                   nOriginSites, nOriginSites, byrow = T,
                   dimnames = list(originNames, originNames))
 prop.table(shapesO, 1)
-
-shapesT <- matrix(c(15, 0.24, 0.0045, 0.0045,
-                    0.24, 15, 0.0045, 0.0045,
-                    0.0045, 0.0068, 18, 0.15,
-                    0.0045, 0.0068, 0.15, 18), 4, 4, byrow = T,
-                  dimnames = list(targetNames, targetNames))
-prop.table(shapesT, 1)
 
 data1 <- simProbData(psi = psiTrue,
                     originRelAbund = originRelAbund,
@@ -237,7 +249,6 @@ captured <- c(captured, rep("target", sum(sampleSize[[2]])))
 
 est1 <- estTransition(targetAssignment = tt,
                       originAssignment = ot, maxTries = 1000,
-                      #originRaster = or, #
                       originNames = originNames,
                       targetNames = targetNames,
                       nSamples = 500, isGL = F,
