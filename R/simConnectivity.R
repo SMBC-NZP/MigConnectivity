@@ -1333,6 +1333,26 @@ simProbData <- function(psi,
                            shapes = shapes)))
 }
 
+#' Simulate capture-mark-reencounter (CMR) migratory movement data
+#'
+#' @param psi Transition probabilities between B origin sites and W target
+#'  sites. B by W matrix
+#' @param banded A vector of the number of released animals from each origin
+#'  site (including those never reencountered in a target site). Length B
+#' @param r A vector (length W) of reencounter probabilities at each target site
+#'
+#' @return \code{simCMRData} returns a list with the elements:
+#' \describe{
+#'   \item{\code{reencountered}}{B by W matrix with numbers reencountered at
+#'    each target site, by origin site}
+#'   \item{\code{migrated}}{B by W matrix with numbers migrated to
+#'    each target site, by origin site. Assumes survival to arrival is 1}
+#'   \item{\code{input}}{List containing the inputs to function}
+#' }
+
+#' @export
+#'
+# @examples
 simCMRData <- function(psi, banded, r) {
   moved <- reencountered <- array(0, dim(psi), dimnames = dimnames(psi))
   nOriginSites <- nrow(psi)
