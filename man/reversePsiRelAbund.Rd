@@ -165,6 +165,19 @@ COTE_rev
 # Number of populations
 nOriginSites <- 3; originNames <- LETTERS[1:nOriginSites]
 nTargetSites <- 4; targetNames <- 1:nTargetSites
+
+originRelAbund <- c(1/3, 1/3, 1/3)
+
+psiTrue <- array(0, c(nOriginSites, nTargetSites),
+                 list(originNames, targetNames))
+psiTrue[1,] <- c(0.22, 0.52, 0.16, 0.10)
+psiTrue[2,] <- c(0.41, 0.31, 0.17, 0.11)
+psiTrue[3,] <- c(0.10, 0.15, 0.42, 0.33)
+rowSums(psiTrue)
+
+rev <- reversePsiRelAbund(psiTrue, originRelAbund)
+
+# Simulate abundance data on origin sites
 # Number of routes w/i each population (assumed to be balanced)
 routePerPop. <- 30 # reduced for example speed
 # Number of years
@@ -176,8 +189,6 @@ alphaPop. <- 1.95
 sdRoute. <- 0.6
 # standard deviation of normal distribution assumed for year random effects
 sdYear. <- 0.18
-
-
 # Number of MCMC iterations
 ni. <- 1000 # reduced for example speed
 # Number of iterations to thin from posterior
@@ -187,51 +198,45 @@ nb. <- 500 # reduced for example speed
 # Number of MCMC chains
 nc. <- 1 # reduced for example speed
 
-# Simulate data
 sim_data <- simCountData(nPops = nOriginSites, routePerPop = routePerPop.,
                          nYears = nYears., alphaPop = alphaPop.,
                          sdRoute = sdRoute., sdYear = sdYear.)
-
-originRelAbund <- c(1/3, 1/3, 1/3)
-
-psiTrue <- array(0, c(nOriginSites, nTargetSites),
-                 list(originNames, targetNames))
-psiTrue[1,] <- c(0.10608 + 0.10856, 0.52536, 0.16, 0.10)
-psiTrue[2,] <- c(0.04441 + 0.36664, 0.30895, 0.17, 0.11)
-psiTrue[3,] <- c(0.10, 0.15, 0.42463, 0.32537)
-rowSums(psiTrue)
-
-rev <- reversePsiRelAbund(psiTrue, originRelAbund)
-
-sim_data2 <- simCountData(nPops = nTargetSites, routePerPop = routePerPop.,
-                          nYears = nYears., alphaPop = rev$targetRelAbund * 2,
-                          sdRoute = sdRoute., sdYear = sdYear.)
 # Estimate population-level abundance
 out_mcmc <- modelCountDataJAGS(count_data = sim_data, ni = ni., nt = nt.,
                                nb = nb., nc = nc.)
 # Estimate winter abundance (needed for movement data collected in winter,
 # genoscape probabilities in this case)
+sim_data2 <- simCountData(nPops = nTargetSites, routePerPop = routePerPop.,
+                          nYears = nYears., alphaPop = rev$targetRelAbund * 2,
+                          sdRoute = sdRoute., sdYear = sdYear.)
 out_mcmc2 <- modelCountDataJAGS(count_data = sim_data2, ni = ni., nt = nt.,
                                 nb = nb., nc = nc.)
-sampleSize <- list(rep(20, nOriginSites), rep(75, nTargetSites))
 
+# Simulate movement data
+sampleSize <- list(rep(10, nOriginSites), rep(75, nTargetSites))
+captured <- rep("origin", sum(sampleSize[[1]]))
+captured <- c(captured, rep("target", sum(sampleSize[[2]])))
+isTelemetry <- rep(TRUE:FALSE, c(sum(sampleSize[[1]]), sum(sampleSize[[2]])))
+isProb <- rep(FALSE:TRUE, c(sum(sampleSize[[1]]), sum(sampleSize[[2]])))
+
+# First, telemetry data (released origin)
+data1 <- simTelemetryData(psi = psiTrue,
+                          sampleSize = sampleSize[[1]],
+                          captured = "origin")
+tt <- data1$targetAssignment
+oa <- data1$originAssignment
+# Put telemetry origin assignments in format compatible with probability table
+# origin assignments
+ot2 <- matrix(0, length(oa), nOriginSites)
+for (i in 1:length(oa))
+  ot2[i, oa[i]] <- 1
+# Next, probability table (genoscape pop probabilities) data (released target)
 shapesO <- matrix(c(5.5, 0.25, 0.01,
                     0.25, 5.5, 0.01,
                     0.004, 0.006, 5.75),
                   nOriginSites, nOriginSites, byrow = T,
                   dimnames = list(originNames, originNames))
 prop.table(shapesO, 1)
-
-data1 <- simProbData(psi = psiTrue,
-                    originRelAbund = originRelAbund,
-                    sampleSize = sampleSize[[1]],
-                    shapes = shapesT,
-                    captured = "origin")
-tt <- data1$genProbs
-oa <- data1$originAssignment
-ot2 <- matrix(0, length(oa), nOriginSites)
-for (i in 1:length(oa))
-  ot2[i, oa[i]] <- 1
 data2 <- simProbData(psi = psiTrue,
                     originRelAbund = originRelAbund,
                     sampleSize = sampleSize[[2]],
@@ -239,27 +244,27 @@ data2 <- simProbData(psi = psiTrue,
                     captured = "target")
 ot <- data2$genProbs
 ta <- data2$targetAssignment
-tt2 <- matrix(0, length(ta), nTargetSites)
-for (i in 1:length(ta))
-  tt2[i, ta[i]] <- 1
-tt <- rbind(tt, tt2)
+# Join together data
+tt <- c(tt, ta)
 ot <- rbind(ot2, ot)
-captured <- rep("origin", sum(sampleSize[[1]]))
-captured <- c(captured, rep("target", sum(sampleSize[[2]])))
 
+# Estimate transition probabilities (psi)
 est1 <- estTransition(targetAssignment = tt,
-                      originAssignment = ot, maxTries = 1000,
+                      originAssignment = ot,
                       originNames = originNames,
                       targetNames = targetNames,
                       nSamples = 500, isGL = F,
-                      isTelemetry = F,
+                      isTelemetry = isTelemetry,
                       isRaster = F,
-                      isProb = T,
+                      isProb = isProb,
                       captured = captured,
-                      nSim = 100, verbose = 0,
+                      nSim = 10, verbose = 0,
                       targetRelAbund = out_mcmc2)
+# Reverse estimates
 rev1 <- reversePsiRelAbund(psi = est1, originRelAbund = out_mcmc)
-rev1
+# Compare estimates of gamma, target relative abundance, and pi with calculation
+# from true values
 rev
+rev1
 
 }
