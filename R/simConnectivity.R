@@ -331,7 +331,7 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   return(coda::as.mcmc(out))
 }
 
-#' Simulate geolocator data
+#' Simulate geolocator (GL) migratory movement data
 #'
 #' @param psi Transition probabilities between B origin and W target sites.
 #'    A matrix with B rows and W columns where rows sum to 1.

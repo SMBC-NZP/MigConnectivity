@@ -1180,7 +1180,7 @@ estTransitionBoot <- function(originSites = NULL,
                            targetAssignment = pointTargetAssignment,
                            originNames = originNames,
                            targetNames = targetNames,
-                           method = "SANN")
+                           method = "BFGS")
    pointPsi <- psi_r$psi
    point_r <- psi_r$r
   }
@@ -1361,7 +1361,18 @@ estTransitionBoot <- function(originSites = NULL,
                             targetAssignment = target.sample[!isCMR[animal.sample]],
                             originNames = originNames,
                             targetNames = targetNames,
-                            method = "SANN")
+                            method = "BFGS")
+    if (any(is.na(psi_r$psi))) {
+      # print(banded.sample)
+      # print(reencountered.sample)
+      # print(origin.sample[!isCMR[animal.sample]])
+      # print(target.sample[!isCMR[animal.sample]])
+      # print(psi_r$psi)
+      # print(psi_r$r)
+      if (verbose > 2)
+        cat(' Bootstrap estimate producing NAs; drawing again\n')
+      next
+    }
     psi.array[boot, , ] <- psi_r$psi
     if (!is.null(banded))
       r.array[boot, ] <- psi_r$r
@@ -1374,6 +1385,12 @@ estTransitionBoot <- function(originSites = NULL,
             nBoot, " successful. If this ratio is high, you should examine ",
             "fixedZero and the data to make sure those transition ",
             "probabilities really are zero\n")
+  # if (any(is.na(psi.array))) {
+  #   bads <- which(is.na(psi.array), arr.ind = T)
+  #   print(bads)
+  #   for (i in 1:nrow(bads))
+  #     print(psi.array[bads[i,1], bads[i, 2], ])
+  # }
   if (method=="bootstrap") {
     meanPsi <- apply(psi.array, 2:3, mean)
     medianPsi <- apply(psi.array, 2:3, median)
@@ -1384,6 +1401,8 @@ estTransitionBoot <- function(originSites = NULL,
                         list(NULL, paste(rep(originNames, nTargetSites),
                                          rep(targetNames, each = nOriginSites),
                                          sep = "#")))
+    # print(summary(psi.array))
+    # print(summary(psi.matrix))
     psi.mcmc <- coda::as.mcmc(psi.matrix)
     hpdCI <- coda::HPDinterval(psi.mcmc, 1-alpha)
     hpdCI <- array(hpdCI, c(nOriginSites, nTargetSites, 2),
@@ -1465,10 +1484,9 @@ estTransitionBoot <- function(originSites = NULL,
 #'
 #' Estimation and resampling of uncertainty for psi (transition probabilities
 #' between origin sites in one phase of the annual cycle and target sites in
-#' another for migratory animals). Data can be from geolocators (GL) and/or
-#' telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
-#' band/ring reencounter data. Update: you can now combine banding data with
-#' telemetry data, using the originAssignment and targetAssignment parameters.
+#' another for migratory animals). Data can be from any combination of
+#' geolocators (GL), telemetry/GPS, intrinsic markers such as isotopes and
+#' genetics, and band/ring reencounter data.
 #'
 #' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
 #'  SpatialPolygons) defining the geographic representation of sites in the

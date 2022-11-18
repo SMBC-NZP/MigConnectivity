@@ -2,7 +2,7 @@
 % Please edit documentation in R/simConnectivity.R
 \name{simGLData}
 \alias{simGLData}
-\title{Simulate geolocator data}
+\title{Simulate geolocator (GL) migratory movement data}
 \usage{
 simGLData(
   psi,
@@ -102,5 +102,5 @@ met. This helps estTransition or estMC not throw an error. Default FALSE.}
 }
 }
 \description{
-Simulate geolocator data
+Simulate geolocator (GL) migratory movement data
 }

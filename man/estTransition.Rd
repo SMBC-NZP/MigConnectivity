@@ -367,10 +367,9 @@ currently the default is n/4, rounded up (no idea if that is reasonable).}
 \description{
 Estimation and resampling of uncertainty for psi (transition probabilities
 between origin sites in one phase of the annual cycle and target sites in
-another for migratory animals). Data can be from geolocators (GL) and/or
-telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
-band/ring reencounter data. Update: you can now combine banding data with
-telemetry data, using the originAssignment and targetAssignment parameters.
+another for migratory animals). Data can be from any combination of
+geolocators (GL), telemetry/GPS, intrinsic markers such as isotopes and
+genetics, and band/ring reencounter data.
 }
 \examples{
 \dontrun{
