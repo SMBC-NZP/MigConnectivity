@@ -220,7 +220,6 @@ summary.intrinsicAssign<-function(object, ...){
 #' @export
 plot.intrinsicAssign <- function(x,map,...){
   if(inherits(x,"isoAssign")){
-plot.isoAssign <- function(x,map,...){
     if(!(map %in% c("probability","population","odds"))){
       stop("map must be either probability, population, or odds")}
     op <- graphics::par(no.readonly = TRUE)
@@ -242,7 +241,6 @@ plot.isoAssign <- function(x,map,...){
     graphics::par(op)
   }
   on.exit(graphics::par(op))
-  }
   }
  if(inherits(x,"weightAssign")){
    graphics::par(bty = "L")
