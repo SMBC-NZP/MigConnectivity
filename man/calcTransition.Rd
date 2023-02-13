@@ -2,10 +2,22 @@
 % Please edit documentation in R/calcConnectivity.R
 \name{calcTransition}
 \alias{calcTransition}
+\alias{calcPsi}
 \title{Calculate psi (transition probabilities between sites in two phases of the
 annual cycle)}
 \usage{
 calcTransition(
+  banded = NULL,
+  reencountered = NULL,
+  counts = NULL,
+  originAssignment = NULL,
+  targetAssignment = NULL,
+  originNames = NULL,
+  targetNames = NULL,
+  method = "SANN"
+)
+
+calcPsi(
   banded = NULL,
   reencountered = NULL,
   counts = NULL,
@@ -66,12 +78,46 @@ very stable here}
 Provides simple maximum-likelihood point estimate of transition probabilities
 that does not include measures of uncertainty. Incorporates detection
 heterogeneity where appropriate (band/ring return data), but not location
-uncertainty. Shared primarily for testing; use of \code{estTransition} is
-recommended instead.
+uncertainty. Shared primarily for testing; use of \code{\link{estTransition}}
+is recommended instead.
 }
 \examples{
-
+nOriginSites <- 4
+nTargetSites <- 4
+originNames <- LETTERS[1:nOriginSites]
+targetNames <- 1:nTargetSites
+psiTrue <- array(c(0.1, 0.2, 0.3, 0.4,
+                   0.2, 0.3, 0.4, 0.1,
+                   0.3, 0.4, 0.1, 0.2,
+                   0.4, 0.1, 0.2, 0.3),
+                 c(nOriginSites, nTargetSites),
+                 dimnames = list(originNames, targetNames))
+rowSums(psiTrue)
+rTrue <- c(0.5, 0.05, 0.3, 0.6)
+banded1 <- c(1000, 2000, 3000, 5000)
+reencountered1 <- simCMRData(psiTrue, banded1, rTrue)$reencountered
+psi_r_calc <- calcTransition(banded = banded1,
+                             reencountered = reencountered1,
+                             originNames = originNames,
+                             targetNames = targetNames,
+                             method = "SANN")
+psi_r_calc
+\dontrun{
+psi_r_mcmc <- estTransition(banded = banded1, reencountered = reencountered1,
+                            originNames = originNames,
+                            targetNames = targetNames,
+                            method = "MCMC",
+                            nThin = 1, nSamples = 60000, nBurnin = 20000,
+                            verbose = 1)
+psi_r_mcmc
+psi_r_boot <- estTransition(banded = banded1, reencountered = reencountered1,
+                            originNames = originNames,
+                            targetNames = targetNames,
+                            method = "bootstrap",
+                            nSamples = 1000, verbose = 2)
+psi_r_boot
+}
 }
 \seealso{
-estTransition, optim
+\code{\link{estTransition}}, \code{\link{optim}}
 }

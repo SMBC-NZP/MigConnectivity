@@ -123,7 +123,7 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
   if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
     originRelAbund <- as.matrix(originRelAbund)
   }
-  if (is.matrix(originRelAbund) && dim(originRelAbund)[1]>1) {
+  if (is.matrix(originRelAbund) && all(dim(originRelAbund)>1)) {
     abundFixed <- FALSE
     if (dim(originRelAbund)[2]>nOriginSites)
       abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
@@ -1245,7 +1245,7 @@ estTransitionBoot <- function(originSites = NULL,
       else {
         # Get origin population for each animal sampled
         if (length(dim(originAssignment))==2){
-          origin.sample <- apply(originAssignment[animal.sample], 1, which.max)
+          origin.sample <- apply(originAssignment[animal.sample, ], 1, which.max)
           if (is.list(origin.sample)) {
             origin.sample[lengths(origin.sample)==0] <- NA
             origin.sample <- unlist(origin.sample)

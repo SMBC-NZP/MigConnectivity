@@ -223,7 +223,7 @@ locSample <- function(isGL,
 
   }else{
     site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]
-    site.sample[which(isTelemetry) & is.na(site.sample)] <- 0
+    site.sample[which(isTelemetry & is.na(site.sample))] <- 0
   }
   if (!is.null(points))
     point.sample[which(isTelemetry), ] <- sf::st_coordinates(points[which(isTelemetry),])

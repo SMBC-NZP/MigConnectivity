@@ -529,7 +529,7 @@ system.time(psi3 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 10000, maxTries = 300,
+                            nSim = 20000, maxTries = 300,
                             originSites = originSites,
                             originPoints = originPoints,
                             captured = "origin",
@@ -606,13 +606,13 @@ system.time(psi4 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 10000, maxTries = 300,
+                            nSim = 15000, maxTries = 300,
                             originSites = originSites,
                             originAssignment = originAssignment,
                             captured = captured,
                             originNames = OVENdata$originNames,
                             targetNames = OVENdata$targetNames,
-                            verbose = 3,
+                            verbose = 2,
                             nSamples = nSamplesTry,
                             targetRelAbund = c(0.1432, 0.3577, 0.4991)))
 psi4
@@ -719,7 +719,7 @@ system.time(psi5 <-
                             originSites = originSites,
                             originPoints = originPoints,
                             captured = rep("origin", nAnimals),
-                            verbose = 3,
+                            verbose = 2,
                             nSamples = nSamplesTry))
 psi5
 }
