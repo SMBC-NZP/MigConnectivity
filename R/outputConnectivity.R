@@ -280,6 +280,9 @@ plot.intrinsicAssign <- function(x,map,...){
 #' @param pch symbols to use for labeling transition probabilities for
 #'   different target sites. If left NULL, defaults to 21:25, then
 #'   0:([number of target sites]-5)
+#' @param las style of axis labels (0-3). We set the default at 1 (always
+#'   horizontal) here, but if you prefer your labels parallel to the axis, set
+#'   at 0
 #' @param gap space left between the center of the error bar and the lines
 #'   marking the error bar in units of the height (width) of the letter "O".
 #'   Defaults to 0
@@ -310,7 +313,7 @@ plot.estMigConnectivity <- function(x,
                                     xlab = NULL, ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
                                     ageNames = NULL,
-                                    col = NULL, pch = NULL,
+                                    col = NULL, pch = NULL, las = 1,
                                     gap = 0,
                                     sfrac = ifelse(range=="se", 0.01, 0),
                                     legend = FALSE, map = FALSE, ...) {
@@ -429,8 +432,22 @@ plot.estMigConnectivity <- function(x,
       else
         targetNames <- x$input$targetNames
     }
-    nTargetSites <- length(targetNames)
-    nOriginSites <- length(originNames)
+    nTargetSites <- ifelse(is.null(x$psi), dim(x$gamma$sample)[2], dim(x$psi$sample)[3])
+    nOriginSites <- ifelse(is.null(x$psi), dim(x$gamma$sample)[3], dim(x$psi$sample)[2])
+    if (length(originNames)==1) {
+      originNames <- rep(originNames, nOriginSites)
+      originNamesHidden <- 1:nOriginSites
+    }
+    else {
+      originNamesHidden <- originNames
+    }
+    if (length(targetNames)==1) {
+      targetNames <- rep(targetNames, nTargetSites)
+      targetNamesHidden <- 1:nTargetSites
+    }
+    else {
+      targetNamesHidden <- targetNames
+    }
     if (plot.which == "psi") {
       y <- switch(point,
                   mean = x$psi$mean,
@@ -442,10 +459,8 @@ plot.estMigConnectivity <- function(x,
                        se = aperm(array(c(y - x$psi$se, y + x$psi$se),
                                         c(dim(y), 2)), c(3, 1, 2)))
       ests.df <- data.frame(y = c(y),
-                            From = factor(rep(originNames, nTargetSites),
-                                          levels = originNames),
-                            To = factor(rep(targetNames, each = nOriginSites),
-                                        levels = targetNames),
+                            To = factor(rep(targetNamesHidden, each = nOriginSites),
+                                        levels = targetNamesHidden),
                             FromTo = rep(1:nOriginSites, nTargetSites) +
                               rep(1:nTargetSites, each = nOriginSites) /
                               (nTargetSites * 2) - 0.3,
@@ -463,10 +478,8 @@ plot.estMigConnectivity <- function(x,
                        se = aperm(array(c(y - x$pi$se, y + x$pi$se),
                                         c(dim(y), 2)), c(3, 1, 2)))
       ests.df <- data.frame(y = c(y),
-                            From = factor(rep(originNames, nTargetSites),
-                                          levels = originNames),
-                            To = factor(rep(targetNames, each = nOriginSites),
-                                        levels = targetNames),
+                            To = factor(rep(targetNamesHidden, each = nOriginSites),
+                                        levels = targetNamesHidden),
                             FromTo = rep(1:nOriginSites, nTargetSites) +
                               rep(1:nTargetSites, each = nOriginSites) /
                               (nTargetSites * 2) - 0.3,
@@ -484,10 +497,8 @@ plot.estMigConnectivity <- function(x,
                        se = aperm(array(c(y - x$gamma$se, y + x$gamma$se),
                                         c(dim(y), 2)), c(3, 1, 2)))
       ests.df <- data.frame(y = c(y),
-                            From = factor(rep(targetNames, nOriginSites),
-                                          levels = targetNames),
-                            To = factor(rep(originNames, each = nTargetSites),
-                                        levels = originNames),
+                            To = factor(rep(originNamesHidden, each = nTargetSites),
+                                        levels = originNamesHidden),
                             FromTo = rep(1:nTargetSites, nOriginSites) +
                               rep(1:nOriginSites, each = nTargetSites) /
                               (nOriginSites * 2) - 0.3,
@@ -588,7 +599,7 @@ plot.estMigConnectivity <- function(x,
                    col = col[as.integer(ests.df$To)],
                    pt.bg = col[as.integer(ests.df$To)],
                    ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
-                   sfrac = sfrac, ...)
+                   sfrac = sfrac, las = las, ...)
     graphics::axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
          labels = originNames, ...)
     if (!isFALSE(legend))
@@ -617,7 +628,7 @@ plot.estMigConnectivity <- function(x,
                    col = col[as.integer(ests.df$To)],
                    pt.bg = col[as.integer(ests.df$To)],
                    ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
-                   sfrac = sfrac, ...)
+                   sfrac = sfrac, las = las, ...)
     graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
                    labels = targetNames, ...)
     if (!isFALSE(legend))
@@ -640,7 +651,7 @@ plot.estMigConnectivity <- function(x,
                      col = col,
                      pt.bg = col,
                      ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
-                     sfrac = sfrac, ...)
+                     sfrac = sfrac, las = las, ...)
       graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
            labels = targetNames, ...)
     }
@@ -666,7 +677,7 @@ plot.estMigConnectivity <- function(x,
                      col = col[as.integer(ests.df$To)],
                      pt.bg = col[as.integer(ests.df$To)],
                      ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
-                     sfrac = sfrac, ...)
+                     sfrac = sfrac, las = las, ...)
       graphics::axis(1, at = 1:nAges, labels = ageNames, ...)
       if (!isFALSE(legend))
         legend(legend, legend = targetNames, col = col, pch = pch,
@@ -686,7 +697,7 @@ plot.estMigConnectivity <- function(x,
                    ui = ests.df$upper,
                    pch = pch[1],
                    col = col[1], gap = gap, sfrac = sfrac,
-                   ylab = ylab, xaxt = "n", xlab = xlab, ...)
+                   ylab = ylab, xaxt = "n", xlab = xlab, las = las, ...)
   }
 }
 map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,

@@ -3,7 +3,7 @@
 \name{estMantel}
 \alias{estMantel}
 \alias{estCorr}
-\title{Estimate Mantel correlation (rM) from geolocator and/or GPS data.}
+\title{Estimate Mantel correlation (rM) from geolocator, GPS, and/or raster data.}
 \usage{
 estMantel(
   targetPoints = NULL,
@@ -13,8 +13,8 @@ estMantel(
   geoVCov = NULL,
   targetSites = NULL,
   nBoot = 1000,
-  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000,
-    ifelse(any(isRaster), 10, 1))),
+  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000, ifelse(any(isRaster),
+    10, 1))),
   verbose = 0,
   alpha = 0.05,
   resampleProjection = "ESRI:102010",
@@ -39,8 +39,8 @@ estCorr(
   geoVCov = NULL,
   targetSites = NULL,
   nBoot = 1000,
-  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000,
-    ifelse(any(isRaster), 10, 1))),
+  nSim = ifelse(any(isRaster & isGL), 5000, ifelse(any(isGL), 1000, ifelse(any(isRaster),
+    10, 1))),
   verbose = 0,
   alpha = 0.05,
   resampleProjection = "ESRI:102010",
@@ -133,7 +133,7 @@ origin sites, the target sites, or neither (another phase of the annual
 cycle). Location uncertainty will only be applied where the animal was not
 captured. So this doesn't matter for telemetry data. Should be either single
 "origin" (default), "target", or "neither" value, or a character vector with
-length of number ofanimals tracked, with "origin", "target", or "neither"
+length of number of animals tracked, with "origin", "target", or "neither"
 for each animal.}
 
 \item{geoBiasOrigin}{For GL data where \code{captured}!="origin", vector of
@@ -186,8 +186,9 @@ to leave this on the default.}
 }
 }
 \description{
-Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
-data.
+Resampling of uncertainty for migratory connectivity strength, as quantified
+by Mantel correlation (rM), from geolocators, GPS, and/or raster (e.g.,
+genoscape or isotope) data.
 }
 \examples{
 data('OVENdata')

@@ -2723,10 +2723,11 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
   return(mc)
 }
 
-#' Estimate Mantel correlation (rM) from geolocator and/or GPS data.
+#' Estimate Mantel correlation (rM) from geolocator, GPS, and/or raster data.
 #'
-#' Resampling of uncertainty for rM from SpatialPoints geolocators and/or GPS
-#' data.
+#' Resampling of uncertainty for migratory connectivity strength, as quantified
+#' by Mantel correlation (rM), from geolocators, GPS, and/or raster (e.g.,
+#' genoscape or isotope) data.
 #'
 #' @param targetPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf
 #'  object, with length number of animals tracked.  Each point indicates the
@@ -2787,7 +2788,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'  cycle). Location uncertainty will only be applied where the animal was not
 #'  captured. So this doesn't matter for telemetry data. Should be either single
 #'  "origin" (default), "target", or "neither" value, or a character vector with
-#'  length of number ofanimals tracked, with "origin", "target", or "neither"
+#'  length of number of animals tracked, with "origin", "target", or "neither"
 #'  for each animal.
 #' @param geoBiasOrigin For GL data where \code{captured}!="origin", vector of
 #'  length 2 indicating expected bias in longitude and latitude of
