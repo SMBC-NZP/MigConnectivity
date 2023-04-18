@@ -321,6 +321,8 @@ estTransitionJAGS <- function (banded, reencountered,
     # Data
     telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
                     factor(targetAssignment, levels = 1:nTargetSites))
+    sampleSize <- sum(telmat)
+
     jags.data <- list(telmat = telmat, npop = nOriginSites,
                       ndest = nTargetSites,
                       ntel = as.vector(table(factor(originAssignment,
@@ -355,6 +357,7 @@ estTransitionJAGS <- function (banded, reencountered,
         jags.data$telmat <- telmat
         jags.data$ntel <- as.vector(table(factor(originAssignment,
                                                  levels = 1:nOriginSites)))
+        sampleSize <- sampleSize + sum(jags.data$ntel)
       }
       for (i in 1:nChains)
         jags.inits[[i]] <- list(m0 =  matrix(runif(nOriginSites * nTargetSites),
