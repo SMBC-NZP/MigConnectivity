@@ -552,7 +552,8 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
     return(list(psi = prop.table(counts, 1)))
   nOriginSites <- nrow(reencountered)
   nTargetSites <- ncol(reencountered)
-  startPsiR <- sweep(reencountered, 1, banded, "/") + 0.00001
+  bunded <- banded + 0.00001 # In case of zeros
+  startPsiR <- sweep(reencountered, 1, bunded, "/") + 0.00001
   startPsi <- prop.table(startPsiR, 1)
   if (!is.null(counts))
     startPsi <- (startPsi * sum(reencountered) +

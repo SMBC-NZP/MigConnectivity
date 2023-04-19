@@ -1344,12 +1344,15 @@ estTransitionBoot <- function(originSites = NULL,
       reencountered.sample <- NULL
     }
     else {
-      reencountered.sample <- table(origin.sample[isCMR[animal.sample]],
-                                    target.sample[isCMR[animal.sample]],
+      reencountered.sample <- table(factor(origin.sample[isCMR[animal.sample]],
+                                           levels = 1:nOriginSites),
+                                    factor(target.sample[isCMR[animal.sample]],
+                                           levels = 1:nTargetSites),
                                     useNA = "no")
       # print(reencountered.sample)
       # print(rowSums(reencountered.sample))
-      banded.sample <- table(origin.sample[isCMR[animal.sample]])
+      banded.sample <- table(factor(origin.sample[isCMR[animal.sample]],
+                                    levels = 1:nOriginSites))
       # print(banded.sample)
         #rowSums(reencountered.sample) + banded -
         #rowSums(reencountered)
