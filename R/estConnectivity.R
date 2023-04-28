@@ -1754,7 +1754,7 @@ estTransitionBoot <- function(originSites = NULL,
 #'  currently the default is n/4, rounded up (no idea if that is reasonable).
 #' @param psiPrior matrix with same dimensions as psi. Only relevant when
 #'  \code{method} is "MCMC". Each row provides a Dirichlet
-#'  (\link{https://en.wikipedia.org/wiki/Dirichlet_distribution}) prior on the
+#'  (https://en.wikipedia.org/wiki/Dirichlet_distribution) prior on the
 #'  transition probabilities from that origin site. The default (NULL) supplies
 #'  Dirichlet parameters of all 1s, which is a standard uninformative Dirichlet
 #'  prior. Setting these to other positive numbers is useful when you think a
