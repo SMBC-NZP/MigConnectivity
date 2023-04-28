@@ -567,6 +567,7 @@ locSample <- function(isGL,
       }
     }
     toSample <- which(is.na(site.sample))
+    #print(toSample)
   }
   if (length(toSample) > 0){
     notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],

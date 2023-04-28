@@ -305,28 +305,24 @@ estTransitionJAGS <- function (banded, reencountered,
                                alpha = 0.05, nSamples = 1000, verbose=0,
                                originNames = NULL, targetNames = NULL,
                                nThin = 1, nBurnin = 5000, nChains = 3,
-                               fixedZero = NULL) {
+                               fixedZero = NULL, psiPrior = NULL) {
   jags.inits <- vector("list", nChains)
   if (is.null(banded)) {
     if (is.null(originAssignment) || is.null(targetAssignment)) {
       stop("If running estTransition without bootstrap, need to provide banding and/or telemetry (through originAssignment and targetAssignment) data")
     }
     nDim <- 0
-    nTargetSites <- length(unique(targetAssignment))
-    nOriginSites <- length(unique(originAssignment))
+    nTargetSites <- max(length(unique(targetAssignment)),
+                        length(targetNames))
+    nOriginSites <- max(length(unique(originAssignment)),
+                        length(originNames))
     if (is.null(originNames))
       originNames <- LETTERS[1:nOriginSites]
     if (is.null(targetNames))
       targetNames <- as.character(1:nTargetSites)
-    # Data
-    telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
-                    factor(targetAssignment, levels = 1:nTargetSites))
-    sampleSize <- sum(telmat)
 
-    jags.data <- list(telmat = telmat, npop = nOriginSites,
-                      ndest = nTargetSites,
-                      ntel = as.vector(table(factor(originAssignment,
-                                                    levels = 1:nOriginSites))))
+    jags.data <- list(npop = nOriginSites, ndest = nTargetSites)
+    sampleSize <- 0
     # Parameters to monitor
     params <- c("psi")
     for (i in 1:nChains)
@@ -351,14 +347,6 @@ estTransitionJAGS <- function (banded, reencountered,
       # Data
       jags.data <- list(recmat = tmat, npop = nOriginSites,
                         ndest = nTargetSites, nreleased = banded)
-      if (!is.null(originAssignment)) {
-        telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
-                        factor(targetAssignment, levels = 1:nTargetSites))
-        jags.data$telmat <- telmat
-        jags.data$ntel <- as.vector(table(factor(originAssignment,
-                                                 levels = 1:nOriginSites)))
-        sampleSize <- sampleSize + sum(jags.data$ntel)
-      }
       for (i in 1:nChains)
         jags.inits[[i]] <- list(m0 =  matrix(runif(nOriginSites * nTargetSites),
                                              nOriginSites, nTargetSites),
@@ -387,6 +375,19 @@ estTransitionJAGS <- function (banded, reencountered,
     # Parameters to monitor
     params <- c("psi", "r")
   }
+  if (is.null(psiPrior)) {
+    psiPrior <- matrix(1, nOriginSites, nTargetSites)
+  }
+  jags.data$psiPrior <- psiPrior
+  if (!is.null(originAssignment)) {
+    telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
+                    factor(targetAssignment, levels = 1:nTargetSites))
+    jags.data$telmat <- telmat
+    jags.data$ntel <- as.vector(table(factor(originAssignment,
+                                             levels = 1:nOriginSites)))
+    sampleSize <- sampleSize + sum(jags.data$ntel)
+  }
+
   if (!is.null(fixedZero)) {
     psiFixed <- matrix(NA, nOriginSites, nTargetSites)
     for (i in 1:nrow(fixedZero)) {
@@ -394,16 +395,66 @@ estTransitionJAGS <- function (banded, reencountered,
     }
     jags.data$m0 <- psiFixed
   }
-  # Initial values
-  #jags.inits <- function()list()
-  file <- paste0(find.package('MigConnectivity'),
-                 ifelse(is.null(banded),
-                        "/JAGS/telemetry.txt",
-                        ifelse(nAges == 1,
-                               ifelse(is.null(originAssignment),
-                                      "/JAGS/multinomial_banding_1age.txt",
-                                      "/JAGS/multinomial_banding_telemetry_1age.txt"),
-                               "/JAGS/multinomial_banding.txt")))
+  file <- "temp_jags.txt"
+  sink(file = file)
+  cat("
+model{
+  # psi prior
+  for(i in 1:npop){
+    for(k in 1:ndest){
+      m0[i, k] ~ dbeta(psiPrior[i, k], 1)
+      psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+    } #k
+  }#i")
+  if (!is.null(banded)){
+    if (nAges==1) {
+      cat("
+  # model for recoveries with known number of ringed
+  for (i in 1:npop){
+    for(k in 1:ndest){
+      p[i, k] <- psi[i, k] * r[k]
+    }
+    p[i, (ndest+1)] <- 1 - sum(p[i, 1:ndest])
+  }
+
+  for(k in 1:ndest) {
+    r[k] ~ dunif(0, 1)
+  }
+  for(i in 1:npop){
+    recmat[i, 1:(ndest+1)] ~ dmulti(p[i, 1:(ndest+1)], nreleased[i])
+  }")
+    }
+    else {
+      cat("
+  for (j in 1:nages) {
+        for(k in 1:ndest) {
+          r[j, k] ~ dunif(0, 1)
+        }
+  }
+  for (i in 1:npop){
+    for (j in 1:nages) {
+      for(k in 1:ndest){
+        p[i, j, k] <- psi[i, k] * r[j, k]
+      }
+      p[i, j, (ndest+1)] <- 1 - sum(p[i, j, 1:ndest])
+    }
+  }
+  for(i in 1:npop){
+    for (j in 1:nages) {
+      recmat[i, j, 1:(ndest+1)] ~ dmulti(p[i, j, 1:(ndest+1)], nreleased[i, j])
+    }
+  }")
+    }
+  }
+  if (!is.null(originAssignment)) {
+    cat("
+  for(i in 1:npop){
+    telmat[i, 1:ndest] ~ dmulti(psi[i, 1:ndest], ntel[i])
+  }
+")
+  }
+  cat("}")
+  sink()
   # print(file)
   # print(jags.data)
   # print(rowSums(jags.data$recmat))
@@ -422,6 +473,7 @@ estTransitionJAGS <- function (banded, reencountered,
     else
       cat("**WARNING** Rhat values indicate convergence failure.\n")
   }
+  file.remove(file)
   psi <- out$BUGSoutput$sims.list$psi
   dimnames(psi) <- list(NULL, originNames, targetNames)
   meanPsi <- out$BUGSoutput$mean$psi
@@ -608,7 +660,7 @@ estTransitionBoot <- function(originSites = NULL,
     }
     else if (inherits(originRaster, "isoAssign")) {
       originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
-                                  is.na(originRaster$SingleCell))
+                                  any(is.na(originRaster$SingleCell)))
       originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
       originRasterXYZcrs <- raster::crs(originRaster$probassign)
       originSingleCell <- originRaster$SingleCell
@@ -1700,6 +1752,14 @@ estTransitionBoot <- function(originSites = NULL,
 #'  samples taken each time (less than the true sample size, n). If the
 #'  "m-out-of-n-bootstrap" is chosen under \code{method} but this is left blank,
 #'  currently the default is n/4, rounded up (no idea if that is reasonable).
+#' @param psiPrior matrix with same dimensions as psi. Only relevant when
+#'  \code{method} is "MCMC". Each row provides a Dirichlet
+#'  (\link{https://en.wikipedia.org/wiki/Dirichlet_distribution}) prior on the
+#'  transition probabilities from that origin site. The default (NULL) supplies
+#'  Dirichlet parameters of all 1s, which is a standard uninformative Dirichlet
+#'  prior. Setting these to other positive numbers is useful when you think a
+#'  priori that certain transitions are unlikely, but don't want to rule them
+#'  out altogether using \code{fixedZero}.
 #'
 #' @return \code{estTransition} returns a list with the elements:
 #' \describe{
@@ -1768,7 +1828,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           targetRelAbund = NULL,
                           method = c("bootstrap", "MCMC",
                                      "m-out-of-n-bootstrap"),
-                          m = NULL) {
+                          m = NULL,
+                          psiPrior = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   method <- match.arg(method)
   if (method != "MCMC") {
@@ -1804,7 +1865,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              originNames = originNames,
                              targetNames = targetNames,
                              nBurnin = nBurnin, nThin = nThin,
-                             nChains = nChains, fixedZero = fixedZero)
+                             nChains = nChains, fixedZero = fixedZero,
+                             psiPrior = psiPrior)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)
@@ -2938,7 +3000,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     originPointsAssigned <- FALSE
   }else if (inherits(originRaster, "isoAssign")) {
     originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
-                                is.na(originRaster$SingleCell))
+                                any(is.na(originRaster$SingleCell)))
     originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
     originRasterXYZcrs <- raster::crs(originRaster$probassign)
     originSingleCell <- originRaster$SingleCell

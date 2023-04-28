@@ -42,7 +42,8 @@ estTransition(
   fixedZero = NULL,
   targetRelAbund = NULL,
   method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
-  m = NULL
+  m = NULL,
+  psiPrior = NULL
 )
 
 estPsi(
@@ -81,7 +82,8 @@ estPsi(
   fixedZero = NULL,
   targetRelAbund = NULL,
   method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
-  m = NULL
+  m = NULL,
+  psiPrior = NULL
 )
 }
 \arguments{
@@ -325,6 +327,11 @@ not for the end user. In the m-out-of-n-bootstrap, m is the number of
 samples taken each time (less than the true sample size, n). If the
 "m-out-of-n-bootstrap" is chosen under \code{method} but this is left blank,
 currently the default is n/4, rounded up (no idea if that is reasonable).}
+
+\item{psiPrior}{matrix with same dimensions as psi. Only relevant when method
+is "MCMC". Each row provides a Dirichlet prior on the transition
+probabilities from that origin site. The default (NULL) supplies a prior of
+all 1s, which is a standard noninformative Dirichlet prior.}
 }
 \value{
 \code{estTransition} returns a list with the elements:
