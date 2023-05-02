@@ -1235,7 +1235,7 @@ estTransitionBoot <- function(originSites = NULL,
                            targetAssignment = pointTargetAssignment,
                            originNames = originNames,
                            targetNames = targetNames,
-                           method = "BFGS")
+                           method = "SANN")
    pointPsi <- psi_r$psi
    point_r <- psi_r$r
   }
@@ -1419,7 +1419,7 @@ estTransitionBoot <- function(originSites = NULL,
                             targetAssignment = target.sample[!isCMR[animal.sample]],
                             originNames = originNames,
                             targetNames = targetNames,
-                            method = "BFGS")
+                            method = "SANN")
     if (any(is.na(psi_r$psi))) {
       # print(banded.sample)
       # print(reencountered.sample)
