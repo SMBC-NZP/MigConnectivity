@@ -721,7 +721,7 @@ estTransitionBoot <- function(originSites = NULL,
                          ifelse(originPointsAssigned, dim(originSingleCell)[3],
                                 dim(originRasterXYZ)[2] - 2)),
                   length(captured))
-  nAnimalsTotal <- nAnimals + sum(reencountered) #+ sum(banded) #
+  nAnimalsTotal <- nAnimals + sum(banded) #+ sum(reencountered)#
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
   # print(nAnimals); print(nAnimalsTotal)
   if (length(isGL)==1){
@@ -750,10 +750,6 @@ estTransitionBoot <- function(originSites = NULL,
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
   if (!is.null(banded)) {
     captured <- c(captured, rep("origin", nAnimalsTotal - nAnimals)) #sum(banded)
-  }
-  if (nAnimals > 0) {
-    if (all(!isTelemetry) && all(!isGL) && all(!isRaster) && all(!isProb))
-      stop("For 'individual-based' data, you need to specify TRUE for at least one isTelemetry, isGL, isRaster, or isProb")
   }
   if (method=="m-out-of-n-bootstrap" && is.null(m))
     m <- ceiling(nAnimalsTotal / 4) # don't know if this is a good default or not!
@@ -833,8 +829,7 @@ estTransitionBoot <- function(originSites = NULL,
     }
     if (!is.null(reencountered)) {
       originAssignment <- array(c(originAssignment,
-                                  rep(1:dim(reencountered)[1],
-                                      rowSums(reencountered))))
+                                  rep(1:length(banded), banded)))
     }
   }
   else if (!is.null(reencountered)) {
@@ -843,15 +838,15 @@ estTransitionBoot <- function(originSites = NULL,
                                 array(0, c(nAnimalsTotal - nAnimals,
                                            dim(originAssignment)[2])))
       place <- nAnimals
-      for (i in 1:nOriginSites) {
-        originAssignment[place + 1:(rowSums(reencountered)[i]), i] <- 1
-        place <- place + rowSums(reencountered)[i]
+      for (i in 1:length(banded)) {
+        originAssignment[place + 1:banded[i], i] <- 1
+        place <- place + banded[i]
       }
     }
     else {
       nOriginSites <- length(banded)
       originAssignment <- array(c(originAssignment,
-                                rep(1:nOriginSites, rowSums(reencountered))))
+                                rep(1:nOriginSites, banded)))
     }
   }
 
@@ -931,7 +926,9 @@ estTransitionBoot <- function(originSites = NULL,
      nOriginSites <- dim(reencountered)[1]
      for (j in 1:nOriginSites)
        targetAssignment <- array(c(targetAssignment,
-                                   rep(1:nTargetSites, reencountered[j, ])))
+                                   rep(c(1:nTargetSites, NA),
+                                       c(reencountered[j, ],
+                                         banded[j] - sum(reencountered[j, ])))))
    }
   }
   else if (!is.null(reencountered)) {
@@ -947,8 +944,8 @@ estTransitionBoot <- function(originSites = NULL,
           targetAssignment[place + 1:reencountered[j, i], i] <- 1
           place <- place + reencountered[j, i]
         }
-        # targetAssignment[place + 1:(banded[j] - sum(reencountered[j, ])), ] <- NA
-        # place <- place + banded[j] - sum(reencountered[j, ])
+        targetAssignment[place + 1:(banded[j] - sum(reencountered[j, ])), ] <- NA
+        place <- place + banded[j] - sum(reencountered[j, ])
       }
     }
     else {
@@ -956,7 +953,9 @@ estTransitionBoot <- function(originSites = NULL,
       nOriginSites <- dim(reencountered)[1]
       for (j in 1:nOriginSites)
         targetAssignment <- array(c(targetAssignment,
-                                    rep(c(1:nTargetSites, reencountered[j, ]))))
+                                    rep(c(1:nTargetSites, NA),
+                                        c(reencountered[j, ],
+                                          banded[j] - sum(reencountered[j, ])))))
     }
   }
 
@@ -968,7 +967,7 @@ estTransitionBoot <- function(originSites = NULL,
       nOriginSites <- length(unique(originAssignment))
     }
   }
-  else {
+  else{
     nOriginSites <- nrow(originSites)
   }
 
@@ -1244,22 +1243,6 @@ estTransitionBoot <- function(originSites = NULL,
     pointPsi <- NULL
     point_r <- NULL
   }
-  # VARIATION: keep number from each origin site the same
-  if (any(captured=="origin")) {
-    if (length(dim(originAssignment))==2){
-      pO1 <- apply(originAssignment, 1, which.max)
-    }
-    else{
-      pO1 <- as.vector(originAssignment)
-    }
-    pO1 <- factor(pO1, levels = 1:nOriginSites)
-    mO <- as.vector(table(pO1[captured=="origin"]))
-    if (length(mO)<nOriginSites) {
-      stop("How'd that happen? Let jhostetler@usgs.gov know you got this message")
-    }
-    mT <- m - sum(mO)
-  }
-
   boot <- 1
   if (verbose > 0)
     cat("Starting bootstrap\n")
@@ -1270,29 +1253,14 @@ estTransitionBoot <- function(originSites = NULL,
     origin.sample <- 'Filler' # Start with one origin site
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
-      # VARIATION: keep number from each origin site the same
-      if (any(captured=="origin")) {
-        animal.sample <- c()
-        for (i in 1:nOriginSites) {
-          if (mO[i]>0) {
-            animal.sample <- c(animal.sample,
-                              sample(which(pO1==i & captured=="origin"),
-                                     mO[i], replace = TRUE))
-          }
-        }
-        if (mT > 0)
-          animal.sample <- c(animal.sample,
-                            sample(which(captured!="origin"),
-                                   mT, replace = TRUE,
-                                   prob = weights[boot,which(captured!="origin")]))
-      }
-      else
-        animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
+      animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
       if (any(captured[animal.sample]!='origin')) {
         if (length(dim(originAssignment))==2)
           assignment <- originAssignment[animal.sample, , drop = FALSE]
         else
           assignment <- originAssignment[animal.sample, drop = FALSE]
+        # print(assignment)
+        # print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
         oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                            isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                            isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),
@@ -1347,7 +1315,7 @@ estTransitionBoot <- function(originSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
-
+      # print(isGL[animal.sample]); print(isGL); print(animal.sample)
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
@@ -1380,7 +1348,6 @@ estTransitionBoot <- function(originSites = NULL,
       }
       target.sample <- tSamp$site.sample
       target.sample[target.sample==0] <- NA
-      #print(all(c(targetAssignment[animal.sample])==target.sample))
       #target.point.sample <- tSamp$target.point.sample
       if (verbose > 2)
         cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
@@ -1434,13 +1401,10 @@ estTransitionBoot <- function(originSites = NULL,
                                     factor(target.sample[isCMR[animal.sample]],
                                            levels = 1:nTargetSites),
                                     useNA = "no")
-      # print(table(origin.sample)); print(table(target.sample))
       # print(reencountered.sample)
       # print(rowSums(reencountered.sample))
-      # banded.sample <- table(factor(origin.sample[isCMR[animal.sample]],
-      #                                levels = 1:nOriginSites))
-      # banded.sample <- banded.sample + banded - rowSums(reencountered)
-      banded.sample <- banded
+      banded.sample <- table(factor(origin.sample[isCMR[animal.sample]],
+                                    levels = 1:nOriginSites))
       # print(banded.sample)
         #rowSums(reencountered.sample) + banded -
         #rowSums(reencountered)
@@ -1450,7 +1414,7 @@ estTransitionBoot <- function(originSites = NULL,
     # print(banded.sample)
     # print(origin.sample[!isCMR[animal.sample]])
     # print(target.sample[!isCMR[animal.sample]])
-    psi_r <- calcTransition(banded, reencountered.sample,
+    psi_r <- calcTransition(banded.sample, reencountered.sample,
                             originAssignment = origin.sample[!isCMR[animal.sample]],
                             targetAssignment = target.sample[!isCMR[animal.sample]],
                             originNames = originNames,
@@ -1549,7 +1513,6 @@ estTransitionBoot <- function(originSites = NULL,
                          simpleCI = simpleCIPsi, bcCI = bcCIPsi, hpdCI = hpdCI,
                          median = medianPsi, point = pointPsi),
               r = r,
-              reencountered = sites.array,
               input = list(sampleSize = nAnimals, originSites = originSites,
                            targetSites = targetSites,
                            originPoints = originPoints,
@@ -1791,7 +1754,7 @@ estTransitionBoot <- function(originSites = NULL,
 #'  currently the default is n/4, rounded up (no idea if that is reasonable).
 #' @param psiPrior matrix with same dimensions as psi. Only relevant when
 #'  \code{method} is "MCMC". Each row provides a Dirichlet
-#'  (\link{https://en.wikipedia.org/wiki/Dirichlet_distribution}) prior on the
+#'  (https://en.wikipedia.org/wiki/Dirichlet_distribution) prior on the
 #'  transition probabilities from that origin site. The default (NULL) supplies
 #'  Dirichlet parameters of all 1s, which is a standard uninformative Dirichlet
 #'  prior. Setting these to other positive numbers is useful when you think a
