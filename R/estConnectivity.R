@@ -395,7 +395,7 @@ estTransitionJAGS <- function (banded, reencountered,
     }
     jags.data$m0 <- psiFixed
   }
-  file <- "temp_jags.txt"
+  file <- tempfile(fileext = ".txt")
   sink(file = file)
   cat("
 model{
@@ -1238,7 +1238,7 @@ estTransitionBoot <- function(originSites = NULL,
                            targetAssignment = pointTargetAssignment,
                            originNames = originNames,
                            targetNames = targetNames,
-                           method = "SANN")
+                           method = "BFGS")
    pointPsi <- psi_r$psi
    point_r <- psi_r$r
   }
@@ -1422,8 +1422,8 @@ estTransitionBoot <- function(originSites = NULL,
                             targetAssignment = target.sample[!isCMR[animal.sample]],
                             originNames = originNames,
                             targetNames = targetNames,
-                            method = "SANN")
-    if (any(is.na(psi_r$psi))) {
+                            method = "BFGS")
+    if (any(is.na(psi_r$psi)) || any(psi_r$psi < 0) || any(psi_r$psi > 1)) {
       # print(banded.sample)
       # print(reencountered.sample)
       # print(origin.sample[!isCMR[animal.sample]])
@@ -1431,7 +1431,7 @@ estTransitionBoot <- function(originSites = NULL,
       # print(psi_r$psi)
       # print(psi_r$r)
       if (verbose > 2)
-        cat(' Bootstrap estimate producing NAs; drawing again\n')
+        cat(' Bootstrap estimate producing nonsense psi; drawing again\n')
       next
     }
     psi.array[boot, , ] <- psi_r$psi
