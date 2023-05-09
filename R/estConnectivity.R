@@ -976,7 +976,9 @@ estTransitionBoot <- function(originSites = NULL,
       nTargetSites <- ncol(targetAssignment)
     }
     else {
-      nTargetSites <- length(unique(targetAssignment[!is.na(targetAssignment)]))
+      nTargetSites <- max(length(unique(targetAssignment[!is.na(targetAssignment)])),
+                          length(targetNames),
+                          dim(reencountered)[2])
     }
   }
   else {
@@ -1180,7 +1182,8 @@ estTransitionBoot <- function(originSites = NULL,
               "abundance.")
   }
 
-  # print(nOriginSites); print(nTargetSites)
+   # print(nOriginSites); print(nTargetSites)
+   # print(originNames); print(targetNames)
   # print(unique(originAssignment)); print(unique(targetAssignment))
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,

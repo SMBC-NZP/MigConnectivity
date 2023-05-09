@@ -553,19 +553,27 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
   nOriginSites <- nrow(reencountered)
   nTargetSites <- ncol(reencountered)
   bunded <- banded + 0.00001 # In case of zeros
-  startPsiR <- sweep(reencountered, 1, bunded, "/") + 0.00001
-  startPsi <- prop.table(startPsiR, 1)
-  if (!is.null(counts))
-    startPsi <- (startPsi * sum(reencountered) +
-                   prop.table(counts + 0.00001, 1) * sum(counts)) /
-    (sum(reencountered) + sum(counts))
+  reuncountered <- reencountered + 0.00001
+  startPsiR <- sweep(reuncountered, 1, bunded, "/")# + 0.00001
+  # startPsi <- prop.table(startPsiR, 1)
+  # if (!is.null(counts))
+  #   startPsi <- (startPsi * sum(reencountered) +
+  #                  prop.table(counts + 0.00001, 1) * sum(counts)) /
+  #   (sum(reencountered) + sum(counts))
   startR <- colSums(startPsiR)
   startR[startR>0.9999] <- 0.9999
+  if (is.null(counts))
+    startPsi <- sweep(reuncountered, 2, startR, "/")
+  else
+    startPsi <- sweep(reuncountered, 2, startR, "/") + counts
+  startPsi <- prop.table(startPsi, 1)
   # print(startPsi); print(startR)
   #print(banded); print(reencountered)
   startPar <- c(log(sweep(startPsi[, -nTargetSites], 1, startPsi[, nTargetSites], "/")),
                 stats::qlogis(startR))
   #print(startPar)
+  # print(divCoefNLL(startPar, banded = banded, reencountered = reencountered,
+  #                  counts = counts))
   opt1 <- optim(fn = divCoefNLL,
                 par = startPar,
                 gr = divCoefGrad,
