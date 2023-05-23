@@ -568,8 +568,9 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
     startPsi <- sweep(reuncountered, 2, startR, "/") + counts
   startPsi <- prop.table(startPsi, 1)
   # print(startPsi); print(startR)
-  #print(banded); print(reencountered)
-  startPar <- c(log(sweep(startPsi[, -nTargetSites], 1, startPsi[, nTargetSites], "/")),
+  # print(banded); print(reencountered)
+  startPar <- c(log(sweep(startPsi[, -nTargetSites, drop = FALSE], 1,
+                          startPsi[, nTargetSites], "/")),
                 stats::qlogis(startR))
   #print(startPar)
   # print(divCoefNLL(startPar, banded = banded, reencountered = reencountered,
@@ -598,112 +599,13 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
   return(list(psi = psi, r = r))
 }
 
-# This version based on no link except for calculating last column by subtraction
-divCoefNLL2 <- function(psi_r, banded, reencountered, counts) {
-  nOriginSites <- nrow(reencountered)
-  nTargetSites <- ncol(reencountered)
-  #print(psi_r)
-  psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
-                nTargetSites - 1)
-  psi <- cbind(psi, 1 - rowSums(psi))
-  #psi[psi<0] <- 0
-  # print(psi)
-  r <- psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites]
-  # print(r)
-  p <- sweep(psi, 2, r, "*")
-  p <- cbind(p, 1 - rowSums(p))
-  reencountered <- cbind(reencountered, banded - rowSums(reencountered))
-  d1 <- d <- rep(0, length = nOriginSites)
-  if (any(psi<0) || any(r<=0))
-    return(0)
-  for (o in 1:nOriginSites) {
-    d[o] <- stats::dmultinom(x = reencountered[o, ], size = banded[o], prob = p[o, ],
-                             log = TRUE)
-    if (!is.null(counts))
-      d1[o] <- stats::dmultinom(x = counts[o, ], prob = psi[o, ], log = TRUE)
-  }
-  return(-sum(d) - sum(d1))
+calcPi <- function(banded = NULL, reencountered = NULL, counts = NULL,
+                   originAssignment = NULL, targetAssignment = NULL,
+                   originNames = NULL, targetNames = NULL, method = "BFGS",
+                   relAbundOriginData = NULL, relAbundTargetData = NULL) {
+
 }
 
-divCoefGrad2 <- function(psi_r, banded, reencountered, counts) {
-  nOriginSites <- nrow(reencountered)
-  nTargetSites <- ncol(reencountered)
-  if (is.null(counts))
-    counts <- array(0, dim(reencountered))
-  ss <- reencountered + counts
-  lost <- banded - rowSums(reencountered)
-  psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
-                nTargetSites - 1)
-  psi <- cbind(psi, 1 - rowSums(psi))
-  r <- psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites]
-  dpsi <- matrix(0, nOriginSites, nTargetSites - 1)
-  results <- rep(0, length(psi_r))
-  for (o in 1:nOriginSites) {
-    for (t in 1:(nTargetSites - 1)) {
-      dpsi[o, t] <- -ss[o, t] / psi[o, t] +
-        counts[o, nTargetSites] / psi[o, nTargetSites] +
-        reencountered[o, nTargetSites] * r[t] /
-        (1 - sum(psi[o, 1:(nTargetSites - 1)] * r[1:(nTargetSites-1)])) +
-        lost[o] * (r[t] - r[nTargetSites]) / (1 - sum(r * psi[o, ]))
-    }
-  }
-  dr <- rep(0, nTargetSites)
-  for (w in 1:nTargetSites) {
-    dr[w] <- -sum(reencountered[,w] / r[w]) +
-      sum(lost * psi[,w] / (1 - rowSums(sweep(psi, 2, r, "*"))))
-  }
-  return(c(dpsi, dr))
-}
-
-calcTransition2 <- function(banded = NULL, reencountered = NULL, counts = NULL,
-                           originAssignment = NULL, targetAssignment = NULL,
-                           originNames = NULL, targetNames = NULL,
-                           method = "L-BFGS-B") {
-  if (is.null(counts) && length(originAssignment)>0) {
-    nOriginSites <- length(originNames); nTargetSites <- length(targetNames)
-    counts <- table(factor(originAssignment, levels = 1:nOriginSites),
-                    factor(targetAssignment, levels = 1:nTargetSites))
-    names(counts) <- list(originNames, targetNames)
-  }
-  if (is.null(banded))
-    return(list(psi = prop.table(counts, 1)))
-  nOriginSites <- nrow(reencountered)
-  nTargetSites <- ncol(reencountered)
-  startPsiR <- sweep(reencountered, 1, banded, "/") + 0.00001
-  startPsi <- prop.table(startPsiR, 1)
-  if (!is.null(counts))
-    startPsi <- (startPsi * sum(reencountered) +
-                   prop.table(counts + 0.00001, 1) * sum(counts)) /
-    (sum(reencountered) + sum(counts))
-  startR <- colSums(startPsiR)
-  startR[startR>0.9999] <- 0.9999
-  # print(startPsi); print(startR)
-  print(banded); print(reencountered)
-  startPar <- c(startPsi[, -nTargetSites], startR)
-  print(startPar)
-  opt1 <- optim(fn = divCoefNLL2,
-                par = startPar,
-                gr = divCoefGrad2,
-                method = method,
-                control = list(trace = 1, REPORT = 1,
-                               ndeps = c(rep(0.001, nOriginSites * (nTargetSites - 1)),
-                                         rep(0.0001, nTargetSites)),
-                               type = 1,
-                               maxit = 5000),
-                lower = rep(0, nOriginSites * (nTargetSites - 1) + nTargetSites),
-                upper = rep(1, nOriginSites * (nTargetSites - 1) + nTargetSites),
-                banded = banded, reencountered = reencountered, counts = counts)
-  psi_r <- opt1$par
-  psi <- matrix(psi_r[1:(nOriginSites * (nTargetSites - 1))], nOriginSites,
-                nTargetSites - 1)
-  for (o in 1:nOriginSites)
-    psi[o,] <- exp(psi[o,]) / (1 + sum(exp(psi[o, ])))
-  psi <- cbind(psi, 1 - rowSums(psi))
-  r <- stats::plogis(psi_r[(nOriginSites * (nTargetSites - 1)) + 1:nTargetSites])
-  dimnames(psi) <- list(originNames, targetNames)
-  names(r) <- targetNames
-  return(list(psi = psi, r = r))
-}
 
 #' @rdname reversePsiRelAbund
 #' @export
@@ -717,53 +619,5 @@ reverseTransition <- reversePsiRelAbund
 #' @export
 calcPsi <- calcTransition
 
-# This version has no link functions, full psi (tested, got gradient right)
-divCoefNLL3 <- function(psi_r, banded, reencountered, counts) {
-  nOriginSites <- nrow(reencountered)
-  nTargetSites <- ncol(reencountered)
-  #print(psi_r)
-  psi <- matrix(psi_r[1:(nOriginSites * nTargetSites)], nOriginSites,
-                nTargetSites)
-  #psi[psi<0] <- 0
-  # print(psi)
-  r <- psi_r[(nOriginSites * nTargetSites) + 1:nTargetSites]
-  # print(r)
-  p <- sweep(psi, 2, r, "*")
-  p <- cbind(p, 1 - rowSums(p))
-  reencountered <- cbind(reencountered, banded - rowSums(reencountered))
-  d1 <- d <- rep(0, length = nOriginSites)
-  if (any(psi<0) || any(r<=0))
-    return(0)
-  for (o in 1:nOriginSites) {
-    d[o] <- stats::dmultinom(x = reencountered[o, ], size = banded[o], prob = p[o, ],
-                             log = TRUE)
-    if (!is.null(counts))
-      d1[o] <- stats::dmultinom(x = counts[o, ], prob = psi[o, ], log = TRUE)
-  }
-  return(-sum(d) - sum(d1))
-}
 
-divCoefGrad3 <- function(psi_r, banded, reencountered, counts) {
-  nOriginSites <- nrow(reencountered)
-  nTargetSites <- ncol(reencountered)
-  if (is.null(counts))
-    counts <- array(0, dim(reencountered))
-  ss <- reencountered + counts
-  lost <- banded - rowSums(reencountered)
-  psi <- matrix(psi_r[1:(nOriginSites * nTargetSites)], nOriginSites,
-                nTargetSites)
-  r <- psi_r[(nOriginSites * nTargetSites) + 1:nTargetSites]
-  dpsi <- matrix(0, nOriginSites, nTargetSites)
-  for (o in 1:nOriginSites) {
-    for (t in 1:(nTargetSites)) {
-      dpsi[o, t] <- -ss[o, t] / psi[o, t] +
-        lost[o] * r[t] / (1 - sum(r * psi[o, ]))
-    }
-  }
-  dr <- rep(0, nTargetSites)
-  for (w in 1:nTargetSites) {
-    dr[w] <- -sum(reencountered[,w] / r[w]) +
-      sum(lost * psi[,w] / (1 - rowSums(sweep(psi, 2, r, "*"))))
-  }
-  return(c(dpsi, dr))
-}
+
