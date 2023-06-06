@@ -2415,6 +2415,7 @@ estMCisotope <- function(targetDist=NULL,
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
                          na.rm=TRUE, type = 8, names = F)
+    pointCorr <- NULL
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   meanMC <- mean(MC, na.rm=TRUE)
