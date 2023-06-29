@@ -751,6 +751,11 @@ estTransitionBoot <- function(originSites = NULL,
   if (!is.null(banded)) {
     captured <- c(captured, rep("origin", nAnimalsTotal - nAnimals)) #sum(banded)
   }
+  if (nAnimals > 0)
+    if (any(!isGL[1:nAnimals] & !isTelemetry[1:nAnimals] & !isRaster[1:nAnimals] &
+            !isProb[1:nAnimals]))
+      stop("For each individual animal (not in banded) one of the following must be set to TRUE:
+           isGL, isTelemetry, isRaster, or isProb")
   if (method=="m-out-of-n-bootstrap" && is.null(m))
     m <- ceiling(nAnimalsTotal / 4) # don't know if this is a good default or not!
   else if (method == "bootstrap")

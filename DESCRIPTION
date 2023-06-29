@@ -1,7 +1,7 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.1.9010
+Version: 0.4.1.9011
 Date: 2022-06-29
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
