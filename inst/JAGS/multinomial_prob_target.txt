@@ -2,7 +2,7 @@ model{
 # likelihood
 for(i in 1:nProbT){
   probT[i, 1:ndest] ~ ddirich(alpha[dest[i], 1:ndest])
-  dest[i] ~ dcat(psi[assO[i], 1:ndest])
+  dest[i] ~ dcat(psi[pop[i], 1:ndest])
 }#i
 
 # priors

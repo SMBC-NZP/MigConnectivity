@@ -285,6 +285,10 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 #' otherwise (if both are simple point estimates), it will also provide point
 #' estimates.
 #'
+#' Alternatively, can be used to reverse migratory combination (joint)
+#' probabilities (pi; sum to 1 overall) to psi, originRelAbund, gamma, and
+#' targetRelAbund.
+#'
 #' @param psi Transition probabilities between B origin and W target sites.
 #'  Either a matrix with B rows and W columns where rows sum to 1, an array with
 #'  dimensions x, B, and W (with x samples of the transition probability matrix
@@ -293,6 +297,10 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 #' @param originRelAbund Relative abundance estimates at B origin sites. Either
 #'  a numeric vector of length B that sums to 1 or an mcmc object with at least
 #'  \code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'
+#' @param pi Migratory combination (joint) probabilities. Either a matrix with B
+#'  rows and W columns where all entries sum to 1, an array with dimensions x,
+#'  B, and W, or an 'estPi' object (currently only the results of calling this
+#'  function) Either pi or psi and originRelAbund should be specified.
 #' @param originSites If \code{psi} is a MARK object, this must be a numeric
 #'  vector indicating which sites are origin
 #' @param targetSites If \code{psi} is a MARK object, this must be a numeric
@@ -311,8 +319,8 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 #'  gives 95 percent CI
 #'
 #' @return If both psi and originRelAbund are simple point estimates,
-#' \code{reversePsiRelAbund} returns a list with point estimates of gamma and
-#' targetRelAbund. Otherwise, it returns a list with the elements:
+#' \code{reversePsiRelAbund} returns a list with point estimates of gamma,
+#' targetRelAbund, and pi. Otherwise, it returns a list with the elements:
 #' \describe{
 #'   \item{\code{gamma}}{List containing estimates of reverse transition
 #'   probabilities:
@@ -348,14 +356,45 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose
 #'    gamma, except for reversing dimensions (same order as psi).}
 #'   \item{\code{input}}{List containing the inputs to \code{reversePsiRelAbund}.}
 #' }
+#' If the input is pi instead of psi and originRelAbund, then pi is not an
+#' output, but psi and originRelAbund are. Otherwise the same.
+#'
 #' @export
 #'
 #' @example inst/examples/reversePsiRelAbundExamples.R
 #'
-reversePsiRelAbund <- function(psi, originRelAbund,
+reverseTransition <- function(psi = NULL, originRelAbund = NULL, pi = NULL,
                                originSites=NULL, targetSites=NULL,
                                originNames = NULL, targetNames = NULL,
                                nSamples = 1000, row0 = 0, alpha = 0.05) {
+  if ((is.null(psi) || is.null(originRelAbund)) && is.null(pi))
+    stop("Either psi and originRelAbund or pi must be specified")
+  if (is.null(psi)){
+    if (is.matrix(pi)) {
+      if (is.null(originNames)) {
+        originNames <- dimnames(pi)[[1]]
+      }
+      if (is.null(targetNames)) {
+        targetNames <- dimnames(pi)[[2]]
+      }
+      gamma <- t(prop.table(pi, 2))
+      targetRelAbund <- colSums(pi)
+      psi <- prop.table(pi, 1)
+      originRelAbund <- rowSums(pi)
+      return(list(psi = psi, originRelAbund = originRelAbund, gamma = gamma,
+                  targetRelAbund = targetRelAbund))
+    }
+    else {
+      return(reverseEstTransition(psi = psi, originRelAbund = originRelAbund,
+                                  pi = pi,
+                                  originSites=originSites,
+                                  targetSites=targetSites,
+                                  originNames = originNames,
+                                  targetNames = targetNames,
+                                  nSamples = nSamples, row0 = row0,
+                                  alpha = alpha))
+    }
+  }
   if (is.matrix(psi) && is.numeric(originRelAbund)) {
     nOriginSites <- nrow(psi)
     if (is.null(originNames)) {
@@ -374,7 +413,7 @@ reversePsiRelAbund <- function(psi, originRelAbund,
     return(list(gamma = gamma, targetRelAbund = targetRelAbund, pi = pi))
   }
   else
-    return(reverseEstPsiRelAbund(psi = psi, originRelAbund = originRelAbund,
+    return(reverseEstTransition(psi = psi, originRelAbund = originRelAbund,
                                  originSites=originSites,
                                  targetSites=targetSites,
                                  originNames = originNames,
@@ -607,13 +646,17 @@ calcPi <- function(banded = NULL, reencountered = NULL, counts = NULL,
 }
 
 
-#' @rdname reversePsiRelAbund
+#' @rdname reverseTransition
 #' @export
-reverseTransitionRelAbund <- reversePsiRelAbund
+reversePsiRelAbund <- reverseTransition
 
-#' @rdname reversePsiRelAbund
+#' @rdname reverseTransition
 #' @export
-reverseTransition <- reversePsiRelAbund
+reverseTransitionRelAbund <- reverseTransition
+
+#' @rdname reverseTransition
+#' @export
+reversePi <- reverseTransition
 
 #' @rdname calcTransition
 #' @export

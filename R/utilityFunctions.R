@@ -1178,11 +1178,140 @@ randomPoints <- function(sites, assignment, geomName = "geometry") {
   return(points)
 }
 
-# Currently called through reversePsiRelAbund (in calcConnectivity.R)
-reverseEstPsiRelAbund <- function(psi, originRelAbund,
+# Summary functions
+summarize3D <- function(array3D, nSites1, nSites2, names1,
+                         names2, point = NULL, alpha = 0.05) {
+  meanA <- apply(array3D, 2:3, mean)
+  medianA <- apply(array3D, 2:3, median)
+  seA <- apply(array3D, 2:3, sd)
+  simpleCIA <- apply(array3D, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE)
+  dimnames(simpleCIA)[[1]] <- c("lower", "upper")
+  matrixA <- array(c(array3D), c(dim(array3D)[1], nSites1 * nSites2),
+                      list(NULL, paste(rep(names1, nSites2),
+                                       rep(names2, each = nSites1),
+                                       sep = "#")))
+  mcmcA <- coda::as.mcmc(matrixA)
+  hpdCI <- coda::HPDinterval(mcmcA, 1-alpha)
+  hpdCI <- array(hpdCI, c(nSites1, nSites2, 2),
+                 list(names1, names2, c("lower", "upper")))
+  hpdCI <- aperm(hpdCI, c(3, 1, 2))
+  bcCIA <- array(NA, dim = c(2, nSites1, nSites2),
+                   dimnames = list(c("lower", "upper"), names1, names2))
+  for (i in 1:nSites1) {
+    for (j in 1:nSites2) {
+      psi.z0 <- qnorm(sum(array3D[, i, j] < meanA[i, j], na.rm = T) /
+                        length(which(!is.na(array3D[, i, j]))))
+      bcCIA[ , i, j] <- quantile(array3D[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, names = F)
+    }
+  }
+  return(list(sample = array3D, mean = meanA, se = seA,
+              simpleCI = simpleCIA, bcCI = bcCIA, hpdCI = hpdCI,
+              median = medianA, point = point))
+}
+
+summarizeAbund <- function(abund, nSites1, names1, pointAbund = NULL,
+                           alpha = 0.05) {
+  meanAbund <- apply(abund, 2, mean, na.rm=TRUE)
+  medianAbund <- apply(abund, 2, median, na.rm=TRUE)
+  seAbund <- apply(abund, 2, sd, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCIAbund <- apply(abund, 2, quantile,
+                         probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE)
+  dimnames(simpleCIAbund)[[1]] <- c("lower", "upper")
+  bcCIAbund <- array(NA, dim = c(2, nSites1),
+                     dimnames = list(c("lower", "upper"), names1))
+  for (i in 1:nSites1) {
+    abund.z0 <- qnorm(sum(abund[, i] < meanAbund[i], na.rm = T) /
+                        length(which(!is.na(abund[, i]))))
+    bcCIAbund[ , i] <- quantile(abund[, i],
+                                pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                na.rm=TRUE, names = F)
+  }
+  return(list(sample = abund, mean = meanAbund, se = seAbund,
+              simpleCI = simpleCIAbund, bcCI = bcCIAbund, median = medianAbund,
+              point = pointAbund))
+}
+
+# Currently called through reverseTransition (in calcConnectivity.R)
+reverseEstTransition <- function(psi, originRelAbund, pi = NULL,
                                   originSites=NULL, targetSites=NULL,
                                   originNames = NULL, targetNames = NULL,
                                   nSamples = 1000, row0 = 0, alpha = 0.05) {
+  if (is.null(psi)) {
+    if (is.array(pi)) {
+      if (length(dim(pi))!=3)
+        stop('Pi should either be 2-(for fixed migratory combination probabilities) or 3-dimensional array')
+      piIn <- pi
+    }
+    else if (inherits(pi, "estPi")) {
+      if (is.null(originNames)) {
+        originNames <- pi$input$originNames
+      }
+      if (is.null(targetNames)) {
+        targetNames <- pi$input$targetNames
+      }
+      piIn <- pi
+      pi <- pi$pi$sample
+    }
+    nOriginSites <- dim(pi)[2]
+    nTargetSites <- dim(pi)[3]
+    if (is.null(originNames)) {
+      originNames <- dimnames(pi)[[2]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(pi)[[3]]
+    }
+    piBase <- apply(pi, 2:3, mean)
+    if (dim(pi)[1]>=nSamples)
+      piSamples <- round(seq(from = 1, to = dim(pi)[1],
+                             length.out = nSamples))
+    else
+      piSamples <- sample.int(dim(pi)[1], nSamples, replace = TRUE)
+    pointRev <- reverseTransition(pi = piBase)
+    pointGamma <- pointRev$gamma
+    pointTargetAbund <- pointRev$targetRelAbund
+    pointPsi <- pointRev$psi
+    pointOriginAbund <- pointRev$originRelAbund
+    gamma <- array(NA, c(nSamples, nTargetSites, nOriginSites),
+                   dimnames = list(NULL, targetNames, originNames))
+    targetRelAbund <- array(NA, c(nSamples, nTargetSites),
+                            dimnames = list(NULL, targetNames))
+    psi <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+                dimnames = list(NULL, originNames, targetNames))
+    originRelAbund <- array(NA, c(nSamples, nOriginSites),
+                            dimnames = list(NULL, originNames))
+    for (i in 1:nSamples) {
+      piNew <- pi[piSamples[i],,]
+      # Reverse for new pi
+      sampleRev <- reverseTransition(pi = piNew)
+      gamma[i, , ] <- sampleRev$gamma
+      targetRelAbund[i, ] <- sampleRev$targetRelAbund
+      psi[i, , ] <- sampleRev$psi
+      originRelAbund[i, ] <- sampleRev$originRelAbund
+    }
+    gammaReturn <- summarize3D(gamma, nTargetSites, nOriginSites, targetNames,
+                               originNames, pointGamma, alpha)
+    targetAbundReturn <- summarizeAbund(targetRelAbund, nTargetSites,
+                                        targetNames, pointTargetAbund, alpha)
+    psiReturn <- summarize3D(psi, nOriginSites, nTargetSites, originNames,
+                             targetNames, pointPsi, alpha)
+    originAbundReturn <- summarizeAbund(originRelAbund, nOriginSites,
+                                        originNames, pointOriginAbund, alpha)
+    rev <- list(gamma = gammaReturn,
+                targetRelAbund = targetAbundReturn,
+                psi = psiReturn, originRekAbund = originAbundReturn,
+                input = list(pi = piIn,
+                             originSites = originSites, targetSites = targetSites,
+                             originNames = originNames, targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0, alpha = alpha))
+    class(rev) <- c("estGamma", "estTargetRelAbund", "estPsi",
+                    "estOriginRelAbund", "estMigConnectivity")
+    return(rev)
+  }
   if (is.matrix(psi)) {
     psiFixed <- TRUE
     psiVCV <- NULL
@@ -1308,66 +1437,15 @@ reverseEstPsiRelAbund <- function(psi, originRelAbund,
     targetRelAbund[i, ] <- sampleRev$targetRelAbund
     pi[i, , ] <- sampleRev$pi
   }
-  meanGamma <- apply(gamma, 2:3, mean, na.rm=TRUE)
-  medianGamma <- apply(gamma, 2:3, median, na.rm=TRUE)
-  seGamma <- apply(gamma, 2:3, sd, na.rm=TRUE)
-  # Calculate confidence intervals using quantiles of sampled MC
-  simpleCIGamma <- apply(gamma, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, type = 8, names = F)
-  bcCIGamma <- array(NA, dim = c(2, nTargetSites, nOriginSites),
-                     dimnames = list(NULL, targetNames, originNames))
-  for (i in 1:nTargetSites) {
-    for (j in 1:nOriginSites) {
-      gamma.z0 <- qnorm(sum(gamma[, i, j] < meanGamma[i, j], na.rm = T) /
-                        length(which(!is.na(gamma[, i, j]))))
-      bcCIGamma[ , i, j] <- quantile(gamma[, i, j],
-                                     pnorm(2 * gamma.z0 +
-                                             qnorm(c(alpha/2, 1-alpha/2))),
-                                     na.rm=TRUE, type = 8, names = F)
-    }
-  }
-  meanAbund <- apply(targetRelAbund, 2, mean, na.rm=TRUE)
-  medianAbund <- apply(targetRelAbund, 2, median, na.rm=TRUE)
-  seAbund <- apply(targetRelAbund, 2, sd, na.rm=TRUE)
-  # Calculate confidence intervals using quantiles of sampled MC
-  simpleCIAbund <- apply(targetRelAbund, 2, quantile,
-                         probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, type = 8, names = F)
-  bcCIAbund <- array(NA, dim = c(2, nTargetSites),
-                     dimnames = list(NULL, targetNames))
-  for (i in 1:nTargetSites) {
-    abund.z0 <- qnorm(sum(targetRelAbund[, i] < meanAbund[i], na.rm = T) /
-                        length(which(!is.na(targetRelAbund[, i]))))
-    bcCIAbund[ , i] <- quantile(targetRelAbund[, i],
-                                pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                na.rm=TRUE, type = 8, names = F)
-  }
-  meanPi <- apply(pi, 2:3, mean)
-  medianPi <- apply(pi, 2:3, median)
-  sePi <- apply(pi, 2:3, sd)
-  simpleCIPi <- apply(pi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
-  bcCIPi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
-                   dimnames = list(NULL, originNames, targetNames))
-  for (i in 1:nOriginSites) {
-    for (j in 1:nTargetSites) {
-      pi.z0 <- qnorm(sum(pi[, i, j] < meanPi[i, j], na.rm = T) /
-                        length(which(!is.na(pi[, i, j]))))
-      bcCIPi[ , i, j] <- quantile(pi[, i, j],
-                                   pnorm(2 * pi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
-    }
-  }
-  rev <- list(gamma = list(sample = gamma, mean = meanGamma, se = seGamma,
-                           simpleCI = simpleCIGamma, bcCI = bcCIGamma,
-                           median = medianGamma, point = pointGamma),
-              targetRelAbund = list(sample = targetRelAbund, mean = meanAbund,
-                                    se = seAbund, simpleCI = simpleCIAbund,
-                                    bcCI = bcCIAbund, median = medianAbund,
-                                    point = pointAbund),
-              pi = list(sample = pi, mean = meanPi, se = sePi,
-                         simpleCI = simpleCIPi, bcCI = bcCIPi,
-                         median = medianPi, point = pointPi),
+  gammaReturn <- summarize3D(gamma, nTargetSites, nOriginSites, targetNames,
+                             originNames, pointGamma, alpha)
+  targetAbundReturn <- summarizeAbund(targetRelAbund, nTargetSites,
+                                      targetNames, pointAbund, alpha)
+  piReturn <- summarize3D(pi, nOriginSites, nTargetSites, originNames,
+                           targetNames, pointPi, alpha)
+  rev <- list(gamma = gammaReturn,
+              targetRelAbund = targetAbundReturn,
+              pi = piReturn,
               input = list(psi = psiIn, originRelAbund = originRelAbundIn,
                            originSites = originSites, targetSites = targetSites,
                            originNames = originNames, targetNames = targetNames,

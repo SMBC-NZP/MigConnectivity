@@ -1457,7 +1457,7 @@ estTransitionBoot <- function(originSites = NULL,
     medianPsi <- apply(psi.array, 2:3, median)
     sePsi <- apply(psi.array, 2:3, sd)
     simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, type = 8, names = F)
+                         na.rm=TRUE, names = F)
     psi.matrix <- array(c(psi.array), c(nBoot, nOriginSites * nTargetSites),
                         list(NULL, paste(rep(originNames, nTargetSites),
                                          rep(targetNames, each = nOriginSites),
