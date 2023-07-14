@@ -1258,7 +1258,7 @@ estTransitionBoot <- function(originSites = NULL,
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Make sure have animals from every origin site
-    origin.sample <- 'Filler' # Start with one origin site
+    origin.sample <- c() # Start with zero origin sites
     while (length(unique(origin.sample)) < nOriginSites) { #2
       # Sample individual animals with replacement
       animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
