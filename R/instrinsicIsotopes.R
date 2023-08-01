@@ -449,57 +449,65 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   haveIsoMap <- list.dirs(path = getwd(), recursive = TRUE)
   if(surface == TRUE){
     if(element == "Hydrogen"){
-      if(!(paste0(getwd(),"/mwswh_fin") %in% haveIsoMap)){
+      if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
         # Create temporary file #
         tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
         # Download the file #
-        utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_H.zip",
+        utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
 
         # unzip the downloaded file #
         utils::unzip(zipfile = tf,
-              files = NULL, list = FALSE, overwrite = TRUE,
-              junkpaths = FALSE, exdir = getwd(), unzip = "internal",
-              setTimes = FALSE)
+                     files = NULL,
+					 list = FALSE,
+					 overwrite = TRUE,
+                     junkpaths = FALSE,
+					 exdir = paste0(getwd(),"/GlobalPrecipGS"),
+					 unzip = "internal",
+                     setTimes = FALSE)
 
         # Delete zipped folder #
         file.remove(tf)
 
-        m_s_d <- raster::raster(paste0(getwd(),"/mwswh_fin/w001001.adf"))
+        m_s_d <- raster::raster(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
       }else{
-        m_s_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/mwswh_fin$")],"/w001001.adf"))
+        m_s_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d2h_GS.tif"))
       }
       names(m_s_d)<-"MeanSurfaceD"
       return(m_s_d)
     }
     if(element == "Oxygen"){
-      if(!(paste0(getwd(),"/mwswh_fin") %in% haveIsoMap)){
+      if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
         # Create temporary file #
         tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
         # Download the file #
-        utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/Surface_O.zip",
+        utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
 
         # unzip the downloaded file #
         utils::unzip(zipfile = tf,
-              files = NULL, list = FALSE, overwrite = TRUE,
-              junkpaths = FALSE, exdir = getwd(), unzip = "internal",
-              setTimes = FALSE)
+                     files = NULL,
+					 list = FALSE,
+					 overwrite = TRUE,
+                     junkpaths = FALSE,
+					 exdir = paste0(getwd(),"/GlobalPrecipGS"),
+					 unzip = "internal",
+                     setTimes = FALSE)
 
         # Delete zipped folder #
         file.remove(tf)
 
-        m_s_o <- raster::raster(paste0(getwd(),"/mwswo_fin/w001001.adf"))
+        m_s_o <- raster::raster(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
       }else{
-        m_s_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/mwswh_fin$")],"/w001001.adf"))
+        m_s_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d18o_GS.tif"))
       }
       names(m_s_o)<-"MeanSurfaceO"
       return(m_s_o)
@@ -507,116 +515,135 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
   }
   if(element == "Hydrogen" & period == "Annual"){
-    if(!(paste0(getwd(),"/AnnualD") %in% haveIsoMap)){
+
+    if(!(paste0(getwd(),"/GlobalPrecip") %in% haveIsoMap)){
+
+      cat("NOTE: The Global H2 precipitation file is large (600 MB) and may take a while to download \n")
 
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualD.zip",
+      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecip.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
-            files = NULL, list = FALSE, overwrite = TRUE,
-            junkpaths = FALSE, exdir = getwd(), unzip = "internal",
-            setTimes = FALSE)
+                  files = NULL,
+				  list = FALSE,
+				  overwrite = TRUE,
+                  junkpaths = FALSE,
+				  exdir = paste0(getwd(),"/GlobalPrecip"),
+				  unzip = "internal",
+                  setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      m_a_d <- raster::raster(paste0(getwd(),"/AnnualD/mad/w001001.adf"))
+      m_a_d <- raster::raster(paste0(getwd(),"/GlobalPrecip/d2h_MA.tif"))
     }else{
-      m_a_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/AnnualD/mad$")],"/w001001.adf"))
+      m_a_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecip")],"/d2h_MA.tif"))
     }
     names(m_a_d)<-"MeanAnnualD"
     return(m_a_d)
   }
 
   if(element == "Hydrogen" & period == "GrowingSeason"){
-    if(!(paste0(getwd(),"/GSD") %in% haveIsoMap)){
+    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSD.zip",
+      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
-            files = NULL, list = FALSE, overwrite = TRUE,
-            junkpaths = FALSE, exdir = getwd(), unzip = "internal",
-            setTimes = FALSE)
+                   files = NULL,
+				   list = FALSE,
+				   overwrite = TRUE,
+                   junkpaths = FALSE,
+				   exdir = paste0(getwd(),"/GlobalPrecipGS"),
+				   unzip = "internal",
+				   setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      g_s_d <- raster::raster(paste0(getwd(),"/GSD/gsd/w001001.adf"))
+      g_s_d <- raster::raster(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
     }else{
-      g_s_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GSD/gsd$")],"/w001001.adf"))
+      g_s_d <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d2h_GS.tif"))
     }
     g_s_d[g_s_d == -999]<-NA
     names(g_s_d)<-"GrowingSeasonD"
     return(g_s_d)
   }
   if(element == "Oxygen" & period == "Annual"){
-    if(!(paste0(getwd(),"/GSO") %in% haveIsoMap)){
+    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/AnnualO.zip",
+      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecip.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
-            files = NULL, list = FALSE, overwrite = TRUE,
-            junkpaths = FALSE, exdir = getwd(), unzip = "internal",
-            setTimes = FALSE)
+	               files = NULL,
+				   list = FALSE,
+				   overwrite = TRUE,
+                   junkpaths = FALSE,
+				   exdir = paste0(getwd(),"/GlobalPrecip"),
+				   unzip = "internal",
+                   setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      m_a_o <- raster::raster(paste0(getwd(),"/AnnualO/mao/w001001.adf"))
+      m_a_o <- raster::raster(paste0(getwd(),"/GlobalPrecip/d18o_MA.tif"))
     }else{
-      m_a_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/AnnualO/mao$")],"/w001001.adf"))
+      m_a_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecip")],"/d18o_MA.tif"))
     }
     names(m_a_o)<-"MeanAnnualO"
     return(m_a_o)
   }
 
   if(element == "Oxygen" & period == "GrowingSeason"){
-    if(!(paste0(getwd(),"/GSO") %in% haveIsoMap)){
+    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
-      utils::download.file(url = "http://wateriso.utah.edu/waterisotopes/media/ArcGrids/GSO.zip",
+      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
-            files = NULL, list = FALSE, overwrite = TRUE,
-            junkpaths = FALSE, exdir = getwd(), unzip = "internal",
+	               files = NULL,
+ 				   list = FALSE,
+ 				   overwrite = TRUE,
+            junkpaths = FALSE,
+			exdir = paste0(getwd(),"/GlobalPrecipGS"),
+			unzip = "internal",
             setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      g_s_o <- raster::raster(paste0(getwd(),"/GSO/gso/w001001.adf"))
+      g_s_o <- raster::raster(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
     }else{
-      g_s_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GSO/gso$")],"/w001001.adf"))
+      g_s_o <- raster::raster(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d18o_GS.tif"))
     }
     g_s_o[g_s_o == -999]<-NA
     names(g_s_o)<-"GrowingSeasonO"
