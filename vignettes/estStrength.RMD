@@ -1,0 +1,241 @@
+---
+title: '''MigConnectivity'' package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r eval = FALSE}
+install.packages('devtools')
+
+devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
+
+library(MigConnectivity)
+```
+
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+library(MigConnectivity)
+library(sf)
+```
+
+## `estStrength` - Estimate the strength of migratory connectivity 
+
+The <code>estStrength</code> function estimates the strength of migratory connectivity between populations during two different time periods within the annual cycle. Below, we illustrate how to estimate the strength of MC between three breeding and non-breeding regions. 
+
+To estimate the strength of MC, you will need:   
+
+1. to define the number of breeding and non-breeding regions  
+1. the distance between the breeding regions and the distance between the non-breeding regions  
+1. the transition probabilities between each breeding and non-breeding region (`psi`)  
+1. the relative abundance within each of the regions where individuals originate from (here the breeding regions)
+1. (optional) the total sample size of animals used to estimate the transition probabilities.
+
+
+### Estimate MC between breeding and non-breeding regions
+
+Simple, non-spatial example with three breeding and three non-breeding regions
+
+Define the number of breeding and non-breeding populations
+
+```{r}
+nBreeding <- 3 #number of breeding regions
+nNonBreeding <- 3 #number of non-breeding regions
+```
+
+Generate a distance matrix between the different regions
+```{r}
+#distances between centroids of three breeding regions
+breedDist <- matrix(c(0, 1, 2,
+                      1, 0, 1,
+                      2, 1, 0), nBreeding, nBreeding) 
+
+#distances between centroids of three non-breeding regions
+nonBreedDist <- matrix(c(0, 5, 10,
+                         5, 0, 5,
+                        10, 5, 0), nNonBreeding, nNonBreeding)
+```
+
+```{r echo=FALSE}
+par(bty="n")
+plot(c(4,5,6),rep(1,3),
+     ylim=c(-0.05,1.05),
+     xlim=c(-1,11),
+     pch=19,
+     axes=FALSE,
+     yaxt="n",
+     xaxt="n",
+     cex=2,
+     ylab="",
+     xlab="Non-breeding",
+     main="Breeding")
+points(c(0,5,10),rep(0,3),pch=15,cex=2)
+```  
+
+Define the transition probabilities between the breeding and non-breeding regions
+```{r}
+#transition probabilities form each breeding to each non-breeding region
+psi <- matrix(c(0.4, 0.35, 0.25,
+                0.3, 0.4, 0.3,
+                0.2, 0.3, 0.5), nBreeding, nNonBreeding, byrow = TRUE) 
+
+```
+```{r echo=FALSE}
+par(bty="n")
+plot(c(4,5,6),rep(1,3),
+     ylim=c(-0.05,1.05),
+     xlim=c(-1,11),
+     pch=19,
+     axes=FALSE,
+     yaxt="n",
+     xaxt="n",
+     cex=2,
+     ylab="",
+     xlab="Non-breeding",
+     main="Breeding")
+points(c(0,5,10),rep(0,3),pch=15,cex=2)
+
+segments(4,1,0,0,lwd=0.4*10)
+segments(4,1,5,0,lwd=0.35*10)
+segments(4,1,10,0,lwd=0.25*10)
+
+segments(5,1,0,0,lwd=0.3*10, lty = 2)
+segments(5,1,5,0,lwd=0.4*10, lty = 2)
+segments(5,1,10,0,lwd=0.3*10, lty = 2)
+
+segments(6,1,0,0,lwd=0.2*10, lty = 3)
+segments(6,1,5,0,lwd=0.3*10, lty = 3)
+segments(6,1,10,0,lwd=0.5*10, lty = 3)
+```  
+
+Define the relative abundance within the three breeding regions
+```{r}
+#equal relative abundance among the three breeding regions, must sum to 1                      
+relN <- rep(1/nBreeding, nBreeding) 
+
+relN
+
+# Define total sample size for psi data 
+# for small sample corrected version of MC 
+
+n <- 250
+
+```
+Estimate the strength of migratory connectivity using the inputs above
+```{r}
+# Calculate the strength of migratory connectivity 
+MC <- estStrength(originDist = breedDist,
+             targetDist = nonBreedDist,
+             originRelAbund = relN,
+             psi = psi)
+
+```
+
+```{r}
+str(MC,1)
+str(MC$MC)
+```
+Estimating the strength of MC by explicitly defining the total sample size of animals to estimate the transition probabilities
+
+```{r}
+MC_n <- estStrength(originDist = breedDist,
+             targetDist = nonBreedDist,
+             originRelAbund = relN, 
+             psi = psi,
+             sampleSize = n)
+```
+```{r}
+str(MC_n,1)
+str(MC_n$MC)
+```
+
+## Estimate the strength of migratory connectivity after running estTransition 
+
+```{r}
+# Read in the processed Yellow Warbler data 
+# see the Worked Examples Vignette for details on how data structured/created
+YEWAdata <- readRDS("yewa_estTrans_data.rds")
+
+# take a quick look at the data # 
+str(YEWAdata,1)
+```
+
+First, we estimate (psi) or transition probabilities using the `estTransition` function.
+
+Note - in the Yellow Warbler data there are no overlapping data sources for individuals, i.e., we only had 
+one type of data for each bird - so we set the overlap setting to “none”.
+
+```{r, eval = FALSE}
+## Run analysis for psi
+psiYEWA <- MigConnectivity::estTransition(originSites = YEWAdata$originSites,
+                                     targetSites = YEWAdata$targetSites,
+                                     originPoints = YEWAdata$originPoints,
+                                     targetPoints = YEWAdata$targetPoints,
+                                     originAssignment = YEWAdata$originAssignment,
+                                     originNames = YEWAdata$originNames,
+                                     targetNames = YEWAdata$targetNames,
+                                     nSamples = 10,  # Set low for illustration
+                                     isGL = YEWAdata$isGL,
+                                     isTelemetry = YEWAdata$isTelemetry,
+                                     isRaster = YEWAdata$isRaster,
+                                     isProb = YEWAdata$isProb,
+                                     captured = YEWAdata$captured,
+                                     geoBias = YEWAdata$geoBias,
+                                     geoVCov = YEWAdata$geoVCov,
+                                     originRaster = YEWAdata$originRaster,
+                                     verbose = 0, 
+                                     maxTries = 400,
+                                     resampleProjection = YEWAdata$resampleProjection,
+                                     nSim = 10,  # Set low for illustration
+                                     dataOverlapSetting = "none",
+                                     targetRelAbund = YEWAdata$targetRelAbund)
+```
+
+We then use the resulting object to estimate the strength of migratory connectivity. We first need some additional data, the distances between originSites and targetSites. 
+
+```{r}
+# calculate distance between originSites
+originCentersYEWA <- st_centroid(YEWAdata$originSites)
+originCentersYEWA <- st_transform(originCentersYEWA, 4326)
+originDistYEWA <- distFromPos(st_coordinates(originCentersYEWA$geometry))
+
+# calculate distance between targetSites 
+targetCentersYEWA <- st_centroid(YEWAdata$targetSites)
+targetCentersYEWA <- st_transform(targetCentersYEWA, 4326)
+targetDistYEWA <- distFromPos(st_coordinates(targetCentersYEWA$geometry))
+```
+
+### Estimate the strength of Migratory Connectivity 
+
+```{r, echo = FALSE}
+psiYEWA <- readRDS("psiYEWA.rds")
+```
+
+
+```{r}
+# Estimate the strength of migratory connectivity
+YEWAmc <- estStrength(originDist = originDistYEWA,
+                      targetDist = targetDistYEWA,
+                      originRelAbund = YEWAdata$originRelAbund,
+                      psi = psiYEWA,
+                      nSamples = 5000,
+                      verbose = 0)
+```
+
+```{r echo = FALSE}
+# saveRDS(YEWAmc, "YEWAmc.rds")
+```
+
+

@@ -1,0 +1,64 @@
+---
+title: 'Compare the strength of migratory connectivity between taxa using the diffMC function from the ''MigConnectivity'' package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/Hallworth_zotero_library.bib 
+csl: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/ecology.csl
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+options(rmarkdown.html_vignette.check_title = FALSE)
+
+library(MigConnectivity)
+```
+
+The MigConnectivity package, which quantifies the strength of migratory connectivity, was developed to facilitate quantitative comparisons of migratory connectivity across studies, data types, and taxa while accounting for uneven sampling and the bias inherent to different data types for studying migratory movement. Below, we use the new `diffMC` function to compare MC estimates for the Yellow Warbler and the Ovenbird. To streamline the vignette and to avoid redundancy we load the results from the [estStrength](estStrength.html) and the [Worked Example](WorkedExample.html) vignettes. 
+
+```{r message=FALSE, warning = FALSE, error=FALSE, echo = FALSE}
+data(OVENdata)
+
+OVENpsi <- readRDS("OVENpsi.rds")
+
+OVEN_mc <- estStrength(originDist = OVENdata$originDist,
+                      targetDist = OVENdata$targetDist,
+                      originRelAbund = OVENdata$originRelAbund,
+                      psi = OVENpsi,
+                      nSamples = 5000,
+                      verbose = 0)
+
+```
+
+
+```{r, eval = FALSE}
+# Read in the estStrength results for OVEN 
+OVEN_mc <- readRDS("OVENmc.rds")
+  
+# Read in the estStrength results for YEWA
+YEWA_mc <- readRDS("YEWAmc.rds")
+```
+
+```{r, echo = FALSE}
+# Read in the estStrength results for YEWA
+YEWA_mc <- readRDS("YEWAmc.rds")
+```
+
+### Compare MC between Ovenbirds and Yellow Warblers 
+
+```{r}
+diffStrength(estimates = list(Ovenbird = OVEN_mc,
+                              Yellow_Warbler = YEWA_mc))
+
+```
