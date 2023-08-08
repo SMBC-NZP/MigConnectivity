@@ -1352,7 +1352,7 @@ simProbData <- function(psi,
 
 #' @export
 #'
-# @examples
+#' @examples inst/examples/simCMRExamples2.R
 simCMRData <- function(psi, banded, r) {
   moved <- reencountered <- array(0, dim(psi), dimnames = dimnames(psi))
   nOriginSites <- nrow(psi)

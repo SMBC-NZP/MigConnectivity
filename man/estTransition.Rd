@@ -43,7 +43,8 @@ estTransition(
   targetRelAbund = NULL,
   method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
   m = NULL,
-  psiPrior = NULL
+  psiPrior = NULL,
+  returnAllInput = TRUE
 )
 
 estPsi(
@@ -83,7 +84,8 @@ estPsi(
   targetRelAbund = NULL,
   method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
   m = NULL,
-  psiPrior = NULL
+  psiPrior = NULL,
+  returnAllInput = TRUE
 )
 }
 \arguments{
@@ -336,6 +338,11 @@ Dirichlet parameters of all 1s, which is a standard uninformative Dirichlet
 prior. Setting these to other positive numbers is useful when you think a
 priori that certain transitions are unlikely, but don't want to rule them
 out altogether using \code{fixedZero}.}
+
+\item{returnAllInput}{if TRUE (the default) the output includes all of the
+inputs. If FALSE, only the inputs currently used by another MigConnectivity
+function are included in the output. Switch this if you're worried about
+computer memory (and the output will be much slimmer).}
 }
 \value{
 \code{estTransition} returns a list with the elements:

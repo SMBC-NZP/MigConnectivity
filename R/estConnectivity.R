@@ -58,8 +58,11 @@
 #'  to elements within an \code{estMigConnectivity} object (results of
 #'  \code{estMC}), you can set this to TRUE to also keep the old structure.
 #'  Defaults to FALSE
+#' @param returnAllInput if TRUE (the default) the output includes all of the
+#'  inputs. If FALSE, only the inputs currently used by another MigConnectivity
+#'  function are included in the output.
 #'
-#' @return \code{estMC} returns a list with the elements:
+#' @return \code{estStrength} returns a list with the elements:
 #' \describe{
 #'   \item{\code{MC}}{List containing estimates of migratory connectivity
 #'    strength:
@@ -116,7 +119,8 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                         originNames = NULL, targetNames = NULL,
                         nSamples = 1000, row0 = 0, verbose=0,
                         alpha = 0.05, approxSigTest = FALSE, sigConst = 0,
-                        maintainLegacyOutput = FALSE) {
+                        maintainLegacyOutput = FALSE,
+                        returnAllInput = TRUE) {
   nOriginSites <- nrow(originDist)
   nTargetSites <- nrow(targetDist)
   absAbund <- !is.null(sampleSize)
@@ -255,6 +259,24 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
     if (pointMC < sigConst)
       bcP <- 1 - bcP
   }
+  if (returnAllInput) {
+    input <- list(originDist = originDist, targetDist = targetDist,
+                  originRelAbund = originRelAbund, psi = psiIn,
+                  sampleSize = sampleSize, originSites = originSites,
+                  targetSites = targetSites,
+                  originNames = originNames,
+                  targetNames = targetNames,
+                  nSamples = nSamples, row0 = row0,
+                  verbose = verbose, alpha = alpha,
+                  approxSigTest = approxSigTest, sigConst = sigConst,
+                  maintainLegacyOutput = maintainLegacyOutput,
+                  returnAllInput = TRUE)
+  }
+  else {
+    input <- list(sampleSize = sampleSize,
+                  originNames = originNames, targetNames = targetNames,
+                  alpha = alpha, returnAllInput = FALSE)
+  }
   if (maintainLegacyOutput) {
     mc <- list(sampleMC=sampleMC, samplePsi = psi.array, pointPsi = psiBase,
                 pointMC=pointMC, meanMC=meanMC,
@@ -268,32 +290,14 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
                           median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
-                input = list(originDist = originDist, targetDist = targetDist,
-                             originRelAbund = originRelAbund, psi = psiIn,
-                             sampleSize = sampleSize, originSites = originSites,
-                             targetSites = targetSites,
-                             originNames = originNames,
-                             targetNames = targetNames,
-                             nSamples = nSamples, row0 = row0,
-                             verbose = verbose, alpha = alpha,
-                             approxSigTest = approxSigTest, sigConst = sigConst,
-                             maintainLegacyOutput = TRUE))
+                input = input)
   }
   else {
     mc <- list(MC = list(sample = sampleMC, mean = meanMC, se = seMC,
                           simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
                           median = medianMC, point = pointMC,
                           simpleP = simpleP, bcP = bcP),
-               input = list(originDist = originDist, targetDist = targetDist,
-                             originRelAbund = originRelAbund, psi = psiIn,
-                             sampleSize = sampleSize, originSites = originSites,
-                             targetSites = targetSites,
-                             originNames = originNames,
-                             targetNames = targetNames,
-                             nSamples = nSamples, row0 = row0,
-                             verbose = verbose, alpha = alpha,
-                             approxSigTest = approxSigTest, sigConst = sigConst,
-                             maintainLegacyOutput = FALSE))
+               input = input)
   }
   class(mc) <- c("estMC", "estMigConnectivity")
   return(mc)
@@ -305,7 +309,8 @@ estTransitionJAGS <- function (banded, reencountered,
                                alpha = 0.05, nSamples = 1000, verbose=0,
                                originNames = NULL, targetNames = NULL,
                                nThin = 1, nBurnin = 5000, nChains = 3,
-                               fixedZero = NULL, psiPrior = NULL) {
+                               fixedZero = NULL, psiPrior = NULL,
+                               returnAllInput = TRUE) {
   jags.inits <- vector("list", nChains)
   if (is.null(banded)) {
     if (is.null(originAssignment) || is.null(targetAssignment)) {
@@ -550,13 +555,22 @@ model{
                        bcCI = bcCIr, median = out$BUGSoutput$median$r)
     }
   }
-  results$input <- list(banded = banded, reencountered = reencountered,
-                        originAssignment = originAssignment,
-                        targetAssignment = targetAssignment,
-                        sampleSize = sampleSize, alpha = alpha,
-                        nSamples = nSamples, verbose=verbose,
-                        originNames = originNames, targetNames = targetNames,
-                        nThin = nThin, nBurnin = nBurnin, nChains = nChains)
+  if (returnAllInput) {
+    results$input <- list(banded = banded, reencountered = reencountered,
+                          originAssignment = originAssignment,
+                          targetAssignment = targetAssignment,
+                          sampleSize = sampleSize, alpha = alpha,
+                          nSamples = nSamples, verbose=verbose,
+                          originNames = originNames, targetNames = targetNames,
+                          nThin = nThin, nBurnin = nBurnin, nChains = nChains,
+                          fixedZero = fixedZero, psiPrior = psiPrior,
+                          method = "MCMC", returnAllInput = TRUE)
+  }
+  else {
+    results$input <- list(sampleSize = sampleSize, alpha = alpha,
+                          originNames = originNames, targetNames = targetNames,
+                          method = "MCMC", returnAllInput = FALSE)
+  }
   results$BUGSoutput <- out$BUGSoutput
   return(results)
 }
@@ -592,7 +606,8 @@ estTransitionBoot <- function(originSites = NULL,
                               banded = NULL,
                               reencountered = NULL,
                               method = "bootstrap",
-                              m = NULL) {
+                              m = NULL,
+                              returnAllInput = TRUE) {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -1517,31 +1532,50 @@ estTransitionBoot <- function(originSites = NULL,
     simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
                          na.rm=TRUE, type = 8, names = F)
   }
+  if (returnAllInput) {
+    input <-list(sampleSize = nAnimals, originSites = originSites,
+                 targetSites = targetSites,
+                 originPoints = originPoints,
+                 targetPoints = targetPoints,
+                 originAssignment = originAssignment,
+                 targetAssignment = targetAssignment,
+                 originNames = originNames,
+                 targetNames = targetNames,
+                 nSamples = nBoot,
+                 isGL=isGL, isTelemetry = isTelemetry,
+                 isRaster = isRaster, isProb = isProb,
+                 captured = captured,
+                 geoBias=geoBias, geoVCov=geoVCov,
+                 geoBiasOrigin = geoBiasOrigin,
+                 geoVCovOrigin = geoVCovOrigin,
+                 targetRaster = targetRaster,
+                 originRaster = originRaster,
+                 verbose = verbose,
+                 alpha = alpha,
+                 resampleProjection = resampleProjection,
+                 nSim = nSim, maxTries = maxTries,
+                 dataOverlapSetting = dataOverlapSetting,
+                 fixedZero = fixedZero,
+                 targetRelAbund = targetRelAbund,
+                 banded = banded,
+                 reencountered = reencountered,
+                 method = method,
+                 m = m,
+                 returnAllInput = TRUE)
+  }
+  else {
+    input <-list(sampleSize = nAnimals,
+                 originNames = originNames,
+                 targetNames = targetNames,
+                 alpha = alpha,
+                 method = method,
+                 returnAllInput = FALSE)
+  }
   return(list(psi = list(sample = psi.array, mean = meanPsi, se = sePsi,
                          simpleCI = simpleCIPsi, bcCI = bcCIPsi, hpdCI = hpdCI,
                          median = medianPsi, point = pointPsi),
               r = r,
-              input = list(sampleSize = nAnimals, originSites = originSites,
-                           targetSites = targetSites,
-                           originPoints = originPoints,
-                           targetPoints = targetPoints,
-                           originAssignment = originAssignment,
-                           targetAssignment = targetAssignment,
-                           originNames = originNames,
-                           targetNames = targetNames,
-                           nSamples = nBoot,
-                           isGL=isGL, isTelemetry = isTelemetry,
-                           isRaster = isRaster, isProb = isProb,
-                           captured = captured,
-                           geoBias=geoBias, geoVCov=geoVCov,
-                           geoBiasOrigin = geoBiasOrigin,
-                           geoVCovOrigin = geoVCovOrigin,
-                           targetRaster = targetRaster,
-                           originRaster = originRaster,
-                           verbose = verbose,
-                           alpha = alpha,
-                           resampleProjection = resampleProjection,
-                           nSim = nSim, maxTries = maxTries),
+              input = input,
               BUGSoutput = NULL))
 }
 
@@ -1768,6 +1802,10 @@ estTransitionBoot <- function(originSites = NULL,
 #'  prior. Setting these to other positive numbers is useful when you think a
 #'  priori that certain transitions are unlikely, but don't want to rule them
 #'  out altogether using \code{fixedZero}.
+#' @param returnAllInput if TRUE (the default) the output includes all of the
+#'  inputs. If FALSE, only the inputs currently used by another MigConnectivity
+#'  function are included in the output. Switch this if you're worried about
+#'  computer memory (and the output will be much slimmer).
 #'
 #' @return \code{estTransition} returns a list with the elements:
 #' \describe{
@@ -1837,7 +1875,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           method = c("bootstrap", "MCMC",
                                      "m-out-of-n-bootstrap"),
                           m = NULL,
-                          psiPrior = NULL) {
+                          psiPrior = NULL,
+                          returnAllInput = TRUE) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   method <- match.arg(method)
   if (method != "MCMC") {
@@ -1862,7 +1901,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              fixedZero = fixedZero,
                              targetRelAbund = targetRelAbund,
                              method = method, m = m,
-                             banded = banded, reencountered = reencountered)
+                             banded = banded, reencountered = reencountered,
+                             returnAllInput = returnAllInput)
   }
   else {
     psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
@@ -1874,7 +1914,8 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              targetNames = targetNames,
                              nBurnin = nBurnin, nThin = nThin,
                              nChains = nChains, fixedZero = fixedZero,
-                             psiPrior = psiPrior)
+                             psiPrior = psiPrior,
+                             returnAllInput = returnAllInput)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
+
+<meta name="date" content="2023-08-01" />
+
+<title>Estimate transition probabilities with the ‘MigConnectivity’ package</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+/* for pandoc --citeproc since 2.11 */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Estimate transition probabilities with the
+‘MigConnectivity’ package</h1>
+<h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
+<h4 class="date">2023-08-01</h4>
+
+
+
+<p>A growing number of tools are available for studying the seasonal
+distributions of migratory animals across the annual cycle including
+individual tracking, assignments quantifying range-wide migratory
+connectivity patterns. However, integratating data types requires
+methods that account for the differences in sampling and differences in
+the precision and bias inherent to each data type. The
+<code>MigConnectivity</code> package provides tools for estimating the
+pattern and strength of migratory connectivity between two or more
+phases of the annual cycle. We developed methods to integrate intrinsic
+marker, tracking, and long-distance band reencounter data collected from
+the same or different individuals. We added functionality to integrate
+analyses that account for differences among seasonal assignment from
+different data types (banding reencounter, light-level geolocator,
+stable isotopes in tissues, genetics, and GPS) in precision, bias,
+reencounter probability, and directionality (i.e., combining breeding to
+nonbreeding and nonbreeding to breeding).</p>
+<p>The <code>estTransition</code> estimates migratory connectivity
+patterns (ψ, transition probabilities) from seasonal movement data.</p>
+<p>The <code>estStrength</code> function estimates the strength of
+migratory connectivity from transition probabilities (MC, Mantel test).
+See the <a href="estStrength.html">estStrength</a> vignette for more
+details.</p>
+<p>We used simulation to explore the challenges and limitations of data
+integration and three species with real-world examples data, Painted
+Bunting (<i>Passerina ciris</i>), Yellow Warbler (<i>Setophaga
+petechia</i>) and Bald Eagle (<i>Haliaeetus leucocephalus</i>), to show
+how data integration can improve precision.</p>
+<div id="incorportaing-location-and-other-sampling-uncertainty" class="section level2">
+<h2>Incorportaing location and other sampling uncertainty</h2>
+<div id="esttransition---estimate-transition-probabilities-while-incorporating-location-and-other-sampling-uncertainty" class="section level3">
+<h3><code>estTransition</code> - Estimate transition probabilities while
+incorporating location and other sampling uncertainty</h3>
+<div id="example-1-combining-two-types-of-tracking-technologies-light-level-geolocator-gps" class="section level4">
+<h4>Example 1: Combining two types of tracking technologies (Light-level
+Geolocator &amp; GPS)</h4>
+<p>To estimate transition probabilities (<code>psi</code>(ψ)) and
+include location uncertainty the following data are needed:</p>
+<ol style="list-style-type: decimal">
+<li>A logical vector indicating the type of device the location
+estimates were derived from (<code>GPS = FALSE, Light-level geolocator =
+TRUE</code>)<br />
+</li>
+<li>A logical vector indicating whether the device is a telemetry type
+device with high precision or not (<code>GPS = TRUE, Light-level
+geolocator = FALSE</code>)</li>
+<li>Location Bias - a vector that has error estimates for both longitude
+and latitude<br />
+</li>
+<li>Location error - a variance, covariance matrix of longitude and
+latitude<br />
+</li>
+<li>Distance matrix between breeding and non-breeding regions<br />
+</li>
+<li>A spatial layer of both breeding and non-breeding regions<br />
+</li>
+<li>The deployment locations and the ‘unknown’ locations derived from
+the tracking devices<br />
+</li>
+<li>The relative (or absolute) abundance within each region where the
+birds originate from (deployment regions)</li>
+</ol>
+<p>We estimate transition probabilities using bootstrapped data of birds
+tracked from breeding to non-breeding regions using light-level and GPS
+geolocation when: 1) GPS location uncertainty was applied to all
+individuals, 2) GPS and light-level location uncertainty were applied to
+individuals with those devices and 3) light-level location uncertainty
+was applied to all individuals <span class="citation">(Cohen et al.
+2018)</span>.</p>
+<p>Load location data that accompanies the <code>MigConnectivity</code>
+package. The location data are data from breeding Ovenbirds that were
+fit with Light-level geolocators or PinPoint-10 GPS tags.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ovenbird data included with the package</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(OVENdata, <span class="at">package =</span> <span class="st">&quot;MigConnectivity&quot;</span>) </span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">names</span>(OVENdata)</span></code></pre></div>
+<pre><code>##  [1] &quot;geo.bias&quot;       &quot;geo.vcov&quot;       &quot;isGL&quot;           &quot;targetPoints&quot;  
+##  [5] &quot;originPoints&quot;   &quot;targetSites&quot;    &quot;originSites&quot;    &quot;originRelAbund&quot;
+##  [9] &quot;originDist&quot;     &quot;targetDist&quot;     &quot;originNames&quot;    &quot;targetNames&quot;</code></pre>
+<p>The figure below shows the two breeding regions (squares), and the
+three non-breeding regions (gray scale) used in Cohen et al. (2018) to
+estimate MC for Ovenbirds tracked with light-level geolocators and
+PinPoint-10 GPS tags.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load packages used below</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(sf)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(terra)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># read in simple geopolitical boundaries for visualization purposes</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(wrld_simpl, <span class="at">package=</span><span class="st">&quot;maptools&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># convert to sf object and set the crs to WGS84</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>wrld_simpl <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_as_sf</span>(wrld_simpl, <span class="at">crs =</span> <span class="dv">4326</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a simple plot of the origin and and target sites </span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(OVENdata<span class="sc">$</span>originSites,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlim=</span><span class="fu">c</span>(terra<span class="sc">::</span><span class="fu">ext</span>(OVENdata<span class="sc">$</span>targetSites)[<span class="dv">1</span>],</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>            terra<span class="sc">::</span><span class="fu">ext</span>(OVENdata<span class="sc">$</span>targetSites)[<span class="dv">2</span>]),</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>     </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>     <span class="at">ylim=</span><span class="fu">c</span>(terra<span class="sc">::</span><span class="fu">ext</span>(OVENdata<span class="sc">$</span>targetSites)[<span class="dv">3</span>],</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>            terra<span class="sc">::</span><span class="fu">ext</span>(OVENdata<span class="sc">$</span>originSites)[<span class="dv">4</span>]))</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(OVENdata<span class="sc">$</span>targetSites,</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>     <span class="at">add =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>     <span class="at">col=</span><span class="fu">c</span>(<span class="st">&quot;gray70&quot;</span>,<span class="st">&quot;gray35&quot;</span>,<span class="st">&quot;gray10&quot;</span>))</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>wrld_simple<span class="ot">&lt;-</span>sf<span class="sc">::</span><span class="fu">st_transform</span>(wrld_simpl, sf<span class="sc">::</span><span class="fu">st_crs</span>(OVENdata<span class="sc">$</span>originSites))</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(sf<span class="sc">::</span><span class="fu">st_geometry</span>(wrld_simple),<span class="at">add=</span><span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="figure">
+<img src="data:image/png;base64,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" alt />
+<p class="caption">Figure 1. Origin and Target sites used to estimate
+Ovenbird migratory connectivity using light-level geolocator and GPS
+tags deployed in the eastern portion of their distribution</p>
+</div>
+<p>The following code demonstrates how to estimate transition
+probabilities using location data from light-level geolocators and
+PinPoint-10 GPS tags. <b>Note:</b> When using a combination of
+light-level geolocators and other more precise tracking technology such
+as GPS tags, be sure to include both <code>isGL</code> and
+<code>isTelemetry</code> vectors. Below, we create the
+<code>isTelemetry</code> vector as the inverse of the <code>isGL</code>
+vector.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>(OVENpsi <span class="ot">&lt;-</span> <span class="fu">estTransition</span>(<span class="at">isGL=</span>OVENdata<span class="sc">$</span>isGL, <span class="co"># Logical vector: light-level geolocator(T)/GPS(F)</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                    <span class="at">isTelemetry =</span> <span class="sc">!</span>OVENdata<span class="sc">$</span>isGL, <span class="co"># Location vector: light-level geolocatr(F)/GPS(T)</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                 <span class="at">geoBias =</span> OVENdata<span class="sc">$</span>geo.bias, <span class="co"># Light-level geolocator location bias</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">geoVCov =</span> OVENdata<span class="sc">$</span>geo.vcov, <span class="co">#Light-level geolocator covariance matrix</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                 <span class="at">targetSites =</span> OVENdata<span class="sc">$</span>targetSites, <span class="co"># Non-breeding / target sites</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>                 <span class="at">originSites =</span> OVENdata<span class="sc">$</span>originSites, <span class="co"># Breeding / origin sites </span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">targetNames =</span> OVENdata<span class="sc">$</span>targetNames, <span class="co"># Names of nonbreeding/target sites</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">originNames =</span> OVENdata<span class="sc">$</span>originNames, <span class="co"># Names of breeding/origin sites</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">originPoints =</span> OVENdata<span class="sc">$</span>originPoints, <span class="co"># Capture Locations </span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>                 <span class="at">targetPoints =</span> OVENdata<span class="sc">$</span>targetPoints, <span class="co"># Target locations from devices</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                 <span class="at">resampleProjection =</span> sf<span class="sc">::</span><span class="fu">st_crs</span>(OVENdata<span class="sc">$</span>targetPoints), </span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>                 <span class="at">maxTries =</span> <span class="dv">300</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>                 <span class="at">verbose =</span> <span class="dv">0</span>,   <span class="co"># output options - see help ??estMC</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                 <span class="at">nSamples =</span> <span class="dv">10</span>)) <span class="co"># This is set low for example </span></span></code></pre></div>
+<pre><code>## Migratory Connectivity Estimates
+## 
+## Transition probability (psi) estimates (mean):
+##        FL   Cuba   Hisp
+## NH 0.0000 0.2046 0.7954
+## MD 0.3594 0.6406 0.0000
+## +/- SE:
+##        FL    Cuba    Hisp
+## NH 0.0000 0.05397 0.05397
+## MD 0.2112 0.21122 0.00000
+## 95% confidence interval (simple quantile):
+##    FL              Cuba            Hisp           
+## NH 0.0000 - 0.0000 0.1250 - 0.2609 0.7391 - 0.8750
+## MD 0.0000 - 0.6667 0.3333 - 1.0000 0.0000 - 0.0000
+## 
+## This is a subset of what&#39;s available inside this estMigConnectivity output.
+## For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).</code></pre>
+<p>Take a closer look at what is included in the output</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># not run </span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(OVENpsi, <span class="at">max.level =</span> <span class="dv">2</span>)</span></code></pre></div>
+<p>New plotting functions allow users to quickly plot transition
+probabilities including confidence intervals. Users can customize plots
+to suit their needs as additional arguments (<code>...</code>) are
+supported.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(OVENpsi, <span class="at">legend =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="figure">
+<img src="data:image/png;base64,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" alt />
+<p class="caption">Figure 2. Transition probablities of Ovenbirds from
+breeding Origin sites to non-breeding Target sites</p>
+</div>
+</div>
+<div id="example-2-combining-tracking-technology-and-genoscape-assignments" class="section level4">
+<h4>Example 2: Combining tracking technology and genoscape
+assignments</h4>
+<p>Below we estimate transition probabilities by integrating several
+different data sources such as tracking data (light-level geolocators),
+genoscape and stable-hydrogen isotope assignments. Furthermore, the data
+sources were derived from both breeding and non-breeding individuals.
+The following parameters are needed to estimate transition probabilities
+with integrating different data types. Below, we provide a streamlined
+example once the data are formatted for the analysis. See <a href="WorkedExample.html">Worked Examples</a> for how to derive and
+structure the data for analysis.</p>
+<ol style="list-style-type: decimal">
+<li>A logical vector indicating the type of device the location
+estimates were derived from <br>(GPS = FALSE, Light-level geolocator =
+TRUE)<br />
+</li>
+<li>Location Bias - a vector that has error estimates for both longitude
+and latitude<br />
+</li>
+<li>Location error - a variance, covariance matrix of longitude and
+latitude<br />
+</li>
+<li>Distance matrix between breeding and non-breeding regions<br />
+</li>
+<li>A spatial layer of both breeding and non-breeding regions<br />
+</li>
+<li>The deployment locations and the ‘unknown’ locations derived from
+the tracking devices<br />
+</li>
+<li>The relative (or absolute) abundance within each region where the
+birds originate from (deployment regions)</li>
+</ol>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the processed Yellow Warbler data </span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="co"># see the Worked Examples Vignette for details on how data structured/created</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>YEWAdata <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">&quot;../yewa_estTrans_data.rds&quot;</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># take a quick look at the data # </span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(YEWAdata,<span class="dv">1</span>)</span></code></pre></div>
+<pre><code>## List of 23
+##  $ originSites       :Classes &#39;sf&#39; and &#39;data.frame&#39;: 5 obs. of  3 variables:
+##   ..- attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##   ..- attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA NA
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;population&quot; &quot;originSite&quot;
+##  $ targetSites       :Classes &#39;sf&#39; and &#39;data.frame&#39;: 4 obs. of  3 variables:
+##   ..- attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##   ..- attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA NA
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;Region&quot; &quot;targetSite&quot;
+##  $ originPoints      :Classes &#39;sf&#39; and &#39;data.frame&#39;: 7 obs. of  3 variables:
+##   ..- attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##   ..- attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA NA
+##   .. ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;bird&quot; &quot;Type&quot;
+##  $ targetPoints      :Classes &#39;sf&#39; and &#39;data.frame&#39;: 420 obs. of  2 variables:
+##   ..- attr(*, &quot;sf_column&quot;)= chr &quot;geometry&quot;
+##   ..- attr(*, &quot;agr&quot;)= Factor w/ 3 levels &quot;constant&quot;,&quot;aggregate&quot;,..: NA
+##   .. ..- attr(*, &quot;names&quot;)= chr &quot;Type&quot;
+##  $ originAssignment  : num [1:203, 1:5] 6.16e-03 1.91e-17 1.86e-18 1.38e-20 5.45e-11 ...
+##   ..- attr(*, &quot;dimnames&quot;)=List of 2
+##  $ originNames       : chr [1:5] &quot;Arctic&quot; &quot;Pacific Northwest&quot; &quot;Southwest&quot; &quot;Central&quot; ...
+##  $ targetNames       : chr [1:4] &quot;Pacific and Central Mexico&quot; &quot;Atlantic Lowland Mexico&quot; &quot;Central America&quot; &quot;South America&quot;
+##  $ nSamples          : num 10
+##  $ isGL              : logi [1:420] TRUE TRUE TRUE TRUE TRUE TRUE ...
+##  $ isTelemetry       : logi [1:420] FALSE FALSE FALSE FALSE FALSE FALSE ...
+##  $ isRaster          : logi [1:420] FALSE FALSE FALSE FALSE FALSE FALSE ...
+##  $ isProb            : logi [1:420] FALSE FALSE FALSE FALSE FALSE FALSE ...
+##  $ captured          : chr [1:420] &quot;origin&quot; &quot;origin&quot; &quot;origin&quot; &quot;origin&quot; ...
+##  $ geoBias           : Named num [1:2] -6513 50965
+##   ..- attr(*, &quot;names&quot;)= chr [1:2] &quot;difflong&quot; &quot;difflat&quot;
+##  $ geoVCov           : num [1:2, 1:2] 2.59e+08 -8.94e+08 -8.94e+08 4.71e+09
+##   ..- attr(*, &quot;dimnames&quot;)=List of 2
+##  $ originRaster      :List of 9
+##   ..- attr(*, &quot;class&quot;)= chr [1:2] &quot;isoAssign&quot; &quot;intrinsicAssign&quot;
+##  $ verbose           : num 2
+##  $ maxTries          : num 400
+##  $ resampleProjection:List of 2
+##   ..- attr(*, &quot;class&quot;)= chr &quot;crs&quot;
+##  $ nSim              : num 10
+##  $ dataOverlapSetting: chr &quot;none&quot;
+##  $ targetRelAbund    : num [1:4] 0.168 0.197 0.387 0.247
+##  $ originRelAbund    : num [1:5] 0.152 0.122 0.235 0.256 0.235</code></pre>
+<p>Below we estimate (psi) or transition probabilities using the
+<code>estTransition</code> function.</p>
+<p>Note - in the Yellow Warbler data there are no overlap of data
+sources for individuals, i.e., we only had one type of data for each
+bird - so we set the overlap setting to “none”.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="do">## Run analysis for psi</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  psiYEWA <span class="ot">&lt;-</span> MigConnectivity<span class="sc">::</span><span class="fu">estTransition</span>(<span class="at">originSites =</span> YEWAdata<span class="sc">$</span>originSites,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">targetSites =</span> YEWAdata<span class="sc">$</span>targetSites,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">originPoints =</span> YEWAdata<span class="sc">$</span>originPoints,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">targetPoints =</span> YEWAdata<span class="sc">$</span>targetPoints,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">originAssignment =</span> YEWAdata<span class="sc">$</span>originAssignment,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">originNames =</span> YEWAdata<span class="sc">$</span>originNames,</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">targetNames =</span> YEWAdata<span class="sc">$</span>targetNames,</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">nSamples =</span> <span class="dv">10</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">isGL =</span> YEWAdata<span class="sc">$</span>isGL,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">isTelemetry =</span> YEWAdata<span class="sc">$</span>isTelemetry,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">isRaster =</span> YEWAdata<span class="sc">$</span>isRaster,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">isProb =</span> YEWAdata<span class="sc">$</span>isProb,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">captured =</span> YEWAdata<span class="sc">$</span>captured,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">geoBias =</span> YEWAdata<span class="sc">$</span>geoBias,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">geoVCov =</span> YEWAdata<span class="sc">$</span>geoVCov,</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">originRaster =</span> YEWAdata<span class="sc">$</span>originRaster,</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">verbose =</span> <span class="dv">2</span>, </span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">maxTries =</span> <span class="dv">400</span>,</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">resampleProjection =</span> YEWAdata<span class="sc">$</span>resampleProjection,</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">nSim =</span> <span class="dv">10</span>,</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">dataOverlapSetting =</span> <span class="st">&quot;none&quot;</span>,</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">targetRelAbund =</span> YEWAdata<span class="sc">$</span>targetRelAbund)</span></code></pre></div>
+<pre><code>## Configuring data overlap settings</code></pre>
+<pre><code>## Warning in reassignInds(dataOverlapSetting = dataOverlapSetting, originPoints = originPoints, : Not all origin capture locations are within originSites. Assigning to closest site.
+## Affects animal: 1</code></pre>
+<pre><code>## Warning in reassignInds(dataOverlapSetting = dataOverlapSetting, originPoints = originPoints, : Not all origin capture locations are within originSites. Assigning to closest site.
+## Affects animal: 2</code></pre>
+<pre><code>## Warning in reassignInds(dataOverlapSetting = dataOverlapSetting, originPoints = originPoints, : Not all origin capture locations are within originSites. Assigning to closest site.
+## Affects animal: 3</code></pre>
+<pre><code>## Warning in reassignInds(dataOverlapSetting = dataOverlapSetting, originPoints = originPoints, : Not all origin capture locations are within originSites. Assigning to closest site.
+## Affects animal: 4</code></pre>
+<pre><code>## Creating targetAssignment
+## Not all target capture locations are within targetSites. Assigning to closest site</code></pre>
+<pre><code>## Warning in estTransitionBoot(isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster, : Not all target capture locations are within targetSites. Assigning to closest site.
+## Affects animals: 343,344,345,346,347,348,349,350,351,352,353,354,355,356,394,399,400,401,402</code></pre>
+<pre><code>## Checking if single cell origin points in originSites, may take a moment
+## Starting bootstrap
+## Bootstrap Run 1 of 10 at Tue Aug 01 16:47:45 2023 
+## Bootstrap Run 2 of 10 at Tue Aug 01 16:47:47 2023 
+## Bootstrap Run 3 of 10 at Tue Aug 01 16:47:49 2023 
+## Bootstrap Run 4 of 10 at Tue Aug 01 16:47:51 2023 
+## Bootstrap Run 5 of 10 at Tue Aug 01 16:47:56 2023 
+## Bootstrap Run 6 of 10 at Tue Aug 01 16:48:00 2023 
+## Bootstrap Run 7 of 10 at Tue Aug 01 16:48:02 2023 
+## Bootstrap Run 8 of 10 at Tue Aug 01 16:48:05 2023 
+## Bootstrap Run 9 of 10 at Tue Aug 01 16:48:07 2023 
+## Bootstrap Run 10 of 10 at Tue Aug 01 16:48:08 2023</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Take a look at the results # </span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>psiYEWA</span></code></pre></div>
+<pre><code>## Migratory Connectivity Estimates
+## 
+## Transition probability (psi) estimates (mean):
+##                   Pacific and Central Mexico Atlantic Lowland Mexico
+## Arctic                              0.416396                  0.4412
+## Pacific Northwest                   0.216154                  0.2658
+## Southwest                           0.136457                  0.1261
+## Central                             0.007374                  0.1361
+## East                                0.005984                  0.0000
+##                   Central America South America
+## Arctic                     0.1424         0.000
+## Pacific Northwest          0.5181         0.000
+## Southwest                  0.7375         0.000
+## Central                    0.6165         0.240
+## East                       0.0000         0.994
+## +/- SE:
+##                   Pacific and Central Mexico Atlantic Lowland Mexico
+## Arctic                              0.066086                 0.06103
+## Pacific Northwest                   0.071447                 0.04717
+## Southwest                           0.036921                 0.02620
+## Central                             0.006983                 0.02766
+## East                                0.006393                 0.00000
+##                   Central America South America
+## Arctic                    0.04199      0.000000
+## Pacific Northwest         0.08715      0.000000
+## Southwest                 0.05066      0.000000
+## Central                   0.06283      0.040755
+## East                      0.00000      0.006393
+## 95% confidence interval (simple quantile):
+##                   Pacific and Central Mexico Atlantic Lowland Mexico
+## Arctic            0.26437 - 0.49074          0.36957 - 0.56322      
+## Pacific Northwest 0.12987 - 0.36364          0.16176 - 0.32468      
+## Southwest         0.08696 - 0.22642          0.08696 - 0.16327      
+## Central           0.00000 - 0.01739          0.08182 - 0.17699      
+## East              0.00000 - 0.01449          0.00000 - 0.00000      
+##                   Central America   South America    
+## Arctic            0.06481 - 0.18557 0.00000 - 0.00000
+## Pacific Northwest 0.31818 - 0.60976 0.00000 - 0.00000
+## Southwest         0.64151 - 0.82609 0.00000 - 0.00000
+## Central           0.50442 - 0.70909 0.19685 - 0.30973
+## East              0.00000 - 0.00000 0.98551 - 1.00000
+## 
+## This is a subset of what&#39;s available inside this estMigConnectivity output.
+## For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).</code></pre>
+<p>Plot the results using the built-in plotting function</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">0</span>))</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(psiYEWA, <span class="at">legend =</span> <span class="st">&quot;topleft&quot;</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code></pre></div>
+<div class="figure">
+<img src="data:image/png;base64,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" alt />
+<p class="caption">Estimated transition probabilities of the Yellow
+Warbler between breeding and nonbreeding periods</p>
+</div>
+</div>
+</div>
+<div id="literature-cited" class="section level3">
+<h3>Literature Cited</h3>
+<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="ref-cohen_quantifying_2018" class="csl-entry">
+Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S.
+Sillett, and P. P. Marra. 2018. <a href="https://doi.org/10.1111/2041-210X.12916">Quantifying the strength
+of migratory connectivity</a>. Methods in Ecology and Evolution
+9:513–524.
+</div>
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

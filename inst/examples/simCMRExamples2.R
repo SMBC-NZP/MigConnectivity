@@ -1,6 +1,4 @@
-devtools::install_github("SMBC-NZP/MigConnectivity", ref = "devpsi2")
-library(MigConnectivity)
-
+\dontrun{
 originNames <- c("A", "B", "C")
 nOriginSites <- length(originNames)
 targetNames <- as.character(1:4)
@@ -22,8 +20,7 @@ for (i in 1:nSims) {
   dataCMR <- simCMRData(psiTrue, banded, rTrue)
   reencountered[[i]] <- dataCMR$reencountered
   psiCalc[[i]] <- calcTransition(banded = banded, reencountered = reencountered[[i]],
-                                 originNames = originNames, targetNames = targetNames,
-                                 method = "BFGS")
+                                 originNames = originNames, targetNames = targetNames)
 
   psiEstMCMC[[i]] <- estTransition(originNames = originNames, targetNames = targetNames,
                               nSamples = 24000, banded = banded,
@@ -31,10 +28,10 @@ for (i in 1:nSims) {
                               method = "MCMC", verbose = 1)
 
   psiEstBoot[[i]] <- estTransition(originNames = originNames, targetNames = targetNames,
-                              nSamples = 24000, banded = banded,
+                              nSamples = 400, # this is set low for demonstration
+                              banded = banded,
                               reencountered = reencountered[[i]],
                               method = "bootstrap", verbose = 1)
-  save.image("~/MC work/simConnectivity/simCMRresults.RData")
 }
 psiErrorBoot <- sapply(psiEstBoot, function(x) x$psi$mean - psiTrue, simplify = "array")
 psiErrorMCMC <- sapply(psiEstMCMC, function(x) x$psi$mean - psiTrue, simplify = "array")
@@ -50,4 +47,5 @@ psiListsMCMC <- lapply(psiEstMCMC, function(x) as.mcmc.list((x$BUGSoutput)))
 for (i in 1:nSims) {
   if (!psiConvergence[i])
     plot(psiListsMCMC[[i]])
+}
 }

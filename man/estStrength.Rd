@@ -20,7 +20,8 @@ estStrength(
   alpha = 0.05,
   approxSigTest = FALSE,
   sigConst = 0,
-  maintainLegacyOutput = FALSE
+  maintainLegacyOutput = FALSE,
+  returnAllInput = TRUE
 )
 }
 \arguments{
@@ -86,9 +87,13 @@ updated the structure of the estimates. If you have legacy code that refers
 to elements within an \code{estMigConnectivity} object (results of
 \code{estMC}), you can set this to TRUE to also keep the old structure.
 Defaults to FALSE}
+
+\item{returnAllInput}{if TRUE (the default) the output includes all of the
+inputs. If FALSE, only the inputs currently used by another MigConnectivity
+function are included in the output.}
 }
 \value{
-\code{estMC} returns a list with the elements:
+\code{estStrength} returns a list with the elements:
 \describe{
   \item{\code{MC}}{List containing estimates of migratory connectivity
    strength:

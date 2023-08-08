@@ -9,8 +9,6 @@ vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
-bibliography: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/Hallworth_zotero_library.bib 
-csl: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/ecology.csl
 ---
 
 ```{r setup, include = FALSE}
@@ -28,6 +26,7 @@ library(MigConnectivity)
 The MigConnectivity package, which quantifies the strength of migratory connectivity, was developed to facilitate quantitative comparisons of migratory connectivity across studies, data types, and taxa while accounting for uneven sampling and the bias inherent to different data types for studying migratory movement. Below, we use the new `diffMC` function to compare MC estimates for the Yellow Warbler and the Ovenbird. To streamline the vignette and to avoid redundancy we load the results from the [estStrength](estStrength.html) and the [Worked Example](WorkedExample.html) vignettes. 
 
 ```{r message=FALSE, warning = FALSE, error=FALSE, echo = FALSE}
+set.seed(1234)
 data(OVENdata)
 
 OVENpsi <- readRDS("OVENpsi.rds")

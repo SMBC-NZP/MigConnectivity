@@ -9,15 +9,15 @@ vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
-bibliography: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/Hallworth_zotero_library.bib 
-csl: C:/Users/mhall/State_Of_Biodiversity/GMNF/reports/ecology.csl
+bibliography: mc_library.bib 
+csl: ecology.csl
 ---
 ```{r, echo = FALSE}
 options(rmarkdown.html_vignette.check_title = FALSE)
 ```
 
 This vignette is intended to help users structure their data for analysis using the 
-MigConnectivity package. There are many ways to derive the data needed for analyis and below, we provided examples and code as a reference for users. However, the most appropriate methods and approaches for particular questions and data types should be considered by 
+MigConnectivity package. There are many ways to derive the data needed for analysis and below, we provided examples and code as a reference for users. However, the most appropriate methods and approaches for particular questions and data types should be considered by 
 the users. 
 
 There are examples at the end of this vignette that illustrate ways to calculate 
@@ -34,17 +34,17 @@ different individuals. The package functionality includes integrated analyses
 that account for differences in precision, bias, reencounter probability, 
 and directionality among different data types (banding reencounter, 
 light-level geolocator, stable isotopes in tissues, genetics, and GPS). The package
-separates estimation of migratory connectivity into two new functions: estTransition and estStrength. 
-The `estTransition` function estimates transition probabilities from seasonal movement data (i.e. pattern of movement) 
-and the `estStrength` estimates the strength of migratory connectivity from transition probabilities.
+separates estimation of migratory connectivity into two functions: estTransition and estStrength. 
+The `estTransition` function estimates transition probabilities (ψ) from seasonal movement data (i.e. pattern of movement) 
+and the `estStrength` estimates the strength of migratory connectivity (MC) from transition probabilities.
 Below we provide a worked example using Yellow Warbler (<i>Setophaga petechia</i>) data to help users format their data to use the new 
-functionality in the MigConnectivity package. 
+functionality in the MigConnectivity package. There are multiple published Yellow Warbler data sets that can be used to estimate migratory connectivity. Here, we illustrate how to integrate stable-isotopes, genetic data, and light-level geolocators to estimate MC.
 
-### Define Target Sites
+### Define regions
 
-There are multiple published Yellow Warbler data sets that can be used to estimate Mmgratory connecitivity (MC). Here, we illustrate how to integrate stable-isotopes, genetic data, and light-level geolocators to estimate MC. The Yellow Warbler genoscape identifies 5 genetically distinct breeding populations (Arctic, Pacific Northwest, Southwest, Central, and East) from 419 sampled individuals at 50 breeding locations [@bay_genetic_2021]. We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
+The Yellow Warbler genoscape identifies 5 genetically distinct breeding populations (Arctic, Pacific Northwest, Southwest, Central, and East) from 419 sampled individuals at 50 breeding locations [@bay_genetic_2021]. We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.cap="Yellow Warbler target regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.cap="Yellow Warbler regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
 
 # THIS CHUNK IS NOT PRINTED TO THE VIGNETTE # 
 # BUT READS IN SOME DATA NEEDED TO RUN THE ANALYSIS # 
@@ -53,6 +53,7 @@ library(MigConnectivity)
 library(sf)
 library(terra)
 
+set.seed(1)
 YEWA_target_sites <- readRDS("C:/Users/mhall/OneDrive/Desktop/YEWA data/yelwar_ecoregions/YEWA_target_sites.rds")
 
 YEWA_target_sites <- YEWA_target_sites[,c("Region","targetSite","geometry")]
@@ -104,7 +105,7 @@ originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
 nOriginSites <- 5
 ```
 
-```{r, echo = FALSE, fig.cap="Yellow Warbler target regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
+```{r, echo = FALSE, fig.cap="Yellow Warbler regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
 
 par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
@@ -296,8 +297,8 @@ YEWA_GL_breed$Type <- "GL Capture"
 
 ```
 
-Calculate location bias and covariance which are used to estimate
-MC (`estStrength`) or estimate transition probabilities (`estTransition`). 
+Calculate location bias and covariance which are used to estimate transition 
+probabilities (`estTransition`). 
 
 ```{r}
 # project from WGS84 into meters #
@@ -339,7 +340,7 @@ The following code creates objects that are needed and/or helpful when using
 the `estStrength` or `estTransition` functions. 
 
 ```{r}
-## Set up input for running in estTransition or estStrength
+## Set up input for running in estTransition
 
 # Number of geolocator birds 
 nGL <- nrow(YEWA_GL_breed)
@@ -357,7 +358,7 @@ nProb <- nrow(YEWA_genetics)
 nAnimals <- nGL + nTelemetry + nRaster + nProb
 
 # Set up a vector of TRUE/FALSE indicating if the individual 
-# has Geolocator data 
+# has geolocator data 
 isGLYEWA <- rep(c(TRUE, FALSE), c(nGL, nTelemetry + nRaster + nProb))
 
 # Vector indicating whether an individual has telemetry data 
@@ -408,7 +409,7 @@ targetAssignment[lengths(targetAssignment)==0] <- NA
 # convert from a list to an array #
 targetAssignment <- array(unlist(targetAssignment))
 
-# If the assignment is NA - assign to the nearsest targetSite
+# If the assignment is NA - assign to the nearest targetSite
 targetAssignment[is.na(targetAssignment)] <- sf::st_nearest_feature(x = targetPointsYEWA[is.na(targetAssignment),],
                                                                     y = targetSitesYEWA)
 ```
@@ -416,34 +417,23 @@ targetAssignment[is.na(targetAssignment)] <- sf::st_nearest_feature(x = targetPo
 ### Abundance estimates 
 
 Accounting for relative abundance is an important component when estimating 
-migratory connectivity or estimating transition probabilities between two or 
-more phases of the annual cycle. 
+migratory connectivity strength or estimating transition probabilities between 
+two or more phases of the annual cycle. 
 
 Below, we use eBird.org products to estimate abundance. Note - users may need 
 to create an account and get permission to access eBird data. See information on
 to [Download eBird data products](https://science.ebird.org/en/use-ebird-data/download-ebird-data-products).
 
-```{r, eval = FALSE}
+```{r}
 # Read in data from eBird 
 library(ebirdst)
 library(tidyverse)
 
-# read in the ebird median abundance weekly cube data
+# read in the eBird median abundance weekly cube data
 rastAbundMed <- raster::brick("yelwar-ERD2019-STATUS-20200930-e26043a8_lr_2019_abundance_median.tif")
 
 # assign the correct dates to the raster layers
 rastAbundMed <- label_raster_stack(rastAbunMed)
-```
-
-```{r, echo = FALSE}
-# Read in data from eBird 
-library(ebirdst)
-library(tidyverse)
-
-# read in the ebird median abundance weekly cube data
-rastAbundMed <- raster::brick("C:/Users/mhall/OneDrive/Desktop/YEWA data/eBird/weekly_cubes/yelwar-ERD2019-STATUS-20200930-e26043a8_lr_2019_abundance_median.tif")
-
-rastAbundMed <- label_raster_stack(rastAbundMed)
 ```
 
 ```{r}
