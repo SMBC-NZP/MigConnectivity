@@ -65,7 +65,7 @@ targetNames <- c("Pacific and Central Mexico", "Atlantic Lowland Mexico",
 
 
 # Define the origin sites
-YEWA_origin_sites <- sf::st_read("C:/Users/mhall/OneDrive/Desktop/YEWA data/yelwar_genoscape/originSitesYEWA.shp", 
+YEWA_origin_sites <- sf::st_read("~/MC work/YEWA/yelwar_genoscape/originSitesYEWA.shp", 
                                  quiet = TRUE)
 # vector of origin names 
 originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
@@ -149,7 +149,7 @@ process to estimate transition probabilities and the strength of MC. Below,
 we format the data so we can easily use it in our analysis. 
 
 ```{r}
-# Note that we re-order the probabilites to match the order of originNames #
+# Note that we re-order the probabilities to match the order of originNames #
 YEWA_genetics <- as.matrix(genetic_samples[,c("Alaska","WesternBoreal",
                                               "Southwest","Central",
                                               "East")])
@@ -184,7 +184,7 @@ str(isotope_samples)
 ```
 
 ```{r, echo = FALSE}
-isotope_samples <- read.csv("C:/Users/mhall/OneDrive/Desktop/YEWA data/YEWA_isotope/YEWA isotopes Jalisco.csv")
+isotope_samples <- read.csv("YEWA_isotope/YEWA isotopes Jalisco.csv")
 
 isotope_samples <- isotope_samples[,c("Delta","Longitude","Latitude")]
 ```
@@ -543,7 +543,7 @@ system.time((psiYEWA <- estTransition(originSites = YEWA_origin_sites,
                                      originAssignment = YEWA_genetics,
                                      originNames = originNames,
                                      targetNames = targetNames,
-                                     nSamples = 10,
+                                     nSamples = 10, # Set low for demonstration speed
                                      isGL = isGLYEWA,
                                      isTelemetry = isTelemetryYEWA,
                                      isRaster = isRasterYEWA,
@@ -555,7 +555,7 @@ system.time((psiYEWA <- estTransition(originSites = YEWA_origin_sites,
                                      verbose = 2, 
                                      maxTries = 400,
                                      resampleProjection = st_crs(YEWA_origin_sites),
-                                     nSim = 10,
+                                     nSim = 40,
                                      dataOverlapSetting = "none",
                                      targetRelAbund = relAbundYEWAWint)))
 
