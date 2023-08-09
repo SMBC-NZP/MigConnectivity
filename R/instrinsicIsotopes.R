@@ -518,7 +518,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
     if(!(paste0(getwd(),"/GlobalPrecip") %in% haveIsoMap)){
 
-      cat("NOTE: The Global H2 precipitation file is large (600 MB) and may take a while to download \n")
+      cat("NOTE: The Global H2 precipitation file is large (>600 MB) and may take a while to download \n")
+      oldTO <- getOption("timeout")
+      options(timeout = max(700, oldTO))
 
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
@@ -529,6 +531,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
+      options(timeout = oldTO)
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
                   files = NULL,
@@ -586,6 +589,10 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   if(element == "Oxygen" & period == "Annual"){
     if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
 
+      cat("NOTE: The Global precipitation file is large (>600 MB) and may take a while to download \n")
+      oldTO <- getOption("timeout")
+      options(timeout = max(700, oldTO))
+
       # Create temporary file #
       tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
@@ -594,6 +601,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
+
+      options(timeout = oldTO)
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,

@@ -54,7 +54,14 @@ library(sf)
 library(terra)
 
 set.seed(1)
-YEWA_target_sites <- readRDS("C:/Users/mhall/OneDrive/Desktop/YEWA data/yelwar_ecoregions/YEWA_target_sites.rds")
+
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "YEWA_target_sites.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
 
 YEWA_target_sites <- YEWA_target_sites[,c("Region","targetSite","geometry")]
 
@@ -65,8 +72,12 @@ targetNames <- c("Pacific and Central Mexico", "Atlantic Lowland Mexico",
 
 
 # Define the origin sites
-YEWA_origin_sites <- sf::st_read("~/MC work/YEWA/yelwar_genoscape/originSitesYEWA.shp", 
-                                 quiet = TRUE)
+file.names <- paste0("originSitesYEWA.", c("shp", "dbf", "prj", "shx"))
+urls <- paste0(baseURL, file.names, '?raw=true')
+temp <- paste(newDir, file.names, sep = '/')
+for (i in 1:length(file.names))
+  utils::download.file(urls[i], temp[i], mode = 'wb')
+YEWA_origin_sites <- sf::st_read(temp[1], quiet = TRUE)
 # vector of origin names 
 originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
 
@@ -131,12 +142,15 @@ For information about sampling and assignment methods see Bay et al. (2021) for 
 genetic_samples <- read.delim("YEWA_nonbreeding_genetic_samples.txt",
                               stringsAsFactors = TRUE)
 
-str(genetric_samples,1)
+str(genetic_samples, 1)
 ```
 
 ```{r, echo = FALSE}
-genetic_samples <- read.delim("C:/Users/mhall/OneDrive/Desktop/YEWA data/YEWA_genetic_samples/YEWA.rep_indiv_est.Wintering.w_meta.txt",
-                              stringsAsFactors = TRUE)
+file.name <- "YEWA.rep_indiv_est.Wintering.w_meta.txt"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+genetic_samples <- read.delim(temp, stringsAsFactors = TRUE)
 
 names(genetic_samples) <- gsub(names(genetic_samples), pattern = "X[0-9]..", replacement = "")
 
@@ -184,7 +198,11 @@ str(isotope_samples)
 ```
 
 ```{r, echo = FALSE}
-isotope_samples <- read.csv("YEWA_isotope/YEWA isotopes Jalisco.csv")
+file.name <- "YEWA_isotopes_Jalisco.csv"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+isotope_samples <- read.csv(temp)
 
 isotope_samples <- isotope_samples[,c("Delta","Longitude","Latitude")]
 ```
