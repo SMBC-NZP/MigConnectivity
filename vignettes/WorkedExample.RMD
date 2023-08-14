@@ -3,8 +3,8 @@ title: 'Preparing data to estimate transition probabilites and/or migratory conn
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
+  rmarkdown::html_vignette: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
@@ -37,14 +37,15 @@ light-level geolocator, stable isotopes in tissues, genetics, and GPS). The pack
 separates estimation of migratory connectivity into two functions: estTransition and estStrength. 
 The `estTransition` function estimates transition probabilities (ψ) from seasonal movement data (i.e. pattern of movement) 
 and the `estStrength` estimates the strength of migratory connectivity (MC) from transition probabilities.
+
 Below we provide a worked example using Yellow Warbler (<i>Setophaga petechia</i>) data to help users format their data to use the new 
-functionality in the MigConnectivity package. There are multiple published Yellow Warbler data sets that can be used to estimate migratory connectivity. Here, we illustrate how to integrate stable-isotopes, genetic data, and light-level geolocators to estimate MC.
+functionality in the MigConnectivity package. There are multiple published Yellow Warbler data sets that can be used to estimate migratory connectivity. Here, we illustrate how to integrate genetic data and light-level geolocators to estimate MC. Genetic sampling of 203 individuals occurred at 20 locations across the nonbreeding range, from Baja Mexico, south through central Mexico, Central America (Costa Rica and Nicaragua), and South America (Trinidad and Venezuela) [@bay_genetic_2021].
 
-### Define regions
+### Define nonbreeding regions
 
-The Yellow Warbler genoscape identifies 5 genetically distinct breeding populations (Arctic, Pacific Northwest, Southwest, Central, and East) from 419 sampled individuals at 50 breeding locations [@bay_genetic_2021]. We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
+We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.cap="Yellow Warbler regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.cap="Yellow Warbler nonbreeding regions. The breeding regions (washed out) are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
 
 # THIS CHUNK IS NOT PRINTED TO THE VIGNETTE # 
 # BUT READS IN SOME DATA NEEDED TO RUN THE ANALYSIS # 
@@ -100,9 +101,9 @@ plot(YEWA_origin_sites$geometry,
 plot(YEWA_target_sites$geometry, col = viridis::viridis(n = 4, option = "D"), border = "white", lwd = 0.25, add = TRUE)
 ```
 
-### Define Origin Sites
+### Define breeding regions
 
-The Yellow Warbler has published genoscape and isotope data on migratory movements from birds captured and sampled in the nonbreeding season and geolocators on birds captured in the breeding season. Genetic sampling of 203 individuals occurred at 20 locations across the nonbreeding range, from Baja Mexico, south through central Mexico, Central America (Costa Rica and Nicaragua), and South America (Trinidad and Venezuela) [@bay_genetic_2021] and the isotope samples were collected at one nonbreeding site in western Mexico (n = 210) [@valdez-juarez_use_2018]. 
+The Yellow Warbler genoscape identifies 5 genetically distinct breeding populations (Arctic, Pacific Northwest, Southwest, Central, and East) from 419 sampled individuals at 50 breeding locations [@bay_genetic_2021].  
 
 Below we create a vector of the origin names. These names correspond with the genoscape. 
 ```{r, eval = FALSE}
@@ -116,7 +117,7 @@ originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
 nOriginSites <- 5
 ```
 
-```{r, echo = FALSE, fig.cap="Yellow Warbler regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
+```{r, echo = FALSE, fig.cap="Yellow Warbler breeding regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions (washed out) were identified by ecoregions across the ranges"}
 
 par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
@@ -132,7 +133,7 @@ plot(YEWA_target_sites$geometry,
 
 ### Sample data 
 
-For information about sampling and assignment methods see Bay et al. (2021) for genetics, Valdez-Juárez et al. (2018) for isotopes, and Witynski and Bonter (2018) for geolocators.
+For information about sampling and assignment methods see Bay et al. (2021) for genetics and Witynski and Bonter (2018) for geolocators.
 
 ### Load the genetic sample data
 
@@ -189,57 +190,6 @@ targetPoints_genetic$Type <- "Genetics Capture"
 ```
 
 
-### Load the hydrogen stable isotope data 
-
-```{r, eval = FALSE}
-isotope_samples <- read.csv("YEWA isotopes Jalisco.csv")
-
-str(isotope_samples)
-```
-
-```{r, echo = FALSE}
-file.name <- "YEWA_isotopes_Jalisco.csv"
-url1 <- paste0(baseURL, file.name, '?raw=true')
-temp <- paste(newDir, file.name, sep = '/')
-utils::download.file(url1, temp, mode = 'wb')
-isotope_samples <- read.csv(temp)
-
-isotope_samples <- isotope_samples[,c("Delta","Longitude","Latitude")]
-```
-
-convert the data into a spatial object 
-
-```{r}
-# Convert the data into spatial object 
-targetPoints_iso <- st_as_sf(isotope_samples[,c("Longitude","Latitude")],
-                                  coords = c("Longitude","Latitude"),
-                                  crs = 4326) # WGS84
-
-# Assign the data type to the spatial layer 
-
-targetPoints_iso$Type <- "Isotope Capture"
-
-```
-
-
-For hydrogen stable isotope, we generate probabilistic origin surfaces (i.e., rasters) for each isotope sample using the `isoAssign` function available in the R package MigConnectivity. 
-
-```{r, eval = FALSE}
-# Make isotope assignments 
-isoRasterYEWA <- isoAssign(isovalues = isotope_samples$Delta,
-                           isoSTD = 18.3,
-                           intercept = -28.67,
-                           slope = 0.59,
-                           sppShapefile = YEWA_origin_sites)
-
-```
-
-```{r, echo = FALSE}
-yewa_data <- readRDS("yewa_estTrans_data.rds")
-
-isoRasterYEWA <- yewa_data$originRaster
-```
-
 ### Load the light-level geolocator data 
 
 We obtained location estimates from seven individuals tracked using light-level geolocators deployed and recovered in Maine (n = 4) and Wisconsin (n = 3; Witynski & Bonter, 2018). We used the daily location estimates while individuals remained on the breeding grounds to derive location bias and uncertainty estimates. The geolocator data were processed and reported by @witynski_crosswise_2018.
@@ -270,7 +220,11 @@ departs <- as.POSIXct(c("2015-09-04",
 
 ```{r, echo = FALSE}
 # read in the daily location data #
-EstLocs <- read.csv("C:/Users/mhall/OneDrive/Desktop/YEWA data/yelwar_geolocators/Yellow Warbler_Witynski (1).csv")
+file.name <- "Yellow_Warbler_Witynski.csv"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+EstLocs <- read.csv(temp)
 
 # make it spatial 
 YEWA_gl_locs <- sf::st_as_sf(EstLocs,
@@ -366,8 +320,8 @@ nGL <- nrow(YEWA_GL_breed)
 # We have 0 birds with telemetry data
 nTelemetry <- 0
 
-# How many birds have raster data (isotopes)
-nRaster <- nrow(isotope_samples)
+# How many birds have raster data (isotopes; for this example, none)
+nRaster <- 0
 
 # How many birds have probability data (genetics)
 nProb <- nrow(YEWA_genetics)
@@ -383,7 +337,7 @@ isGLYEWA <- rep(c(TRUE, FALSE), c(nGL, nTelemetry + nRaster + nProb))
 isTelemetryYEWA <- rep(FALSE, nAnimals)
 
 # Vector indicating whether an individual has raster assignment data 
-isRasterYEWA <- rep(c(FALSE, TRUE, FALSE), c(nGL + nTelemetry, nRaster, nProb))
+isRasterYEWA <- rep(FALSE, nAnimals)
 
 # Vector indicating whether an individual has probability data 
 isProbYEWA <- rep(c(FALSE, TRUE), c(nGL + nTelemetry + nRaster, nProb))
@@ -396,7 +350,6 @@ with each individual we can set up the spatial data.
 # combine all the target locations into a single object 
 # NOTE - we reorder the columns to match between the data sets
 targetPointsYEWA <- rbind(YEWA_GL_nb[,c("Type","geometry")],
-                          targetPoints_iso[,c("Type","geometry")],
                           targetPoints_genetic[,c("Type","geometry")])
 
 # Transform (re-project the data) into Equidistant conic projection
@@ -439,27 +392,17 @@ migratory connectivity strength or estimating transition probabilities between
 two or more phases of the annual cycle. 
 
 Below, we use eBird.org products to estimate abundance. Note - users may need 
-to create an account and get permission to access eBird data. See information on
+to create an account and get permission to access eBird data. See information 
 to [Download eBird data products](https://science.ebird.org/en/use-ebird-data/download-ebird-data-products).
 
-```{r}
+```{r, eval = FALSE}
 # Read in data from eBird 
 library(ebirdst)
 library(tidyverse)
 
-# read in the eBird median abundance weekly cube data
-rastAbundMed <- raster::brick("yelwar-ERD2019-STATUS-20200930-e26043a8_lr_2019_abundance_median.tif")
+sp_path <- ebirdst_download(species = "yelwar", path = "./")
 
-# assign the correct dates to the raster layers
-rastAbundMed <- label_raster_stack(rastAbunMed)
-```
-
-```{r}
-# dates for each abundance layer 
-weeks <- parse_raster_dates(rastAbundMed)
-
-run_review <- subset(ebirdst_runs, 
-                     species_code == "yelwar")
+run_review <- subset(ebirdst_runs, species_code == "yelwar")
 
 yelwar_dates <- run_review %>%
   # just keep the seasonal definition columns
@@ -471,13 +414,18 @@ yelwar_dates <- run_review %>%
   spread(start_end, date) %>%
   select(season, start_dt = start, end_dt = end) %>%
   filter(season != "resident")
-  
-  # did the season pass review
+
+# did the season pass review
 quality_rating <- run_review[paste0(yelwar_dates$season, "_quality")]
-
 yelwar_dates$pass <- as.integer(quality_rating) > 1
-
-# Get the weeks that represent breeding and non-breeding
+yelwar_dates
+rastAbundMed <- load_raster(path = sp_path, 
+                            product = "abundance",
+                            period = "weekly", 
+                            resolution = "mr")
+# dates for each abundance layer
+weeks <- parse_raster_dates(rastAbundMed)
+# assign to seasons
 weeks_season <- rep(NA_character_, length(weeks))
 for (i in seq_len(nrow(yelwar_dates))) {
   s <- yelwar_dates[i, ]
@@ -493,64 +441,81 @@ for (i in seq_len(nrow(yelwar_dates))) {
   }
   weeks_season[in_season] <- s$season
 }
-
+table(weeks_season)
 b <- which(weeks_season == 'breeding')
 w <- which(weeks_season == 'nonbreeding')
+
 ```
+
+```{r, eval=FALSE}
+eBirdRelAbund <- function(wks, abund, regions, names=regions[,1], fun = max,
+                          regionFirst = FALSE, seasonalAlready = FALSE) {
+  regionSum <- array(NA, nrow(regions),
+                     list(names))
+  thing <- abund[[wks]]
+  for (j in 1:nrow(regions)){
+    region <- regions[j, ]
+    rastvals <- raster::extract(thing, region)[,1 + 1:length(wks)]
+    if (seasonalAlready) {
+      regionSum[j] <- sum(rastvals, na.rm = T)
+    }
+    else if (regionFirst) {
+      sumByWeek <- apply(rastvals, 2, sum, na.rm = T)
+      regionSum[j] <- do.call(fun, list(x = sumByWeek, na.rm = T))
+    }
+    else
+    {
+      valid <- apply(rastvals, 1, function(x) any(!is.na(x)))
+      maxed <- apply(rastvals[valid, ], 1, fun, na.rm = T)
+      regionSum[j] <- sum(maxed, na.rm = T)
+    }
+  }
+  testII <- prop.table(regionSum)
+  return(testII)
+}
+
+relAbundYEWAWint <- eBirdRelAbund(w, rastAbundMed, targetSitesProj,
+                                  targetNames)
+relAbundYEWABreed <- eBirdRelAbund(b, rastAbundMed, originSitesProj,
+                                   originNames)
+
+```
+```{r, echo = FALSE}
+relAbundYEWABreed <- c(Arctic = 0.1690379, 'Pacific Northwest' = 0.1245764,  
+                       Southwest = 0.2838745, Central = 0.2471317,
+                       East = 0.1753794)
+relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.08807831,    
+                      'Atlantic Lowland Mexico' = 0.16450576,
+                      'Central America' = 0.42872615, 'South America' = 0.31868978)
+```
+```{r}
+relAbundYEWAWint
+relAbundYEWABreed
+```
+There are a few other things we would need for eventually running `estStrength`:
+the distances between breeding regions, and the distances between nonbreeding 
+regions.
 
 ```{r}
+# calculate distance between originSites
+originCentersYEWA <- st_centroid(YEWA_origin_sites)
+originCentersYEWA <- st_transform(originCentersYEWA, 4326)
+originDistYEWA <- distFromPos(st_coordinates(originCentersYEWA$geometry))
 
-# Project the target and origin sites in the projection of the eBird abundance
-# so abundance data aren't changed while projecting 
-originSitesProj <- sf::st_transform(YEWA_origin_sites, st_crs(rastAbundMed))
-targetSitesProj <- sf::st_transform(YEWA_target_sites, st_crs(rastAbundMed))
+# calculate distance between targetSites 
+targetCentersYEWA <- st_centroid(YEWA_target_sites)
+targetCentersYEWA <- st_transform(targetCentersYEWA, 4326)
+targetDistYEWA <- distFromPos(st_coordinates(targetCentersYEWA$geometry))
 ```
 
 
-### Extract nonbreeding relative abundance estimates
 
-```{r}
-# extract winter raster values for each region 
-system.time(
-weekly_region_vals  <- raster::extract(rastAbundMed[[w]],targetSitesProj)
-)
-
-str(weekly_region_vals)
-
-sumByWeek <- lapply(weekly_region_vals, 
-                    FUN = function(x){apply(x, 2, sum, na.rm = TRUE)})
-
-regionSum <- lapply(sumByWeek, max)
-
-relAbundYEWAWint <- prop.table(unlist(regionSum))
-
-```
-
-Extract breeding relative abundance estimates
-
-```{r}
-# extract breeding raster values for each region 
-system.time(
-weekly_region_vals  <- raster::extract(rastAbundMed[[b]],originSitesProj)
-)
-
-str(weekly_region_vals)
-
-sumByWeek <- lapply(weekly_region_vals, 
-                    FUN = function(x){apply(x, 2, sum, na.rm = TRUE)})
-
-regionSum <- lapply(sumByWeek, max)
-
-relAbundYEWABreed <- prop.table(unlist(regionSum))
-
-```
-
-
-We now have all the data in order to run the `estTransition` or `estStrength` 
-functions. 
+We now have all the data in order to run `estTransition` and then `estStrength`. 
 
 Note - there was no overlap of data sources for individuals, i.e., we only had 
-one type of data for each bird - so we set the overlap setting to “none”.
+one type of data for each bird - so we set the overlap setting to “none”. If 
+there are multiple types for an individual animal or only one type of data overall,
+it's best to leave `dataOverlapSetting` at its default ("dummy").
 
 ```{r}
 ## Run analysis for psi
@@ -569,15 +534,12 @@ system.time((psiYEWA <- estTransition(originSites = YEWA_origin_sites,
                                      captured = capturedYEWA,
                                      geoBias = geoBiasYEWA,
                                      geoVCov = geoVCovYEWA,
-                                     originRaster = isoRasterYEWA,
                                      verbose = 2, 
                                      maxTries = 400,
                                      resampleProjection = st_crs(YEWA_origin_sites),
                                      nSim = 40,
                                      dataOverlapSetting = "none",
                                      targetRelAbund = relAbundYEWAWint)))
-
-
 
 # Take a look at the results # 
 psiYEWA
@@ -586,36 +548,35 @@ psiYEWA
 ```{r echo = FALSE}
 
 yewa_data <- list(originSites = YEWA_origin_sites,
-                                     targetSites = YEWA_target_sites,
-                                     originPoints = originPointsYEWA,
-                                     targetPoints = targetPointsYEWA,
-                                     originAssignment = YEWA_genetics,
-                                     originNames = originNames,
-                                     targetNames = targetNames,
-                                     nSamples = 10,
-                                     isGL = isGLYEWA,
-                                     isTelemetry = isTelemetryYEWA,
-                                     isRaster = isRasterYEWA,
-                                     isProb = isProbYEWA,
-                                     captured = capturedYEWA,
-                                     geoBias = geoBiasYEWA,
-                                     geoVCov = geoVCovYEWA,
-                                     originRaster = isoRasterYEWA,
-                                     verbose = 2, 
-                                     maxTries = 400,
-                                     resampleProjection = st_crs(YEWA_origin_sites),
-                                     nSim = 10,
-                                     dataOverlapSetting = "none",
-                                     targetRelAbund = relAbundYEWAWint,
-                                     originRelAbund = relAbundYEWABreed)
+                  targetSites = YEWA_target_sites,
+                  originPoints = originPointsYEWA,
+                  targetPoints = targetPointsYEWA,
+                  originAssignment = YEWA_genetics,
+                  originNames = originNames,
+                  targetNames = targetNames,
+                  nSamples = 10,
+                  isGL = isGLYEWA,
+                  isTelemetry = isTelemetryYEWA,
+                  isRaster = isRasterYEWA,
+                  isProb = isProbYEWA,
+                  captured = capturedYEWA,
+                  geoBias = geoBiasYEWA,
+                  geoVCov = geoVCovYEWA,
+                  verbose = 2, 
+                  maxTries = 400,
+                  resampleProjection = st_crs(YEWA_origin_sites),
+                  nSim = 40,
+                  dataOverlapSetting = "none",
+                  targetRelAbund = relAbundYEWAWint,
+                  originRelAbund = relAbundYEWABreed)
 
-# saveRDS(yewa_data,"yewa_estTrans_data.rds")
+#saveRDS(yewa_data,"../data-raw/yewa_estTrans_data.rds")
 ```
 
 Plot the results using the built-in plotting function
-```{r, fig.width=5, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
+```{r, fig.width=7, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
 par(mar = c(2,3,0,0))
-plot(psiYEWA, legend = "topleft", cex = 0.4)
+plot(psiYEWA, legend = "top", cex = 0.4)
 ```
 
 
