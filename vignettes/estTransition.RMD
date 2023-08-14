@@ -104,7 +104,7 @@ The following code demonstrates how to estimate transition probabilities using l
 ```
 
 ```{r, echo = FALSE}
-saveRDS(OVENpsi,"OVENpsi.rds")
+#saveRDS(OVENpsi,"OVENpsi.rds")
 ```
 
 Take a closer look at what is included in the output
@@ -197,7 +197,7 @@ psiYEWA
 ```
 
 ```{r, echo = FALSE}
-saveRDS(psiYEWA,"psiYEWA.rds")
+#saveRDS(psiYEWA,"psiYEWA.rds")
 ```
 
 Plot the results using the built-in plotting function

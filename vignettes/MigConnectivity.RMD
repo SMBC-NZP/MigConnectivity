@@ -1,0 +1,31 @@
+---
+title: 'MigConnectivity package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: mc_library.bib 
+csl: ecology.csl
+---
+
+Welcome to the MigConnectivity package! We hope you find it helpful. We have several vignettes to help you navigate the package. 
+
+1. [Worked Examples](WorkedExample.html) of processing data
+1. The [estTransition](estTransition.html) function estimates migratory connectivity patterns (ψ, transition probabilities) from seasonal movement data [@hostetler_challenges_nodate]
+1. The [estStrength](estStrength.html) function estimates the strength of migratory connectivity (MC) from transition probabilities [@cohen_quantifying_2018; @roberts_migratory_2023]
+1. The [diffMC](diffMC.html) function compares MC for two or more taxa [@cohen_strength_2019]
+1. [Simulating and working with isotope data](simulateIsoMC.html) can be tough, so check out this vignette if you need to do one of those [@cohen_strength_2019]
+1. Finally, we have an older vignette that this master one replaces, which includes lots of examples, but doesn't include the more recent functions. See our [Older Functionality](olderFunctionality.html) vignette
+
+
+### Literature Cited
+
+<div id="refs"></div>
+
+
+
