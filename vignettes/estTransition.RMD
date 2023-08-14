@@ -19,13 +19,13 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 library(MigConnectivity)
 ```
 
-A growing number of tools are available for studying the seasonal distributions of migratory animals across the annual cycle including individual tracking, assignments quantifying range-wide migratory connectivity patterns. However, integrating data types requires methods that account for the differences in sampling and differences in the precision and bias inherent to each data type. The `MigConnectivity` package provides tools for estimating the pattern and strength of migratory connectivity between two or more phases of the annual cycle. We developed methods to integrate intrinsic marker, tracking, and long-distance band reencounter data collected from the same or different individuals. We added functionality to integrate analyses that account for differences among seasonal assignment from different data types (banding reencounter, light-level geolocator, stable isotopes in tissues, genetics, and GPS) in precision, bias, reencounter probability, and directionality (i.e., combining breeding to nonbreeding and  nonbreeding to breeding). 
+A growing number of tools are available for studying the seasonal distributions of migratory animals across the annual cycle including individual tracking, assignments quantifying range-wide migratory connectivity patterns. However, integrating data types requires methods that account for the differences in sampling and differences in the precision and bias inherent to each data type. The `MigConnectivity` package provides tools for estimating the pattern and strength of migratory connectivity between two or more phases of the annual cycle. We developed methods to integrate intrinsic marker, tracking, and long-distance band reencounter data collected from the same or different individuals. We added functionality to integrate analyses that account for differences among seasonal assignment from different data types (banding reencounter, light-level geolocator, stable isotopes in tissues, genetics, and GPS) in precision, bias, reencounter probability, and directionality (i.e., combining breeding to nonbreeding and nonbreeding to breeding). 
 
 The `estTransition` estimates migratory connectivity patterns (ψ, transition probabilities) from seasonal movement data.
 
 The `estStrength` function estimates the strength of migratory connectivity from transition probabilities (MC, Mantel test). See the [estStrength](estStrength.html) vignette for more details. 
 
-We used simulation to explore the challenges and limitations of data integration and three species with real-world examples data, Painted Bunting (<i>Passerina ciris</i>), Yellow Warbler (<i>Setophaga petechia</i>) and Bald Eagle (<i>Haliaeetus leucocephalus</i>), to show how data integration can improve precision. 
+ Yellow Warbler  and Bald Eagle (<i>Haliaeetus leucocephalus</i>), to show how data integration can improve precision. 
 
 
 ## Incorportaing location and other sampling uncertainty 
@@ -61,6 +61,7 @@ The figure below shows the two breeding regions (squares), and the three non-bre
 # Load packages used below
 library(sf)
 library(terra)
+library(maptools)
 
 # read in simple geopolitical boundaries for visualization purposes
 data(wrld_simpl, package="maptools")
@@ -127,9 +128,9 @@ plot(OVENpsi, legend = "top", cex = 0.5, las = 2)
 ```
 
 
-#### Example 2: Combining tracking technology and genoscape assignments 
+#### Example 2: Combining tracking technology and genoscape assignments
 
-Below we estimate transition probabilities by integrating several different data sources such as tracking data (light-level geolocators), genoscape and stable-hydrogen isotope assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
+Below we estimate transition probabilities for Yellow Warblers (<i>Setophaga petechia</i>) by integrating several different data sources such as tracking data (light-level geolocators) and genoscape assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
 
 1. A logical vector indicating the type of device the location estimates were derived from <br>(GPS = FALSE, Light-level geolocator = TRUE)    
 1. Location Bias - a vector that has error estimates for both longitude and latitude    
@@ -143,10 +144,18 @@ Below we estimate transition probabilities by integrating several different data
 ```{r}
 # Read in the processed Yellow Warbler data 
 # see the Worked Examples Vignette for details on how data structured/created
-YEWAdata <- readRDS("../yewa_estTrans_data.rds")
+set.seed(1)
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "yewa_estTrans_data.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
+YEWAdata <- readRDS(temp)
 
 # take a quick look at the data # 
-str(YEWAdata,1)
+str(YEWAdata, 1)
 ```
 
 Below we estimate (psi) or transition probabilities using the `estTransition` function.
@@ -154,33 +163,33 @@ Below we estimate (psi) or transition probabilities using the `estTransition` fu
 Note - in the Yellow Warbler data there are no overlap of data sources for individuals, i.e., we only had 
 one type of data for each bird - so we set the overlap setting to “none”. 
 However, when there's only one type of data in the whole dataset, the function
-runs faster if you leave dataOverlapSetting at "dummy"
+runs faster if you leave `dataOverlapSetting` at "dummy"
 
 ```{r}
 ## Run analysis for psi
-  psiYEWA <- estTransition(originSites = YEWAdata$originSites,
-                           targetSites = YEWAdata$targetSites,
-                           originPoints = YEWAdata$originPoints,
-                           targetPoints = YEWAdata$targetPoints,
-                           originAssignment = YEWAdata$originAssignment,
-                           originNames = YEWAdata$originNames,
-                           targetNames = YEWAdata$targetNames,
-                           nSamples = 10,
-                           isGL = YEWAdata$isGL,
-                           isTelemetry = YEWAdata$isTelemetry,
-                           isRaster = YEWAdata$isRaster,
-                           isProb = YEWAdata$isProb,
-                           captured = YEWAdata$captured,
-                           geoBias = YEWAdata$geoBias,
-                           geoVCov = YEWAdata$geoVCov,
-                           originRaster = YEWAdata$originRaster,
-                           verbose = 2, 
-                           maxTries = 400,
-                           resampleProjection = YEWAdata$resampleProjection,
-                           nSim = 10,
-                           dataOverlapSetting = "none",
-                           targetRelAbund = YEWAdata$targetRelAbund,
-                           returnAllInput = FALSE)
+psiYEWA <- estTransition(originSites = YEWAdata$originSites,
+                         targetSites = YEWAdata$targetSites,
+                         originPoints = YEWAdata$originPoints,
+                         targetPoints = YEWAdata$targetPoints,
+                         originAssignment = YEWAdata$originAssignment,
+                         originNames = YEWAdata$originNames,
+                         targetNames = YEWAdata$targetNames,
+                         nSamples = 10,
+                         isGL = YEWAdata$isGL,
+                         isTelemetry = YEWAdata$isTelemetry,
+                         isRaster = YEWAdata$isRaster,
+                         isProb = YEWAdata$isProb,
+                         captured = YEWAdata$captured,
+                         geoBias = YEWAdata$geoBias,
+                         geoVCov = YEWAdata$geoVCov,
+                         originRaster = YEWAdata$originRaster,
+                         verbose = 2, 
+                         maxTries = 400,
+                         resampleProjection = YEWAdata$resampleProjection,
+                         nSim = 10,
+                         dataOverlapSetting = "none",
+                         targetRelAbund = YEWAdata$targetRelAbund,
+                         returnAllInput = FALSE)
 
 
 
@@ -195,9 +204,9 @@ saveRDS(psiYEWA,"psiYEWA.rds")
 ```
 
 Plot the results using the built-in plotting function
-```{r, fig.width=5, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
+```{r, fig.width=7, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
 par(mar = c(2,3,0,0))
-plot(psiYEWA, legend = "topleft", cex = 0.4)
+plot(psiYEWA, legend = "top", cex = 0.4)
 ```
 
 ### Literature Cited

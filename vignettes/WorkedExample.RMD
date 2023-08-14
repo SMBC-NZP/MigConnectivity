@@ -1,10 +1,10 @@
 ---
-title: 'Preparing data to estimate transition probabilites and/or migratory connecitivity using the ''MigConnectivity'' package'
+title: 'Preparing data to estimate transition probabilites and/or migratory connecitivity strength using the ''MigConnectivity'' package'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
-  rmarkdown::pdf_document: default
   rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
 vignette: |
   %\VignetteIndexEntry{MigConnectivity package}
   %\usepackage[utf8]{inputenc}
