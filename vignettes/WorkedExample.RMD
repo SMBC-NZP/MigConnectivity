@@ -63,6 +63,7 @@ url1 <- paste0(baseURL, file.name, '?raw=true')
 temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
 YEWA_target_sites <- readRDS(temp)
+unlink(temp)
 
 YEWA_target_sites <- YEWA_target_sites[,c("Region","targetSite","geometry")]
 
@@ -152,6 +153,7 @@ url1 <- paste0(baseURL, file.name, '?raw=true')
 temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
 genetic_samples <- read.delim(temp, stringsAsFactors = TRUE)
+unlink(temp)
 
 names(genetic_samples) <- gsub(names(genetic_samples), pattern = "X[0-9]..", replacement = "")
 
@@ -225,6 +227,7 @@ url1 <- paste0(baseURL, file.name, '?raw=true')
 temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
 EstLocs <- read.csv(temp)
+unlink(temp)
 
 # make it spatial 
 YEWA_gl_locs <- sf::st_as_sf(EstLocs,

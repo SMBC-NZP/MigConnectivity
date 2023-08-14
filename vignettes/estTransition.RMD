@@ -23,22 +23,18 @@ A growing number of tools are available for studying the seasonal distributions 
 
 The `estTransition` estimates migratory connectivity patterns (ψ, transition probabilities) from seasonal movement data.
 
-The `estStrength` function estimates the strength of migratory connectivity from transition probabilities (MC, Mantel test). See the [estStrength](estStrength.html) vignette for more details. 
-
- Yellow Warbler  and Bald Eagle (<i>Haliaeetus leucocephalus</i>), to show how data integration can improve precision. 
+The `estStrength` function estimates the strength of migratory connectivity from transition probabilities (MC). See the [estStrength](estStrength.html) vignette for more details. 
 
 
-## Incorportaing location and other sampling uncertainty 
+## `estTransition` - Estimate transition probabilities while incorporating location and other sampling uncertainty
 
-### `estTransition` - Estimate transition probabilities while incorporating location and other sampling uncertainty
-
-#### Example 1: Combining two types of tracking technologies (Light-level Geolocator & GPS)
+### Example 1: Combining two types of tracking technologies (Light-level Geolocator & GPS)
 
 To estimate transition probabilities (<code>psi</code>(ψ)) and include location uncertainty the following data are needed:  
 
 1. A logical vector indicating whether each individual's location estimate was derived from a light-level geolocator (<code>isGL = TRUE</code>) or another data source (<code>isGL = FALSE</code>)    
 1. A logical vector indicating whether the device for each animals is a telemetry type device with high precision or not (<code>isTelemetry = TRUE/FALSE</code>) 
-1. Location Bias - a vector that has error estimates for both longitude and latitude    
+1. Location bias - a vector that has error estimates for both longitude and latitude    
 1. Location error - a variance, covariance matrix of longitude and latitude    
 1. A spatial layer of both breeding and non-breeding regions    
 1. The deployment locations and the 'unknown' locations derived from the tracking devices   
@@ -121,23 +117,23 @@ str(OVENpsi, max.level = 2)
 New plotting functions allow users to quickly plot transition probabilities including
 confidence intervals. Users can customize plots to suit their needs as additional arguments (`...`) are supported.
 
-```{r, fig.width=5, fig.height=5,fig.cap="Figure 2. Transition probablities of Ovenbirds from breeding Origin sites to non-breeding Target sites"}
+```{r, fig.width=5, fig.height=5,fig.cap="Figure 2. Transition probablities of Ovenbirds from breeding origin sites to non-breeding target sites"}
 # THE FIGS ARE TOO SMALL IN VINGETTE HTML SO NEED TO ADD ADDITIONAL PARAMETERS TO MAKE IT LOOK HALFWAY DECENT
 
 plot(OVENpsi, legend = "top", cex = 0.5, las = 2)
 ```
 
 
-#### Example 2: Combining tracking technology and genoscape assignments
+### Example 2: Combining tracking technology and genoscape assignments
 
 Below we estimate transition probabilities for Yellow Warblers (<i>Setophaga petechia</i>) by integrating several different data sources such as tracking data (light-level geolocators) and genoscape assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
 
-1. A logical vector indicating the type of device the location estimates were derived from <br>(GPS = FALSE, Light-level geolocator = TRUE)    
+1. Four logical vectors indicating the type of information the location/assignment estimates were derived from <br>(light-level geolocators, telemetry, isotopes, and/or genoscapes)    
 1. Location Bias - a vector that has error estimates for both longitude and latitude    
 1. Location error - a variance, covariance matrix of longitude and latitude    
-1. Distance matrix between breeding and non-breeding regions    
+1. Distance matrices between breeding and non-breeding regions    
 1. A spatial layer of both breeding and non-breeding regions    
-1. The deployment locations and the 'unknown' locations derived from the tracking devices    
+1. Capture locations and the 'unknown' locations/assignments derived from the tracking devices or intrinsic markers   
 1. The relative (or absolute) abundance within each region where the birds originate from (deployment regions)     
 
 
@@ -153,6 +149,7 @@ temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
 YEWA_target_sites <- readRDS(temp)
 YEWAdata <- readRDS(temp)
+unlink(temp)
 
 # take a quick look at the data # 
 str(YEWAdata, 1)

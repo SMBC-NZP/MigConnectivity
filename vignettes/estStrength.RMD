@@ -6,7 +6,7 @@ output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package}
+  %\VignetteIndexEntry{Estimate migratory connectivity strength with the ''MigConnectivity'' package}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 bibliography: mc_library.bib 
@@ -47,9 +47,9 @@ To estimate the strength of MC, you will need:
 1. (optional) the total sample size of animals used to estimate the transition probabilities (provided automatically if psi comes from estTransition)
 
 
-### Estimate MC between breeding and non-breeding regions
+### Example 1. Estimate MC between breeding and non-breeding regions with both abundance and transition uncertainty
 
-Simple, made up example with four breeding and four nonbreeding regions
+Simple example with four breeding and four nonbreeding regions and simulated data
 
 Define the number of breeding and nonbreeding populations
 
@@ -89,7 +89,7 @@ points(targetPos[,1],targetPos[,2],pch=15,cex=2)
 ```  
 
 Define the transition probabilities between the breeding and nonbreeding regions
-and pull out previously estimated transition probabilities (using the package RMark)
+and load previously estimated transition probabilities (using the package RMark)
 ```{r}
 #transition probabilities form each breeding to each nonbreeding region
 psiTrue <- samplePsis[["Low"]]
@@ -127,7 +127,8 @@ for (b in 1:nBreeding) {
 ```  
 
 Define the relative abundance within the four breeding regions, and provide 
-previously estimated relative abundances (BBS style analysis)
+previously simulated and estimated relative abundances (simple BBS-style analyses 
+using the functions `simCountData` and `modelCountDataJAGS`)
 ```{r}
 #equal relative abundance among the four breeding regions, must sum to 1                      
 relNTrue <- rep(1/nBreeding, nBreeding) 
@@ -158,19 +159,27 @@ MCest <- estStrength(originDist = breedDist,
              sampleSize = n,
              originSites = 5:8, 
              targetSites = c(3,2,1,4),
-             nSamples = 250)
+             nSamples = 1000)
 ```
 ```{r}
 MCest
 MCest$MC$mean - MCtrue
 ```
 
-## Estimate the strength of migratory connectivity after running estTransition 
+## Example 2. Estimate the strength of migratory connectivity after running estTransition 
 
 ```{r}
 # Read in the processed Yellow Warbler data 
 # see the Worked Examples Vignette for details on how data structured/created
-YEWAdata <- readRDS("yewa_estTrans_data.rds")
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "yewa_estTrans_data.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
+YEWAdata <- readRDS(temp)
+unlink(temp)
 
 # take a quick look at the data # 
 str(YEWAdata,1)
@@ -204,7 +213,8 @@ psiYEWA <- estTransition(originSites = YEWAdata$originSites,
                          resampleProjection = YEWAdata$resampleProjection,
                          nSim = 30, 
                          dataOverlapSetting = "none",
-                         targetRelAbund = YEWAdata$targetRelAbund)
+                         targetRelAbund = YEWAdata$targetRelAbund,
+                         returnAllInput = FALSE)
 ```
 
 We then use the resulting object to estimate the strength of migratory connectivity. We first need some additional data, the distances between originSites and targetSites. 
@@ -224,7 +234,16 @@ targetDistYEWA <- distFromPos(st_coordinates(targetCentersYEWA$geometry))
 ### Estimate the strength of Migratory Connectivity 
 
 ```{r, echo = FALSE}
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "psiYEWA.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
 psiYEWA <- readRDS("psiYEWA.rds")
+unlink(temp)
+
 ```
 
 
@@ -240,7 +259,7 @@ YEWAmc
 ```
 
 ```{r echo = FALSE}
-# saveRDS(YEWAmc, "YEWAmc.rds")
+saveRDS(YEWAmc, "YEWAmc.rds")
 ```
 
 ### Literature Cited
