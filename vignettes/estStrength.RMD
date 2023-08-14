@@ -240,8 +240,7 @@ file.name <- "psiYEWA.rds"
 url1 <- paste0(baseURL, file.name, '?raw=true')
 temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
-YEWA_target_sites <- readRDS(temp)
-psiYEWA <- readRDS("psiYEWA.rds")
+psiYEWA <- readRDS(temp)
 unlink(temp)
 
 ```
@@ -259,7 +258,7 @@ YEWAmc
 ```
 
 ```{r echo = FALSE}
-saveRDS(YEWAmc, "YEWAmc.rds")
+#saveRDS(YEWAmc, "YEWAmc.rds")
 ```
 
 ### Literature Cited
