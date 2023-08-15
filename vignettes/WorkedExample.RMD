@@ -460,17 +460,17 @@ eBirdRelAbund <- function(wks, abund, regions, names=regions[,1], fun = max,
     region <- regions[j, ]
     rastvals <- raster::extract(thing, region)[,1 + 1:length(wks)]
     if (seasonalAlready) {
-      regionSum[j] <- sum(rastvals, na.rm = T)
+      regionSum[j] <- sum(rastvals, na.rm = TRUE)
     }
     else if (regionFirst) {
-      sumByWeek <- apply(rastvals, 2, sum, na.rm = T)
-      regionSum[j] <- do.call(fun, list(x = sumByWeek, na.rm = T))
+      sumByWeek <- apply(rastvals, 2, sum, na.rm = TRUE)
+      regionSum[j] <- do.call(fun, list(x = sumByWeek, na.rm = TRUE))
     }
     else
     {
       valid <- apply(rastvals, 1, function(x) any(!is.na(x)))
-      maxed <- apply(rastvals[valid, ], 1, fun, na.rm = T)
-      regionSum[j] <- sum(maxed, na.rm = T)
+      maxed <- apply(rastvals[valid, ], 1, fun, na.rm = TRUE)
+      regionSum[j] <- sum(maxed, na.rm = TRUE)
     }
   }
   testII <- prop.table(regionSum)

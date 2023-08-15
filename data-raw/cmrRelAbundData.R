@@ -15,7 +15,7 @@ targetDCMR <- distFromPos(targetPosCMR, 'ellipsoid')
 originRelAbundCMR <- rep(0.25, 4)
 # the second intermediate psi scenario, the "low" level
 psiMatCMR <- matrix(c(0.55, 0.2, 0.15, 0.1, 0.1, 0.55, 0.2, 0.15, 0.15, 0.1,
-                     0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=T) #samplePsis[[5]]
+                     0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=TRUE) #samplePsis[[5]]
 MCCMR <- calcMC(originDCMR, targetDCMR, psiMatCMR, originRelNCMR)
 MCCMR
 # Storage list for examples
@@ -33,6 +33,6 @@ for (r in 1:nSimulationsCMR) {
 
 
 
-load("rel_abun_sim2.RData")   #Modeled seperately
+load("rel_abun_sim2.RData")   #Modeled separately
 abundExamples <- sim_out
-devtools::use_data(abundExamples, overwrite = T)
+devtools::use_data(abundExamples, overwrite = TRUE)

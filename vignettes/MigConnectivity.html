@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-08-14" />
+<meta name="date" content="2023-08-15" />
 
 <title>MigConnectivity package</title>
 
@@ -261,14 +261,26 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">MigConnectivity package</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-08-14</h4>
+<h4 class="date">2023-08-15</h4>
 
 
 
 <p>Welcome to the MigConnectivity package! We hope you find it helpful.
-We have several vignettes to help you navigate the package.</p>
+The MigConnectivity package allows the user to estimate or calculate
+transition probabilities for migratory animals between any two phases of
+the annual cycle, using a variety of different data types, with the
+function estTransition. The user can also estimate or calculate the
+strength of migratory connectivity (MC), a standardized metric to
+quantify the extent to which populations co-occur between two phases of
+the annual cycle. MC is independent of data type and accounts for the
+relative abundance of populations distributed across a seasonal range.
+The package includes functions to estimate MC (estStrength) and the more
+traditional metric of migratory connectivity strength (Mantel
+correlation; rM; estMantel) incorporating uncertainty from multiple
+sources of sampling error. We have several vignettes to help you
+navigate the package:</p>
 <ol style="list-style-type: decimal">
-<li><a href="WorkedExample.html">Worked Examples</a> of processing
+<li><a href="WorkedExample.html">Worked examples</a> of processing
 data</li>
 <li>The <a href="estTransition.html">estTransition</a> function
 estimates migratory connectivity patterns (ψ, transition probabilities)
@@ -276,17 +288,17 @@ from seasonal movement data <span class="citation">(Hostetler et al.
 n.d.)</span></li>
 <li>The <a href="estStrength.html">estStrength</a> function estimates
 the strength of migratory connectivity (MC) from transition
-probabilities <span class="citation">(Cohen et al. 2018, Roberts et al.
-2023)</span></li>
+probabilities and relative abundances <span class="citation">(Cohen et
+al. 2018, Roberts et al. 2023)</span></li>
 <li>The <a href="diffMC.html">diffMC</a> function compares MC for two or
 more taxa <span class="citation">(Cohen et al. 2019)</span></li>
 <li><a href="simulateIsoMC.html">Simulating and working with isotope
 data</a> can be tough, so check out this vignette if you need to do one
 of those <span class="citation">(Cohen et al. 2019)</span></li>
-<li>Finally, we have an older vignette that this master one replaces,
-which includes lots of examples, but doesn’t include the more recent
-functions. See our <a href="olderFunctionality.html">Older
-Functionality</a> vignette</li>
+<li>Finally, we have an older vignette that this master vignette
+replaces, which includes lots of examples, but doesn’t include the more
+recent functions. See our <a href="olderFunctionality.html">older
+functionality</a> vignette</li>
 </ol>
 <div id="literature-cited" class="section level3">
 <h3>Literature Cited</h3>

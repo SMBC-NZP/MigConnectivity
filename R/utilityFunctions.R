@@ -5,7 +5,7 @@ makePsiRand <- function(model, origin.set, target.set) {
   new.beta <- MASS::mvrnorm(1, beta1, vcv1)
   full.beta <- rep(NA, length(model$results$beta$estimate))
   new.real <- RMark::get.real(model, "Psi", new.beta,
-                              design = model$design.matrix, vcv=F, se=F)
+                              design = model$design.matrix, vcv=FALSE, se=FALSE)
   mat <- RMark::TransitionMatrix(new.real)[origin.set, target.set]
   return(mat)
 }
@@ -306,7 +306,7 @@ locSample <- function(isGL,
         # IF ALL THE POINTS ARE WITHIN SITES and no animals have two data types
         samp <- sample.int(nrandomDraws,
                            size = sum(isRaster & toSampleBool),
-                           replace = T)
+                           replace = TRUE)
       # GRAB LOCATIONS FROM RASTER #
         samp2 <- samp + ((1:nAnimals)[toSampleBool & isRaster] - 1) * nrandomDraws
 
@@ -617,7 +617,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
   # In this case, only need to draw once, because already determined that points fall in targetSites
   if (pointsInSites) {
     draws <- 1
-    samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
+    samp <- sample.int(nrandomDraws, size = length(toSample), replace = TRUE)
     samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
     point.sample <- targetIntrinsic2[samp2]
     # Changed to make sure x,y coords stack correctly
@@ -684,7 +684,8 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
       }
       else {
         # Select nSim points for each animal still to be sampled
-        samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
+        samp <- sample.int(nrandomDraws, size = length(toSample) * nSim,
+                           replace = TRUE)
         samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
         point.sample <- targetIntrinsic2[samp2,]
         # Check which points are in target sites
@@ -1200,11 +1201,11 @@ summarize3D <- function(array3D, nSites1, nSites2, names1,
                    dimnames = list(c("lower", "upper"), names1, names2))
   for (i in 1:nSites1) {
     for (j in 1:nSites2) {
-      psi.z0 <- qnorm(sum(array3D[, i, j] < meanA[i, j], na.rm = T) /
+      psi.z0 <- qnorm(sum(array3D[, i, j] < meanA[i, j], na.rm = TRUE) /
                         length(which(!is.na(array3D[, i, j]))))
       bcCIA[ , i, j] <- quantile(array3D[, i, j],
                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, names = F)
+                                   na.rm=TRUE, names = FALSE)
     }
   }
   return(list(sample = array3D, mean = meanA, se = seA,
@@ -1225,11 +1226,11 @@ summarizeAbund <- function(abund, nSites1, names1, pointAbund = NULL,
   bcCIAbund <- array(NA, dim = c(2, nSites1),
                      dimnames = list(c("lower", "upper"), names1))
   for (i in 1:nSites1) {
-    abund.z0 <- qnorm(sum(abund[, i] < meanAbund[i], na.rm = T) /
+    abund.z0 <- qnorm(sum(abund[, i] < meanAbund[i], na.rm = TRUE) /
                         length(which(!is.na(abund[, i]))))
     bcCIAbund[ , i] <- quantile(abund[, i],
                                 pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                na.rm=TRUE, names = F)
+                                na.rm=TRUE, names = FALSE)
   }
   return(list(sample = abund, mean = meanAbund, se = seAbund,
               simpleCI = simpleCIAbund, bcCI = bcCIAbund, median = medianAbund,

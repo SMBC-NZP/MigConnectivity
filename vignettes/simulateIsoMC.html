@@ -12,7 +12,7 @@
 
 <meta name="author" content="Michael T. Hallworth, Jeffrey A. Hostetler" />
 
-<meta name="date" content="2023-08-14" />
+<meta name="date" content="2023-08-15" />
 
 <title>‘MigConnectivity’ package: isotope simulation</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">‘MigConnectivity’ package: isotope
 simulation</h1>
 <h4 class="author">Michael T. Hallworth, Jeffrey A. Hostetler</h4>
-<h4 class="date">2023-08-14</h4>
+<h4 class="date">2023-08-15</h4>
 
 
 
@@ -420,7 +420,7 @@ target site layers used in the simulation.</p>
 <span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a>featherIso <span class="ot">&lt;-</span> (<span class="fl">0.95</span><span class="sc">*</span><span class="fu">getIsoMap</span>(<span class="at">period =</span> <span class="st">&quot;GrowingSeason&quot;</span>)<span class="sc">+</span>(<span class="sc">-</span><span class="fl">17.57</span>))</span>
 <span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a>iso <span class="ot">&lt;-</span> <span class="fu">crop</span>(featherIso, <span class="fu">extent</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">180</span>,<span class="sc">-</span><span class="dv">40</span>,<span class="dv">25</span>,<span class="dv">85</span>)))</span>
 <span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a>isocut <span class="ot">&lt;-</span> <span class="fu">cut</span>(iso, <span class="at">breaks=</span> <span class="fu">seq</span>(<span class="fu">cellStats</span>(iso,min),<span class="fu">cellStats</span>(iso,max),<span class="dv">12</span>))</span>
-<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>targetRanges[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">rasterToPolygons</span>(isocut, <span class="at">dissolve =</span> T)</span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a>targetRanges[[<span class="dv">4</span>]] <span class="ot">&lt;-</span> <span class="fu">rasterToPolygons</span>(isocut, <span class="at">dissolve =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a></span>
 <span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a></span>
 <span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co"># 12*2 isotope units</span></span>
@@ -626,7 +626,7 @@ target site layers used in the simulation.</p>
 <span id="cb7-142"><a href="#cb7-142" tabindex="-1"></a>                    <span class="at">verbose =</span> <span class="dv">0</span>,</span>
 <span id="cb7-143"><a href="#cb7-143" tabindex="-1"></a>                    <span class="at">calcCorr =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb7-144"><a href="#cb7-144" tabindex="-1"></a>                    <span class="at">alpha =</span> <span class="fl">0.05</span>,</span>
-<span id="cb7-145"><a href="#cb7-145" tabindex="-1"></a>                    <span class="at">approxSigTest =</span> F,</span>
+<span id="cb7-145"><a href="#cb7-145" tabindex="-1"></a>                    <span class="at">approxSigTest =</span> <span class="cn">FALSE</span>,</span>
 <span id="cb7-146"><a href="#cb7-146" tabindex="-1"></a>                    <span class="at">sigConst =</span> <span class="dv">0</span>,</span>
 <span id="cb7-147"><a href="#cb7-147" tabindex="-1"></a>                    <span class="at">isIntrinsic =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb7-148"><a href="#cb7-148" tabindex="-1"></a>                    <span class="at">nSim =</span> <span class="dv">5</span>)</span>

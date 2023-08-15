@@ -13,8 +13,8 @@ then type "git push origin develop".
 5. Run formal tests too: Build | Check.  Fix any errors and examine any notes
 and warnings.
 6. [With maintainer approval only] Pull latest develop version, update version
-number and date in DESCRIPTION, and run Check one last time.  Push to develop
-branch on origin one last time.
+number and date in DESCRIPTION, and run Check one last time. Edit links and
+info in README.md. Push to develop branch on origin one last time.
 7. [With maintainer approval only] Merge branches locally: Git | More |
 Shell... then type "git checkout master", then "git merge --no-ff develop".
 8. [With maintainer approval only] Then push from master to origin (also

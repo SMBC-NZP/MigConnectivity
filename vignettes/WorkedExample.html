@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-08-14" />
+<meta name="date" content="2023-08-15" />
 
 <title>Preparing data to estimate transition probabilites and/or migratory connecitivity strength using the ‘MigConnectivity’ package</title>
 
@@ -364,7 +364,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 probabilites and/or migratory connecitivity strength using the
 ‘MigConnectivity’ package</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-08-14</h4>
+<h4 class="date">2023-08-15</h4>
 
 
 
@@ -723,17 +723,17 @@ eBird data products</a>.</p>
 <span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>    region <span class="ot">&lt;-</span> regions[j, ]</span>
 <span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>    rastvals <span class="ot">&lt;-</span> raster<span class="sc">::</span><span class="fu">extract</span>(thing, region)[,<span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(wks)]</span>
 <span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a>    <span class="cf">if</span> (seasonalAlready) {</span>
-<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(rastvals, <span class="at">na.rm =</span> T)</span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(rastvals, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb18-11"><a href="#cb18-11" tabindex="-1"></a>    }</span>
 <span id="cb18-12"><a href="#cb18-12" tabindex="-1"></a>    <span class="cf">else</span> <span class="cf">if</span> (regionFirst) {</span>
-<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>      sumByWeek <span class="ot">&lt;-</span> <span class="fu">apply</span>(rastvals, <span class="dv">2</span>, sum, <span class="at">na.rm =</span> T)</span>
-<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">do.call</span>(fun, <span class="fu">list</span>(<span class="at">x =</span> sumByWeek, <span class="at">na.rm =</span> T))</span>
+<span id="cb18-13"><a href="#cb18-13" tabindex="-1"></a>      sumByWeek <span class="ot">&lt;-</span> <span class="fu">apply</span>(rastvals, <span class="dv">2</span>, sum, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-14"><a href="#cb18-14" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">do.call</span>(fun, <span class="fu">list</span>(<span class="at">x =</span> sumByWeek, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
 <span id="cb18-15"><a href="#cb18-15" tabindex="-1"></a>    }</span>
 <span id="cb18-16"><a href="#cb18-16" tabindex="-1"></a>    <span class="cf">else</span></span>
 <span id="cb18-17"><a href="#cb18-17" tabindex="-1"></a>    {</span>
 <span id="cb18-18"><a href="#cb18-18" tabindex="-1"></a>      valid <span class="ot">&lt;-</span> <span class="fu">apply</span>(rastvals, <span class="dv">1</span>, <span class="cf">function</span>(x) <span class="fu">any</span>(<span class="sc">!</span><span class="fu">is.na</span>(x)))</span>
-<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a>      maxed <span class="ot">&lt;-</span> <span class="fu">apply</span>(rastvals[valid, ], <span class="dv">1</span>, fun, <span class="at">na.rm =</span> T)</span>
-<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(maxed, <span class="at">na.rm =</span> T)</span>
+<span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a>      maxed <span class="ot">&lt;-</span> <span class="fu">apply</span>(rastvals[valid, ], <span class="dv">1</span>, fun, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(maxed, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a>    }</span>
 <span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a>  }</span>
 <span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a>  testII <span class="ot">&lt;-</span> <span class="fu">prop.table</span>(regionSum)</span>
@@ -818,18 +818,18 @@ one type of data overall, it’s best to leave
 <pre><code>## Warning in estTransitionBoot(isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster, : Not all target capture locations are within targetSites. Assigning to closest site.
 ## Affects animals: 133,134,135,136,137,138,139,140,141,142,143,144,145,146,184,189,190,191,192</code></pre>
 <pre><code>## Starting bootstrap
-## Bootstrap Run 1 of 10 at Mon Aug 14 16:15:52 2023 
-## Bootstrap Run 2 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 3 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 4 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 5 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 6 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 7 of 10 at Mon Aug 14 16:15:53 2023 
-## Bootstrap Run 8 of 10 at Mon Aug 14 16:15:54 2023 
-## Bootstrap Run 9 of 10 at Mon Aug 14 16:15:54 2023 
-## Bootstrap Run 10 of 10 at Mon Aug 14 16:15:54 2023</code></pre>
+## Bootstrap Run 1 of 10 at Tue Aug 15 13:13:07 2023 
+## Bootstrap Run 2 of 10 at Tue Aug 15 13:13:07 2023 
+## Bootstrap Run 3 of 10 at Tue Aug 15 13:13:07 2023 
+## Bootstrap Run 4 of 10 at Tue Aug 15 13:13:07 2023 
+## Bootstrap Run 5 of 10 at Tue Aug 15 13:13:07 2023 
+## Bootstrap Run 6 of 10 at Tue Aug 15 13:13:08 2023 
+## Bootstrap Run 7 of 10 at Tue Aug 15 13:13:08 2023 
+## Bootstrap Run 8 of 10 at Tue Aug 15 13:13:08 2023 
+## Bootstrap Run 9 of 10 at Tue Aug 15 13:13:08 2023 
+## Bootstrap Run 10 of 10 at Tue Aug 15 13:13:08 2023</code></pre>
 <pre><code>##    user  system elapsed 
-##    2.39    0.16    2.56</code></pre>
+##    2.60    0.10    2.75</code></pre>
 <div class="sourceCode" id="cb40"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" tabindex="-1"></a><span class="co"># Take a look at the results # </span></span>
 <span id="cb40-2"><a href="#cb40-2" tabindex="-1"></a>psiYEWA</span></code></pre></div>
 <pre><code>## Migratory Connectivity Estimates

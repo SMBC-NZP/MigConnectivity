@@ -40,8 +40,8 @@ psiConvergence <- psiRhat < 1.1
 psiErrorMCMC
 (psiBiasMCMC <- apply(psiErrorMCMC, 1:2, mean))
 (psiBiasBoot <- apply(psiErrorBoot, 1:2, mean))
-(psiMAEMCMC <- apply(psiErrorMCMC, 1:2, function(x) mean(abs(x), na.rm = T)))
-(psiMAEBoot <- apply(psiErrorBoot, 1:2, function(x) mean(abs(x), na.rm = T)))
+(psiMAEMCMC <- apply(psiErrorMCMC, 1:2, function(x) mean(abs(x), na.rm = TRUE)))
+(psiMAEBoot <- apply(psiErrorBoot, 1:2, function(x) mean(abs(x), na.rm = TRUE)))
 library(coda)
 psiListsMCMC <- lapply(psiEstMCMC, function(x) as.mcmc.list((x$BUGSoutput)))
 for (i in 1:nSims) {

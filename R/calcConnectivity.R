@@ -39,10 +39,10 @@ calcMC <- function(originDist, targetDist, originRelAbund, psi, sampleSize=NULL)
     stop('targetDist (distances between target sites) must be a square, symmetric matrix.')
   if (ncol(originDist)!=nOrigin || ncol(targetDist)!=nTarget ||
       !isTRUE(all.equal(rowSums(psi), rep(1, nOrigin), tolerance = 1e-6,
-                        check.attributes = F))) {
+                        check.attributes = FALSE))) {
     if (ncol(targetDist)!=nOrigin || ncol(originDist)!=nTarget ||
         !isTRUE(all.equal(colSums(psi), rep(1, nTarget), tolerance = 1e-6,
-                          check.attributes = F)))
+                          check.attributes = FALSE)))
       stop('psi should have [number of origin sites] rows and [number of target sites] columns and rows that sum to 1.')
     else { #Just turn it around
       psi <- t(psi)
@@ -118,7 +118,8 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
   # (SD in origin site distances * SD in target site distances)
   MC <- sum(M *
               (matrix(rep(originDist, nTarget^2), nOrigin^2, nTarget^2) - mu.bD) *
-              (matrix(rep(targetDist, nOrigin^2), nOrigin^2, nTarget^2, byrow=T) - mu.wD))/(sd.bD*sd.wD)
+              (matrix(rep(targetDist, nOrigin^2), nOrigin^2, nTarget^2,
+                      byrow = TRUE) - mu.wD))/(sd.bD*sd.wD)
   return(MC)
 }
 
@@ -247,7 +248,8 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000, verb
 # Simple approach to estimate psi matrix and MC from simulated (or real) data
 # (doesn't include uncertainty)
 ###############################################################################
-calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose=F) {
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
+                      verbose=FALSE) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)

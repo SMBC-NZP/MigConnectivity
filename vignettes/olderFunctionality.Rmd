@@ -142,7 +142,7 @@ calcPsiMC <- function(originDist,
                       locations, 
                       years = 1, 
                       months = 1, 
-                      verbose=F) {
+                      verbose=FALSE) {
   
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
@@ -201,7 +201,7 @@ if(inherits(targetSites,"SpatialPolygons") |
 
 nAnimals <- nrow(targetPoints)
 
-geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=TRUE)
 target.sample <- rep(NA, nAnimals)
 target.point.sample <- matrix(NA, nAnimals, 2)
 
@@ -1175,7 +1175,7 @@ for (sim in 1:nSims14) {
    results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
                                animalLoc14[[i]], 
                                originRelAbund = breedingRelN14[[i]], 
-                               verbose = F)
+                               verbose = FALSE)
       
    compare14.array[sim, i, 'MC'] <- results14[[i]]$MC
       
@@ -1345,7 +1345,7 @@ for (i in 1:nScenarios15) {
                                 targetDist = nonbreedDist15[[i]],
                                 originRelAbund = breedingRelN15[[i]],
                                 locations = animalLoc15[[i]], 
-                                verbose = F)
+                                verbose = FALSE)
     
 compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
 
@@ -1633,7 +1633,7 @@ for (i in 13) {
                              nonbreedDist14[[i]],
                              animalLoc14[[i]],
                              originRelAbund = breedingRelN14[[i]],
-                             verbose = F)
+                             verbose = FALSE)
  
   compare14.1.array[sim,'MC'] <- results14[[i]]$MC
     
@@ -1671,7 +1671,7 @@ results14 <- vector("list", nSims14)
 # Run estimations
 set.seed(567)
 
-sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, T)]
+sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, TRUE)]
 
 for (sim in 1:nSims14) {
   cat("Estimation", sim, "of", nSims14, '\n')
@@ -1691,7 +1691,7 @@ for (sim in 1:nSims14) {
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
                             nSamples = 1000,
                             verbose = 1,
-                            calcCorr = T,
+                            calcCorr = TRUE,
                             geoBias = c(0, 0),
                             geoVCov = matrix(0, 2, 2))
   
@@ -1755,7 +1755,7 @@ qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
                                     mean(ci14.array[,"Mantel",'lower']<=MC14 &
                                          ci14.array[,"Mantel",'upper']>=MC14)))
 
-format(qualities14, digits = 2, scientific = F)
+format(qualities14, digits = 2, scientific = FALSE)
 
 ```
  
@@ -1837,7 +1837,7 @@ results14 <- vector("list", nScenarios14)
 results14.2 <- vector("list", nSimsLarge14.2)
 originDist1 <- targetDist1 <- matrix(NA, nSample14.2, nSample14.2)
 targetDist1[lower.tri(targetDist1)] <- 1
-distIndices <- which(!is.na(targetDist1), arr.ind = T)
+distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
 # Run simulations
 set.seed(7)
@@ -1876,7 +1876,7 @@ for (i in 13) { # only run one scenario
                                 nonbreedDist14[[i]],
                                 animalLoc14.2,
                                 originRelAbund = breedingRelN14[[i]],
-                                verbose = F)
+                                verbose = FALSE)
     
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
     
@@ -1927,7 +1927,7 @@ results14 <- vector("list", nSims14.2)
 # Run estimations
 
 set.seed(567)
-sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, T)]
+sim14.2.sub <- sim14.2[sample.int(nSimsLarge14.2, nSims14.2, TRUE)]
 
 for (sim in 1:nSims14.2) {
   cat("Estimation", sim, "of", nSims14.2, '\n')
@@ -1952,10 +1952,10 @@ for (sim in 1:nSims14.2) {
                             targetAssignment = results14.2[[sim]]$targetSample,
                             nSamples = 1000,
                             verbose = 0,
-                            calcCorr = T,
+                            calcCorr = TRUE,
                             geoBias = geoBias,
                             geoVCov = geoVCov,
-                            isGL = T,
+                            isGL = TRUE,
                             targetSites = winteringPolys2[[i]], 
                             maintainLegacyOutput = TRUE)
   
@@ -2028,7 +2028,7 @@ qualities14.2 <- data.frame(Parameter = rep(c("MC", 'rM'), 5),
                               mean(ci14.2.array[, "Mantel", 'lower'] <= MC14 & 
                                    ci14.2.array[, "Mantel", 'upper'] >= MC14)))
 
-format(qualities14.2, digits = 2, scientific = F)
+format(qualities14.2, digits = 2, scientific = FALSE)
 
 
 
@@ -2139,7 +2139,7 @@ for(i in 1:length(Drates)){
                               breedingRelN,
                               birdLocDisp[[i]]$animalLoc,
                               years=j,
-                              verbose = F)
+                              verbose = FALSE)
     
     Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC
   }

@@ -65,7 +65,7 @@ calcStrengthInd <- function(originDist, targetDist, locations, resamp=1000,
 # (doesn't include uncertainty)
 ###############################################################################
 calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
-                      verbose=F) {
+                      verbose=FALSE) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -215,12 +215,12 @@ compare14 <- data.frame(Scenario = c("True", "Base", "Breeding10", "Wintering10"
 for (i in 1:nScenarios14) {
   cat("\nScenario", i, "\n")
   results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
-                              breedingRelN14[[i]], animalLoc14[[i]], T)
+                              breedingRelN14[[i]], animalLoc14[[i]], TRUE)
   compare14$MC[i+1] <- results14[[i]]$MC
 }
 compare14 <- transform(compare14, diff=MC - MC[1], prop=MC/MC[1])
 compare14
-write.csv(compare14, 'sampling_regions1.csv', row.names=F)
+write.csv(compare14, 'sampling_regions1.csv', row.names=FALSE)
 
 ###############################################################################
 # Sampling regime 2  of 3
@@ -327,7 +327,7 @@ for (sim in 1:nSims15) {
     animalLoc15[[i]] <- changeLocations(sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                       breedingSiteTrans15[[i]], 1:nWintering15[i])
     results15[[i]] <- calcPsiMC(breedDist15[[i]], nonbreedDist15[[i]],
-                                   breedingRelN15[[i]], animalLoc15[[i]], F)
+                                   breedingRelN15[[i]], animalLoc15[[i]], FALSE)
     compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
     compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
                                                          nonbreedDist15[[1]],
@@ -347,7 +347,7 @@ compare15a <- as.matrix(compare15[2:7,c(2,4,3,5)])
 rownames(compare15a) <- compare15$Scenario[2:7]
 round(compare15a, 3)
 round(compare15a, 2)
-write.csv(compare15, 'sampling_regions2.csv', row.names=F)
+write.csv(compare15, 'sampling_regions2.csv', row.names=FALSE)
 
 ###############################################################################
 # Sampling regime 3 of 3
@@ -457,7 +457,7 @@ for (sim in 1:nSims15) {
     animalLoc15[[i]] <- changeLocations(sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                         breedingSiteTrans15[[i]], 1:nWintering15[i])
     results15[[i]] <- calcPsiMC(breedDist15[[i]], nonbreedDist15[[i]],
-                                breedingRelN15[[i]], animalLoc15[[i]], F)
+                                breedingRelN15[[i]], animalLoc15[[i]], FALSE)
     compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
     compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
                                                          nonbreedDist15[[1]],
@@ -475,7 +475,7 @@ for (sim in 1:nSims16) {
     animalLoc16[[i]] <- changeLocations(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                       breedingSiteTrans16[[i]], 1:nWintering16[i])
     results16[[i]] <- calcPsiMC(breedDist16[[i]], nonbreedDist16[[i]],
-                                breedingRelN16[[i]], animalLoc16[[i]], F)
+                                breedingRelN16[[i]], animalLoc16[[i]], FALSE)
     compare16.array[sim, i, 'MC'] <- results16[[i]]$MC
     compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]],
                                                          nonbreedDist16[[1]],
@@ -492,5 +492,5 @@ compare16a <- as.matrix(compare16[2:7,c(2,4,3,5)])
 rownames(compare16a) <- compare16$Scenario[2:7]
 round(compare16a, 3)
 round(compare16a, 2)
-write.csv(compare16, 'sampling_regions3.csv', row.names=F)
+write.csv(compare16, 'sampling_regions3.csv', row.names=FALSE)
 }

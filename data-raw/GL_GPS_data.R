@@ -424,7 +424,7 @@ OVENdata[[11]]<-c("NH", "MD")
 OVENdata[[12]]<-c("FL", "Cuba", "Hisp")
 
 # Save to data folder
-usethis::use_data(OVENdata, overwrite = T)
+usethis::use_data(OVENdata, overwrite = TRUE)
 
 
 

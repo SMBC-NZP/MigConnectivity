@@ -240,10 +240,10 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
   seMC <- sd(sampleMC, na.rm=TRUE)
   # Calculate confidence intervals using quantiles of sampled MC
   simpleCI <- quantile(sampleMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                       names = F)
+                       names = FALSE)
   z0 <- qnorm(sum((sampleMC)<meanMC)/nSamples)
   bcCI <- quantile(sampleMC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, names = FALSE)
   MC.mcmc <- coda::as.mcmc(sampleMC) # Ha!
   hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
   if (!approxSigTest)
@@ -483,7 +483,7 @@ model{
   dimnames(psi) <- list(NULL, originNames, targetNames)
   meanPsi <- out$BUGSoutput$mean$psi
   simpleCIPsi <- apply(psi, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, names = F)
+                       na.rm=TRUE, names = FALSE)
   psi.matrix <- array(c(psi), c(dim(psi)[[1]], nOriginSites * nTargetSites),
                       list(NULL, paste(rep(originNames, nTargetSites),
                                        rep(targetNames, each = nOriginSites),
@@ -497,11 +497,11 @@ model{
                    dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nOriginSites) {
     for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi[, i, j] < meanPsi[i, j], na.rm = T) /
+      psi.z0 <- qnorm(sum(psi[, i, j] < meanPsi[i, j], na.rm = TRUE) /
                         length(which(!is.na(psi[, i, j]))))
       bcCIPsi[ , i, j] <- quantile(psi[, i, j],
                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
+                                   na.rm=TRUE, names = FALSE)
     }
   }
   results <- list(psi = list(sample = psi, mean = meanPsi,
@@ -515,11 +515,11 @@ model{
                      dimnames = list(NULL, targetNames))
       for (j in 1:nTargetSites) {
         psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ ,j] <
-                              out$BUGSoutput$mean$r[j], na.rm = T) /
+                              out$BUGSoutput$mean$r[j], na.rm = TRUE) /
                           length(which(!is.na(out$BUGSoutput$sims.list$r[ ,j]))))
         bcCIr[ , j] <- quantile(out$BUGSoutput$sims.list$r[ ,j],
                                 pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                na.rm=TRUE, type = 8, names = F)
+                                na.rm=TRUE, names = FALSE)
       }
       colnames(out$BUGSoutput$sims.list$r) <- names(out$BUGSoutput$mean$r) <-
         names(out$BUGSoutput$sd$r) <- names(out$BUGSoutput$median$r) <-
@@ -537,11 +537,11 @@ model{
       for (i in 1:nAges) {
         for (j in 1:nTargetSites) {
           psi.z0 <- qnorm(sum(out$BUGSoutput$sims.list$r[ , i, j] <
-                              out$BUGSoutput$mean$r[i, j], na.rm = T) /
+                              out$BUGSoutput$mean$r[i, j], na.rm = TRUE) /
                           length(which(!is.na(out$BUGSoutput$sims.list$r[,i,j]))))
           bcCIr[,i,j] <- quantile(out$BUGSoutput$sims.list$r[ , i, j],
                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2,1-alpha/2))),
-                                  na.rm=TRUE, type = 8, names = F)
+                                  na.rm=TRUE, names = FALSE)
         }
       }
       dimnames(out$BUGSoutput$sims.list$r)[[3]]<-colnames(out$BUGSoutput$mean$r) <-
@@ -615,7 +615,8 @@ estTransitionBoot <- function(originSites = NULL,
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
   if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither"))){
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL & (captured == "origin" | captured == "neither"))){
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = FALSE)) &&
+      any(isGL & (captured == "origin" | captured == "neither"))){
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
   if ((is.null(originPoints) && is.null(originRaster) && is.null(originSites)) &&
       is.null(originAssignment) && is.null(banded)){
@@ -1308,7 +1309,7 @@ estTransitionBoot <- function(originSites = NULL,
           notfind <- unique(oSamp$notfind)
           stop('maxTries (',maxTries,') reached during origin location sampling, exiting. ',
                'Animal(s) where location sampling failed to fall in sites:\n',
-               paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+               paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
                '\nExamine originSites',
                ifelse(any(notfind$isGL),
                       ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
@@ -1361,7 +1362,7 @@ estTransitionBoot <- function(originSites = NULL,
         notfind <- unique(tSamp$notfind)
         stop('maxTries (',maxTries,') reached during target location sampling, exiting. ',
              'Animal(s) where location sampling failed to fall in sites:\n',
-             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
              '\nExamine targetSites',
              ifelse(any(notfind$isGL),
                     ', geoBiasOrigin, geoVcovOrigin, targetPoints', ''),
@@ -1477,7 +1478,7 @@ estTransitionBoot <- function(originSites = NULL,
     medianPsi <- apply(psi.array, 2:3, median)
     sePsi <- apply(psi.array, 2:3, sd)
     simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, names = F)
+                         na.rm=TRUE, names = FALSE)
     psi.matrix <- array(c(psi.array), c(nBoot, nOriginSites * nTargetSites),
                         list(NULL, paste(rep(originNames, nTargetSites),
                                          rep(targetNames, each = nOriginSites),
@@ -1493,11 +1494,11 @@ estTransitionBoot <- function(originSites = NULL,
                      dimnames = list(NULL, originNames, targetNames))
     for (i in 1:nOriginSites) {
       for (j in 1:nTargetSites) {
-        psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+        psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = TRUE) /
                           length(which(!is.na(psi.array[, i, j]))))
         bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
                                      pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                     na.rm=TRUE, type = 8, names = F)
+                                     na.rm=TRUE, names = FALSE)
       }
     }
     if (!is.null(r.array)){
@@ -1505,18 +1506,18 @@ estTransitionBoot <- function(originSites = NULL,
       median.r <- apply(r.array, 2, median)
       se.r <- apply(r.array, 2, sd)
       simpleCIr <- apply(r.array, 2, quantile, probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, type = 8, names = F)
+                         na.rm=TRUE, names = FALSE)
       r.mcmc <- coda::as.mcmc(r.array)
       hpdCIr <- coda::HPDinterval(r.mcmc, 1-alpha)
       hpdCIr <- aperm(hpdCIr, c(2, 1))
       bcCIr <- array(NA, dim = c(2, nTargetSites),
                      dimnames = list(c("lower", "upper"), targetNames))
       for (j in 1:nTargetSites) {
-        r.z0 <- qnorm(sum(r.array[ ,j] < mean.r[j], na.rm = T) /
+        r.z0 <- qnorm(sum(r.array[ ,j] < mean.r[j], na.rm = TRUE) /
                           length(which(!is.na(r.array[ ,j]))))
         bcCIr[ , j] <- quantile(r.array[ ,j],
                                 pnorm(2 * r.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                na.rm=TRUE, type = 8, names = F)
+                                na.rm=TRUE, names = FALSE)
       }
       r <- list(sample = r.array, mean = mean.r,
                 se = se.r, simpleCI = simpleCIr,
@@ -1530,7 +1531,7 @@ estTransitionBoot <- function(originSites = NULL,
     medianPsi <- apply(psi.array, 2:3, median)
     sePsi <- apply(psi.array, 2:3, sd) * sqrt(m / nAnimals)
     simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                         na.rm=TRUE, type = 8, names = F)
+                         na.rm=TRUE, names = FALSE)
   }
   if (returnAllInput) {
     input <-list(sampleSize = nAnimals, originSites = originSites,
@@ -1933,7 +1934,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
                        originAssignment=NULL, originNames=NULL,
                        targetNames=NULL, nBoot = 1000, verbose=0,
                        nSim = 1000, calcCorr=TRUE, alpha = 0.05,
-                       approxSigTest = F, sigConst = 0,
+                       approxSigTest = FALSE, sigConst = 0,
             resampleProjection = 'ESRI:102010',
                        maxTries = 300,
                        row0=0,
@@ -1944,7 +1945,7 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")
   if (length(geoBias)!=2 && any(isGL))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) && any(isGL))
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = FALSE)) && any(isGL))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")
   if ((is.null(originPoints) || is.null(originSites)) &&
       is.null(originAssignment))
@@ -2095,9 +2096,9 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     if (!is.na(MC[boot]))
       boot <- boot + 1
   }
-  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = TRUE), na.rm = TRUE)/length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, type = 8, names = FALSE)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
   hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
   if (!approxSigTest)
@@ -2117,32 +2118,31 @@ estMCGlGps <- function(originDist, targetDist, originRelAbund, isGL,
     meanCorr <- mean(corr, na.rm=TRUE)
     medianCorr <- median(corr, na.rm=TRUE)
     seCorr <- sd(corr, na.rm=TRUE)
-    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                             names = F)
+    simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                             names = FALSE)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                           na.rm=TRUE, type = 8, names = F)
+                           na.rm=TRUE, names = FALSE)
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
   meanMC <- mean(MC, na.rm=TRUE)
   medianMC <- median(MC, na.rm=TRUE)
   seMC <- sd(MC, na.rm=TRUE)
-  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                       names = F)
+  simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, names = FALSE)
   meanPsi <- apply(psi.array, 2:3, mean)
   medianPsi <- apply(psi.array, 2:3, median)
   sePsi <- apply(psi.array, 2:3, sd)
   simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, names = FALSE)
   bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
                    dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nOriginSites) {
     for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = TRUE) /
                         length(which(!is.na(psi.array[, i, j]))))
       bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
+                                   na.rm=TRUE, type = 8, names = FALSE)
     }
   }
   if (maintainLegacyOutput) {
@@ -2240,7 +2240,7 @@ estMCisotope <- function(targetDist=NULL,
                          nSim = NULL,
                          calcCorr=TRUE,
                          alpha = 0.05,
-                         approxSigTest = F,
+                         approxSigTest = FALSE,
                          sigConst = 0,
                          resampleProjection = sf::st_crs(4326),# MigConnectivity::projections$WGS84,
                          maxTries = 300,
@@ -2434,9 +2434,10 @@ estMCisotope <- function(targetDist=NULL,
     if (!is.na(MC[boot]))
       boot <- boot + 1
   }
-  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/length(which(!is.na(MC))))
+  MC.z0 <- qnorm(sum(MC<mean(MC, na.rm = TRUE), na.rm = TRUE) /
+                   length(which(!is.na(MC))))
   bcCI <- quantile(MC, pnorm(2*MC.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                   na.rm=TRUE, type = 8, names = F)
+                   na.rm=TRUE, type = 8, names = FALSE)
   MC.mcmc <- coda::as.mcmc(MC) # Ha!
   hpdCI <- as.vector(coda::HPDinterval(MC.mcmc, 1-alpha))
   if (!approxSigTest)
@@ -2457,10 +2458,10 @@ estMCisotope <- function(targetDist=NULL,
     medianCorr <- median(corr, na.rm=TRUE)
     seCorr <- sd(corr, na.rm=TRUE)
     simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                             names = F)
+                             names = FALSE)
     corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
     bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                         na.rm=TRUE, type = 8, names = F)
+                         na.rm=TRUE, type = 8, names = FALSE)
     pointCorr <- NULL
   } else
     pointCorr <- meanCorr <- medianCorr <- seCorr <- simpleCICorr <- bcCICorr <- NULL
@@ -2468,21 +2469,21 @@ estMCisotope <- function(targetDist=NULL,
   medianMC <- median(MC, na.rm=TRUE)
   seMC <- sd(MC, na.rm=TRUE)
   simpleCI <- quantile(MC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                       names = F)
+                       names = FALSE)
   meanPsi <- apply(psi.array, 2:3, mean)
   medianPsi <- apply(psi.array, 2:3, median)
   sePsi <- apply(psi.array, 2:3, sd)
   simpleCIPsi <- apply(psi.array, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, type = 8, names = FALSE)
   bcCIPsi <- array(NA, dim = c(2, nOriginSites, nTargetSites),
                    dimnames = list(NULL, originNames, targetNames))
   for (i in 1:nOriginSites) {
     for (j in 1:nTargetSites) {
-      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = T) /
+      psi.z0 <- qnorm(sum(psi.array[, i, j] < meanPsi[i, j], na.rm = TRUE) /
                         length(which(!is.na(psi.array[, i, j]))))
       bcCIPsi[ , i, j] <- quantile(psi.array[, i, j],
                                    pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
-                                   na.rm=TRUE, type = 8, names = F)
+                                   na.rm=TRUE, type = 8, names = FALSE)
     }
   }
   if (maintainLegacyOutput) {
@@ -3000,7 +3001,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = every animal")
   if (length(geoBias)!=2 && any(isGL) && any(captured != "target"))
     stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in meters)")
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = F)) &&
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = FALSE)) &&
       any(isGL) && any(captured != "target"))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
 
@@ -3210,6 +3211,11 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     pointCorr <- NA
     if (!is.null(targetPoints)){
       targetPoints2 <- sf::st_transform(targetPoints,4326)
+      targetDistStart <- matrix(NA, nAnimals, nAnimals)
+
+      targetDistStart[lower.tri(originDistStart)] <- 1
+
+      distIndices <- which(!is.na(targetDistStart), arr.ind = TRUE)
       targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
                                         sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
       targetDistStart <- matrix(NA, nAnimals, nAnimals)
@@ -3220,6 +3226,12 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     }
     else { # Can't both be null
       originPoints2 <- sf::st_transform(originPoints,4326)
+
+      originDistStart <- matrix(NA, nAnimals, nAnimals)
+
+      originDistStart[lower.tri(originDistStart)] <- 1
+
+      distIndices <- which(!is.na(originDistStart), arr.ind = TRUE)
       originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
                                         sf::st_coordinates(originPoints2[distIndices[,'col'],]))
       originDistStart <- matrix(NA, nAnimals, nAnimals)
@@ -3258,7 +3270,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
         notfind <- unique(oSamp$notfind)
         stop('maxTries (',maxTries,') reached during origin location sampling, exiting. ',
              'Animal(s) where location sampling failed to fall in sites:\n',
-             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
              '\nExamine originSites',
              ifelse(any(notfind$isGL),
                     ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
@@ -3301,7 +3313,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
         notfind <- unique(tSamp$notfind)
         stop('maxTries (',maxTries,') reached during target location sampling, exiting. ',
              'Animal(s) where location sampling failed to fall in sites:\n',
-             paste(capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
              '\nExamine targetSites',
              ifelse(any(notfind$isGL),
                     ', geoBiasOrigin, geoVcovOrigin, targetPoints', ''),
@@ -3350,10 +3362,10 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   medianCorr <- median(corr, na.rm=TRUE)
   seCorr <- sd(corr, na.rm=TRUE)
   simpleCICorr <- quantile(corr, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
-                           names = F)
+                           names = FALSE)
   corr.z0 <- qnorm(sum((corr)<meanCorr)/nBoot)
   bcCICorr <- quantile(corr, pnorm(2*corr.z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8, names = F)
+                       na.rm=TRUE, names = FALSE)
   if (maintainLegacyOutput)
     return(structure(list(sampleCorr = corr, pointCorr = pointCorr,
                           meanCorr = meanCorr, medianCorr = medianCorr,
@@ -3510,7 +3522,7 @@ getCMRexample <- function(number = 1) {
 #'
 #'}
 diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
-                   returnSamples = F) {
+                   returnSamples = FALSE) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   for (i in 1:nEst)
@@ -3530,20 +3542,20 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
             each = nSamplesEst[comparisons[i, 1]])
     else
       diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$MC$sample,
-                                 nSamples, replace = T) -
-        sample(estimates[[comparisons[i, 2]]]$MC$sample, nSamples, replace = T)
+                                 nSamples, replace = TRUE) -
+        sample(estimates[[comparisons[i, 2]]]$MC$sample, nSamples, replace = TRUE)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                     type = 8, names = F)
+                     names = FALSE)
   diff.z0 <- sapply(diffSamples,
-                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T),
-                                           na.rm = T)/length(which(!is.na(MC)))))
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = TRUE),
+                                           na.rm = TRUE)/length(which(!is.na(MC)))))
   bcCI <- mapply(function(MC, z0)
     quantile(MC, pnorm(2*z0+ qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
+                       na.rm=TRUE, names = FALSE), diffSamples, diff.z0)
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)
@@ -3609,7 +3621,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
 #'
 # @examples
 diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
-                       returnSamples = F) {
+                       returnSamples = FALSE) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   for (i in 1:nEst)
@@ -3629,21 +3641,21 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
             each = nSamplesEst[comparisons[i, 1]])
     else
       diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]]$corr$sample,
-                                 nSamples, replace = T) -
+                                 nSamples, replace = TRUE) -
         sample(estimates[[comparisons[i, 2]]]$corr$sample, nSamples,
-               replace = T)
+               replace = TRUE)
   }
   meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
   medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
   seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
   simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                     type = 8, names = F)
+                     names = FALSE)
   diff.z0 <- sapply(diffSamples,
-                    function(MC) qnorm(sum(MC<mean(MC, na.rm = T), na.rm = T)/
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = TRUE), na.rm = TRUE)/
                                          length(which(!is.na(MC)))))
   bcCI <- mapply(function(MC, z0) quantile(MC,
                                            pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, type = 8, names = F), diffSamples, diff.z0)
+                       na.rm=TRUE, names = FALSE), diffSamples, diff.z0)
   names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
                                                  '-', names(estimates[comparisons[,2]]))
   names(medianDiff) <- names(seDiff) <- names(diffSamples)

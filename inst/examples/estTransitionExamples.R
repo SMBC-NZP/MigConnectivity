@@ -328,8 +328,8 @@ iso <- isoAssign(isovalues = OVENvals[,2],
                  verbose=1)
 
 nAnimals <- dim(iso$probassign)[3]
-isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
-isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
+isGL <-rep(FALSE, nAnimals); isRaster <- rep(TRUE, nAnimals)
+isProb <- rep(FALSE, nAnimals); isTelemetry <- rep(FALSE, nAnimals)
 targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSite)
 targetSites <- sf::st_as_sf(targetSites)
 

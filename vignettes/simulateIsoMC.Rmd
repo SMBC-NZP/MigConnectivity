@@ -92,7 +92,7 @@ targetRanges[[3]] <- rasterToPolygons(raster(xmn = -180,
 featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
 iso <- crop(featherIso, extent(c(-180,-40,25,85)))
 isocut <- cut(iso, breaks= seq(cellStats(iso,min),cellStats(iso,max),12))
-targetRanges[[4]] <- rasterToPolygons(isocut, dissolve = T)
+targetRanges[[4]] <- rasterToPolygons(isocut, dissolve = TRUE)
 
 
 # 12*2 isotope units
@@ -302,7 +302,7 @@ output.sims <- foreach(target=1:nTargetSetups,
                     verbose = 0,
                     calcCorr = TRUE,
                     alpha = 0.05,
-                    approxSigTest = F,
+                    approxSigTest = FALSE,
                     sigConst = 0,
                     isIntrinsic = TRUE,
                     nSim = 5)

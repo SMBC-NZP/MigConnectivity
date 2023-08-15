@@ -25,52 +25,6 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
           quote = FALSE)
   }
   if (inherits(x, "estMC")) {
-    # if (is.null(x$psi) && !is.null(x$samplePsi)) {
-    #   x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
-    #                 se = apply(x$samplePsi, 2:3, sd),
-    #                 simpleCI = apply(x$samplePsi, 2:3, quantile,
-    #                                  probs = c(alpha/2, 1-alpha/2),
-    #                                  na.rm=TRUE, type = 8, names = F))
-    #   x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
-    #   x$input <- list(alpha = x$alpha)
-    #   if (is.null(dimnames(x$samplePsi)[2])){
-    #     x$input$originNames <- LETTERS[1:dim(x$samplePsi)[2]]
-    #     originNamesFilled <- TRUE
-    #   }
-    #   else {
-    #     x$input$originNames <- dimnames(x$samplePsi)[[2]]
-    #     originNamesFilled <- FALSE
-    #   }
-    #   if (is.null(dimnames(x$samplePsi)[3])){
-    #     x$input$targetNames <- 1:dim(x$samplePsi)[3]
-    #     targetNamesFilled <- TRUE
-    #   }
-    #   else {
-    #     x$input$targetNames <- dimnames(x$samplePsi)[[3]]
-    #     targetNamesFilled <- FALSE
-    #   }
-    # }
-    # else {
-    #   originNamesFilled <- targetNamesFilled <- FALSE
-    # }
-    # if (!is.null(x$psi)) {
-    #   dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
-    #                                                      x$input$targetNames)
-    #   cat("\nTransition probability (psi) estimates (mean):",
-    #       ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
-    #       ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
-    #       "\n")
-    #   print(x$psi$mean, digits = digits)
-    #   cat("+/- SE:\n")
-    #   print(x$psi$se, digits = digits)
-    #   cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-    #       "% confidence interval (simple quantile):\n", sep = "")
-    #   print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
-    #                     format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
-    #                     sep = ' - '), dim = dim(x$psi$mean),
-    #               dimnames = list(x$input$originNames, x$input$targetNames)),
-    #         quote = FALSE)
-    # }
     cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
         format(x$MC$se, digits = digits), '\n')
     cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
@@ -338,12 +292,12 @@ plot.estMigConnectivity <- function(x,
       for (i in 1:dim(x$samplePsi)[2]) {
         for (j in 1:dim(x$samplePsi)[3]) {
           psi.z0 <- qnorm(sum(x$samplePsi[, i, j] < mean(x$samplePsi[, i, j],
-                                                         na.rm = T)) /
+                                                         na.rm = TRUE)) /
                             length(which(!is.na(x$samplePsi[, i, j]))))
           bcCIPsi[ , i, j] <- quantile(x$samplePsi[, i, j],
                                        pnorm(2 * psi.z0 +
                                                qnorm(c(x$alpha/2,1-x$alpha/2))),
-                                       na.rm=TRUE, type = 8, names = F)
+                                       na.rm=TRUE, names = FALSE)
         }
       }
       x$psi <- list(sample = x$samplePsi,
@@ -351,7 +305,7 @@ plot.estMigConnectivity <- function(x,
                     se = apply(x$samplePsi, 2:3, sd),
                     simpleCI = apply(x$samplePsi, 2:3, quantile,
                                      probs = c(x$alpha/2, 1-x$alpha/2),
-                                     na.rm=TRUE, type = 8, names = F),
+                                     na.rm=TRUE, names = FALSE),
                     bcCI = bcCIPsi,
                     median = apply(x$samplePsi, 2:3, median),
                     point = x$pointPsi)
@@ -752,7 +706,7 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
     col <- 1:nTargetSites
   }
   # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
-  op <- par(mar=c(0,0,0,0))
+  op <- graphics::par(mar=c(0,0,0,0))
   extent <- sf::st_bbox(allSites)
   plot(allSites, xlim=c(extent[1],extent[3]),
        ylim=c(extent[2], extent[4]), lwd = 1.5)
@@ -776,7 +730,7 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
         cosa <- cos(angle)
         sina <- sin(angle)
         if (doubled) {
-          polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+          graphics::polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
                     xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
                     xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
                     xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
@@ -784,10 +738,10 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                     yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
                     yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
                     yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                  col = rgb(i/nOriginSites, j/nTargetSites,
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                             1 - (i + j) / (nOriginSites + nTargetSites),
                             alpha=alpha.range), border = NA)
-          polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+          graphics::polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
                     xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
                     xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
                     xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
@@ -795,10 +749,10 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                     yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
                     yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
                     yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                  col = rgb(i/nOriginSites, j/nTargetSites,
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                             1 - (i + j) / (nOriginSites + nTargetSites),
                             alpha=alpha.range), border = NA)
-          polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth,
+          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth,
                     xT - x$psi$mean[i,j] * sina * maxWidth,
                     xT + x$psi$mean[i,j] * sina * maxWidth,
                     xO + x$psi$mean[i,j] * sina * maxWidth),
@@ -806,15 +760,15 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                     yT + x$psi$mean[i,j] * cosa * maxWidth,
                     yT - x$psi$mean[i,j] * cosa * maxWidth,
                     yO - x$psi$mean[i,j] * cosa * maxWidth),
-                  col = rgb(i/nOriginSites, j/nTargetSites,
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                             1 - (i + j) / (nOriginSites + nTargetSites),
                             alpha=alpha.point),
-                  border = rgb(i/nOriginSites, j/nTargetSites,
+                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                                1 - (i + j) / (nOriginSites + nTargetSites),
                                alpha=1))
         }
         else {
-          polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth / 2,
+          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth / 2,
                     xT - x$psi$mean[i,j] * sina * maxWidth / 2,
                     xT + x$psi$mean[i,j] * sina * maxWidth / 2,
                     xO + x$psi$mean[i,j] * sina * maxWidth / 2),
@@ -822,13 +776,13 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                     yT + x$psi$mean[i,j] * cosa * maxWidth / 2,
                     yT - x$psi$mean[i,j] * cosa * maxWidth / 2,
                     yO - x$psi$mean[i,j] * cosa * maxWidth / 2),
-                  col = rgb(i/nOriginSites, j/nTargetSites,
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                             1 - (i + j) / (nOriginSites + nTargetSites),
                             alpha=alpha.point),
-                  border = rgb(i/nOriginSites, j/nTargetSites,
+                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                                1 - (i + j) / (nOriginSites + nTargetSites),
                                alpha=1))
-          polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
+          graphics::polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
                                               x$psi$mean[i,j] / 2),
                     xT - (x$psi$simpleCI[2,i,j] - x$psi$mean[i,j] / 2) *
                       sina * maxWidth,
@@ -840,14 +794,14 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
                     yT+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
                     yT+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
                     yO+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth),
-                  col = rgb(i/nOriginSites, j/nTargetSites,
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                             1 - (i + j) / (nOriginSites + nTargetSites),
                             alpha=alpha.range), border = NA)
 
         }
         shape::Arrowhead(xT, yT, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
                          arr.type = 'curved', npoint = 15,
-                         lcol = rgb(i/nOriginSites, j/nTargetSites,
+                         lcol = grDevices::rgb(i/nOriginSites, j/nTargetSites,
                                     1 - (i + j) / (nOriginSites + nTargetSites),
                                     alpha=1), arr.adj = 0)
       }
@@ -903,5 +857,5 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
 #
 # box(which="plot")
 # #
-  par(op)
+  graphics::par(op)
 }

@@ -1,7 +1,7 @@
 # MigConnectivity [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002228.svg)](https://zenodo.org/record/1002228#.Wm_Oh3xG1EY)    
-The MigConnectivity package estimates the strength and pattern of migratory connectivity for migratory animals
+The MigConnectivity package quantifies the pattern and strength of migratory connectivity for migratory animals
 
-Migratory Connectivity (MC) is a standardized metric to quantify migratory connectivity strength between two phases 
+MC is a standardized metric to quantify migratory connectivity strength between two phases 
 of the annual cycle. MC is independent of data type and accounts for the relative abundance of 
 populations distributed across a seasonal range. See the [Vignette](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes)  for details and examples.
 
@@ -20,7 +20,8 @@ devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
 ```
 
 ### Links to previous versions
-
+[[v0.4.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.1) released Nov. 10, 2021
+[[v0.4.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.0) released May 30, 2021
 [[v0.3.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.3.1) released Apr. 30, 2020    
 [[v0.3.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.3.0) released Jul. 5, 2018    
 [[v0.2.5]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.5) released Jan. 30, 2018    

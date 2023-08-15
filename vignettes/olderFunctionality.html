@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-08-14" />
+<meta name="date" content="2023-08-15" />
 
 <title>MigConnectivity package (older functionality)</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">MigConnectivity package (older
 functionality)</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-08-14</h4>
+<h4 class="date">2023-08-15</h4>
 
 
 
@@ -515,7 +515,7 @@ incorporate sampling uncertainty)</p>
 <span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>                      locations, </span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>                      <span class="at">years =</span> <span class="dv">1</span>, </span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>                      <span class="at">months =</span> <span class="dv">1</span>, </span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>                      <span class="at">verbose=</span>F) {</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>                      <span class="at">verbose=</span><span class="cn">FALSE</span>) {</span>
 <span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  </span>
 <span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  nOrigin <span class="ot">&lt;-</span> <span class="fu">nrow</span>(originDist)</span>
 <span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  nTarget <span class="ot">&lt;-</span> <span class="fu">nrow</span>(targetDist)</span>
@@ -568,7 +568,7 @@ bias and variance / covariance matrix</p>
 <span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a></span>
 <span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>nAnimals <span class="ot">&lt;-</span> <span class="fu">nrow</span>(targetPoints)</span>
 <span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>geoBias2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rep</span>(geoBias, nSim), <span class="at">nrow=</span>nSim, <span class="at">byrow=</span>T)</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>geoBias2 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">rep</span>(geoBias, nSim), <span class="at">nrow=</span>nSim, <span class="at">byrow=</span><span class="cn">TRUE</span>)</span>
 <span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>target.sample <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="cn">NA</span>, nAnimals)</span>
 <span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>target.point.sample <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, nAnimals, <span class="dv">2</span>)</span>
 <span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a></span>
@@ -968,19 +968,19 @@ data from light-level geolocators and PinPoint-10 GPS tags.</p>
 <span id="cb18-19"><a href="#cb18-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb18-20"><a href="#cb18-20" tabindex="-1"></a><span class="co">#&gt; Transition probability (psi) estimates (mean):</span></span>
 <span id="cb18-21"><a href="#cb18-21" tabindex="-1"></a><span class="co">#&gt;        FL   Cuba   Hisp</span></span>
-<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; NH 0.0000 0.1905 0.8095</span></span>
-<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a><span class="co">#&gt; MD 0.3591 0.6409 0.0000</span></span>
+<span id="cb18-22"><a href="#cb18-22" tabindex="-1"></a><span class="co">#&gt; NH 0.0000 0.1676 0.8324</span></span>
+<span id="cb18-23"><a href="#cb18-23" tabindex="-1"></a><span class="co">#&gt; MD 0.4387 0.5613 0.0000</span></span>
 <span id="cb18-24"><a href="#cb18-24" tabindex="-1"></a><span class="co">#&gt; +/- SE:</span></span>
-<span id="cb18-25"><a href="#cb18-25" tabindex="-1"></a><span class="co">#&gt;        FL    Cuba    Hisp</span></span>
-<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a><span class="co">#&gt; NH 0.0000 0.05717 0.05717</span></span>
-<span id="cb18-27"><a href="#cb18-27" tabindex="-1"></a><span class="co">#&gt; MD 0.1167 0.11665 0.00000</span></span>
+<span id="cb18-25"><a href="#cb18-25" tabindex="-1"></a><span class="co">#&gt;        FL   Cuba   Hisp</span></span>
+<span id="cb18-26"><a href="#cb18-26" tabindex="-1"></a><span class="co">#&gt; NH 0.0000 0.0806 0.0806</span></span>
+<span id="cb18-27"><a href="#cb18-27" tabindex="-1"></a><span class="co">#&gt; MD 0.1506 0.1506 0.0000</span></span>
 <span id="cb18-28"><a href="#cb18-28" tabindex="-1"></a><span class="co">#&gt; 95% confidence interval (simple quantile):</span></span>
-<span id="cb18-29"><a href="#cb18-29" tabindex="-1"></a><span class="co">#&gt;    FL              Cuba            Hisp           </span></span>
-<span id="cb18-30"><a href="#cb18-30" tabindex="-1"></a><span class="co">#&gt; NH 0.0000 - 0.0000 0.1034 - 0.2759 0.7241 - 0.8966</span></span>
-<span id="cb18-31"><a href="#cb18-31" tabindex="-1"></a><span class="co">#&gt; MD 0.2000 - 0.5714 0.4286 - 0.8000 0.0000 - 0.0000</span></span>
+<span id="cb18-29"><a href="#cb18-29" tabindex="-1"></a><span class="co">#&gt;    FL               Cuba             Hisp            </span></span>
+<span id="cb18-30"><a href="#cb18-30" tabindex="-1"></a><span class="co">#&gt; NH 0.00000 - 0.0000 0.04767 - 0.2650 0.73500 - 0.9523</span></span>
+<span id="cb18-31"><a href="#cb18-31" tabindex="-1"></a><span class="co">#&gt; MD 0.29066 - 0.6925 0.30750 - 0.7093 0.00000 - 0.0000</span></span>
 <span id="cb18-32"><a href="#cb18-32" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb18-33"><a href="#cb18-33" tabindex="-1"></a><span class="co">#&gt; MC estimate (mean): 0.5923 +/- (SE) 0.08948 </span></span>
-<span id="cb18-34"><a href="#cb18-34" tabindex="-1"></a><span class="co">#&gt; 95% confidence interval (simple quantile): 0.4331 - 0.7343</span></span>
+<span id="cb18-33"><a href="#cb18-33" tabindex="-1"></a><span class="co">#&gt; MC estimate (mean): 0.6553 +/- (SE) 0.1069 </span></span>
+<span id="cb18-34"><a href="#cb18-34" tabindex="-1"></a><span class="co">#&gt; 95% confidence interval (simple quantile): 0.5013 - 0.7795</span></span>
 <span id="cb18-35"><a href="#cb18-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb18-36"><a href="#cb18-36" tabindex="-1"></a><span class="co">#&gt; This is a subset of what&#39;s available inside this estMigConnectivity output.</span></span>
 <span id="cb18-37"><a href="#cb18-37" tabindex="-1"></a><span class="co">#&gt; For more info, try ?estTransition or str(obj_name, max.levels = 2).</span></span></code></pre></div>
@@ -990,26 +990,26 @@ data from light-level geolocators and PinPoint-10 GPS tags.</p>
 <span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="co">#&gt;  $ psi  :List of 7</span></span>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a><span class="co">#&gt;   ..$ sample  : num [1:10, 1:2, 1:3] 0 0 0 0 0 0 0 0 0 0 ...</span></span>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 3</span></span>
-<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co">#&gt;   ..$ mean    : num [1:2, 1:3] 0 0.359 0.191 0.641 0.809 ...</span></span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="co">#&gt;   ..$ mean    : num [1:2, 1:3] 0 0.439 0.168 0.561 0.832 ...</span></span>
 <span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 2</span></span>
-<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="co">#&gt;   ..$ se      : num [1:2, 1:3] 0 0.1167 0.0572 0.1167 0.0572 ...</span></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a><span class="co">#&gt;   ..$ se      : num [1:2, 1:3] 0 0.1506 0.0806 0.1506 0.0806 ...</span></span>
 <span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 2</span></span>
-<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="co">#&gt;   ..$ simpleCI: num [1:2, 1:2, 1:3] 0 0 0.2 0.571 0.103 ...</span></span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="co">#&gt;   ..$ simpleCI: num [1:2, 1:2, 1:3] 0 0 0.2907 0.6925 0.0477 ...</span></span>
 <span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 3</span></span>
-<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="co">#&gt;   ..$ bcCI    : num [1:2, 1:2, 1:3] 0 0 0.2 0.56 0.103 ...</span></span>
+<span id="cb19-12"><a href="#cb19-12" tabindex="-1"></a><span class="co">#&gt;   ..$ bcCI    : num [1:2, 1:2, 1:3] 0 0 0.286 0.7 0.04 ...</span></span>
 <span id="cb19-13"><a href="#cb19-13" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 3</span></span>
-<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a><span class="co">#&gt;   ..$ median  : num [1:2, 1:3] 0 0.388 0.196 0.613 0.804 ...</span></span>
+<span id="cb19-14"><a href="#cb19-14" tabindex="-1"></a><span class="co">#&gt;   ..$ median  : num [1:2, 1:3] 0 0.389 0.17 0.611 0.83 ...</span></span>
 <span id="cb19-15"><a href="#cb19-15" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 2</span></span>
 <span id="cb19-16"><a href="#cb19-16" tabindex="-1"></a><span class="co">#&gt;   ..$ point   : num [1:2, 1:3] 0 0.4 0.174 0.6 0.826 ...</span></span>
 <span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a><span class="co">#&gt;   .. ..- attr(*, &quot;dimnames&quot;)=List of 2</span></span>
 <span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a><span class="co">#&gt;  $ MC   :List of 10</span></span>
-<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a><span class="co">#&gt;   ..$ sample  : num [1:10] 0.58 0.734 0.549 0.433 0.711 ...</span></span>
-<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a><span class="co">#&gt;   ..$ mean    : num 0.592</span></span>
-<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="co">#&gt;   ..$ se      : num 0.0895</span></span>
-<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a><span class="co">#&gt;   ..$ simpleCI: num [1:2] 0.433 0.734</span></span>
-<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a><span class="co">#&gt;   ..$ bcCI    : num [1:2] 0.433 0.734</span></span>
-<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a><span class="co">#&gt;   ..$ hpdCI   : num [1:2] 0.433 0.734</span></span>
-<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a><span class="co">#&gt;   ..$ median  : num 0.593</span></span>
+<span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a><span class="co">#&gt;   ..$ sample  : num [1:10] 0.493 0.731 0.609 0.54 0.735 ...</span></span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a><span class="co">#&gt;   ..$ mean    : num 0.655</span></span>
+<span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a><span class="co">#&gt;   ..$ se      : num 0.107</span></span>
+<span id="cb19-22"><a href="#cb19-22" tabindex="-1"></a><span class="co">#&gt;   ..$ simpleCI: num [1:2] 0.501 0.779</span></span>
+<span id="cb19-23"><a href="#cb19-23" tabindex="-1"></a><span class="co">#&gt;   ..$ bcCI    : num [1:2] 0.493 0.791</span></span>
+<span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a><span class="co">#&gt;   ..$ hpdCI   : num [1:2] 0.493 0.791</span></span>
+<span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a><span class="co">#&gt;   ..$ median  : num 0.687</span></span>
 <span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a><span class="co">#&gt;   ..$ point   : num 0.621</span></span>
 <span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a><span class="co">#&gt;   ..$ simpleP : NULL</span></span>
 <span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a><span class="co">#&gt;   ..$ bcP     : NULL</span></span>
@@ -1650,7 +1650,7 @@ latitudinal midpoint into four regions</li>
 <span id="cb32-179"><a href="#cb32-179" tabindex="-1"></a>   results14[[i]] <span class="ot">&lt;-</span> <span class="fu">calcPsiMC</span>(breedDist14[[i]], nonbreedDist14[[i]],</span>
 <span id="cb32-180"><a href="#cb32-180" tabindex="-1"></a>                               animalLoc14[[i]], </span>
 <span id="cb32-181"><a href="#cb32-181" tabindex="-1"></a>                               <span class="at">originRelAbund =</span> breedingRelN14[[i]], </span>
-<span id="cb32-182"><a href="#cb32-182" tabindex="-1"></a>                               <span class="at">verbose =</span> F)</span>
+<span id="cb32-182"><a href="#cb32-182" tabindex="-1"></a>                               <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb32-183"><a href="#cb32-183" tabindex="-1"></a>      </span>
 <span id="cb32-184"><a href="#cb32-184" tabindex="-1"></a>   compare14.array[sim, i, <span class="st">&#39;MC&#39;</span>] <span class="ot">&lt;-</span> results14[[i]]<span class="sc">$</span>MC</span>
 <span id="cb32-185"><a href="#cb32-185" tabindex="-1"></a>      </span>
@@ -1818,7 +1818,7 @@ square</li>
 <span id="cb33-130"><a href="#cb33-130" tabindex="-1"></a>                                <span class="at">targetDist =</span> nonbreedDist15[[i]],</span>
 <span id="cb33-131"><a href="#cb33-131" tabindex="-1"></a>                                <span class="at">originRelAbund =</span> breedingRelN15[[i]],</span>
 <span id="cb33-132"><a href="#cb33-132" tabindex="-1"></a>                                <span class="at">locations =</span> animalLoc15[[i]], </span>
-<span id="cb33-133"><a href="#cb33-133" tabindex="-1"></a>                                <span class="at">verbose =</span> F)</span>
+<span id="cb33-133"><a href="#cb33-133" tabindex="-1"></a>                                <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb33-134"><a href="#cb33-134" tabindex="-1"></a>    </span>
 <span id="cb33-135"><a href="#cb33-135" tabindex="-1"></a>compare15.array[sim, i, <span class="st">&#39;MC&#39;</span>] <span class="ot">&lt;-</span> results15[[i]]<span class="sc">$</span>MC</span>
 <span id="cb33-136"><a href="#cb33-136" tabindex="-1"></a></span>
@@ -2105,7 +2105,7 @@ animals.</p>
 <span id="cb35-81"><a href="#cb35-81" tabindex="-1"></a>                             nonbreedDist14[[i]],</span>
 <span id="cb35-82"><a href="#cb35-82" tabindex="-1"></a>                             animalLoc14[[i]],</span>
 <span id="cb35-83"><a href="#cb35-83" tabindex="-1"></a>                             <span class="at">originRelAbund =</span> breedingRelN14[[i]],</span>
-<span id="cb35-84"><a href="#cb35-84" tabindex="-1"></a>                             <span class="at">verbose =</span> F)</span>
+<span id="cb35-84"><a href="#cb35-84" tabindex="-1"></a>                             <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb35-85"><a href="#cb35-85" tabindex="-1"></a> </span>
 <span id="cb35-86"><a href="#cb35-86" tabindex="-1"></a>  compare14.<span class="fl">1.</span>array[sim,<span class="st">&#39;MC&#39;</span>] <span class="ot">&lt;-</span> results14[[i]]<span class="sc">$</span>MC</span>
 <span id="cb35-87"><a href="#cb35-87" tabindex="-1"></a>    </span>
@@ -2143,7 +2143,7 @@ animals.</p>
 <span id="cb35-119"><a href="#cb35-119" tabindex="-1"></a><span class="co"># Run estimations</span></span>
 <span id="cb35-120"><a href="#cb35-120" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">567</span>)</span>
 <span id="cb35-121"><a href="#cb35-121" tabindex="-1"></a></span>
-<span id="cb35-122"><a href="#cb35-122" tabindex="-1"></a>sim14.sub <span class="ot">&lt;-</span> sim14[<span class="fu">sample.int</span>(nSimsLarge14, nSims14, T)]</span>
+<span id="cb35-122"><a href="#cb35-122" tabindex="-1"></a>sim14.sub <span class="ot">&lt;-</span> sim14[<span class="fu">sample.int</span>(nSimsLarge14, nSims14, <span class="cn">TRUE</span>)]</span>
 <span id="cb35-123"><a href="#cb35-123" tabindex="-1"></a></span>
 <span id="cb35-124"><a href="#cb35-124" tabindex="-1"></a><span class="cf">for</span> (sim <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nSims14) {</span>
 <span id="cb35-125"><a href="#cb35-125" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;Estimation&quot;</span>, sim, <span class="st">&quot;of&quot;</span>, nSims14, <span class="st">&#39;</span><span class="sc">\n</span><span class="st">&#39;</span>)</span>
@@ -2163,7 +2163,7 @@ animals.</p>
 <span id="cb35-139"><a href="#cb35-139" tabindex="-1"></a>                            <span class="at">targetAssignment =</span> animalLoc14[[sim]][, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">1</span>],</span>
 <span id="cb35-140"><a href="#cb35-140" tabindex="-1"></a>                            <span class="at">nSamples =</span> <span class="dv">1000</span>,</span>
 <span id="cb35-141"><a href="#cb35-141" tabindex="-1"></a>                            <span class="at">verbose =</span> <span class="dv">1</span>,</span>
-<span id="cb35-142"><a href="#cb35-142" tabindex="-1"></a>                            <span class="at">calcCorr =</span> T,</span>
+<span id="cb35-142"><a href="#cb35-142" tabindex="-1"></a>                            <span class="at">calcCorr =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb35-143"><a href="#cb35-143" tabindex="-1"></a>                            <span class="at">geoBias =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>),</span>
 <span id="cb35-144"><a href="#cb35-144" tabindex="-1"></a>                            <span class="at">geoVCov =</span> <span class="fu">matrix</span>(<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">2</span>))</span>
 <span id="cb35-145"><a href="#cb35-145" tabindex="-1"></a>  </span>
@@ -2227,7 +2227,7 @@ animals.</p>
 <span id="cb35-203"><a href="#cb35-203" tabindex="-1"></a>                                    <span class="fu">mean</span>(ci14.array[,<span class="st">&quot;Mantel&quot;</span>,<span class="st">&#39;lower&#39;</span>]<span class="sc">&lt;=</span>MC14 <span class="sc">&amp;</span></span>
 <span id="cb35-204"><a href="#cb35-204" tabindex="-1"></a>                                         ci14.array[,<span class="st">&quot;Mantel&quot;</span>,<span class="st">&#39;upper&#39;</span>]<span class="sc">&gt;=</span>MC14)))</span>
 <span id="cb35-205"><a href="#cb35-205" tabindex="-1"></a></span>
-<span id="cb35-206"><a href="#cb35-206" tabindex="-1"></a><span class="fu">format</span>(qualities14, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">scientific =</span> F)</span></code></pre></div>
+<span id="cb35-206"><a href="#cb35-206" tabindex="-1"></a><span class="fu">format</span>(qualities14, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">scientific =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 <p>###EXAMPLE 9 <code>estMC</code> Estimate strength of migratory
 connectivity incorporating uncertainty from location error associated
 with light-level geolocators. Again, we simulated data using the 13th
@@ -2308,7 +2308,7 @@ run examples 5 and 8 code before running this section).</p>
 <span id="cb36-73"><a href="#cb36-73" tabindex="-1"></a>results14<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&quot;list&quot;</span>, nSimsLarge14<span class="fl">.2</span>)</span>
 <span id="cb36-74"><a href="#cb36-74" tabindex="-1"></a>originDist1 <span class="ot">&lt;-</span> targetDist1 <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, nSample14<span class="fl">.2</span>, nSample14<span class="fl">.2</span>)</span>
 <span id="cb36-75"><a href="#cb36-75" tabindex="-1"></a>targetDist1[<span class="fu">lower.tri</span>(targetDist1)] <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb36-76"><a href="#cb36-76" tabindex="-1"></a>distIndices <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="sc">!</span><span class="fu">is.na</span>(targetDist1), <span class="at">arr.ind =</span> T)</span>
+<span id="cb36-76"><a href="#cb36-76" tabindex="-1"></a>distIndices <span class="ot">&lt;-</span> <span class="fu">which</span>(<span class="sc">!</span><span class="fu">is.na</span>(targetDist1), <span class="at">arr.ind =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb36-77"><a href="#cb36-77" tabindex="-1"></a></span>
 <span id="cb36-78"><a href="#cb36-78" tabindex="-1"></a><span class="co"># Run simulations</span></span>
 <span id="cb36-79"><a href="#cb36-79" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">7</span>)</span>
@@ -2347,7 +2347,7 @@ run examples 5 and 8 code before running this section).</p>
 <span id="cb36-112"><a href="#cb36-112" tabindex="-1"></a>                                nonbreedDist14[[i]],</span>
 <span id="cb36-113"><a href="#cb36-113" tabindex="-1"></a>                                animalLoc14<span class="fl">.2</span>,</span>
 <span id="cb36-114"><a href="#cb36-114" tabindex="-1"></a>                                <span class="at">originRelAbund =</span> breedingRelN14[[i]],</span>
-<span id="cb36-115"><a href="#cb36-115" tabindex="-1"></a>                                <span class="at">verbose =</span> F)</span>
+<span id="cb36-115"><a href="#cb36-115" tabindex="-1"></a>                                <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb36-116"><a href="#cb36-116" tabindex="-1"></a>    </span>
 <span id="cb36-117"><a href="#cb36-117" tabindex="-1"></a>    compare14.<span class="fl">2.</span>array[sim, <span class="st">&#39;MC&#39;</span>] <span class="ot">&lt;-</span> results14[[i]]<span class="sc">$</span>MC</span>
 <span id="cb36-118"><a href="#cb36-118" tabindex="-1"></a>    </span>
@@ -2398,7 +2398,7 @@ run examples 5 and 8 code before running this section).</p>
 <span id="cb36-163"><a href="#cb36-163" tabindex="-1"></a><span class="co"># Run estimations</span></span>
 <span id="cb36-164"><a href="#cb36-164" tabindex="-1"></a></span>
 <span id="cb36-165"><a href="#cb36-165" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">567</span>)</span>
-<span id="cb36-166"><a href="#cb36-166" tabindex="-1"></a>sim14.<span class="fl">2.</span>sub <span class="ot">&lt;-</span> sim14<span class="fl">.2</span>[<span class="fu">sample.int</span>(nSimsLarge14<span class="fl">.2</span>, nSims14<span class="fl">.2</span>, T)]</span>
+<span id="cb36-166"><a href="#cb36-166" tabindex="-1"></a>sim14.<span class="fl">2.</span>sub <span class="ot">&lt;-</span> sim14<span class="fl">.2</span>[<span class="fu">sample.int</span>(nSimsLarge14<span class="fl">.2</span>, nSims14<span class="fl">.2</span>, <span class="cn">TRUE</span>)]</span>
 <span id="cb36-167"><a href="#cb36-167" tabindex="-1"></a></span>
 <span id="cb36-168"><a href="#cb36-168" tabindex="-1"></a><span class="cf">for</span> (sim <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nSims14<span class="fl">.2</span>) {</span>
 <span id="cb36-169"><a href="#cb36-169" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;Estimation&quot;</span>, sim, <span class="st">&quot;of&quot;</span>, nSims14<span class="fl">.2</span>, <span class="st">&#39;</span><span class="sc">\n</span><span class="st">&#39;</span>)</span>
@@ -2423,10 +2423,10 @@ run examples 5 and 8 code before running this section).</p>
 <span id="cb36-188"><a href="#cb36-188" tabindex="-1"></a>                            <span class="at">targetAssignment =</span> results14<span class="fl">.2</span>[[sim]]<span class="sc">$</span>targetSample,</span>
 <span id="cb36-189"><a href="#cb36-189" tabindex="-1"></a>                            <span class="at">nSamples =</span> <span class="dv">1000</span>,</span>
 <span id="cb36-190"><a href="#cb36-190" tabindex="-1"></a>                            <span class="at">verbose =</span> <span class="dv">0</span>,</span>
-<span id="cb36-191"><a href="#cb36-191" tabindex="-1"></a>                            <span class="at">calcCorr =</span> T,</span>
+<span id="cb36-191"><a href="#cb36-191" tabindex="-1"></a>                            <span class="at">calcCorr =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb36-192"><a href="#cb36-192" tabindex="-1"></a>                            <span class="at">geoBias =</span> geoBias,</span>
 <span id="cb36-193"><a href="#cb36-193" tabindex="-1"></a>                            <span class="at">geoVCov =</span> geoVCov,</span>
-<span id="cb36-194"><a href="#cb36-194" tabindex="-1"></a>                            <span class="at">isGL =</span> T,</span>
+<span id="cb36-194"><a href="#cb36-194" tabindex="-1"></a>                            <span class="at">isGL =</span> <span class="cn">TRUE</span>,</span>
 <span id="cb36-195"><a href="#cb36-195" tabindex="-1"></a>                            <span class="at">targetSites =</span> winteringPolys2[[i]], </span>
 <span id="cb36-196"><a href="#cb36-196" tabindex="-1"></a>                            <span class="at">maintainLegacyOutput =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb36-197"><a href="#cb36-197" tabindex="-1"></a>  </span>
@@ -2499,7 +2499,7 @@ run examples 5 and 8 code before running this section).</p>
 <span id="cb36-264"><a href="#cb36-264" tabindex="-1"></a>                              <span class="fu">mean</span>(ci14.<span class="fl">2.</span>array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">&#39;lower&#39;</span>] <span class="sc">&lt;=</span> MC14 <span class="sc">&amp;</span> </span>
 <span id="cb36-265"><a href="#cb36-265" tabindex="-1"></a>                                   ci14.<span class="fl">2.</span>array[, <span class="st">&quot;Mantel&quot;</span>, <span class="st">&#39;upper&#39;</span>] <span class="sc">&gt;=</span> MC14)))</span>
 <span id="cb36-266"><a href="#cb36-266" tabindex="-1"></a></span>
-<span id="cb36-267"><a href="#cb36-267" tabindex="-1"></a><span class="fu">format</span>(qualities14<span class="fl">.2</span>, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">scientific =</span> F)</span>
+<span id="cb36-267"><a href="#cb36-267" tabindex="-1"></a><span class="fu">format</span>(qualities14<span class="fl">.2</span>, <span class="at">digits =</span> <span class="dv">2</span>, <span class="at">scientific =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb36-268"><a href="#cb36-268" tabindex="-1"></a></span>
 <span id="cb36-269"><a href="#cb36-269" tabindex="-1"></a></span>
 <span id="cb36-270"><a href="#cb36-270" tabindex="-1"></a></span>
@@ -2616,7 +2616,7 @@ dispersal.</p>
 <span id="cb37-62"><a href="#cb37-62" tabindex="-1"></a>                              breedingRelN,</span>
 <span id="cb37-63"><a href="#cb37-63" tabindex="-1"></a>                              birdLocDisp[[i]]<span class="sc">$</span>animalLoc,</span>
 <span id="cb37-64"><a href="#cb37-64" tabindex="-1"></a>                              <span class="at">years=</span>j,</span>
-<span id="cb37-65"><a href="#cb37-65" tabindex="-1"></a>                              <span class="at">verbose =</span> F)</span>
+<span id="cb37-65"><a href="#cb37-65" tabindex="-1"></a>                              <span class="at">verbose =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb37-66"><a href="#cb37-66" tabindex="-1"></a>    </span>
 <span id="cb37-67"><a href="#cb37-67" tabindex="-1"></a>    Disp.df<span class="sc">$</span>MC[j <span class="sc">+</span> (i <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> nYears] <span class="ot">&lt;-</span> temp.results<span class="sc">$</span>MC</span>
 <span id="cb37-68"><a href="#cb37-68" tabindex="-1"></a>  }</span>
