@@ -1,5 +1,5 @@
 library(MigConnectivity)
-context('Calculate migratory connectivity')
+context('Calculate migratory connectivity strength')
 
 test_that('psi examples generate right MC values', {
   psiMats <- list(matrix(0.25, 4, 4), #"Full Mix"

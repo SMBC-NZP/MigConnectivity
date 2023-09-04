@@ -1,9 +1,13 @@
 # MigConnectivity [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1002228.svg)](https://zenodo.org/record/1002228#.Wm_Oh3xG1EY)    
 The MigConnectivity package quantifies the pattern and strength of migratory connectivity for migratory animals
 
+The pattern of migratory connectivity can be expressed as migratory transition probabilities between sites or regions in any two phases of the annual cycle.
+
 MC is a standardized metric to quantify migratory connectivity strength between two phases 
 of the annual cycle. MC is independent of data type and accounts for the relative abundance of 
-populations distributed across a seasonal range. See the [Vignette](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes)  for details and examples.
+populations distributed across a seasonal range. 
+
+See the [vignettes](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes)  for details and examples.
 
 ## Installation
 
@@ -13,7 +17,8 @@ devtools::install_github("SMBC-NZP/MigConnectivity")
 ```
 
 to install the vignette on your machine along with the package use the following code.   
-*Note* it takes quite a bit longer to download the package if `build_vignettes = TRUE`
+*Note* it takes a bit longer to download the package if `build_vignettes = TRUE`
+We also provide html copies of the vignettes, so they should be available even if you don't do this. 
 
 ```r
 devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)

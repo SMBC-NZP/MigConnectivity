@@ -1,12 +1,12 @@
 ---
-title: 'Preparing data to estimate transition probabilites and/or migratory connecitivity strength using the ''MigConnectivity'' package'
+title: 'MigConnectivity package: worked example'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package}
+  %\VignetteIndexEntry{MigConnectivity package: worked example}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 bibliography: mc_library.bib 
@@ -29,7 +29,7 @@ bias and variance metrics using light-level geolocator data derived from the
 
 This MigConnectivity package provides tools for estimating the pattern and strength
 of migratory connectivity. We've developed methods to integrate intrinsic markers,
-tracking, and long-distance band reencounter data collected from the same or
+tracking, and band reencounter data collected from the same or
 different individuals. The package functionality includes integrated analyses
 that account for differences in precision, bias, reencounter probability, 
 and directionality among different data types (banding reencounter, 
@@ -45,10 +45,7 @@ functionality in the MigConnectivity package. There are multiple published Yello
 
 We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.cap="Yellow Warbler nonbreeding regions. The breeding regions (washed out) are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
-
-# THIS CHUNK IS NOT PRINTED TO THE VIGNETTE # 
-# BUT READS IN SOME DATA NEEDED TO RUN THE ANALYSIS # 
+```{r, message = FALSE, warning = FALSE}
 
 library(MigConnectivity)
 library(sf)
@@ -70,9 +67,11 @@ YEWA_target_sites <- YEWA_target_sites[,c("Region","targetSite","geometry")]
 # vector of target names #
 targetNames <- c("Pacific and Central Mexico", "Atlantic Lowland Mexico",
                  "Central America", "South America")
+```
 
 
 
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=7, fig.height=5, fig.cap="Yellow Warbler nonbreeding regions. The breeding regions (washed out) are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
 # Define the origin sites
 file.names <- paste0("originSitesYEWA.", c("shp", "dbf", "prj", "shx"))
 urls <- paste0(baseURL, file.names, '?raw=true')
@@ -96,10 +95,13 @@ par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
      ylim = c(mins[2],maxs[2]), 
      xlim = c(mins[1],maxs[1]), 
-     col = viridis::viridis(n = 5, option = "G", alpha = 0.25), 
+     col = c("#78a18d40", "#dece6640", "#a8a80040", "#56995940", "#c4d09740"), 
      border = "white", 
      lwd = 0.25)
-plot(YEWA_target_sites$geometry, col = viridis::viridis(n = 4, option = "D"), border = "white", lwd = 0.25, add = TRUE)
+plot(YEWA_target_sites$geometry, lwd = 0.25, add = TRUE, 
+     col = c("#E9D097", "#67B8D6", "#1C77A3", "#DEA785"), border = "white")
+legend("topright", legend = targetNames, 
+       fill = c("#E9D097", "#67B8D6", "#1C77A3", "#DEA785"), border = "white")
 ```
 
 ### Define breeding regions
@@ -109,8 +111,13 @@ The Yellow Warbler genoscape identifies 5 genetically distinct breeding populati
 Below we create a vector of the origin names. These names correspond with the genoscape. 
 ```{r, eval = FALSE}
 # Load shapefile of origin sites derived from genoscape data
-YEWA_origin_sites <- sf::st_read("originSitesYEWA.shp", 
-                                 quiet = TRUE)
+# Define the origin sites
+file.names <- paste0("originSitesYEWA.", c("shp", "dbf", "prj", "shx"))
+urls <- paste0(baseURL, file.names, '?raw=true')
+temp <- paste(newDir, file.names, sep = '/')
+for (i in 1:length(file.names))
+  utils::download.file(urls[i], temp[i], mode = 'wb')
+YEWA_origin_sites <- sf::st_read(temp[1], quiet = TRUE)
 # vector of origin names 
 originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
 
@@ -118,18 +125,22 @@ originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
 nOriginSites <- 5
 ```
 
-```{r, echo = FALSE, fig.cap="Yellow Warbler breeding regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions (washed out) were identified by ecoregions across the ranges"}
+```{r, echo = FALSE, fig.width=7, fig.height=5, fig.cap="Yellow Warbler breeding regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions (washed out) were identified by ecoregions across the ranges"}
 
 par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
      ylim = c(mins[2],maxs[2]), 
      xlim = c(mins[1],maxs[1]), 
-     col = viridis::viridis(n = 5, option = "G"), 
+     col = c("#78a18dff", "#dece66ff", "#a8a800ff", "#569959ff", "#c4d097ff"), 
      border = "white", 
      lwd = 0.25)
 plot(YEWA_target_sites$geometry, 
-     col = viridis::viridis(n = 4, option = "D", alpha = 0.25),
+     col = c("#E9D09740", "#67B8D640", "#1C77A340", "#DEA78540"),
      border = "white", lwd = 0.25, add = TRUE)
+legend("topright", legend = originNames, 
+       fill = c("#78a18dff", "#dece66ff", "#a8a800ff", "#569959ff", "#c4d097ff"), 
+       border = "white")
+
 ```
 
 ### Sample data 
@@ -588,7 +599,7 @@ plot(psiYEWA, legend = "top", cex = 0.4)
 #### SGAT {#SGAT_bias}
 
 The code below is a repeatable example for how to calculate location bias and location error using coordinates derived from light-level geolocators (see @cohen_quantifying_2018) analyzed using the
-SGAT package [@wotherspoon_sgat_2017; @lisovski_lightlevel_2020]. 
+SGAT package [@wotherspoon_sgat_2017; @lisovski_light-level_2020]. 
     
 ```{r, eval = FALSE}
 # Load in projections
@@ -712,7 +723,7 @@ geo.vcov <- vcov(geo.error.model)
   
 #### FLightR {#FLightR_bias}
 
-The code below is a repeatable example for how to calculate location bias and location error using location estimates derived from light-level geolocators analyzed in FLightR [@rakhimberdiev_flightr_2017; @lisovski_lightlevel_2020]. The geolocator data were processed and reported by @witynski_crosswise_2018.
+The code below is a repeatable example for how to calculate location bias and location error using location estimates derived from light-level geolocators analyzed in FLightR [@rakhimberdiev_flightr_2017; @lisovski_light-level_2020]. The geolocator data were processed and reported by @witynski_crosswise_2018.
 
 ```{r, eval = FALSE}
 # Capture locations #

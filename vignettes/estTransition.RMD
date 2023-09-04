@@ -6,7 +6,7 @@ output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{MigConnectivity package}
+  %\VignetteIndexEntry{Estimate transition probabilities with the ''MigConnectivity'' package}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 bibliography: mc_library.bib 
@@ -19,16 +19,14 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 library(MigConnectivity)
 ```
 
-A growing number of tools are available for studying the seasonal distributions of migratory animals across the annual cycle including individual tracking, assignments quantifying range-wide migratory connectivity patterns. However, integrating data types requires methods that account for the differences in sampling and differences in the precision and bias inherent to each data type. The `MigConnectivity` package provides tools for estimating the pattern and strength of migratory connectivity between two or more phases of the annual cycle. We developed methods to integrate intrinsic marker, tracking, and long-distance band reencounter data collected from the same or different individuals. We added functionality to integrate analyses that account for differences among seasonal assignment from different data types (banding reencounter, light-level geolocator, stable isotopes in tissues, genetics, and GPS) in precision, bias, reencounter probability, and directionality (i.e., combining breeding to nonbreeding and nonbreeding to breeding). 
-
-The `estTransition` estimates migratory connectivity patterns (ψ, transition probabilities) from seasonal movement data.
+The `estTransition` estimates migratory connectivity pattern (ψ, transition probabilities) from seasonal movement data.
 
 The `estStrength` function estimates the strength of migratory connectivity from transition probabilities (MC). See the [estStrength](estStrength.html) vignette for more details. 
 
 
 ## `estTransition` - Estimate transition probabilities while incorporating location and other sampling uncertainty
 
-### Example 1: Combining two types of tracking technologies (Light-level Geolocator & GPS)
+### Example 1: Combining two types of tracking technologies (light-level geolocator & GPS)
 
 To estimate transition probabilities (<code>psi</code>(ψ)) and include location uncertainty the following data are needed:  
 

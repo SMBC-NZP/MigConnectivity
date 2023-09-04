@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-08-14" />
+<meta name="date" content="2023-09-04" />
 
 <title>Estimate transition probabilities with the ‘MigConnectivity’ package</title>
 
@@ -363,36 +363,20 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Estimate transition probabilities with the
 ‘MigConnectivity’ package</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-08-14</h4>
+<h4 class="date">2023-09-04</h4>
 
 
 
-<p>A growing number of tools are available for studying the seasonal
-distributions of migratory animals across the annual cycle including
-individual tracking, assignments quantifying range-wide migratory
-connectivity patterns. However, integrating data types requires methods
-that account for the differences in sampling and differences in the
-precision and bias inherent to each data type. The
-<code>MigConnectivity</code> package provides tools for estimating the
-pattern and strength of migratory connectivity between two or more
-phases of the annual cycle. We developed methods to integrate intrinsic
-marker, tracking, and long-distance band reencounter data collected from
-the same or different individuals. We added functionality to integrate
-analyses that account for differences among seasonal assignment from
-different data types (banding reencounter, light-level geolocator,
-stable isotopes in tissues, genetics, and GPS) in precision, bias,
-reencounter probability, and directionality (i.e., combining breeding to
-nonbreeding and nonbreeding to breeding).</p>
 <p>The <code>estTransition</code> estimates migratory connectivity
-patterns (ψ, transition probabilities) from seasonal movement data.</p>
+pattern (ψ, transition probabilities) from seasonal movement data.</p>
 <p>The <code>estStrength</code> function estimates the strength of
 migratory connectivity from transition probabilities (MC). See the <a href="estStrength.html">estStrength</a> vignette for more details.</p>
 <div id="esttransition---estimate-transition-probabilities-while-incorporating-location-and-other-sampling-uncertainty" class="section level2">
 <h2><code>estTransition</code> - Estimate transition probabilities while
 incorporating location and other sampling uncertainty</h2>
 <div id="example-1-combining-two-types-of-tracking-technologies-light-level-geolocator-gps" class="section level3">
-<h3>Example 1: Combining two types of tracking technologies (Light-level
-Geolocator &amp; GPS)</h3>
+<h3>Example 1: Combining two types of tracking technologies (light-level
+geolocator &amp; GPS)</h3>
 <p>To estimate transition probabilities (<code>psi</code>(ψ)) and
 include location uncertainty the following data are needed:</p>
 <ol style="list-style-type: decimal">
@@ -494,16 +478,16 @@ vector.</p>
 ## 
 ## Transition probability (psi) estimates (mean):
 ##        FL   Cuba   Hisp
-## NH 0.0000 0.1881 0.8119
-## MD 0.3406 0.6594 0.0000
+## NH 0.0000 0.1816 0.8184
+## MD 0.3539 0.6461 0.0000
 ## +/- SE:
 ##        FL    Cuba    Hisp
-## NH 0.0000 0.09926 0.09926
-## MD 0.1704 0.17043 0.00000
+## NH 0.0000 0.06581 0.06581
+## MD 0.1544 0.15440 0.00000
 ## 95% confidence interval (simple quantile):
-##    FL               Cuba             Hisp            
-## NH 0.00000 - 0.0000 0.06667 - 0.3711 0.62887 - 0.9333
-## MD 0.04091 - 0.5431 0.45694 - 0.9591 0.00000 - 0.0000
+##    FL              Cuba            Hisp           
+## NH 0.0000 - 0.0000 0.1071 - 0.2629 0.7371 - 0.8929
+## MD 0.1142 - 0.5533 0.4467 - 0.8858 0.0000 - 0.0000
 ## 
 ## This is a subset of what&#39;s available inside this estMigConnectivity output.
 ## For more info, try ?estTransition or str(obj_name, max.levels = 2).</code></pre>
@@ -518,7 +502,7 @@ supported.</p>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="fu">plot</span>(OVENpsi, <span class="at">legend =</span> <span class="st">&quot;top&quot;</span>, <span class="at">cex =</span> <span class="fl">0.5</span>, <span class="at">las =</span> <span class="dv">2</span>)</span></code></pre></div>
 <div class="float">
-<img src="data:image/png;base64,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" alt="Figure 2. Transition probablities of Ovenbirds from breeding origin sites to non-breeding target sites" />
+<img src="data:image/png;base64,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" alt="Figure 2. Transition probablities of Ovenbirds from breeding origin sites to non-breeding target sites" />
 <div class="figcaption">Figure 2. Transition probablities of Ovenbirds
 from breeding origin sites to non-breeding target sites</div>
 </div>
@@ -657,16 +641,16 @@ you leave <code>dataOverlapSetting</code> at “dummy”</p>
 <pre><code>## Warning in estTransitionBoot(isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster, : Not all target capture locations are within targetSites. Assigning to closest site.
 ## Affects animals: 133,134,135,136,137,138,139,140,141,142,143,144,145,146,184,189,190,191,192</code></pre>
 <pre><code>## Starting bootstrap
-## Bootstrap Run 1 of 10 at Mon Aug 14 17:35:05 2023 
-## Bootstrap Run 2 of 10 at Mon Aug 14 17:35:06 2023 
-## Bootstrap Run 3 of 10 at Mon Aug 14 17:35:06 2023 
-## Bootstrap Run 4 of 10 at Mon Aug 14 17:35:06 2023 
-## Bootstrap Run 5 of 10 at Mon Aug 14 17:35:06 2023 
-## Bootstrap Run 6 of 10 at Mon Aug 14 17:35:06 2023 
-## Bootstrap Run 7 of 10 at Mon Aug 14 17:35:07 2023 
-## Bootstrap Run 8 of 10 at Mon Aug 14 17:35:07 2023 
-## Bootstrap Run 9 of 10 at Mon Aug 14 17:35:07 2023 
-## Bootstrap Run 10 of 10 at Mon Aug 14 17:35:07 2023</code></pre>
+## Bootstrap Run 1 of 10 at Mon Sep  4 11:34:20 2023 
+## Bootstrap Run 2 of 10 at Mon Sep  4 11:34:20 2023 
+## Bootstrap Run 3 of 10 at Mon Sep  4 11:34:20 2023 
+## Bootstrap Run 4 of 10 at Mon Sep  4 11:34:20 2023 
+## Bootstrap Run 5 of 10 at Mon Sep  4 11:34:20 2023 
+## Bootstrap Run 6 of 10 at Mon Sep  4 11:34:21 2023 
+## Bootstrap Run 7 of 10 at Mon Sep  4 11:34:21 2023 
+## Bootstrap Run 8 of 10 at Mon Sep  4 11:34:21 2023 
+## Bootstrap Run 9 of 10 at Mon Sep  4 11:34:21 2023 
+## Bootstrap Run 10 of 10 at Mon Sep  4 11:34:22 2023</code></pre>
 <div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># Take a look at the results # </span></span>
 <span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>psiYEWA</span></code></pre></div>
 <pre><code>## Migratory Connectivity Estimates

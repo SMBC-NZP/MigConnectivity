@@ -1,12 +1,12 @@
 ---
-title: 'Compare the strength of migratory connectivity between taxa using the diffMC function from the ''MigConnectivity'' package'
+title: 'diffMC Function'
 author: "Jeffrey A. Hostetler, Michael T. Hallworth"
 date: '`r Sys.Date()`'
 output:
   rmarkdown::html_vignette: default
   rmarkdown::pdf_document: default
 vignette: |
-  %\VignetteIndexEntry{Compare the strength of migratory connectivity between taxa using the diffMC function from the ''MigConnectivity'' package}
+  %\VignetteIndexEntry{diffMC Function}
   %\usepackage[utf8]{inputenc}
   %\VignetteEngine{knitr::rmarkdown}
 ---

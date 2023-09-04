@@ -584,10 +584,18 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
                            originNames = NULL, targetNames = NULL,
                            method = "SANN") {
   if (is.null(counts) && length(originAssignment)>0) {
-    nOriginSites <- length(originNames); nTargetSites <- length(targetNames)
-    counts <- table(factor(originAssignment, levels = 1:nOriginSites),
-                    factor(targetAssignment, levels = 1:nTargetSites))
-    names(counts) <- list(originNames, targetNames)
+    if (is.null(originNames))
+      nOriginSites <- length(unique(originAssignment))
+    else
+      nOriginSites <- length(originNames)
+    if (is.null(targetNames))
+      nTargetSites <- length(unique(targetAssignment))
+    else
+      nTargetSites <- length(targetNames)
+    counts <- as(table(factor(originAssignment, levels = 1:nOriginSites),
+                       factor(targetAssignment, levels = 1:nTargetSites)),
+                 "matrix")
+    dimnames(counts) <- list(originNames, targetNames)
   }
   if (is.null(banded))
     return(list(psi = prop.table(counts, 1)))
@@ -664,5 +672,8 @@ reversePi <- reverseTransition
 #' @export
 calcPsi <- calcTransition
 
+#' @rdname calcMC
+#' @export
+calcStrength <- calcMC
 
 

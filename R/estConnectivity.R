@@ -460,6 +460,7 @@ model{
   }
   cat("}")
   sink()
+  # print(nAges)
   # print(file)
   # print(jags.data)
   # print(rowSums(jags.data$recmat))
