@@ -20,7 +20,8 @@ estStrength(
   alpha = 0.05,
   approxSigTest = FALSE,
   sigConst = 0,
-  maintainLegacyOutput = FALSE
+  maintainLegacyOutput = FALSE,
+  returnAllInput = TRUE
 )
 }
 \arguments{
@@ -31,8 +32,10 @@ matrix}
 matrix}
 
 \item{originRelAbund}{Relative abundance estimates at B origin sites. Either
-a numeric vector of length B that sums to 1 or an mcmc object with at least
-\code{nSamples} rows and columns including 'relN[1]' through 'relN[B]'}
+a numeric vector of length B that sums to 1, or an mcmc object (such as is
+produced by \code{\link{modelCountDataJAGS}}) or matrix with at least
+\code{nSamples} rows. If there are more than B columns, the relevant columns
+should be labeled "relN[1]" through "relN[B]"}
 
 \item{psi}{Transition probabilities between B origin and W target sites.
 Either a matrix with B rows and W columns where rows sum to 1, an array with
@@ -62,8 +65,8 @@ internal use}
 \code{originRelAbund}. The purpose is to estimate sampling uncertainty;
 higher values here will do so with more precision}
 
-\item{row0}{If \code{originRelAbund} is an mcmc object, this can be set
-to 0 (default) or any greater integer to specify where to stop ignoring
+\item{row0}{If \code{originRelAbund} is an mcmc object or array, this can be
+set to 0 (default) or any greater integer to specify where to stop ignoring
 samples ("burn-in")}
 
 \item{verbose}{0 (default) to 2. 0 prints no output during run. 1 prints
@@ -84,9 +87,13 @@ updated the structure of the estimates. If you have legacy code that refers
 to elements within an \code{estMigConnectivity} object (results of
 \code{estMC}), you can set this to TRUE to also keep the old structure.
 Defaults to FALSE}
+
+\item{returnAllInput}{if TRUE (the default) the output includes all of the
+inputs. If FALSE, only the inputs currently used by another MigConnectivity
+function are included in the output.}
 }
 \value{
-\code{estMC} returns a list with the elements:
+\code{estStrength} returns a list with the elements:
 \describe{
   \item{\code{MC}}{List containing estimates of migratory connectivity
    strength:

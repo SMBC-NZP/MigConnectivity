@@ -2,7 +2,7 @@
 % Please edit documentation in R/instrinsicIsotopes.R
 \name{isoAssign}
 \alias{isoAssign}
-\title{Generate probabilitistic isotope assignments}
+\title{Generate probabilistic isotope assignments}
 \usage{
 isoAssign(
   isovalues,

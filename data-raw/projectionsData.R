@@ -42,4 +42,4 @@ projections <- list(EquidistConic = EquidistConic, WGS84 = WGS84,
                     Africa = Africa, AsiaNorth = AsiaNorth,
                     AsiaSouth = AsiaSouth, Arctic = Arctic,
                     Antarctic = Antarctic)
-devtools::use_data(projections, overwrite = T)
+devtools::use_data(projections, overwrite = TRUE)

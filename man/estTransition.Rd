@@ -2,6 +2,7 @@
 % Please edit documentation in R/estConnectivity.R
 \name{estTransition}
 \alias{estTransition}
+\alias{estPsi}
 \title{Estimate psi (transition probabilities between locations in two phases of
 the annual cycle)}
 \usage{
@@ -36,27 +37,81 @@ estTransition(
   maxTries = 300,
   nBurnin = 5000,
   nChains = 3,
-  nThin = 1
+  nThin = 1,
+  dataOverlapSetting = c("dummy", "none", "named"),
+  fixedZero = NULL,
+  targetRelAbund = NULL,
+  method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
+  m = NULL,
+  psiPrior = NULL,
+  returnAllInput = TRUE
+)
+
+estPsi(
+  originSites = NULL,
+  targetSites = NULL,
+  originPoints = NULL,
+  targetPoints = NULL,
+  originAssignment = NULL,
+  targetAssignment = NULL,
+  originNames = NULL,
+  targetNames = NULL,
+  nSamples = 1000,
+  isGL = FALSE,
+  isTelemetry = FALSE,
+  isRaster = FALSE,
+  isProb = FALSE,
+  captured = "origin",
+  geoBias = NULL,
+  geoVCov = NULL,
+  geoBiasOrigin = NULL,
+  geoVCovOrigin = NULL,
+  targetRaster = NULL,
+  originRaster = NULL,
+  banded = NULL,
+  reencountered = NULL,
+  verbose = 0,
+  alpha = 0.05,
+  resampleProjection = "ESRI:102010",
+  nSim = ifelse(any(isRaster & isGL) || any(isRaster & isProb) || any(isGL & isProb),
+    5000, ifelse(any(isGL), 1000, ifelse(any(isRaster), 10, 1))),
+  maxTries = 300,
+  nBurnin = 5000,
+  nChains = 3,
+  nThin = 1,
+  dataOverlapSetting = c("dummy", "none", "named"),
+  fixedZero = NULL,
+  targetRelAbund = NULL,
+  method = c("bootstrap", "MCMC", "m-out-of-n-bootstrap"),
+  m = NULL,
+  psiPrior = NULL,
+  returnAllInput = TRUE
 )
 }
 \arguments{
-\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the origin season.}
+\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
+SpatialPolygons) defining the geographic representation of sites in the
+origin season.}
 
-\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining the geographic representation of sites in the target season.}
+\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
+SpatialPolygons) defining the geographic representation of sites in the
+target season.}
 
 \item{originPoints}{A \code{sf} or \code{SpatialPoints} object, with number
 of rows or length being the number of animals tracked. Each point indicates
 the origin location of an animal (or point estimate of same, for GL animals
 released on target sites). Note that to simplify input of multiple
 data types both between and for the same animal, if origin points are
-provided for any animal, they must be provided for all (can be dummy values)}
+provided for any animal, they must be provided for all except banding data
+(can be dummy values), unless \code{dataOverlapSetting} is set to "none".}
 
 \item{targetPoints}{For GL or telemetry data, a \code{sf} or
 \code{SpatialPoints} object, with length or number of rows number of animals
 tracked. Each point indicates the point estimate location of an animal in
 the target season. Note that to simplify input of multiple
 data types both between and for the same animal, if target points are
-provided for any animal, they must be provided for all (can be dummy values)}
+provided for any animal, they must be provided for all except banding data
+(can be dummy values), unless \code{dataOverlapSetting} is set to "none".}
 
 \item{originAssignment}{Assignment of animals to origin season sites. Either
 an integer vector with length number of animals tracked or a matrix of
@@ -66,7 +121,10 @@ in the target sites where there is uncertainty about their origin site, for
 example from genetic population estimates from the rubias package.
 Optional, but some combination of these inputs should be defined. Note that
 if \code{originAssignment} is a probability table, animals with known origin
-sites can have 1 in that column and 0s in all others}
+sites can have 1 in that column and 0s in all others. Also note that if
+\code{method} is "MCMC", anything in \code{originAssignment} and
+\code{targetAssignment} will be assumed to represent animals tracked via
+telemetry, with known origin and target sites.}
 
 \item{targetAssignment}{Assignment of animals to target season sites. Either
 an integer vector with length number of animals tracked or a matrix of
@@ -76,47 +134,54 @@ in the origin sites where there is uncertainty about their target site, for
 example from genetic population estimates from the rubias package.
 Optional, but some combination of these inputs needs to be defined. Note
 that if \code{targetAssignment} is a probability table, animals with known
-target sites can have 1 in that column and 0s in all others}
+target sites can have 1 in that column and 0s in all others.}
 
 \item{originNames}{Optional, but recommended to keep track. Vector of names
 for the origin sites. If not provided, the function will either try to get
-these from another input or provide default names (capital letters)}
+these from another input or provide default names (capital letters).}
 
 \item{targetNames}{Optional, but recommended to keep track. Vector of names
 for the target sites. If not provided, the function will either try to get
-these from another input or provide default names (numbers)}
+these from another input or provide default names (numbers).}
 
-\item{nSamples}{Number of post-burn-in MCMC samples to store (band
-data) OR number of bootstrap runs for GL, telemetry, probability assignment,
-and/or raster data. In the latter case, animals are sampled with replacement
-for each. For all, the purpose is to estimate sampling uncertainty}
+\item{nSamples}{Number of post-burn-in MCMC samples to store (\code{method}
+== "MCMC") OR number of bootstrap runs for \code{method}
+== "bootstrap". In the latter case, animals are sampled with replacement
+for each. For all, the purpose is to estimate sampling uncertainty.}
 
 \item{isGL}{Indicates whether or which animals were tracked with geolocators.
 Should be either single TRUE or FALSE value, or vector with length of
-number of animals tracked, with TRUE or FALSE for each animal in data. For
+number of animals tracked, with TRUE or FALSE for each animal in data
+(except those in \code{banded}, which are handled separately). For
 TRUE animals, the model applies \code{geoBias} and \code{geoVCov} to
 \code{targetPoints} where \code{captured} == "origin" or "neither" and
 \code{geoBiasOrigin} and \code{geoVCovOrigin} to
-\code{originPoints} where \code{captured} == "target" or "neither"}
+\code{originPoints} where \code{captured} == "target" or "neither".
+Geolocator data should be entered as \code{originPoints} and
+\code{targetPoints}.}
 
 \item{isTelemetry}{Indicates whether or which animals were tracked with
 telemetry/GPS (no location uncertainty on either end).
 Should be either single TRUE or FALSE value, or vector with length of
-number of animals tracked, with TRUE or FALSE for each animal in data}
+number of animals tracked, with TRUE or FALSE for each animal in data
+(except those in \code{banded}, which are handled separately).
+Telemetry data can be entered as points or using the \code{targetAssignment}
+and \code{originAssignment} arguments.}
 
 \item{isRaster}{Indicates whether or which animals were tracked with
 intrinsic markers (e.g., genetics or isotopes), with location uncertainty
 expressed as a raster of probabilities by grid cells, either in
 \code{targetRaster} or \code{originRaster}. Should be either single TRUE or
 FALSE value, or vector with length of number of animals tracked, with TRUE
-or FALSE for each animal in data}
+or FALSE for each animal in data (except those in \code{banded}, which are
+handled separately).}
 
 \item{isProb}{Indicates whether or which animals were tracked with
 intrinsic markers (e.g., genetics or isotopes), with location uncertainty
 expressed as a probability table, either in \code{targetAssignment} or
-\code{originAssignment}. Should be either single TRUE or FALSE value, or vector
-with length of number of animals tracked, with TRUE or FALSE for each animal
-in data}
+\code{originAssignment}. Should be either single TRUE or FALSE value, or
+vector with length of number of animals tracked, with TRUE or FALSE for each
+animal in data (except those in \code{banded}, which are handled separately).}
 
 \item{captured}{Indicates whether or which animals were captured in the
 origin sites, the target sites, or neither (another phase of the annual
@@ -124,84 +189,160 @@ cycle). Location uncertainty will only be applied where the animal was not
 captured. So this doesn't matter for telemetry data, and is assumed to be
 "origin" for band return data. Should be either single "origin" (default),
 "target", or "neither" value, or a character vector with length of number of
-animals tracked, with "origin", "target", or "neither" for each animal}
+animals tracked, with "origin", "target", or "neither" for each animal.}
 
 \item{geoBias}{For GL data, vector of length 2 indicating expected bias
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters)}
+\code{resampleProjection} units (default meters).}
 
 \item{geoVCov}{For GL data, 2x2 matrix with expected variance/covariance
 in longitude and latitude of \code{targetPoints}, in
-\code{resampleProjection} units (default meters)}
+\code{resampleProjection} units (default meters).}
 
 \item{geoBiasOrigin}{For GL data where \code{captured}!="origin", vector of
 length 2 indicating expected bias in longitude and latitude of
-\code{originPoints}, in
-\code{resampleProjection} units (default meters)}
+\code{originPoints}, in \code{resampleProjection} units (default meters).}
 
 \item{geoVCovOrigin}{For GL data where \code{captured}!="origin", 2x2 matrix
 with expected variance/covariance in longitude and latitude of
-\code{targetPoints}, in \code{resampleProjection} units (default meters)}
+\code{targetPoints}, in \code{resampleProjection} units (default meters).}
 
 \item{targetRaster}{For intrinsic tracking data, the results of
 \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
 class \code{RasterBrick}/\code{RasterStack}, for example from the package
 \code{assignR}. In any case, it expresses location uncertainty on target
-range, through a raster of probabilities by grid cells}
+range, through a raster of probabilities by grid cells.}
 
 \item{originRaster}{For intrinsic tracking data, the results of
 \code{isoAssign} or a similar function of class \code{intrinsicAssign} or
 class \code{RasterBrick}/\code{RasterStack}, for example from the package
 \code{assignR}. In any case, it expresses location uncertainty on origin
-range, through a raster of probabilities by grid cells}
+range, through a raster of probabilities by grid cells.}
 
 \item{banded}{For band return data, a vector or matrix of the number of
 released animals from each origin site (including those never reencountered
 in a target site). If a matrix, the second dimension is taken as the number
 of age classes of released animals; the model estimates reencounter
-probability by age class but assumes transition probabilities are the same}
+probability by age class but assumes transition probabilities are the same.
+Note that this age model is currently implemented only for \code{method}
+set to "MCMC", and only when banding data is analyzed alone (no telemetry
+data).}
 
 \item{reencountered}{For band return data, either a matrix with B rows and W
 columns or a B x [number of ages] x W array. Number of animals reencountered
-on each target site (by age class banded as) by origin site they came from}
+on each target site (by age class banded as) by origin site they came from.}
 
 \item{verbose}{0 (default) to 3. 0 prints no output during run (except on
-convergence for banding data). 1 prints an update every 100 samples or
-bootstraps (or a status bar for banding data).  2 prints an update
-every sample or bootstrap. 3 also prints the number of
-draws (for tuning nSim for GL/intrinsic data only)}
+convergence for \code{method} set to "MCMC"). 1 prints an update every 100
+samples or bootstraps (or a status bar for "MCMC").  2 prints an update
+every sample or bootstrap. 3 also prints the number of draws (for
+tuning \code{nSim}).}
 
 \item{alpha}{Level for confidence/credible intervals provided. Default (0.05)
-gives 95 percent CI}
+gives 95 percent CI.}
 
 \item{resampleProjection}{Projection when sampling from location uncertainty.
 Default is Equidistant Conic. The default setting preserves distances
 around latitude = 0 and longitude = 0. Other projections may work well,
-depending on the location of sites. Ignored unless data are geolocator,
-telemetry, or intrinsic}
+depending on the location of sites. Ignored unless data are entered using
+sites and points and/or rasters.}
 
 \item{nSim}{Tuning parameter for GL or intrinsic data. Affects only the
 speed; 1000 seems to work well with our GL data and 10 for our intrinsic
 data, but your results may vary. For data combinations, we put the default
-higher (5000) to allow for more data conflicts. Should be integer > 0}
+higher (5000) to allow for more data conflicts. Should be integer > 0.
+Ignored when \code{method} is "MCMC".}
 
 \item{maxTries}{Maximum number of times to run a single GL/intrinsic
 bootstrap before exiting with an error. Default is 300; you may want to make
-a little higher if your nSim is low and nSamples is high. Set to NULL to
-never stop. This parameter was added to prevent setups where some
-sample points never land on target sites from running indefinitely}
+a little higher if your \code{nSim} is low and \code{nSamples} is high. Set
+to NULL to never exit. This parameter was added to prevent setups where some
+sample points never land on target sites from running indefinitely.}
 
-\item{nBurnin}{For band return data, \code{estTransition} runs a \code{JAGS}
-multinomial non-Markovian model, for which it needs the number of burn-in
-samples before beginning to store results. Default 5000}
+\item{nBurnin}{For \code{method} set to "MCMC", \code{estTransition} runs a
+\code{JAGS} multinomial non-Markovian transitions model, for which it needs
+the number of burn-in samples before beginning to store results. Default
+5000.}
 
-\item{nChains}{For band return data, \code{estTransition} runs a \code{JAGS}
-multinomial non-Markovian model, for which it needs the number of MCMC
-chains (to test for convergence). Default 3}
+\item{nChains}{For \code{method} set to "MCMC", \code{estTransition} runs a
+\code{JAGS} multinomial non-Markovian transitions model, for which it needs
+the number of MCMC chains (to test for convergence). Default 3.}
 
-\item{nThin}{For band return data, \code{estTransition} runs a \code{JAGS}
-multinomial non-Markovian model, for which it needs the thinning rate.
-Default 1}
+\item{nThin}{For \code{method} set to "MCMC", \code{estTransition} runs a
+\code{JAGS} multinomial non-Markovian transitions model, for which it needs
+the thinning rate. Default 1.}
+
+\item{dataOverlapSetting}{When there is more than one type of data, this
+setting allows the user some flexibility for clarifying which type(s) of
+data apply to which animals. Setting "dummy" (the default) indicates that
+there are dummy values within each dataset for the animals that isGL,
+isTelemetry, etc. don't have that data type (FALSE values). If no animals
+have a data type, no dummy values are required. If no animals have more than
+one type of data, the user can simplify processing their data by choosing
+setting "none" here. In this case, there should be no dummy values, and only
+the animals with a type of data should be included in that dataset. The
+third setting ("named") is not yet implemented, but will eventually allow
+another way to allow animals with more than one type of data with named
+animals linking records. When there is only one type of data, it is fastest
+to leave this on the default. Note that banding data entered through
+\code{banded} and \code{reencountered} are assumed to have no
+overlap with other data types, so none of this applies to those.}
+
+\item{fixedZero}{When the user has a priori reasons to believe one or more
+transition probabilities are zero, they can indicate those here, and the
+model will keep them fixed at zero. This argument should be a matrix with
+two columns (for row and column of the transition probability matrix) and
+number of transitions being fixed to zero rows. For MCMC modeling,
+substantial evidence that a transition fixed to zero isn't zero may
+cause an error. For bootstrap modeling, a warning
+will come up if any bootstrap runs generate the transition fixed to zero,
+and the function will quit with an error if a very large number of runs do
+(> 10 * nSamples). Fixing transitions to zero may also slow down the
+bootstrap model somewhat.}
+
+\item{targetRelAbund}{When some/all data have location error at origin sites
+(i.e., GL, raster, or probability table data with captured = "target" or
+"none"), unless the data were collected in proportion to abundance at target
+sites, simulation work indicates substantial bias in transition probability
+estimates can result. However, if these data are resampled in proportion to
+target site abundance, this bias is removed. This argument allows the user
+to provide an estimate of relative abundance at the target sites. Either
+a numeric vector of length [number target sites] that sums to 1, or an mcmc
+object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
+with at least \code{nSamples} rows. If there are more than [number target
+sites] columns, the relevant columns should be labeled "relN[1]" through
+"relN[number target sites]".}
+
+\item{method}{This important setting lets the user choose the estimation
+method used: bootstrap or MCMC (Markov chain Monte Carlo). Bootstrap (the
+default) now works with any and all types of data, whereas MCMC currently
+only works with banding and telemetry data (enter telemetry data for MCMC
+using \code{originAssignment} and \code{targetAssignment}, not
+\code{originPoints} and \code{targetPoints}). However, MCMC is
+usually faster (and may be a bit more accurate). The third option,
+"m-out-of-n-bootstrap", is still under development and should be left alone.}
+
+\item{m}{We read that the m-out-of-n-bootstrap method may improve the
+coverage of confidence intervals for parameters on or near a boundary (0 or
+1 in this case). So we're testing that out. This still under development and
+not for the end user. In the m-out-of-n-bootstrap, m is the number of
+samples taken each time (less than the true sample size, n). If the
+"m-out-of-n-bootstrap" is chosen under \code{method} but this is left blank,
+currently the default is n/4, rounded up (no idea if that is reasonable).}
+
+\item{psiPrior}{matrix with same dimensions as psi. Only relevant when
+\code{method} is "MCMC". Each row provides a Dirichlet
+(https://en.wikipedia.org/wiki/Dirichlet_distribution) prior on the
+transition probabilities from that origin site. The default (NULL) supplies
+Dirichlet parameters of all 1s, which is a standard uninformative Dirichlet
+prior. Setting these to other positive numbers is useful when you think a
+priori that certain transitions are unlikely, but don't want to rule them
+out altogether using \code{fixedZero}.}
+
+\item{returnAllInput}{if TRUE (the default) the output includes all of the
+inputs. If FALSE, only the inputs currently used by another MigConnectivity
+function are included in the output. Switch this if you're worried about
+computer memory (and the output will be much slimmer).}
 }
 \value{
 \code{estTransition} returns a list with the elements:
@@ -221,11 +362,13 @@ Default 1}
    \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
      for psi. May be preferable to \code{simpleCI} when \code{mean} is the
      best estimate of psi. \code{simpleCI} is preferred when
-     \code{median} is a better estimator. When \code{meanMC==medianMC},
+     \code{median} is a better estimator. When the mean and median are equal,
      these should be identical.  Estimated as the
      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of \code{sample},
      where z0 is the proportion of \code{sample < mean}.
+   \item{\code{hpdCI}} \code{1 - alpha} credible interval for psi,
+     estimated using the highest posterior density (HPD) method.
    \item{\code{median}} Median estimate of psi matrix.
    \item{\code{point}} Simple point estimate of psi matrix, not accounting
      for sampling error.
@@ -236,15 +379,15 @@ Default 1}
    data.}
   \item{\code{input}}{List containing the inputs to \code{estTransition}.}
   \item{\code{BUGSoutput}}{List containing \code{R2jags} output. Only present
-   when using direct band/ring reencounter data.}
+   when using \code{method} of "MCMC".}
 }
 }
 \description{
 Estimation and resampling of uncertainty for psi (transition probabilities
 between origin sites in one phase of the annual cycle and target sites in
-another for migratory animals). Data can be from geolocators (GL) and/or
-telemetry/GPS and/or intrinsic markers such as isotopes and genetics OR
-band/ring reencounter data.
+another for migratory animals). Data can be from any combination of
+geolocators (GL), telemetry/GPS, intrinsic markers such as isotopes and
+genetics, and band/ring reencounter data.
 }
 \examples{
 \dontrun{
@@ -264,7 +407,8 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = 60000, nBurnin = 20000)
+                          nSamples = 60000, nBurnin = 20000,
+                          method = "MCMC")
 COTE_psi
 
 COTE_banded2 <- matrix(rep(COTE_banded, 2), 4, 2)
@@ -279,7 +423,8 @@ COTE_psi2 <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded2,
                           reencountered = COTE_reencountered2,
                           verbose = 0,
-                          nSamples = 60000, nBurnin = 20000)
+                          nSamples = 60000, nBurnin = 20000,
+                          method = "MCMC")
 COTE_psi2
 
 ###############################################################################
@@ -402,7 +547,7 @@ system.time(psi3 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 5000, maxTries = 300,
+                            nSim = 20000, maxTries = 300,
                             originSites = originSites,
                             originPoints = originPoints,
                             captured = "origin",
@@ -429,13 +574,12 @@ isGL <- c(OVENdata$isGL, rep(FALSE, 6))
 isTelemetry <- c(!OVENdata$isGL, rep(FALSE, 6))
 isRaster <- rep(FALSE, nAnimals)
 isProb <- rep(FALSE, nAnimals)
-targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[c(1:4,6:7),])
+targetPoints <- rbind(OVENdata$targetPoints, OVENdata$targetPoints[c(1:3,19,23,31),])
 targetAssignment <- array(0, dim = c(nAnimals, 3), dimnames = list(NULL, targetNames))
 assignment0 <- unclass(sf::st_intersects(x = targetPoints, y = targetSites,
                                          sparse = TRUE))
 assignment0[sapply(assignment0, function(x) length(x)==0)] <- 0
 assignment0 <- array(unlist(assignment0), nAnimals)
-assignment0[nAnimals] <- 3
 for (ani in 1:nAnimals) {
   if (assignment0[ani]>0)
     targetAssignment[ani, assignment0[ani]] <- 1
@@ -480,14 +624,15 @@ system.time(psi4 <-
                             targetAssignment = targetAssignment,
                             targetSites = targetSites,
                             resampleProjection = resampleProjection,
-                            nSim = 5000, maxTries = 300,
+                            nSim = 15000, maxTries = 300,
                             originSites = originSites,
                             originAssignment = originAssignment,
                             captured = captured,
                             originNames = OVENdata$originNames,
                             targetNames = OVENdata$targetNames,
-                            verbose = 3,
-                            nSamples = nSamplesTry))
+                            verbose = 2,
+                            nSamples = nSamplesTry,
+                            targetRelAbund = c(0.1432, 0.3577, 0.4991)))
 psi4
 
 plot(psi4, legend = "top",
@@ -575,8 +720,8 @@ iso <- isoAssign(isovalues = OVENvals[,2],
                  verbose=1)
 
 nAnimals <- dim(iso$probassign)[3]
-isGL <-rep(F, nAnimals); isRaster <- rep(T, nAnimals)
-isProb <- rep(F, nAnimals); isTelemetry <- rep(F, nAnimals)
+isGL <-rep(FALSE, nAnimals); isRaster <- rep(TRUE, nAnimals)
+isProb <- rep(FALSE, nAnimals); isTelemetry <- rep(FALSE, nAnimals)
 targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSite)
 targetSites <- sf::st_as_sf(targetSites)
 
@@ -592,7 +737,7 @@ system.time(psi5 <-
                             originSites = originSites,
                             originPoints = originPoints,
                             captured = rep("origin", nAnimals),
-                            verbose = 3,
+                            verbose = 2,
                             nSamples = nSamplesTry))
 psi5
 }

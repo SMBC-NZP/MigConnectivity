@@ -1,5 +1,5 @@
 model{
-# model for recoveries with known number of ringed
+# model for banding reencounters by age
 for (i in 1:npop){
   for (j in 1:nages) {
     for(k in 1:ndest){

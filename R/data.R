@@ -80,7 +80,7 @@
 #' Example origin site abundances and relative abundances
 #'
 #' \code{sampleOriginN} is a dataset containing example origin site abundances
-#' from 5 scenarios used in Cohen et al. (in prep.).  For the same 5
+#' from 5 scenarios used in Cohen et al. (2018).  For the same 5
 #' scenarios, \code{sampleOriginRelN} contains the relative abundances.
 #'
 #' @format Each dataset is a named list with 5 vectors in it. Each vector has

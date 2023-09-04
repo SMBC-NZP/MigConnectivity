@@ -25,52 +25,6 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
           quote = FALSE)
   }
   if (inherits(x, "estMC")) {
-    # if (is.null(x$psi) && !is.null(x$samplePsi)) {
-    #   x$psi <- list(mean = apply(x$samplePsi, 2:3, mean),
-    #                 se = apply(x$samplePsi, 2:3, sd),
-    #                 simpleCI = apply(x$samplePsi, 2:3, quantile,
-    #                                  probs = c(alpha/2, 1-alpha/2),
-    #                                  na.rm=TRUE, type = 8, names = F))
-    #   x$MC <- list(mean = x$meanMC, se = x$seMC, simpleCI = x$simpleCI)
-    #   x$input <- list(alpha = x$alpha)
-    #   if (is.null(dimnames(x$samplePsi)[2])){
-    #     x$input$originNames <- LETTERS[1:dim(x$samplePsi)[2]]
-    #     originNamesFilled <- TRUE
-    #   }
-    #   else {
-    #     x$input$originNames <- dimnames(x$samplePsi)[[2]]
-    #     originNamesFilled <- FALSE
-    #   }
-    #   if (is.null(dimnames(x$samplePsi)[3])){
-    #     x$input$targetNames <- 1:dim(x$samplePsi)[3]
-    #     targetNamesFilled <- TRUE
-    #   }
-    #   else {
-    #     x$input$targetNames <- dimnames(x$samplePsi)[[3]]
-    #     targetNamesFilled <- FALSE
-    #   }
-    # }
-    # else {
-    #   originNamesFilled <- targetNamesFilled <- FALSE
-    # }
-    # if (!is.null(x$psi)) {
-    #   dimnames(x$psi$mean) <- dimnames(x$psi$se) <- list(x$input$originNames,
-    #                                                      x$input$targetNames)
-    #   cat("\nTransition probability (psi) estimates (mean):",
-    #       ifelse(originNamesFilled, "(Arbitrary origin site labels used)", ""),
-    #       ifelse(targetNamesFilled, "(Arbitrary target site labels used)", ""),
-    #       "\n")
-    #   print(x$psi$mean, digits = digits)
-    #   cat("+/- SE:\n")
-    #   print(x$psi$se, digits = digits)
-    #   cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-    #       "% confidence interval (simple quantile):\n", sep = "")
-    #   print(array(paste(format(x$psi$simpleCI[1,,],digits = digits, trim = TRUE),
-    #                     format(x$psi$simpleCI[2,,],digits = digits, trim = TRUE),
-    #                     sep = ' - '), dim = dim(x$psi$mean),
-    #               dimnames = list(x$input$originNames, x$input$targetNames)),
-    #         quote = FALSE)
-    # }
     cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
         format(x$MC$se, digits = digits), '\n')
     cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
@@ -99,13 +53,58 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     #   cat("   point calculation (not considering error):",
     #       format(x$pointCorr, digits = digits), '\n')
   }
+  if (inherits(x, "estGamma")) {
+    cat("\nReverse transition probability (gamma) estimates (mean):\n")
+    print(x$gamma$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$gamma$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$gamma$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$gamma$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$gamma$mean),
+                dimnames = list(x$input$targetNames, x$input$originNames)),
+          quote = FALSE)
+  }
+  if (inherits(x, "estTargetRelAbund")) {
+    cat("\nTarget site relative abundance estimates (mean):\n")
+    print(x$targetRelAbund$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$targetRelAbund$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$targetRelAbund$simpleCI[1,],digits = digits, trim = TRUE),
+                      format(x$targetRelAbund$simpleCI[2,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$gamma$mean)[1],
+                dimnames = list(x$input$targetNames)),
+          quote = FALSE)
+  }
+  if (inherits(x, "estPi")) {
+    cat("\nOrigin/target site combination probability (pi) estimates (mean):\n")
+    print(x$pi$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$pi$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile):\n", sep = "")
+    print(array(paste(format(x$pi$simpleCI[1,,],digits = digits, trim = TRUE),
+                      format(x$pi$simpleCI[2,,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = dim(x$pi$mean),
+                dimnames = list(x$input$originNames, x$input$targetNames)),
+          quote = FALSE)
+  }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
-  if (inherits(x, "estPsi"))
-    cat("For more info, try ?estTransition or ?estMC or str(obj_name, max.levels = 2).\n")
+  if (inherits(x, "estPi"))
+    cat("For more info, try ?reverseTransition or str(obj_name, max.levels = 2).\n")
+  else if (inherits(x, "estPsi"))
+    cat("For more info, try ?estTransition or str(obj_name, max.levels = 2).\n")
   else if (inherits(x, "estMC"))
     cat("For more info, try ?estStrength or ?estMC or str(obj_name, max.levels = 2).\n")
-  else
+  else if (inherits(x, "estGamma"))
+    cat("For more info, try ?reverseTransition or str(obj_name, max.levels = 2).\n")
+  else if (inherits(x, "estMantel"))
     cat("For more info, try ?estMantel or str(obj_name, max.levels = 2).\n")
+  else # In case we left something out...
+    cat("For more info, try str(obj_name, max.levels = 2).\n")
 }
 
 #' @export
@@ -177,7 +176,6 @@ summary.intrinsicAssign<-function(object, ...){
 #' @export
 plot.intrinsicAssign <- function(x,map,...){
   if(inherits(x,"isoAssign")){
-plot.isoAssign <- function(x,map,...){
     if(!(map %in% c("probability","population","odds"))){
       stop("map must be either probability, population, or odds")}
     op <- graphics::par(no.readonly = TRUE)
@@ -199,7 +197,6 @@ plot.isoAssign <- function(x,map,...){
     graphics::par(op)
   }
   on.exit(graphics::par(op))
-  }
   }
  if(inherits(x,"weightAssign")){
    graphics::par(bty = "L")
@@ -239,6 +236,9 @@ plot.isoAssign <- function(x,map,...){
 #' @param pch symbols to use for labeling transition probabilities for
 #'   different target sites. If left NULL, defaults to 21:25, then
 #'   0:([number of target sites]-5)
+#' @param las style of axis labels (0-3). We set the default at 1 (always
+#'   horizontal) here, but if you prefer your labels parallel to the axis, set
+#'   at 0
 #' @param gap space left between the center of the error bar and the lines
 #'   marking the error bar in units of the height (width) of the letter "O".
 #'   Defaults to 0
@@ -261,41 +261,43 @@ plot.estMigConnectivity <- function(x,
                                                         "psi",
                                                         ifelse(inherits(x, "estMC"),
                                                                "MC",
-                                                               "rM")),
+                                                               ifelse(inherits(x, "estGamma"),
+                                                                      "gamma",
+                                                                      "rM"))),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
                                     xlab = NULL, ylab = plot.which,
                                     originNames = NULL, targetNames = NULL,
                                     ageNames = NULL,
-                                    col = NULL, pch = NULL,
+                                    col = NULL, pch = NULL, las = 1,
                                     gap = 0,
                                     sfrac = ifelse(range=="se", 0.01, 0),
                                     legend = FALSE, map = FALSE, ...) {
-  if (map) {
-    warning("Map plotting not yet available")
-  }
   if ((plot.which %in% c("corr", "Mantel")))
     plot.which <- "rM"
   if ((plot.which %in% c("transition", "Transition")))
     plot.which <- "psi"
   if ((plot.which %in% c("strength", "Strength")))
     plot.which <- "MC"
-  if (!(plot.which %in% c("psi", "MC", "rM", "r")))
-    stop("Set plot.which to psi, MC, rM, or r")
+  if ((plot.which %in% c("abund", "abundance", "relAbund")))
+    plot.which <- "targetRelAbund"
+  if (!(plot.which %in% c("psi", "MC", "rM", "r", "gamma", "pi",
+                          "targetRelAbund")))
+    stop("Set plot.which to psi, MC, rM, gamma, pi, targetRelAbund, or r")
   point <- match.arg(point)
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
-    if (is.null(x$psi)) {
+    if (is.null(x$psi) && !is.null(x$samplePsi)) {
       bcCIPsi <- array(NA, dim = c(2, dim(x$samplePsi)[2], dim(x$samplePsi)[3]))
       for (i in 1:dim(x$samplePsi)[2]) {
         for (j in 1:dim(x$samplePsi)[3]) {
           psi.z0 <- qnorm(sum(x$samplePsi[, i, j] < mean(x$samplePsi[, i, j],
-                                                         na.rm = T)) /
+                                                         na.rm = TRUE)) /
                             length(which(!is.na(x$samplePsi[, i, j]))))
           bcCIPsi[ , i, j] <- quantile(x$samplePsi[, i, j],
                                        pnorm(2 * psi.z0 +
                                                qnorm(c(x$alpha/2,1-x$alpha/2))),
-                                       na.rm=TRUE, type = 8, names = F)
+                                       na.rm=TRUE, names = FALSE)
         }
       }
       x$psi <- list(sample = x$samplePsi,
@@ -303,7 +305,7 @@ plot.estMigConnectivity <- function(x,
                     se = apply(x$samplePsi, 2:3, sd),
                     simpleCI = apply(x$samplePsi, 2:3, quantile,
                                      probs = c(x$alpha/2, 1-x$alpha/2),
-                                     na.rm=TRUE, type = 8, names = F),
+                                     na.rm=TRUE, names = FALSE),
                     bcCI = bcCIPsi,
                     median = apply(x$samplePsi, 2:3, median),
                     point = x$pointPsi)
@@ -313,8 +315,14 @@ plot.estMigConnectivity <- function(x,
                       targetNames = dimnames(x$samplePsi)[[3]])
     }
   }
-  else if (plot.which != "rM" && !inherits(x, "estPsi"))
+  else if (plot.which %in% c("psi", "MC") && !inherits(x, "estPsi"))
     stop("This estimate does not include psi or MC - try setting plot.which to rM")
+  if (plot.which == "gamma" && !inherits(x, "estGamma"))
+    stop("This estimate does not include gamma - try setting plot.which to something else")
+  if (plot.which == "pi" && !inherits(x, "estPi"))
+    stop("This estimate does not include pi - try setting plot.which to something else")
+  if (plot.which == "targetRelAbund" && !inherits(x, "estTargetRelAbund"))
+    stop("This estimate does not include targetRelAbund - try setting plot.which to something else")
   if (inherits(x, "estMantel")) {
     if (is.null(x$corr)) {
       x$corr <- list(sample = x$sampleCorr,
@@ -355,7 +363,7 @@ plot.estMigConnectivity <- function(x,
                                                 x$corr$simpleCI[2],
                                                 y + x$corr$se)))
   }
-  else if (plot.which == "psi") {
+  else if (plot.which %in% c("psi", "gamma", "pi")) {
     if (is.null(originNames)) {
       if (is.null(x$input$originNames)) {
         if (is.null(dimnames(x$psi$sample)[2])) {
@@ -380,29 +388,82 @@ plot.estMigConnectivity <- function(x,
       else
         targetNames <- x$input$targetNames
     }
-    nTargetSites <- length(targetNames)
-    nOriginSites <- length(originNames)
-    y <- switch(point,
-                mean = x$psi$mean,
-                median = x$psi$median,
-                point = x$psi$point)
-    yrange <- switch(range,
-                     bcCI = x$psi$bcCI,
-                     simpleCI = x$psi$simpleCI,
-                     se = aperm(array(c(y - x$psi$se, y + x$psi$se),
-                                      c(dim(y), 2)), c(3, 1, 2)))
-    ests.df <- data.frame(y = c(y),
-                          From = factor(rep(originNames, nTargetSites),
-                                        levels = originNames),
-                          To = factor(rep(targetNames, each = nOriginSites),
-                                      levels = targetNames),
-                          FromTo = rep(1:nOriginSites, nTargetSites) +
-                            rep(1:nTargetSites, each = nOriginSites) /
-                            (nTargetSites * 2) - 0.3,
-                          lower = c(yrange[1,,]),
-                          upper = c(yrange[2,,]))
+    nTargetSites <- ifelse(is.null(x$psi), dim(x$gamma$sample)[2], dim(x$psi$sample)[3])
+    nOriginSites <- ifelse(is.null(x$psi), dim(x$gamma$sample)[3], dim(x$psi$sample)[2])
+    if (length(originNames)==1) {
+      originNames <- rep(originNames, nOriginSites)
+      originNamesHidden <- 1:nOriginSites
+    }
+    else {
+      originNamesHidden <- originNames
+    }
+    if (length(targetNames)==1) {
+      targetNames <- rep(targetNames, nTargetSites)
+      targetNamesHidden <- 1:nTargetSites
+    }
+    else {
+      targetNamesHidden <- targetNames
+    }
+    if (plot.which == "psi") {
+      y <- switch(point,
+                  mean = x$psi$mean,
+                  median = x$psi$median,
+                  point = x$psi$point)
+      yrange <- switch(range,
+                       bcCI = x$psi$bcCI,
+                       simpleCI = x$psi$simpleCI,
+                       se = aperm(array(c(y - x$psi$se, y + x$psi$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            To = factor(rep(targetNamesHidden, each = nOriginSites),
+                                        levels = targetNamesHidden),
+                            FromTo = rep(1:nOriginSites, nTargetSites) +
+                              rep(1:nTargetSites, each = nOriginSites) /
+                              (nTargetSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+    }
+    else if (plot.which == "pi") {
+      y <- switch(point,
+                  mean = x$pi$mean,
+                  median = x$pi$median,
+                  point = x$pi$point)
+      yrange <- switch(range,
+                       bcCI = x$pi$bcCI,
+                       simpleCI = x$pi$simpleCI,
+                       se = aperm(array(c(y - x$pi$se, y + x$pi$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            To = factor(rep(targetNamesHidden, each = nOriginSites),
+                                        levels = targetNamesHidden),
+                            FromTo = rep(1:nOriginSites, nTargetSites) +
+                              rep(1:nTargetSites, each = nOriginSites) /
+                              (nTargetSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+    }
+    else {
+      y <- switch(point,
+                  mean = x$gamma$mean,
+                  median = x$gamma$median,
+                  point = x$gamma$point)
+      yrange <- switch(range,
+                       bcCI = x$gamma$bcCI,
+                       simpleCI = x$gamma$simpleCI,
+                       se = aperm(array(c(y - x$gamma$se, y + x$gamma$se),
+                                        c(dim(y), 2)), c(3, 1, 2)))
+      ests.df <- data.frame(y = c(y),
+                            To = factor(rep(originNamesHidden, each = nTargetSites),
+                                        levels = originNamesHidden),
+                            FromTo = rep(1:nTargetSites, nOriginSites) +
+                              rep(1:nOriginSites, each = nTargetSites) /
+                              (nOriginSites * 2) - 0.3,
+                            lower = c(yrange[1,,]),
+                            upper = c(yrange[2,,]))
+
+    }
   }
-  else if (plot.which == "r") {
+  else if (plot.which == "r" || plot.which == "targetRelAbund") {
     if (is.null(targetNames)) {
       if (is.null(x$input$targetNames)) {
         if (is.null(dimnames(x$psi$sample)[3])) {
@@ -416,41 +477,63 @@ plot.estMigConnectivity <- function(x,
         targetNames <- x$input$targetNames
     }
     nTargetSites <- length(targetNames)
-    y <- switch(point,
-                mean = x$r$mean,
-                median = x$r$median)
-    if (length(dim(y)) < 2){
-      nAges <- 1
+    if (plot.which == "r") {
+      y <- switch(point,
+                  mean = x$r$mean,
+                  median = x$r$median)
+      if (length(dim(y)) < 2){
+        nAges <- 1
+        yrange <- switch(range,
+                         bcCI = x$r$bcCI,
+                         simpleCI = x$r$simpleCI,
+                         se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                          c(length(y), 2)), c(2, 1)))
+        ests.df <- data.frame(y = c(y),
+                              To = 1:nTargetSites,
+                              lower = c(yrange[1,]),
+                              upper = c(yrange[2,]))
+      }
+      else{
+        nAges <- dim(y)[1]
+        if (is.null(ageNames))
+          ageNames <- 1:nAges
+        yrange <- switch(range,
+                         bcCI = x$r$bcCI,
+                         simpleCI = x$r$simpleCI,
+                         se = aperm(array(c(y - x$r$se, y + x$r$se),
+                                          c(dim(y), 2)), c(3, 1, 2)))
+        ests.df <- data.frame(y = c(y),
+                              Age = rep(1:nAges, nTargetSites),
+                              To = rep(1:nTargetSites, each = nAges),
+                              AgeTo = rep(1:nAges, nTargetSites) +
+                                rep(1:nTargetSites, each = nAges) /
+                                (nTargetSites * 2) - 0.3,
+                              lower = c(yrange[1,,]),
+                              upper = c(yrange[2,,]))
+      }
+    }
+    else { # plotting targetRelAbund
+      y <- switch(point,
+                  mean = x$targetRelAbund$mean,
+                  median = x$targetRelAbund$median)
       yrange <- switch(range,
-                       bcCI = x$r$bcCI,
-                       simpleCI = x$r$simpleCI,
-                       se = aperm(array(c(y - x$r$se, y + x$r$se),
+                       bcCI = x$targetRelAbund$bcCI,
+                       simpleCI = x$targetRelAbund$simpleCI,
+                       se = aperm(array(c(y - x$targetRelAbund$se,
+                                          y + x$targetRelAbund$se),
                                         c(length(y), 2)), c(2, 1)))
       ests.df <- data.frame(y = c(y),
                             To = 1:nTargetSites,
                             lower = c(yrange[1,]),
                             upper = c(yrange[2,]))
-    }
-    else{
-      nAges <- dim(y)[1]
-      if (is.null(ageNames))
-        ageNames <- 1:nAges
-      yrange <- switch(range,
-                       bcCI = x$r$bcCI,
-                       simpleCI = x$r$simpleCI,
-                       se = aperm(array(c(y - x$r$se, y + x$r$se),
-                                        c(dim(y), 2)), c(3, 1, 2)))
-      ests.df <- data.frame(y = c(y),
-                            Age = rep(1:nAges, nTargetSites),
-                            To = rep(1:nTargetSites, each = nAges),
-                            AgeTo = rep(1:nAges, nTargetSites) +
-                              rep(1:nTargetSites, each = nAges) /
-                              (nTargetSites * 2) - 0.3,
-                            lower = c(yrange[1,,]),
-                            upper = c(yrange[2,,]))
+      nAges <- 1
+
     }
   }
-  if (plot.which=="psi") {
+  if (map) {
+    warning("Map plotting not yet available")
+  }
+  if (plot.which %in% c("psi", "pi")) {
     if (is.null(col)) {
       col <- 1:nTargetSites
     }
@@ -472,14 +555,43 @@ plot.estMigConnectivity <- function(x,
                    col = col[as.integer(ests.df$To)],
                    pt.bg = col[as.integer(ests.df$To)],
                    ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
-                   sfrac = sfrac, ...)
+                   sfrac = sfrac, las = las, ...)
     graphics::axis(1, at = seq(from = 1, by = 1, length.out = nOriginSites),
-         labels = originNames)
+         labels = originNames, ...)
     if (!isFALSE(legend))
       legend(legend, legend = targetNames, col = col, pch = pch,
              pt.bg = col)
   }
-  else if (plot.which=="r") {
+  else if (plot.which=="gamma") {
+    if (is.null(col)) {
+      col <- 1:nOriginSites
+    }
+    else if (length(col) < nOriginSites)
+      col <- rep_len(col, nOriginSites)
+    if (is.null(pch)) {
+      if (nOriginSites > 5)
+        pch <- c(21:25, 0:(nOriginSites - 6))
+      else
+        pch <- 20 + 1:nOriginSites
+    }
+    else if (length(pch) < nOriginSites)
+      pch <- rep_len(pch, nOriginSites)
+    if (is.null(xlab))
+      xlab <- "Target"
+    gplots::plotCI(ests.df$FromTo, ests.df$y, li = ests.df$lower,
+                   ui = ests.df$upper,
+                   pch = pch[as.integer(ests.df$To)],
+                   col = col[as.integer(ests.df$To)],
+                   pt.bg = col[as.integer(ests.df$To)],
+                   ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
+                   sfrac = sfrac, las = las, ...)
+    graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
+                   labels = targetNames, ...)
+    if (!isFALSE(legend))
+      legend(legend, legend = originNames, col = col, pch = pch,
+             pt.bg = col)
+  }
+  else if (plot.which=="r" || plot.which=="targetRelAbund") {
     if (nAges == 1) {
       if (is.null(col)) {
         col <- "black"
@@ -495,9 +607,9 @@ plot.estMigConnectivity <- function(x,
                      col = col,
                      pt.bg = col,
                      ylab = ylab, xlab = xlab, gap = gap, xaxt = "n",
-                     sfrac = sfrac, ...)
+                     sfrac = sfrac, las = las, ...)
       graphics::axis(1, at = seq(from = 1, by = 1, length.out = nTargetSites),
-           labels = targetNames)
+           labels = targetNames, ...)
     }
     else {
       if (is.null(col)) {
@@ -521,8 +633,8 @@ plot.estMigConnectivity <- function(x,
                      col = col[as.integer(ests.df$To)],
                      pt.bg = col[as.integer(ests.df$To)],
                      ylab = ylab, xaxt = "n", xlab = xlab, gap = gap,
-                     sfrac = sfrac, ...)
-      graphics::axis(1, at = 1:nAges, labels = ageNames)
+                     sfrac = sfrac, las = las, ...)
+      graphics::axis(1, at = 1:nAges, labels = ageNames, ...)
       if (!isFALSE(legend))
         legend(legend, legend = targetNames, col = col, pch = pch,
                pt.bg = col)
@@ -541,7 +653,209 @@ plot.estMigConnectivity <- function(x,
                    ui = ests.df$upper,
                    pch = pch[1],
                    col = col[1], gap = gap, sfrac = sfrac,
-                   ylab = ylab, xaxt = "n", xlab = xlab, ...)
+                   ylab = ylab, xaxt = "n", xlab = xlab, las = las, ...)
   }
 }
+map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
+                       yOffset = NULL, col = NULL, maxWidth = 100000,
+                       alpha.range = 0.2, alpha.point = 0,
+                       subsetOrigin = NULL, subsetTarget = NULL,
+                       doubled = FALSE) {
+# #
+# # data(OVENdata) # Ovenbird
+# #
+# M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
+#          geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+#          geoVCov = OVENdata$geo.vcov, #Light-level geolocator covariance matrix
+#          targetDist = OVENdata$targetDist, # Target location distance matrix
+#          originDist = OVENdata$originDist, # Origin location distance matrix
+#          targetSites = OVENdata$targetSites, # Non-breeding / target sites
+#          originSites = OVENdata$originSites, # Breeding / origin sites
+#          originPoints = OVENdata$originPoints, # Capture Locations
+#          targetPoints = OVENdata$targetPoints, # Target locations from devices
+#          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
+#          resampleProjection = raster::projection(OVENdata$targetPoints),
+#          verbose = 0,   # output options - see help ??estMC
+#          nSamples = 10000) # This is set low for example
+#
+  nTargetSites <- ncol(x$psi$mean)
+  nOriginSites <- nrow(x$psi$mean)
+  if (is.null(subsetOrigin))
+    subsetOrigin <- 1:nOriginSites
+  if (is.null(subsetTarget))
+    subsetTarget <- 1:nTargetSites
+  originNames <- x$input$originNames
+  targetNames <- x$input$targetNames
+  # meanPsi <- apply(M$samplePsi, 2:3, mean)
+# lowPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.025)
+# highPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.975)
+# library(rgeos)
+# library(shape)
+# library(raster)
+# library(maptools)
+# library(rgdal)
+# data(wrld_simpl)
+# wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
+  # maxWidth <- 1000000
+  if (is.null(xOffset))
+    xOffset <- matrix(0, nOriginSites, nTargetSites)
+  if (is.null(yOffset))
+    yOffset <- matrix(0, nOriginSites, nTargetSites)
+  allSites <- rbind(originSites[, "geometry"], targetSites[, "geometry"])
+  if (is.null(col)) {
+    col <- 1:nTargetSites
+  }
+  # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
+  op <- graphics::par(mar=c(0,0,0,0))
+  extent <- sf::st_bbox(allSites)
+  plot(allSites, xlim=c(extent[1],extent[3]),
+       ylim=c(extent[2], extent[4]), lwd = 1.5)
+  # plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
+  # plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
+  # plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
+  # legend("topleft",legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+  for (i in subsetOrigin) {
+    xO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,1]
+    yO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,2]
+    for (j in subsetTarget) {
+      if (x$psi$simpleCI[2,i,j] > 0) {
+        xT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,1] + xOffset[i, j]
+        yT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,2] + yOffset[i, j]
+        angle <- atan((yT - yO)/(xT - xO))
+        if (is.nan(angle))
+          angle <- 0
+        if (xT < xO)
+          angle <- angle + pi
+        cosa <- cos(angle)
+        sina <- sin(angle)
+        if (doubled) {
+          graphics::polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+          graphics::polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth,
+                    xT - x$psi$mean[i,j] * sina * maxWidth,
+                    xT + x$psi$mean[i,j] * sina * maxWidth,
+                    xO + x$psi$mean[i,j] * sina * maxWidth),
+                  c(yO + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT - x$psi$mean[i,j] * cosa * maxWidth,
+                    yO - x$psi$mean[i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.point),
+                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                               1 - (i + j) / (nOriginSites + nTargetSites),
+                               alpha=1))
+        }
+        else {
+          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT + x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xO + x$psi$mean[i,j] * sina * maxWidth / 2),
+                  c(yO + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT - x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yO - x$psi$mean[i,j] * cosa * maxWidth / 2),
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.point),
+                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                               1 - (i + j) / (nOriginSites + nTargetSites),
+                               alpha=1))
+          graphics::polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
+                                              x$psi$mean[i,j] / 2),
+                    xT - (x$psi$simpleCI[2,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth,
+                    xT - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth,
+                    xO - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+                      sina * maxWidth),
+                  c(yO+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yT+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yT+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+                    yO+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth),
+                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                            1 - (i + j) / (nOriginSites + nTargetSites),
+                            alpha=alpha.range), border = NA)
+
+        }
+        shape::Arrowhead(xT, yT, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
+                         arr.type = 'curved', npoint = 15,
+                         lcol = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+                                    1 - (i + j) / (nOriginSites + nTargetSites),
+                                    alpha=1), arr.adj = 0)
+      }
+    }
+  }
+# dev.off()
+# shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+#               gCentroid(OVENdata$originSites[1])@coords[,2],
+#               gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,
+#               extent(OVENdata$targetSites[2])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
+#               gCentroid(OVENdata$originSites[1])@coords[,2],
+#               gCentroid(OVENdata$targetSites[3])@coords[,1],
+#               extent(OVENdata$targetSites[3])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,1,],2,mean)[3]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+#               gCentroid(OVENdata$originSites[2])@coords[,2],
+#               gCentroid(OVENdata$targetSites[1])@coords[,1],
+#               extent(OVENdata$targetSites[1])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,2,],2,mean)[1]*10),
+#               lty=1)
+#
+# shape::Arrows(gCentroid(OVENdata$originSites[2])@coords[,1],
+#               gCentroid(OVENdata$originSites[2])@coords[,2],
+#               (gCentroid(OVENdata$targetSites[2])@coords[,1]-80000),
+#               extent(OVENdata$targetSites[2])[4]+150000,
+#               arr.length = 0.3,
+#               arr.adj = 0.5,
+#               arr.lwd = 1,
+#               arr.width = 0.4,
+#               arr.type = "triangle",
+#               lwd=(apply(M$samplePsi[,2,],2,mean)[2]*10))
+#
+# box(which="plot")
+# #
+  graphics::par(op)
+}

@@ -5,7 +5,7 @@ makePsiRand <- function(model, origin.set, target.set) {
   new.beta <- MASS::mvrnorm(1, beta1, vcv1)
   full.beta <- rep(NA, length(model$results$beta$estimate))
   new.real <- RMark::get.real(model, "Psi", new.beta,
-                              design = model$design.matrix, vcv=F, se=F)
+                              design = model$design.matrix, vcv=FALSE, se=FALSE)
   mat <- RMark::TransitionMatrix(new.real)[origin.set, target.set]
   return(mat)
 }
@@ -162,16 +162,6 @@ targetSample <- function(isGL,
               draws = draws))
 }
 
-randomPoints <- function(probs, xy, nSim) {
-  multidraw <- rmultinom(n = nSim,
-                         size = 1,
-                         prob = probs)
-  # save the xy coordinates of the 'possible' locations #
-  point.sample2a <- xy[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
-
-  return(point.sample2a)
-}
-
 # Function for sampling from geolocator, telemetry, and/or intrinsic location
 # uncertainty on either origin or target side
 locSample <- function(isGL,
@@ -182,6 +172,7 @@ locSample <- function(isGL,
                       geoVCov = NULL,
                       points = NULL,
                       matvals = NULL,
+                      matvals_crs = NULL,
                       singleCell = NULL,
                       pointsInSites = FALSE,
                       overlap1 = NULL,
@@ -208,14 +199,17 @@ locSample <- function(isGL,
     intrinsic2 <- sf::st_as_sf(as.data.frame(intrinsic1), coords = c("x", "y"),
                                crs = 4326)
   }
+
   # If assignment isn't defined, create one from sites and points
   if (is.null(assignment)) {
-    if (!is.null(sites)){
+    if (!is.null(sites) && !is.null(points)){
       #Use the provided spatial layers to create assignment
       if(!sf::st_crs(sites)==sf::st_crs(points)){
         points <- sf::st_transform(points, crs = resampleProjection)
+        sites <- sf::st_transform(sites, crs = resampleProjection)
       }
-      assignment <- suppressMessages(unclass(sf::st_intersects(x = points, y = sites,
+      assignment <- suppressMessages(unclass(sf::st_intersects(x = points,
+                                                               y = sites,
                                                     sparse = TRUE)))
       #if assignment is not there - convert to 0
       assignment[sapply(assignment, function(x) length(x)==0)] <- 0
@@ -227,24 +221,33 @@ locSample <- function(isGL,
 
   # Storage
   site.sample <- rep(NA, nAnimals)
-  point.sample <- matrix(NA, nAnimals, 2)
+  point.sample <- matrix(NA, nAnimals, 2, dimnames = list(NULL, c('x', 'y')))
   # Fill in telemetry/GPS values (no location uncertainty)
   if (length(dim(assignment))==2){
-    site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ], 1,
+    site.sample[which(isTelemetry)] <- apply(assignment[isTelemetry, ,
+                                                        drop = FALSE], 1,
                                                   which.max)
+    if (is.list(site.sample)) {
+      site.sample[lengths(site.sample)==0] <- 0
+      site.sample <- unlist(site.sample)
+    }
+
   }else{
-    site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]}
+    site.sample[which(isTelemetry)] <- assignment[which(isTelemetry)]
+    site.sample[which(isTelemetry & is.na(site.sample))] <- 0
+  }
   if (!is.null(points))
     point.sample[which(isTelemetry), ] <- sf::st_coordinates(points[which(isTelemetry),])
   # Which to sample still
   toSample <- which(!isTelemetry)
   draws <- 0
   # Loop until all animals have valid sample or have exceeded maxTries
-  while (length(toSample) > 0 && (is.null(maxTries) || draws <= maxTries)) {
+  while (length(toSample) > 0 && (is.null(maxTries) || draws < maxTries)) {
     draws <- draws + 1
     # Convert toSample (numbers) into T/F, so can combine with other T/F
     toSampleBool <- 1:nAnimals %in% toSample
-    #cat(toSample, '\n')
+    # cat(toSampleBool, '\n')
+    # cat(isGL[1:10], '\n')
     # Sample geolocator points
     if (any(isGL & toSampleBool)) {
       #cat("*************", sum(isGL & toSampleBool), "*************\n")
@@ -269,43 +272,52 @@ locSample <- function(isGL,
                              MARGIN = 3)
       #print(str(point.sample0))
       #point.sample <- lapply(point.sample1, st_as_sf)
-      # Find out which sampled points are in a target site
-      if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
-        sites <- sf::st_transform(sites, crs = resampleProjection)
-      }
-      # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
-      #                            sparse = TRUE)
-      # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
-      #                   sparse = TRUE)
-      # inter[lengths(inter)==0] <- 0
-      # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
-      # test <- as.numeric(unlist(unclass(inter)))
-      site.sample0 <- sapply(point.sample0, FUN = function(z){
-        inter <- sf::st_intersects(x = z, y = sites,
-                                   sparse = TRUE)
-        inter[lengths(inter)==0] <- NA
-        inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
-        as.numeric(unlist(unclass(inter)))})
+      if (!is.null(sites)) {
+        # Find out which sampled points are in a target site
+        if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
+          sites <- sf::st_transform(sites, crs = resampleProjection)
+        }
+        # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
+        #                            sparse = TRUE)
+        # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
+        #                   sparse = TRUE)
+        # inter[lengths(inter)==0] <- 0
+        # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+        # test <- as.numeric(unlist(unclass(inter)))
+        site.sample0 <- sapply(point.sample0, FUN = function(z){
+          inter <- sf::st_intersects(x = z, y = sites,
+                                     sparse = TRUE)
+          inter[lengths(inter)==0] <- NA
+          inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
+          as.numeric(unlist(unclass(inter)))})
 
-      # Identify which animals have at least one valid sample point. good.sample0
-      # will be NA for those that don't.  For those that do, it will location in
-      # point.sample first valid point can be found.
-      good.sample0 <- apply(site.sample0, 2, function(x) which(!is.na(x))[1])
+        # Identify which animals have at least one valid sample point. good.sample0
+        # will be NA for those that don't.  For those that do, it will location in
+        # point.sample first valid point can be found.
+        good.sample0 <- apply(site.sample0, 2, function(x) which(!is.na(x))[1])
+      }
+      else {
+        site.sample0 <- array(0, c(nSim, length(point.sample0)))
+        good.sample0 <- rep(1, length(point.sample0))
+      }
+      # cat(good.sample0, "\n")
     }
     if (any(isProb & toSampleBool)) {
       #print(assignment)
       site.sample1 <- apply(assignment[isProb & toSampleBool, , drop = FALSE],
                             1, sample.int, n = ncol(assignment), size = nSim,
                             replace = TRUE)
+      if (is.null(dim(site.sample1)))
+        site.sample1 <- matrix(site.sample1, 1)
     }
-# IF ALL THE POINTS ARE WITHIN SITES #
-    # walk throught this section #
+    # walk through this section #
     if (any(isRaster & toSampleBool)) {
+      # some raster -
       if (pointsInSites && !any(isRaster & toSampleBool & (isGL | isProb))) {
+        # IF ALL THE POINTS ARE WITHIN SITES and no animals have two data types
         samp <- sample.int(nrandomDraws,
                            size = sum(isRaster & toSampleBool),
-                           replace = T)
- # some raster -
+                           replace = TRUE)
       # GRAB LOCATIONS FROM RASTER #
         samp2 <- samp + ((1:nAnimals)[toSampleBool & isRaster] - 1) * nrandomDraws
 
@@ -319,8 +331,9 @@ locSample <- function(isGL,
 # We ULTIMATELY NEED POINTS BECAUSE THEY ONLY HAVE RASTER DATA
         if (!is.null(overlap1))
           # Grab the relevant sites
-          site.sample2 <- overlap1[1, samp2, drop = FALSE]
-        good.sample2 <- rep(1, sum(isRaster & toSampleBool))
+          site.sample2 <- overlap1[samp, (1:nAnimals)[toSampleBool & isRaster], drop = FALSE]
+        good.sample2 <- seq(from = 1, by = nSim,
+              length.out = sum(isRaster & toSampleBool))
       }
       else if (is.null(singleCell)) {
         multidraw <- apply(matvals[ , (1:nAnimals)[toSampleBool & isRaster] + 2, drop = FALSE],
@@ -330,35 +343,63 @@ locSample <- function(isGL,
         #point.sample2 <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
         point.sample2 <- apply(multidraw, c(2:3), function(x) which(x==1))
         point.sample2 <- array(matvals[point.sample2, 1:2],
-                               c(nSim, sum(toSampleBool & isRaster), 2),
-                               list(NULL, NULL, c("x","y")))
+                               c(nSim * sum(toSampleBool & isRaster), 2),
+                               list(NULL, c("x","y")))
         #dimnames(point.sample2)[[2]] <- c("x","y")
 
         # Convert those to SpatialPoints
+        #cat("------ I MADE IT TO POINTSAMPLE 2 --------\n")
+        point.sample2 <- sf::st_as_sf(as.data.frame(point.sample2),
+                                      coords = c("x","y"),
+                                      #crs = 4326)
+                                      crs = sf::st_crs(matvals_crs))
 
-        point.sample2 <- apply(point.sample2,
-                               FUN = function(x){
-                                 sf::st_as_sf(data.frame(x),
-                                              coords = c("x","y"),
-                                    crs = 4326)},
-                               MARGIN = 2)
+        # point.sample2 <- apply(point.sample2,
+        #                        FUN = function(x){
+        #                          sf::st_as_sf(data.frame(x),
+        #                                       coords = c("x","y"),
+        #                             crs = 4326)},
+        #                        MARGIN = 2)
         #point.sample <- lapply(point.sample1, st_as_sf)
-        # Find out which sampled points are in a target site
-        if(!sf::st_crs(sites)==sf::st_crs(point.sample2[[1]])){
-          sites <- sf::st_transform(sites, crs = resampleProjection)
-          point.sample2 <- lapply(point.sample2, sf::st_transform,
-                                  crs = resampleProjection)
+        if (!is.null(sites)) {
+          # Find out which sampled points are in a target site
+          if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
+            sites <- sf::st_transform(sites, crs = resampleProjection)
+            point.sample2 <- sf::st_transform(point.sample2,
+                                              crs = resampleProjection)
+          }
+
+          # site.sample2 <- sapply(point.sample2, FUN = function(z){
+          #   suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
+          #                                        sparse = TRUE))))})
+          # Check which points are in target sites
+          site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
+                                                             y = sites))
+
+          # Give values without intersection an NA
+          len_intersect <- lengths(site.sample2)
+          # quick check to ensure that all the points fall exactly in one site #
+          if(any(len_intersect)>1){
+            warning("Overlapping targetSites or originSites may cause issues\n")
+            site.sample2 <- lapply(site.sample2, function (x) x[1])
+          }
+          site.sample2[lengths(site.sample2)==0] <- NA
+          site.sample2 <- unlist(as.numeric(site.sample2))
+
+          # Organize into matrix (separate by animal)
+          site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
+
+          # Identify which animals have at least one valid sample point. good.sample2
+          # will be NA for those that don't.  For those that do, it will location in
+          # point.sample first valid point can be found.
+          good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])+
+            seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
+          #cat(good.sample2, "\n")
         }
-
-        site.sample2 <- sapply(point.sample2, FUN = function(z){
-          suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = sites,
-                                               sparse = TRUE))))})
-
-        # Identify which animals have at least one valid sample point. good.sample2
-        # will be NA for those that don't.  For those that do, it will location in
-        # point.sample first valid point can be found.
-        good.sample2 <- apply(site.sample2, 2, function(x) which(!is.na(x))[1])
-        #cat(good.sample2, "\n")
+        else {
+          site.sample2 <- array(0, c(nSim, sum(isRaster & toSampleBool)))
+          good.sample2 <- rep(1, sum(isRaster & toSampleBool))
+        }
       }
       else {
         # Select nSim points for each animal still to be sampled
@@ -369,48 +410,56 @@ locSample <- function(isGL,
         samp2 <- samp + rep((1:nAnimals)[toSampleBool & isRaster] - 1, each = nSim) * nrandomDraws
 
         point.sample2 <- intrinsic2[samp2, ]
-        if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
-          point.sample2 <- sf::st_transform(point.sample2, crs = resampleProjection)
+        if (!is.null(sites)) {
+          if(!sf::st_crs(sites)==sf::st_crs(point.sample2)){
+            point.sample2 <- sf::st_transform(point.sample2,
+                                              crs = resampleProjection)
+          }
+          # Check which points are in target sites
+          site.sample2 <- suppressMessages(sf::st_intersects(point.sample2,
+                                                             y = sites))
+
+          # Give values without intersection an NA
+          len_intersect <- lengths(site.sample2)
+          # quick check to ensure that all the points fall exactly in one site #
+          if(any(len_intersect)>1){
+            warning("Overlapping targetSites or originSites may cause issues\n")
+            site.sample2 <- lapply(site.sample2, function (x) x[1])
+          }
+          site.sample2[len_intersect==0] <- NA
+          site.sample2 <- unlist(as.numeric(site.sample2))
+
+          # Organize into matrix (separate by animal)
+          site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
+          # Identify which animals have a valid point (inside a site).
+          # good.sample2, for those that don't, will be NA. For those that do, it
+          # will be location in point.sample where first valid point is.
+
+
+          good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]})+
+            seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
         }
-        # Check which points are in target sites
-        site.sample2 <- suppressMessages(sf::st_intersects(point.sample2, y = sites))
-
-        # Give values without intersection an NA
-        len_intersect <- lengths(site.sample2)
-        # quick check to ensure that all the points fall exactly in one site #
-        if(any(len_intersect)>1){
-          stop("Overlapping targetSites or originSites not allowed \n")
+        else {
+          site.sample2 <- array(0, c(nSim, sum(isRaster & toSampleBool)))
+          good.sample2 <- rep(1, sum(isRaster & toSampleBool))
         }
-
-        tf_intersect <- lengths(site.sample2)>0
-
-        site.sample2 <- unlist(as.numeric(site.sample2))
-        site.sample2[site.sample2==0] <- NA
-
-        # Organize into matrix (separate by animal)
-        site.sample2 <- matrix(site.sample2, nSim, sum(isRaster & toSampleBool))
-        # Identify which animals have a valid point (inside a site).
-        # good.sample2, for those that don't, will be NA. For those that do, it
-        # will be location in point.sample where first valid point is.
-
-        good.sample2 <- apply(site.sample2, 2, function(x){which(!is.na(x))[1]}) +
-          seq(from = 0, by = nSim, length.out = sum(isRaster & toSampleBool))
       }
     }
     if (any(isProb & !isGL & !isRaster & toSampleBool)){
       site.sample[isProb & !isGL & !isRaster & toSampleBool] <-
-        site.sample1[1, !(which(isProb & toSampleBool) %in% which(isGL | isRaster))]
+        site.sample1[1, !(which(isProb & toSampleBool) %in% which(isGL | isRaster)), drop = FALSE]
     }
     if (any(!isProb & isGL & !isRaster & toSampleBool)){
       if (any(!is.na(good.sample0[!(which(isGL) %in% which(isProb | isRaster))]))){
-        site.sample[!isProb & isGL & !isRaster & toSampleBool] <- apply(site.sample0[, !(which(isGL & toSampleBool) %in% which(isProb | isRaster)), drop = FALSE],
-                                                                        2,
-                                                                        function(x) x[!is.na(x)][1])
+        site.sample[!isProb & isGL & !isRaster & toSampleBool] <-
+          apply(site.sample0[, !(which(isGL & toSampleBool) %in% which(isProb | isRaster)), drop = FALSE],
+                2,
+                function(x) x[!is.na(x)][1])
         # Fill in target points of valid sampled points
-        # point.sample[which(!isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample0[!(which(isGL & toSampleBool) %in% which(isProb | isRaster))]))], ]<-
-        #   t(mapply(x = good.sample0[!is.na(good.sample0) & !(which(isGL & toSampleBool) %in% which(isProb | isRaster))],
-        #            y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0)))],
-        #            FUN = function(x, y) sf::st_coordinates(y[x,])))
+        point.sample[which(!isProb & isGL & !isRaster & toSampleBool)[which(!is.na(good.sample0[!(which(isGL & toSampleBool) %in% which(isProb | isRaster))]))], ]<-
+          t(mapply(x = good.sample0[!is.na(good.sample0) & !(which(isGL & toSampleBool) %in% which(isProb | isRaster))],
+                   y = point.sample0[which(!(which(isGL & toSampleBool) %in% which(isProb | isRaster)) & (!is.na(good.sample0)))],
+                   FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
     if (any(isProb & isGL & !isRaster & toSampleBool)){
@@ -440,11 +489,17 @@ locSample <- function(isGL,
                              drop = FALSE],
                 2,
                 function(x) x[!is.na(x)][1])
+        rows.select <- good.sample2[!(which(isRaster & toSampleBool) %in%
+                                        which(isProb | isGL) |
+                                        is.na(good.sample2))]
         # Fill in target points of valid sampled points
-        # point.sample[which(!isProb & !isGL & isRaster & toSampleBool), ]<- #[which(!is.na(good.sample2))]
-        #   t(mapply(x = good.sample2[!(which(isRaster & toSampleBool) %in% which(isProb | isGL))],
-        #            y = point.sample2[,],#which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),],
-        #            FUN = function(x, y) sf::st_coordinates(y[x,])))
+        point.sample[which(!isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample2))], ] <-
+          sf::st_coordinates(point.sample2[rows.select, ])
+          #[which(!is.na(good.sample2))]
+          # t(mapply(x = good.sample2[!(which(isRaster & toSampleBool) %in% which(isProb | isGL))],
+          #          y = point.sample2[which(which(isRaster & toSampleBool) %in% which(!isProb & !isGL & !is.na(good.sample2))),,
+          #                            drop = FALSE],
+          #          FUN = function(x, y) sf::st_coordinates(y[x,])))
       }
     }
     if (any(isProb & !isGL & isRaster & toSampleBool)){
@@ -460,6 +515,7 @@ locSample <- function(isGL,
               site.sample2[good.sample12[col],
                            which(which(isRaster & toSampleBool) %in% which(isProb & !isGL))[col]]
           # Fill in target points of valid sampled points
+          # Doesn't get used, not going to include prob with estMantel
           # point.sample[which(isProb & !isGL & isRaster & toSampleBool)[which(!is.na(good.sample12))], ]<-
           #   t(mapply(x = good.sample12[!is.na(good.sample12)],
           #            y = point.sample2[which(which(isRaster & toSampleBool) %in% which(isProb & !isGL))[which(!is.na(good.sample12))], ],
@@ -482,17 +538,17 @@ locSample <- function(isGL,
                            which(which(isRaster & toSampleBool) %in% which(!isProb & isGL))[col]]
           # Just choosing GL point instead of fussing with raster point - generally
           # those are a lot more precise so probably also more accurate.
-          # point.sample[which(!isProb &
-          #                      isGL &
-          #                      isRaster &
-          #                      toSampleBool)[which(!is.na(good.sample02))],] <-
-          #   t(mapply(
-          #     x = good.sample02[!is.na(good.sample02)],
-          #     y = point.sample0[which(which(isGL & toSampleBool) %in%
-          #                               which(!isProb & isRaster))[which(!is.na(good.sample02))]],
-          #     FUN = function(x, y)
-          #       sf::st_coordinates(y[x, ])
-          #   ))
+          point.sample[which(!isProb &
+                               isGL &
+                               isRaster &
+                               toSampleBool)[which(!is.na(good.sample02))],] <-
+            t(mapply(
+              x = good.sample02[!is.na(good.sample02)],
+              y = point.sample0[which(which(isGL & toSampleBool) %in%
+                                        which(!isProb & isRaster))[which(!is.na(good.sample02))]],
+              FUN = function(x, y)
+                sf::st_coordinates(y[x, ])
+            ))
         }
       }
     }
@@ -522,10 +578,15 @@ locSample <- function(isGL,
       }
     }
     toSample <- which(is.na(site.sample))
+    #print(toSample)
   }
-  if (!is.null(maxTries) && draws > maxTries)
-    stop(paste0('maxTries (',maxTries,') reached during point resampling, exiting. Examine targetSites, geoBias, and geoVcov to determine why so few resampled points fall within targetSites.'))
-#  }
+  if (length(toSample) > 0){
+    notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],
+                          isRaster = isRaster[toSample], isProb = isProb[toSample],
+                          isTelemetry = isTelemetry[toSample])
+    return(list(site.sample = site.sample, point.sample = point.sample,
+                draws = draws, notfind = notfind))
+  }
   return(list(site.sample = site.sample, point.sample = point.sample,
               draws = draws))
 }
@@ -567,7 +628,7 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
   # In this case, only need to draw once, because already determined that points fall in targetSites
   if (pointsInSites) {
     draws <- 1
-    samp <- sample.int(nrandomDraws, size = length(toSample), replace = T)
+    samp <- sample.int(nrandomDraws, size = length(toSample), replace = TRUE)
     samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
     point.sample <- targetIntrinsic2[samp2]
     # Changed to make sure x,y coords stack correctly
@@ -634,7 +695,8 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
       }
       else {
         # Select nSim points for each animal still to be sampled
-        samp <- sample.int(nrandomDraws, size = length(toSample) * nSim, replace = T)
+        samp <- sample.int(nrandomDraws, size = length(toSample) * nSim,
+                           replace = TRUE)
         samp2 <- samp + rep(animal.sample[toSample] - 1, each = nSim) * nrandomDraws
         point.sample <- targetIntrinsic2[samp2,]
         # Check which points are in target sites
@@ -717,4 +779,690 @@ distFromPos <- function(pos, surface = 'ellipsoid') {
     }
   }
   return(dist)
+}
+
+reassignInds <- function(dataOverlapSetting = "none",
+                         originPoints = NULL, targetPoints = NULL,
+                         originAssignment = NULL, targetAssignment = NULL,
+                         isGL = FALSE, isTelemetry = FALSE,
+                         isRaster = FALSE, isProb = FALSE,
+                         captured = "origin",
+                         originRasterXYZ = NULL,
+                         originRasterXYZcrs = NULL,
+                         originSingleCell = NULL,
+                         targetRasterXYZ = NULL,
+                         targetRasterXYZcrs = NULL,
+                         targetSingleCell = NULL,
+                         originSites = NULL,
+                         targetSites = NULL) {
+  if (dataOverlapSetting != "none") {
+    stop('dataOverlapSetting "named" not set up yet')
+  }
+  if (is.null(targetPoints))
+    nTargetPoints <- 0
+  else
+    nTargetPoints <- nrow(targetPoints)
+  if (is.null(originPoints))
+    nOriginPoints <- 0
+  else
+    nOriginPoints <- nrow(originPoints)
+  if (any(isGL) || any(isTelemetry)) {
+    nPoints <- max(nTargetPoints, nOriginPoints)
+  }
+  else {
+    nPoints <- 0
+  }
+  # capturePointsGL <- T
+  # if (any(isGL))
+  #   if (sum(captured[isGL]=="origin")>nOriginPoints)
+  if (any(isRaster)) {
+    if (!is.null(originRasterXYZ)) {
+      dimORast <- dim(originRasterXYZ)
+      nORast <- dimORast[2] - 2
+    }
+    else
+      nORast <- 0
+    if (!is.null(targetRasterXYZ)) {
+      dimTRast <- dim(targetRasterXYZ)
+      nTRast <- dimTRast[2] - 2
+    }
+    else
+      nTRast <- 0
+  }
+  else {
+    nORast <- nTRast <- 0
+  }
+  if (any(isProb)) {
+    if (is.null(originAssignment)){
+      nOAss <- 0
+      dimOAss <- NULL
+    }
+    else {
+      dimOAss <- dim(originAssignment)
+      if (is.null(dimOAss)) {
+        nOAss <- length(originAssignment)
+        tt2 <- matrix(0, nOAss, max(length(unique(originAssignment)),
+                                    nrow(originSites)))
+        for (i in 1:nOAss)
+          tt2[i, originAssignment[i]] <- 1
+        originAssignment <- tt2
+        dimOAss <- dim(originAssignment)
+      }
+      else
+        nOAss <- dimOAss[1]
+    }
+    if (is.null(targetAssignment)){
+      nTAss <- 0
+      dimTAss <- NULL
+    }
+    else {
+      dimTAss <- dim(targetAssignment)
+      if (is.null(dimTAss)){
+        nTAss <- length(targetAssignment)
+        tt2 <- matrix(0, nTAss, max(length(unique(targetAssignment)),
+                                    nrow(targetSites)))
+        for (i in 1:nTAss)
+          tt2[i, targetAssignment[i]] <- 1
+        targetAssignment <- tt2
+        dimTAss <- dim(targetAssignment)
+        #print(targetAssignment)
+      }
+      else
+        nTAss <- dimTAss[1]
+    }
+  }
+  nTotal <- max(length(isGL), length(isTelemetry), length(isRaster),
+                length(isProb))
+  if (nTotal < 2) {
+    nTotal <- length(captured)
+    if (nTotal < 2 &&
+        ((any(isGL) + any(isTelemetry) + any(isRaster) + any(isProb)) > 1)) {
+      warning("For multiple datasets, we recommend having an entry in captured, isGL, isTelemetry, etc. for each animal")
+      nTotal <- nPoints + nORast + nTRast + max(nOAss, nTAss)
+    }
+  }
+  if (length(isGL)==1)
+    isGL <- rep(isGL, nTotal)
+  if (length(isTelemetry)==1)
+    isTelemetry <- rep(isTelemetry, nTotal)
+  if (length(isRaster)==1)
+    isRaster <- rep(isRaster, nTotal)
+  if (length(isProb)==1)
+    isProb <- rep(isProb, nTotal)
+  if (length(captured)==1)
+    captured <- rep(captured, nTotal)
+  capturePoint <- rep(FALSE, nTotal)
+  nTPremain <- nTargetPoints
+  nOPremain <- nOriginPoints
+  if (any(isGL)){
+    nTPremain <- nTPremain - sum(captured[isGL]!="target")
+    nOPremain <- nOPremain - sum(captured[isGL]!="origin")
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isGL] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isGL]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isGL] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isGL]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isTelemetry)) {
+    nTPremain <- nTPremain - sum(captured[isTelemetry]!="target")
+    nOPremain <- nOPremain - sum(captured[isTelemetry]!="origin")
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isTelemetry] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isTelemetry]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isTelemetry] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isTelemetry]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isRaster)) {
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isRaster] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isRaster]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isRaster] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isRaster]=="origin")
+    }
+  }
+  if ((nTPremain > 0 || nOPremain > 0) && any(isProb)) {
+    if (nTPremain > 0) {
+      capturePoint[captured=="target" & isProb] <- TRUE
+      nTPremain <- nTPremain - sum(captured[isProb]=="target")
+    }
+    if (nOPremain > 0) {
+      capturePoint[captured=="origin" & isProb] <- TRUE
+      nOPremain <- nOPremain - sum(captured[isProb]=="origin")
+    }
+  }
+  if (nTargetPoints > 0 || nOriginPoints > 0) {
+    if (is.null(targetPoints)) {
+      targetPoints2 <- NULL
+    }
+    else {
+      if (nTargetPoints < nTotal) {
+        dummyPoint <- targetPoints[1, ]
+        targetPoints2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isGL[i] || isTelemetry[i] || (captured[i] == "target" &&
+                                            capturePoint[i])) {
+            place <- place + 1
+            targetPoints2 <- rbind(targetPoints2,
+                                   targetPoints[place, ])
+          }
+          else
+            targetPoints2 <- rbind(targetPoints2,
+                                   dummyPoint)
+        }
+      }
+      else
+        targetPoints2 <- targetPoints
+    }
+    if (is.null(originPoints)) {
+      originPoints2 <- NULL
+    }
+    else {
+      if (nOriginPoints < nTotal) {
+        dummyPoint <- originPoints[1, ]
+        originPoints2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isGL[i] || isTelemetry[i] || captured[i] == "origin" &&
+              capturePoint[i]) {
+            place <- place + 1
+            originPoints2 <- rbind(originPoints2,
+                                   originPoints[place, ])
+          }
+          else
+            originPoints2 <- rbind(originPoints2,
+                                   dummyPoint)
+        }
+      }
+      else
+        originPoints2 <- originPoints
+    }
+  }
+  else {
+    originPoints2 <- originPoints; targetPoints2 <- targetPoints
+  }
+  if (any(isRaster)) {
+    if (!is.null(originRasterXYZ)) {
+      if (all(isRaster & captured != "origin")) {
+        originRasterXYZ2 <- originRasterXYZ
+      }
+      else {
+        originRasterXYZ2 <- originRasterXYZ[, 1:2]
+        column <- 2
+        for (i in 1:nTotal) {
+          if (isRaster[i] && captured[i] != "origin") {
+            column <- column + 1
+            originRasterXYZ2 <- cbind(originRasterXYZ2,
+                                      originRasterXYZ[, column])
+          }
+          else
+            originRasterXYZ2 <- cbind(originRasterXYZ2,
+                                      array(1/dimORast[1], c(dimORast[1], 1)))
+
+        }
+        if (!is.null(originSingleCell)) {
+          dimOCell <- dim(originSingleCell)
+          dummyVals <- c(originSingleCell[ , , 1])
+          originSingleCell2 <- NULL
+          place <- 0
+          for (i in 1:nTotal) {
+            if (isRaster[i] && captured[i] != "origin") {
+              place <- place + 1
+              originSingleCell2 <- c(originSingleCell2, originSingleCell[,,place])
+            }
+            else
+              originSingleCell2 <- c(originSingleCell2, dummyVals)
+
+          }
+          originSingleCell <- array(originSingleCell2,
+                                    c(dimOCell[1], dimOCell[2], nTotal),
+                                    list(NULL, c("Longitude", "Latitude"), NULL))
+        }
+      }
+    }
+    else
+      originRasterXYZ2 <- NULL
+    if (!is.null(targetRasterXYZ)) {
+      if (all(isRaster & captured != "target")) {
+        targetRasterXYZ2 <- targetRasterXYZ
+      }
+      else {
+        targetRasterXYZ2 <- targetRasterXYZ[, 1:2]
+        column <- 2
+        for (i in 1:nTotal) {
+          if (isRaster[i] && captured[i] != "target") {
+            column <- column + 1
+            targetRasterXYZ2 <- cbind(targetRasterXYZ2,
+                                      targetRasterXYZ[, column])
+          }
+          else
+            targetRasterXYZ2 <- cbind(targetRasterXYZ2,
+                                      array(1/dimTRast[1], c(dimTRast[1], 1)))
+
+        }
+        if (!is.null(targetSingleCell)) {
+          dimTCell <- dim(targetSingleCell)
+          dummyVals <- c(targetSingleCell[ , , 1])
+          targetSingleCell2 <- NULL
+          place <- 0
+          for (i in 1:nTotal) {
+            if (isRaster[i] && captured[i] != "target") {
+              place <- place + 1
+              targetSingleCell2 <- c(targetSingleCell2, targetSingleCell[,,place])
+            }
+            else
+              targetSingleCell2 <- c(targetSingleCell2, dummyVals)
+
+          }
+          targetSingleCell <- array(targetSingleCell2,
+                                    c(dimTCell[1], dimTCell[2], nTotal))
+        }
+      }
+    }
+    else
+      targetRasterXYZ2 <- NULL
+  }
+  else {
+    originRasterXYZ2 <- originRasterXYZ; targetRasterXYZ2 <- targetRasterXYZ
+  }
+  if (any(isProb)) {
+    if (nTAss == 0) {
+      targetAssignment2 <- NULL
+    }
+    else {
+      if (nTAss < nTotal) {
+        dummyAss <- array(1/dimTAss[2], c(1, dimTAss[2]))
+        targetAssignment2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isProb[i] && (captured[i] != "target" || !capturePoint[i])) {
+            place <- place + 1
+            targetAssignment2 <- rbind(targetAssignment2,
+                                       targetAssignment[place, ])
+          }
+          else {
+            if (captured[i] == "target" && capturePoint[i]){
+              ass <- sf::st_intersects(x = targetPoints[i,], y = targetSites,
+                                       sparse = FALSE)
+              if (sum(ass)<1){
+                warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
+                        "Affects animal: ", i)
+                ass <- matrix(0, 1, dimTAss[2])
+                ass[sf::st_nearest_feature(x = targetPoints[i,],
+                                           y = targetSites)] <- 1
+              }
+              else if (sum(ass) > 1){
+                warning("Overlapping targetSites may cause issues\n")
+                ass0 <- sf::st_intersects(x = targetPoints[i,], y = targetSites,
+                                          sparse = TRUE)
+                ass <- matrix(0, 1, dimTAss[2])
+                ass[ass0[1]] <- 1
+              }
+              targetAssignment2 <- rbind(targetAssignment2, ass)
+            }
+
+            else
+              targetAssignment2 <- rbind(targetAssignment2, dummyAss)
+          }
+        }
+      }
+      else
+        targetAssignment2 <- targetAssignment
+    }
+    if (is.null(dimOAss)) {
+      originAssignment2 <- NULL
+    }
+    else {
+      if (dimOAss[1] < nTotal) {
+        dummyAss <- array(1/dimOAss[2], c(1, dimOAss[2]))
+        originAssignment2 <- NULL
+        place <- 0
+        for (i in 1:nTotal) {
+          if (isProb[i] && (captured[i] != "origin" || !capturePoint[i])) {
+            place <- place + 1
+            originAssignment2 <- rbind(originAssignment2,
+                                       originAssignment[place, ])
+          }
+          else {
+            if (captured[i] == "origin" && capturePoint[i]){
+              ass <- sf::st_intersects(x = originPoints[i,], y = originSites,
+                                       sparse = FALSE)
+              if (sum(ass)<1){
+                warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
+                        "Affects animal: ", i)
+                ass <- matrix(0, 1, dimOAss[2])
+                ass[sf::st_nearest_feature(x = originPoints[i,],
+                                              y = originSites)] <- 1
+
+              }
+              else if (sum(ass) > 1){
+                warning("Overlapping originSites may cause issues\n")
+                ass0 <- sf::st_intersects(x = originPoints[i,], y = originSites,
+                                          sparse = TRUE)
+                ass <- matrix(0, 1, dimOAss[2])
+                ass[ass0[1]] <- 1
+              }
+              originAssignment2 <- rbind(originAssignment2, ass)
+            }
+            else
+              originAssignment2 <- rbind(originAssignment2,
+                                         dummyAss)
+          }
+
+        }
+      }
+      else
+        originAssignment2 <- originAssignment
+    }
+  }
+  else {
+    originAssignment2 <- originAssignment
+    targetAssignment2 <- targetAssignment
+  }
+  return(list(originPoints = originPoints2, targetPoints = targetPoints2,
+              originAssignment = originAssignment2,
+              targetAssignment = targetAssignment2,
+              isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster,
+              isProb = isProb, captured = captured,
+              originRasterXYZ = originRasterXYZ2,
+              originSingleCell = originSingleCell,
+              targetRasterXYZ = targetRasterXYZ2,
+              targetSingleCell = targetSingleCell))
+}
+
+# Return randomly sampled points from sites, based on assignment
+randomPoints <- function(sites, assignment, geomName = "geometry") {
+  nSites <- nrow(sites)
+  assignmentSum <- c(table(factor(assignment, levels = 1:nSites)))
+  points <- sf::st_sample(sites, assignmentSum)
+  points <- sf::st_as_sf(points)
+  points <- points[rank(assignment, ties.method = "first"), ]
+  names(points)[1] <- geomName
+  sf::st_geometry(points) <- geomName
+  return(points)
+}
+
+# Summary functions
+summarize3D <- function(array3D, nSites1, nSites2, names1,
+                         names2, point = NULL, alpha = 0.05) {
+  meanA <- apply(array3D, 2:3, mean)
+  medianA <- apply(array3D, 2:3, median)
+  seA <- apply(array3D, 2:3, sd)
+  simpleCIA <- apply(array3D, 2:3, quantile, probs = c(alpha/2, 1-alpha/2),
+                       na.rm=TRUE)
+  dimnames(simpleCIA)[[1]] <- c("lower", "upper")
+  matrixA <- array(c(array3D), c(dim(array3D)[1], nSites1 * nSites2),
+                      list(NULL, paste(rep(names1, nSites2),
+                                       rep(names2, each = nSites1),
+                                       sep = "#")))
+  mcmcA <- coda::as.mcmc(matrixA)
+  hpdCI <- coda::HPDinterval(mcmcA, 1-alpha)
+  hpdCI <- array(hpdCI, c(nSites1, nSites2, 2),
+                 list(names1, names2, c("lower", "upper")))
+  hpdCI <- aperm(hpdCI, c(3, 1, 2))
+  bcCIA <- array(NA, dim = c(2, nSites1, nSites2),
+                   dimnames = list(c("lower", "upper"), names1, names2))
+  for (i in 1:nSites1) {
+    for (j in 1:nSites2) {
+      psi.z0 <- qnorm(sum(array3D[, i, j] < meanA[i, j], na.rm = TRUE) /
+                        length(which(!is.na(array3D[, i, j]))))
+      bcCIA[ , i, j] <- quantile(array3D[, i, j],
+                                   pnorm(2 * psi.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                   na.rm=TRUE, names = FALSE)
+    }
+  }
+  return(list(sample = array3D, mean = meanA, se = seA,
+              simpleCI = simpleCIA, bcCI = bcCIA, hpdCI = hpdCI,
+              median = medianA, point = point))
+}
+
+summarizeAbund <- function(abund, nSites1, names1, pointAbund = NULL,
+                           alpha = 0.05) {
+  meanAbund <- apply(abund, 2, mean, na.rm=TRUE)
+  medianAbund <- apply(abund, 2, median, na.rm=TRUE)
+  seAbund <- apply(abund, 2, sd, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCIAbund <- apply(abund, 2, quantile,
+                         probs = c(alpha/2, 1-alpha/2),
+                         na.rm=TRUE)
+  dimnames(simpleCIAbund)[[1]] <- c("lower", "upper")
+  bcCIAbund <- array(NA, dim = c(2, nSites1),
+                     dimnames = list(c("lower", "upper"), names1))
+  for (i in 1:nSites1) {
+    abund.z0 <- qnorm(sum(abund[, i] < meanAbund[i], na.rm = TRUE) /
+                        length(which(!is.na(abund[, i]))))
+    bcCIAbund[ , i] <- quantile(abund[, i],
+                                pnorm(2 * abund.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                na.rm=TRUE, names = FALSE)
+  }
+  return(list(sample = abund, mean = meanAbund, se = seAbund,
+              simpleCI = simpleCIAbund, bcCI = bcCIAbund, median = medianAbund,
+              point = pointAbund))
+}
+
+# Currently called through reverseTransition (in calcConnectivity.R)
+reverseEstTransition <- function(psi, originRelAbund, pi = NULL,
+                                  originSites=NULL, targetSites=NULL,
+                                  originNames = NULL, targetNames = NULL,
+                                  nSamples = 1000, row0 = 0, alpha = 0.05) {
+  if (is.null(psi)) {
+    if (is.array(pi)) {
+      if (length(dim(pi))!=3)
+        stop('Pi should either be 2-(for fixed migratory combination probabilities) or 3-dimensional array')
+      piIn <- pi
+    }
+    else if (inherits(pi, "estPi")) {
+      if (is.null(originNames)) {
+        originNames <- pi$input$originNames
+      }
+      if (is.null(targetNames)) {
+        targetNames <- pi$input$targetNames
+      }
+      piIn <- pi
+      pi <- pi$pi$sample
+    }
+    nOriginSites <- dim(pi)[2]
+    nTargetSites <- dim(pi)[3]
+    if (is.null(originNames)) {
+      originNames <- dimnames(pi)[[2]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(pi)[[3]]
+    }
+    piBase <- apply(pi, 2:3, mean)
+    if (dim(pi)[1]>=nSamples)
+      piSamples <- round(seq(from = 1, to = dim(pi)[1],
+                             length.out = nSamples))
+    else
+      piSamples <- sample.int(dim(pi)[1], nSamples, replace = TRUE)
+    pointRev <- reverseTransition(pi = piBase)
+    pointGamma <- pointRev$gamma
+    pointTargetAbund <- pointRev$targetRelAbund
+    pointPsi <- pointRev$psi
+    pointOriginAbund <- pointRev$originRelAbund
+    gamma <- array(NA, c(nSamples, nTargetSites, nOriginSites),
+                   dimnames = list(NULL, targetNames, originNames))
+    targetRelAbund <- array(NA, c(nSamples, nTargetSites),
+                            dimnames = list(NULL, targetNames))
+    psi <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+                dimnames = list(NULL, originNames, targetNames))
+    originRelAbund <- array(NA, c(nSamples, nOriginSites),
+                            dimnames = list(NULL, originNames))
+    for (i in 1:nSamples) {
+      piNew <- pi[piSamples[i],,]
+      # Reverse for new pi
+      sampleRev <- reverseTransition(pi = piNew)
+      gamma[i, , ] <- sampleRev$gamma
+      targetRelAbund[i, ] <- sampleRev$targetRelAbund
+      psi[i, , ] <- sampleRev$psi
+      originRelAbund[i, ] <- sampleRev$originRelAbund
+    }
+    gammaReturn <- summarize3D(gamma, nTargetSites, nOriginSites, targetNames,
+                               originNames, pointGamma, alpha)
+    targetAbundReturn <- summarizeAbund(targetRelAbund, nTargetSites,
+                                        targetNames, pointTargetAbund, alpha)
+    psiReturn <- summarize3D(psi, nOriginSites, nTargetSites, originNames,
+                             targetNames, pointPsi, alpha)
+    originAbundReturn <- summarizeAbund(originRelAbund, nOriginSites,
+                                        originNames, pointOriginAbund, alpha)
+    rev <- list(gamma = gammaReturn,
+                targetRelAbund = targetAbundReturn,
+                psi = psiReturn, originRekAbund = originAbundReturn,
+                input = list(pi = piIn,
+                             originSites = originSites, targetSites = targetSites,
+                             originNames = originNames, targetNames = targetNames,
+                             nSamples = nSamples, row0 = row0, alpha = alpha))
+    class(rev) <- c("estGamma", "estTargetRelAbund", "estPsi",
+                    "estOriginRelAbund", "estMigConnectivity")
+    return(rev)
+  }
+  if (is.matrix(psi)) {
+    psiFixed <- TRUE
+    psiVCV <- NULL
+    nOriginSites <- dim(psi)[1]
+    nTargetSites <- dim(psi)[2]
+    if (is.null(originNames)) {
+      originNames <- dimnames(psi)[[1]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(psi)[[2]]
+    }
+    psiBase <- psi
+    psiIn <- psi
+  }
+  else if (inherits(psi, "mark")) {
+    psiFixed <- FALSE
+    if (!is.numeric(originSites) || !is.numeric(targetSites))
+      stop('Must specify which RMark Psi parameters represent origin and target sites')
+    nOriginSites <- length(originSites)
+    nTargetSites <- length(targetSites)
+    psiVCV <- psi$results$beta.vcv
+    psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
+                                                       se=TRUE))[originSites,
+                                                                 targetSites]
+    if (any(diag(psi$results$beta.vcv) < 0))
+      stop("Can't sample model, negative beta variances")
+    psiIn <- psi
+  }
+  else if (is.array(psi)) {
+    if (length(dim(psi))!=3)
+      stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
+    psiFixed <- FALSE
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    if (is.null(originNames)) {
+      originNames <- dimnames(psi)[[2]]
+    }
+    if (is.null(targetNames)) {
+      targetNames <- dimnames(psi)[[3]]
+    }
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    psiIn <- psi
+  }
+  else if (inherits(psi, "estPsi") || inherits(psi, "estMC")) {
+    psiFixed <- FALSE
+    if (is.null(originNames)) {
+      originNames <- psi$input$originNames
+    }
+    if (is.null(targetNames)) {
+      targetNames <- psi$input$targetNames
+    }
+    psiIn <- psi
+    psi <- psi$psi$sample
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+  }
+  originRelAbundIn <- originRelAbund
+  if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
+    originRelAbund <- as.matrix(originRelAbund)
+  }
+  if (is.matrix(originRelAbund) && dim(originRelAbund)[1]>1) {
+    abundFixed <- FALSE
+    if (dim(originRelAbund)[2]>nOriginSites)
+      abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
+    else if (dim(originRelAbund)[2]==nOriginSites)
+      abundParams <- 1:nOriginSites
+    else
+      stop('Number of origin sites must be constant between psi and abundance')
+    if (dim(originRelAbund)[1] >= nSamples)
+      abundRows <- round(seq(from = row0 + 1, to = dim(originRelAbund)[1],
+                                    length.out = nSamples))
+    else
+      abundRows <- sample((row0 + 1):dim(originRelAbund)[1], nSamples,
+                          replace = TRUE)
+    originRelAbund <- as.matrix(originRelAbund[abundRows, abundParams])
+    abundBase <- colMeans(originRelAbund)
+  }
+  else {
+    abundFixed <- TRUE
+    if (length(originRelAbund)!=nOriginSites)
+      stop('Number of origin sites must be constant between psi and abundance')
+    abundBase <- originRelAbund
+  }
+  pointRev <- reversePsiRelAbund(psi = psiBase, originRelAbund = abundBase)
+  pointGamma <- pointRev$gamma
+  pointAbund <- pointRev$targetRelAbund
+  pointPi <- pointRev$pi
+  gamma <- array(NA, c(nSamples, nTargetSites, nOriginSites),
+                 dimnames = list(NULL, targetNames, originNames))
+  targetRelAbund <- array(NA, c(nSamples, nTargetSites),
+                          dimnames = list(NULL, targetNames))
+  pi <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+              dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nSamples) {
+    # Generate random transition probability matrices
+    if (psiFixed)
+      psiNew <- psiBase
+    else if (is.null(psiVCV))
+      psiNew <- psi[psiSamples[i],,]
+    else
+      psiNew <- makePsiRand(psi, originSites, targetSites)
+    # Point estimates of breeding densities
+    if (abundFixed)
+      abundNew <- abundBase
+    else
+      abundNew <- originRelAbund[i, abundParams]
+    # Reverse for new psis and relative breeding densities
+    sampleRev <- reversePsiRelAbund(psi = psiNew, originRelAbund = abundNew)
+    gamma[i, , ] <- sampleRev$gamma
+    targetRelAbund[i, ] <- sampleRev$targetRelAbund
+    pi[i, , ] <- sampleRev$pi
+  }
+  gammaReturn <- summarize3D(gamma, nTargetSites, nOriginSites, targetNames,
+                             originNames, pointGamma, alpha)
+  targetAbundReturn <- summarizeAbund(targetRelAbund, nTargetSites,
+                                      targetNames, pointAbund, alpha)
+  piReturn <- summarize3D(pi, nOriginSites, nTargetSites, originNames,
+                           targetNames, pointPi, alpha)
+  rev <- list(gamma = gammaReturn,
+              targetRelAbund = targetAbundReturn,
+              pi = piReturn,
+              input = list(psi = psiIn, originRelAbund = originRelAbundIn,
+                           originSites = originSites, targetSites = targetSites,
+                           originNames = originNames, targetNames = targetNames,
+                           nSamples = nSamples, row0 = row0, alpha = alpha))
+  class(rev) <- c("estGamma", "estTargetRelAbund", "estPi", "estMigConnectivity")
+  return(rev)
+
 }

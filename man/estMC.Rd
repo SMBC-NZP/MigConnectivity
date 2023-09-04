@@ -451,7 +451,7 @@ GPS_mc<-estMC(isGL=FALSE, # Logical vector: light-level geolocator(T)/GPS(F)
 str(GPS_mc, max.level = 2)
 str(Combined, max.level = 2)
 str(GL_mc, max.level = 2)
-if (length(find.package("RColorBrewer", quiet = T))==0)
+if (length(find.package("RColorBrewer", quiet = TRUE))==0)
   install.packages(c('RColorBrewer'))
 plot(Combined, col = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
      main = "Ovenbird GL and GPS")

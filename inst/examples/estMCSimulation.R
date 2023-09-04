@@ -1,4 +1,4 @@
-calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose=F) {
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, verbose=FALSE) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
   psiMat <- matrix(0, nOrigin, nTarget)
@@ -231,7 +231,7 @@ system.time(for (sim in 1:nSimsLarge14) {
     results14[[i]] <- calcPsiMC(breedDist14[[i]], nonbreedDist14[[i]],
                                 animalLoc14[[i]],
                                 originRelAbund = breedingRelN14[[i]],
-                                verbose = F)
+                                verbose = FALSE)
     compare14.array[sim, 'MC'] <- results14[[i]]$MC
     compare14.array[sim, 'Mantel'] <- calcStrengthInd(breedDist14[[1]],
                                                       nonbreedDist14[[1]],
@@ -261,7 +261,7 @@ results14 <- vector("list", nSims14)
 
 # Run estimations
 set.seed(567)
-sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, T)]
+sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, TRUE)]
 for (sim in 1:nSims14) {
   cat("Estimation", sim, "of", nSims14, '\n')
   for (i in 13) {#:nScenarios14) {
@@ -273,7 +273,7 @@ for (sim in 1:nSims14) {
                             targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
-                            nSamples = 1000, verbose = 0, calcCorr = T,
+                            nSamples = 1000, verbose = 0, calcCorr = TRUE,
                             geoBias = c(0, 0), geoVCov = matrix(0, 2, 2))
     est14.array[sim, 'MC'] <- results14[[sim]]$meanMC
     est14.array[sim, 'Mantel'] <- results14[[sim]]$meanCorr
@@ -324,7 +324,7 @@ qualities14 <- data.frame(Parameter = rep(c("MC", 'rM'), 8),
                                  mean(ci14.array[, "Mantel", 'lower'] <= MC & ci14.array[, "Mantel", 'upper'] >= MC),
                                  mean(ci14.array[, "MC", 'lower'] <= means14[1] & ci14.array[, "MC", 'upper'] >= means14[1]),
                                  mean(ci14.array[, "Mantel", 'lower'] <= means14[2] & ci14.array[, "Mantel", 'upper'] >= means14[2])))
-format(qualities14, digits = 2, scientific = F)
+format(qualities14, digits = 2, scientific = FALSE)
 
 # point.rM14 <- sapply(results14, function(x) x$pointCorr, simplify = 'array')
 # mean(simplify2array(point.rM14))
@@ -343,7 +343,7 @@ ci14.array <- array(NA, c(nSims14, nScenarios14, 3, 2), dimnames =
                                 c("MC", "MCss", "Mantel"),
                                 c('lower', 'upper')))
 set.seed(567)
-sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, T)]
+sim14.sub <- sim14[sample.int(nSimsLarge14, nSims14, TRUE)]
 for (sim in 1:nSims14) {
   cat("Estimation", sim, "of", nSims14, '\n')
   for (i in 5) {#:nScenarios14) {
@@ -355,7 +355,7 @@ for (sim in 1:nSims14) {
 #                           targetPoints = targLocs14[[i]][animalLoc14[[sim]][, 2, 1, 1], ],
                             originAssignment = animalLoc14[[sim]][, 1, 1, 1],
                             targetAssignment = animalLoc14[[sim]][, 2, 1, 1],
-                            nSamples = 1000, verbose = 0, calcCorr = F)
+                            nSamples = 1000, verbose = 0, calcCorr = FALSE)
     est14.array[sim, i, 'MCss'] <- results14[[sim]]$meanMC
     var14.array[sim, i, 'MCss'] <- results14[[sim]]$seMC ^ 2
     ci14.array[sim, i, 'MCss', ] <- results14[[sim]]$bcCI
@@ -429,7 +429,7 @@ polys <- lapply(winteringPos14,toPoly,projection.in = WGS84, projection.out = NA
 simLocationError <- function(targetPoints, targetSites, geoBias, geoVCov) {
   nAnimals <- length(targetPoints)
   nSim <- 100
-  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=T)
+  geoBias2 <- matrix(rep(geoBias, nSim), nrow=nSim, byrow=TRUE)
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   for(i in 1:nAnimals){

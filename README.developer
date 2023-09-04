@@ -5,20 +5,23 @@ Steps for Making Future Updates
 the version of master on our GitHub repository.
 2. In RStudio (or wherever), create a new development branch. If you use an old
 branch name (such as "develop"), you may have to delete the old branch first.
+Create it from the Shell (Tools > Shell) and type git checkout -b develop.
 3. Make your changes, documenting and performing your own tests along the way.
 4. Commit and push to your development branch of our GitHub repository as things
 progress.  This push may have be done through the shell: Git | More | Shell...
 then type "git push origin develop".
 5. Run formal tests too: Build | Check.  Fix any errors and examine any notes
-and warnings.
-6. [With maintainer approval only] Pull latest develop version, update version
-number and date in DESCRIPTION, and run Check one last time.  Push to develop
-branch on origin one last time.
-7. [With maintainer approval only] Merge branches locally: Git | More |
+and warnings. Also run Build | Test, fix any fails.
+6. Knit all vignettes (especially any that have changed!) and copy HTML version
+into vignettes folder.
+7. [With maintainer approval only] Pull latest develop version, update version
+number and date in DESCRIPTION, and run Check one last time. Edit links and
+info in README.md. Push to develop branch on origin one last time.
+8. [With maintainer approval only] Merge branches locally: Git | More |
 Shell... then type "git checkout master", then "git merge --no-ff develop".
-8. [With maintainer approval only] Then push from master to origin (also
+9. [With maintainer approval only] Then push from master to origin (also
 master).
-9. [With maintainer approval only] Once a new version of MigConnectivity is on
+10. [With maintainer approval only] Once a new version of MigConnectivity is on
 GitHub, go to website and create new release.  On SMBC-NZP / MigConnectivity
 choose releases then Draft a new release.  Fill in version number and relevant
 updates since last version.
@@ -31,7 +34,7 @@ documentation, which could improve formatting.  They could either be individual
 string variables (e.g., "Lambert," "WGS84") or a list variable (i.e.,
 "projections").  Status: Done (v0.2.4)
 2. Allow users to include relative abundance uncertainty with GL or GPS data as
-well as with CMR data or alone.  Status: Proposed
+well as with CMR data or alone.  Status: Done (v0.4.1)
 3. Allow users to estimate MC (and rM) from intrinsic data types, like isotopes
 and morphometrics.  Status: Done for isotopes (v0.3.0)
 4. Allow users to resample from transition matrix uncertainty from sources

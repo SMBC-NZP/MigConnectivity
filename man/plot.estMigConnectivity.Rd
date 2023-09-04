@@ -7,7 +7,7 @@
 \method{plot}{estMigConnectivity}(
   x,
   plot.which = ifelse(inherits(x, "estPsi"), "psi", ifelse(inherits(x, "estMC"), "MC",
-    "rM")),
+    ifelse(inherits(x, "estGamma"), "gamma", "rM"))),
   point = c("mean", "median", "point"),
   range = c("simpleCI", "bcCI", "se"),
   xlab = NULL,
@@ -17,6 +17,7 @@
   ageNames = NULL,
   col = NULL,
   pch = NULL,
+  las = 1,
   gap = 0,
   sfrac = ifelse(range == "se", 0.01, 0),
   legend = FALSE,
@@ -59,6 +60,10 @@ different target sites. If left NULL, defaults to 1:[number of target sites]}
 \item{pch}{symbols to use for labeling transition probabilities for
 different target sites. If left NULL, defaults to 21:25, then
 0:([number of target sites]-5)}
+
+\item{las}{style of axis labels (0-3). We set the default at 1 (always
+horizontal) here, but if you prefer your labels parallel to the axis, set
+at 0}
 
 \item{gap}{space left between the center of the error bar and the lines
 marking the error bar in units of the height (width) of the letter "O".

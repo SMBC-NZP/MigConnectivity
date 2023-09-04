@@ -1,0 +1,27 @@
+model{
+# model for recoveries with known number of ringed
+for (i in 1:npop){
+  for(k in 1:ndest){
+    p[i, k] <- psi[i, k] * r[k]
+  }
+  p[i, (ndest+1)] <- 1 - sum(p[i, 1:ndest])
+}
+
+# likelihood
+for(i in 1:npop){
+  recmat[i, 1:(ndest+1)] ~ dmulti(p[i, 1:(ndest+1)], nreleased[i])
+  telmat[i, 1:ndest] ~ dmulti(psi[i, 1:ndest], ntel[i])
+}
+
+# priors
+for(k in 1:ndest) {
+  r[k] ~ dunif(0, 1)
+}
+
+for(i in 1:npop){
+  for(k in 1:ndest){
+    m0[i, k] ~ dbeta(1, 1)
+    psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+  } #k
+}#i
+}

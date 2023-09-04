@@ -2,10 +2,13 @@
 % Please edit documentation in R/estConnectivity.R
 \name{diffMantel}
 \alias{diffMantel}
+\alias{diffCorr}
 \title{Pairwise differences between two or more independent Mantel correlation
 estimates}
 \usage{
-diffMantel(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = F)
+diffMantel(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
+
+diffCorr(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
 }
 \arguments{
 \item{estimates}{List of at leat two Mantel correlation estimates, provided

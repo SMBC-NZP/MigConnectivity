@@ -1,5 +1,5 @@
 library(MigConnectivity)
-context('Calculate migratory connectivity')
+context('Calculate migratory connectivity strength')
 
 test_that('psi examples generate right MC values', {
   psiMats <- list(matrix(0.25, 4, 4), #"Full Mix"
@@ -8,13 +8,13 @@ test_that('psi examples generate right MC values', {
                 matrix(c(rep(c(0.5, 0), 2, each=2), rep(c(0, 0.5), 2, each=2)),
                        4, 4), #"Half Mix"
                 matrix(c(0.55, 0.2, 0.15, 0.1, 0.1, 0.55, 0.2, 0.15, 0.15, 0.1,
-                         0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=T), #"Low"
+                         0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=TRUE), #"Low"
                 matrix(c(rep(c(0.75, 0.15, rep(0.05, 3)), 3), 0.75), 4, 4,
-                       byrow=T), #"Medium"
-                matrix(c(rep(0.25, 12), rep(0, 3), 1), 4, 4, byrow=T), #"Site Pref"
+                       byrow=TRUE), #"Medium"
+                matrix(c(rep(0.25, 12), rep(0, 3), 1), 4, 4, byrow=TRUE), #"Site Pref"
                 matrix(c(0.01, 0.49, 0.49, 0.01, 0.49, 0.01, 0.01, 0.49, 0.49,
                          0.01, 0.01, 0.49, 0.01, 0.49, 0.49, 0.01), 4, 4,
-                       byrow=T)) #Negative
+                       byrow=TRUE)) #Negative
   psiMats[[6]][4, 1] <- 0.15
   nBreeding <- sapply(psiMats, nrow)
   nWintering <- sapply(psiMats, ncol)

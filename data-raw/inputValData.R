@@ -10,20 +10,20 @@ samplePsis <- list(matrix(0.25, 4, 4), #"Full Mix"
                 matrix(c(rep(c(0.5, 0), 2, each=2), rep(c(0, 0.5), 2, each=2)),
                        4, 4), #"Half Mix"
                 matrix(c(0.55, 0.2, 0.15, 0.1, 0.1, 0.55, 0.2, 0.15, 0.15, 0.1,
-                         0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=T), #"Low"
+                         0.55, 0.2, 0.2, 0.15, 0.1, 0.55), 4, 4, byrow=TRUE), #"Low"
                 matrix(c(rep(c(0.75, 0.15, rep(0.05, 3)), 3), 0.75), 4, 4,
-                       byrow=T), #"Medium"
-                matrix(c(rep(0.25, 12), rep(0, 3), 1), 4, 4, byrow=T), #"Site Pref"
+                       byrow=TRUE), #"Medium"
+                matrix(c(rep(0.25, 12), rep(0, 3), 1), 4, 4, byrow=TRUE), #"Site Pref"
                 matrix(c(0.01, 0.49, 0.49, 0.01, 0.49, 0.01, 0.01, 0.49, 0.49,
                          0.01, 0.01, 0.49, 0.01, 0.49, 0.49, 0.01), 4, 4,
-                       byrow=T)) #Negative
+                       byrow=TRUE)) #Negative
 samplePsis[[6]][4, 1] <- 0.15
 psi.scenario.names <- c("Full Mix", "Avoid One Site", "Full Connectivity",
                         "Half Mix", "Low", "Medium", "One Site Preference",
                         "Negative")
 names(samplePsis) <- psi.scenario.names
 samplePsis <- lapply(samplePsis, provideDimnames, base = list(LETTERS[1:4], as.character(1:4)))
-devtools::use_data(samplePsis, overwrite = T)
+devtools::use_data(samplePsis, overwrite = TRUE)
 nOrigin <- sapply(samplePsis, nrow)
 nTarget <- sapply(samplePsis, ncol)
 nScenariosPsi <- length(samplePsis)
@@ -106,10 +106,10 @@ pos.scenario.names <- c("Linear", "B Dist BC*2", "B Dist BC/2",
 names(sampleTargetDist) <- names(sampleTargetPos) <- pos.scenario.names
 names(sampleOriginDist) <- names(sampleOriginPos) <- pos.scenario.names
 pos.scenario.names
-devtools::use_data(sampleOriginPos, overwrite = T)
-devtools::use_data(sampleOriginDist, overwrite = T)
-devtools::use_data(sampleTargetPos, overwrite = T)
-devtools::use_data(sampleTargetDist, overwrite = T)
+devtools::use_data(sampleOriginPos, overwrite = TRUE)
+devtools::use_data(sampleOriginDist, overwrite = TRUE)
+devtools::use_data(sampleTargetPos, overwrite = TRUE)
+devtools::use_data(sampleTargetDist, overwrite = TRUE)
 
 #########################
 #Input values 3 of 3
@@ -138,6 +138,6 @@ sampleOriginN
 sampleOriginRelN
 sampleTotalN <- sapply(sampleOriginN, sum)
 sampleTotalN
-devtools::use_data(sampleOriginN, overwrite = T)
-devtools::use_data(sampleOriginRelN, overwrite = T)
+devtools::use_data(sampleOriginN, overwrite = TRUE)
+devtools::use_data(sampleOriginRelN, overwrite = TRUE)
 

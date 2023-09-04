@@ -1,0 +1,24 @@
+model{
+# likelihood
+for(i in 1:nProbO){
+  probO[i, 1:npop] ~ ddirich(alpha[pop[i], 1:npop])
+  pop[i] ~ dcat(gam[dest[i], 1:npop])
+}#i
+
+# priors
+for(l in 1:nblock){
+  alpha0[l] ~ dgamma(1, 1)
+}#l
+for(j in 1:npop){
+  for(k in 1:npop){
+    alpha[j, k] <- alpha0[structO[j, k]]
+  } #k
+}#j
+for(j in 1:npop){
+  for(k in 1:ndest){
+    m0[k, j] ~ dgamma(1, 1)
+    gam[k, j] <- m0[k, j] / sum(m0[k, 1:npop])
+    psi[j, k] <- gam[k, j] * destAbund[k] / sum(gam[1:ndest, j] * destAbund)
+  } #k
+}#j
+}
