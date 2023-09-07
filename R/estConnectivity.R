@@ -793,7 +793,8 @@ estTransitionBoot <- function(originSites = NULL,
                                                           y = originSites,
                                                           sparse = TRUE)))
     # if raster and not captured in origin sites then determine the origin site
-    }else if (all(isRaster & captured != "origin")) {
+    }
+    else if (all(isRaster & captured != "origin")) {
       # if isRaster == TRUE and captured != origin
       # WEIGHTED XY COORDIANTES FROM THE RASTER
       # get geographically weighted median value
@@ -2989,7 +2990,8 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                       captured = "origin", geoBiasOrigin = NULL,
                       geoVCovOrigin = NULL,
                       targetRaster = NULL, originRaster = NULL,
-                      dataOverlapSetting = c("dummy", "none", "named")) {
+                      dataOverlapSetting = c("dummy", "none", "named"),
+                      originRelAbund = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   # double check that spatial data coming in is in sf format #
   if (inherits(targetPoints, "SpatialPoints"))
@@ -3096,8 +3098,8 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                          #targetRasterXYZcrs = targetRasterXYZcrs,
                          targetSingleCell = targetSingleCell)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
-    originAssignment <- temp$originAssignment
-    targetAssignment <- temp$targetAssignment
+    # originAssignment <- temp$originAssignment
+    # targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
     isRaster <- temp$isRaster; isProb <- temp$isProb
     originRasterXYZ <- temp$originRasterXYZ
@@ -3200,6 +3202,117 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     originCon <- NULL
   }
 
+  weights <- array(0, c(nBoot, nAnimals))
+  if (is.null(originRelAbund)) {
+    warning("rM can be biased if ")
+    weights[,] <- 1/nAnimals
+  }
+  else if (is.null(originSites)) {
+    stop("If you want to set origin relative abundances, you need to define the origin sites")
+  }
+  else {
+    nOriginSites <- nrow(originSites)
+    if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
+      originRelAbund <- as.matrix(originRelAbund)
+    }
+    if (is.matrix(originRelAbund) && dim(originRelAbund)[1]>1) {
+      abundFixed <- FALSE
+      if (dim(originRelAbund)[2]>nOriginSites)
+        abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
+      else if (dim(originRelAbund)[2]==nOriginSites)
+        abundParams <- 1:nOriginSites
+      else
+        stop('Number of origin sites must be constant between sites and abundance')
+      if (dim(originRelAbund)[1] >= nBoot)
+        abundRows <- round(seq(from = 1, to = dim(originRelAbund)[1],
+                               length.out = nBoot))
+      else
+        abundRows <- sample.int(n = dim(originRelAbund)[1], replace = TRUE,
+                                size = nBoot)
+      originRelAbund <- as.matrix(originRelAbund[abundRows, abundParams])
+      abundBase <- colMeans(originRelAbund)
+    }
+    else {
+      abundFixed <- TRUE
+      if (length(originRelAbund)!=nOriginSites)
+        stop('Number of origin sites must be constant between sites and abundance')
+      abundBase <- originRelAbund
+      originRelAbund <- matrix(originRelAbund, nBoot, nOriginSites, TRUE)
+    }
+    if (verbose > 0)
+      cat("Creating originAssignment\n")
+    # if geolocator, telemetry and captured in origin then simply get the origin site
+    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
+      if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
+        # project if needed
+        originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
+      }
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                                     y = originSites,
+                                                                     sparse = TRUE)))
+      # if raster and not captured in origin sites then determine the origin site
+    }
+    else if (all(isRaster & captured != "origin")) {
+      # if isRaster == TRUE and captured != origin
+      # WEIGHTED XY COORDIANTES FROM THE RASTER
+      # get geographically weighted median value
+      xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
+                            MARGIN = 2,
+                            FUN = function(x){
+                              #select the cell with the highest posterior probability #
+                              xy <- cbind(originRasterXYZ[which.max(x)[1],1],
+                                          originRasterXYZ[which.max(x)[1],2])
+                              return(xy)})
+      # returns a point estimate for each bird - turn it into a sf object
+      xyOriginRast <- t(xyOriginRast)
+      colnames(xyOriginRast) <- c("x","y")
+      # right now the assignment CRS is WGS84 - should be the same as the origin raster
+
+      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast),
+                                       coords = c("x","y"),
+                                       crs = originRasterXYZcrs)
+
+      # transform to match originSites
+      originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
+                                                                     y = originSites,
+                                                                     sparse = TRUE)))
+    }   # originAssignment <- what # need point assignment for raster (mean location?)
+    else if (!is.null(originPoints))
+      # originAssignment <- what # points over where we have them, raster assignment otherwise
+      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                                     y = originSites,
+                                                                     sparse = TRUE)))
+    else
+      originAssignment <- NULL
+    if (!is.null(originAssignment)) {
+      originAssignment[lengths(originAssignment)==0] <- NA
+      if (any(lengths(originAssignment)>1)){
+        warning("Overlapping originSites may cause issues\n")
+        originAssignment <- lapply(originAssignment, function (x) x[1])
+      }
+      originAssignment <- array(unlist(originAssignment))
+      duds <- is.na(originAssignment) & captured[1:nAnimals] == "origin"
+      if (any(duds)){
+        if (verbose > 0)
+          cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
+        warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
+                "Affects animals: ", paste(which(duds), collapse = ","))
+        originAssignment[duds] <-
+          sf::st_nearest_feature(x = originPoints[duds,],
+                                 y = originSites)
+
+      }
+    }
+
+    nOriginAnimals <- rep(NA, nOriginSites)
+    for (i in 1:nOriginSites) {
+      nOriginAnimals[i] <- sum(originAssignment==i)
+      if (nOriginAnimals[i] > 0)
+        weights[ , originAssignment==i] <- originRelAbund[, i]/nOriginAnimals[i]
+    }
+  }
+
   corr <- rep(NA, nBoot)
   if (!is.null(targetPoints) && !is.null(originPoints)){
     pointMantel <- calcMantel(targetPoints = targetPoints,
@@ -3247,7 +3360,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
       cat("Bootstrap Run", boot, "of", nBoot, "at", date(), "\n")
     # Sample individual animals with replacement
-    animal.sample <- sample.int(nAnimals, replace=TRUE)
+    animal.sample <- sample.int(nAnimals, replace=TRUE, prob = weights[boot, ])
     if (any(captured[animal.sample]!='origin')) {
       oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
