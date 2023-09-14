@@ -1,0 +1,18 @@
+model{
+
+# likelihood
+for(i in 1:npop){
+  telmat[i, 1:ndest] ~ dmulti(psi[i, 1:ndest], ntel[i])
+}
+
+
+# priors
+for(i in 1:npop){
+  R[i] <- R0[i] / sum(R0[1:npop])
+  R0[i] ~ dbeta(1,1)
+  for(k in 1:ndest){
+    m0[i, k] ~ dbeta(1, 1)
+    psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+  } #k
+}#i
+}

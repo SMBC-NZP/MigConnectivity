@@ -2940,6 +2940,15 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'  another way to allow animals with more than one type of data with named
 #'  animals linking records. When there is only one type of data, it is fastest
 #'  to leave this on the default.
+#' @param originRelAbund the proportion of the total abundance in each of B
+#'  \code{originSites}. Used to set up the bootstrap to be weighted by relative
+#'  abundance. Either a numeric vector of length B that sums to 1, or an mcmc
+#'  object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
+#'  with at least \code{nSamples} rows. If there are more than B columns, the
+#'  relevant columns should be labeled "relN[1]" through "relN[B]". Optional,
+#'  but if you don't set it there's potential for rM to be biased (if sampling
+#'  isn't proportional to abundance). Leaving this NULL will also trigger a
+#'  warning.
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
@@ -3204,7 +3213,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
 
   weights <- array(0, c(nBoot, nAnimals))
   if (is.null(originRelAbund)) {
-    warning("rM can be biased if ")
+    warning("rM can be biased if you don't weight by abundance")
     weights[,] <- 1/nAnimals
   }
   else if (is.null(originSites)) {

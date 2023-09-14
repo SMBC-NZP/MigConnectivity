@@ -2,9 +2,12 @@
 % Please edit documentation in R/calcConnectivity.R
 \name{calcMC}
 \alias{calcMC}
+\alias{calcStrength}
 \title{Migratory connectivity strength function}
 \usage{
 calcMC(originDist, targetDist, originRelAbund, psi, sampleSize = NULL)
+
+calcStrength(originDist, targetDist, originRelAbund, psi, sampleSize = NULL)
 }
 \arguments{
 \item{originDist}{Distances between the B origin sites.  Symmetric B by B

@@ -28,7 +28,8 @@ estMantel(
   geoVCovOrigin = NULL,
   targetRaster = NULL,
   originRaster = NULL,
-  dataOverlapSetting = c("dummy", "none", "named")
+  dataOverlapSetting = c("dummy", "none", "named"),
+  originRelAbund = NULL
 )
 
 estCorr(
@@ -54,7 +55,8 @@ estCorr(
   geoVCovOrigin = NULL,
   targetRaster = NULL,
   originRaster = NULL,
-  dataOverlapSetting = c("dummy", "none", "named")
+  dataOverlapSetting = c("dummy", "none", "named"),
+  originRelAbund = NULL
 )
 }
 \arguments{
@@ -169,6 +171,16 @@ third setting ("named") is not yet implemented, but will eventually allow
 another way to allow animals with more than one type of data with named
 animals linking records. When there is only one type of data, it is fastest
 to leave this on the default.}
+
+\item{originRelAbund}{the proportion of the total abundance in each of B
+\code{originSites}. Used to set up the bootstrap to be weighted by relative
+abundance. Either a numeric vector of length B that sums to 1, or an mcmc
+object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
+with at least \code{nSamples} rows. If there are more than B columns, the
+relevant columns should be labeled "relN[1]" through "relN[B]". Optional,
+but if you don't set it there's potential for rM to be biased (if sampling
+isn't proportional to abundance). Leaving this NULL will also trigger a
+warning.}
 }
 \value{
 \code{estMantel} returns a list with elements:
