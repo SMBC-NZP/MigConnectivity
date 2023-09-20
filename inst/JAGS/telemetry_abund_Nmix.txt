@@ -3,7 +3,7 @@ model{
 # likelihood
 for(i in 1:npop){
   telmat[i, 1:ndest] ~ dmulti(psi[i, 1:ndest], ntel[i])
-  Nb[i] ~ dpois(lambda[i])
+  Nb[i] ~ dpois(lambda)
   for (j in 1:noccB){
     yb[i, j] ~ dbin(Nb[i], pb)
   }
@@ -26,7 +26,6 @@ pw ~ dunif(0, 1)
 lambda ~ dgamma(0.001, 0.001)
 for(i in 1:npop){
   R[i] <- Nb[i] / sum(Nb[1:npop])
-  Nb[i] ~ dpois(lambda)
   for(k in 1:ndest){
     m0[i, k] ~ dbeta(1, 1)
     psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
@@ -35,3 +34,151 @@ for(i in 1:npop){
 }#i
 
 }
+
+
+# priors
+    lambda0_alpha ~ dnorm(0, .01)
+    lambda0_mean <- exp(lambda0_alpha)
+    lambda0_cov ~ dnorm(0, .01)
+    lambda0_tau ~ dgamma(.01, .01)
+    lambda0_sd <- 1 / sqrt(lambda0_tau)
+    gamma_alpha ~ dnorm(0, .01)
+    gamma_mean <- exp(gamma_alpha)
+    gamma_ddp ~ dnorm(0, .01)
+    gamma_cov ~ dnorm(0, .01)
+    gamma_tau ~ dgamma(.01, .01)
+    gamma_sd <- 1 / sqrt(gamma_tau)
+    omega_alpha ~ dnorm(0, .01)
+    omega_mean <- ilogit(omega_alpha)
+    omega_ddp ~ dnorm(0, .01)
+    omega_cov ~ dnorm(0, .01)
+    omega_tau ~ dgamma(.01, .01)
+    omega_sd <- 1 / sqrt(omega_tau)
+    kappa ~ dunif(0, 1)
+    theta_mean ~ dgamma(.01, .01)
+    theta_tau ~ dgamma(.01, .01)
+    theta_sd <- 1 / sqrt(theta_tau)
+    logit_pobs_mean ~ dnorm(0, .01)
+    pobs_mean <- ilogit(logit_pobs_mean)
+    logit_pobs_tau ~ dgamma(.01, .01)
+    logit_pobs_sd <- sqrt(1 / logit_pobs_tau)
+    logit_pcap_mean ~ dnorm(0, .01)
+    pcap_mean <- ilogit(logit_pcap_mean)
+    logit_pcap_tau ~ dgamma(.01, .01)
+    logit_pcap_sd <- sqrt(1 / logit_pcap_tau)
+
+    for (i in 1:nsite) {
+      for (j in 1:nsite) {
+        w_ori_epsilon[i,j] ~ dnorm(0, theta_tau)
+        w_ori[i,j] <- ifelse(i==j, 1e-6, exp(-1 * theta_mean * dist[i,j] + w_ori_epsilon[i,j]))
+        w[i,j] <- w_ori[i,j] / sum(w_ori[i,1:nsite])
+      } # j
+    } # i
+
+    for (t in 1:nyear) {
+      logit_pobs[t] ~ dnorm(logit_pobs_mean, logit_pobs_tau)
+      pobs[t] <- ilogit(logit_pobs[t])
+    } # t
+
+    for (t in 1:nyear) {
+      logit_pcap[t] ~ dnorm(logit_pcap_mean, logit_pcap_tau)
+      pcap[t] <- ilogit(logit_pcap[t])
+      for (i in 1:nsite) {
+        pcap_mat[i,t] <- ifelse(site_cap01[i]==0, 0, pcap[t])
+      } # i
+    } # t
+
+    # likelihood
+    ### population count
+    for (i in 1:nsite) {
+      lambda0_epsilon[i] ~ dnorm(0, lambda0_tau)
+      lambda0[i] <- exp(lambda0_alpha + lambda0_cov * x_mean[i] + lambda0_epsilon[i])
+      N[i,1] ~ dpois(lambda0[i])
+
+      for (t in 2:nyear) {
+        gamma_epsilon[i,t-1] ~ dnorm(0, gamma_tau)
+        gamma[i,t-1] <- exp(
+          gamma_alpha +
+          gamma_ddp * (N[i,t-1] - lambda0[i]) / lambda0[i] +
+          gamma_cov * (x[i,t] - x_mean[i]) +
+          gamma_epsilon[i,t-1])
+        R[i,t-1] ~ dpois(N[i,t-1] * gamma[i,t-1])
+
+        omega_epsilon[i,t-1] ~ dnorm(0, omega_tau)
+        omega[i,t-1] <- ilogit(
+          omega_alpha +
+          omega_ddp * (N[i,t-1] - lambda0[i]) / lambda0[i] +
+          omega_cov * (x[i,t] - x_mean[i]) +
+          omega_epsilon[i,t-1])
+        S[i,t-1] ~ dbin(omega[i,t-1], N[i,t-1])
+
+        E[i,t-1] ~ dbin(kappa, S[i,t-1])
+        for (j in 1:nsite) {
+          M[i,j,t-1] <- E[i,t-1] * w[i,j]
+        } # j
+        I[i,t-1] ~ dpois(sum(M[1:nsite,i,t-1]))
+
+        N[i,t] <- R[i,t-1] + S[i,t-1] - E[i,t-1] + I[i,t-1]
+      } # t
+    } # i
+
+    ### capture-recapture
+    for (t in 2:nyear) {
+      for (i in 1:nsite) {
+        for (j in 1:nsite) {
+          phi[i,j,t-1] <- ifelse(i==j, omega[i,t-1]*(1-kappa), omega[i,t-1]*kappa*w[i,j])
+        } # j
+        phi[i,nsite+1,t-1] <- 1 - omega[i,t-1]
+      } # i
+      for (i in 1:nsite) {
+        phi[nsite+1,i,t-1] <- 0
+      } # i
+      phi[nsite+1,nsite+1,t-1] <- 1
+    } # t
+
+    for (i in 1:nind) {
+      z[i,first[i]] <- zf[i]
+      for (t in (first[i]+1):nyear) {
+        z[i,t] ~ dcat(phi[z[i,t-1],,t-1])
+      } # t
+    } # i
+
+    # observation
+    ### population count
+    for (i in 1:nsite_obs) {
+      for (t in 1:nyear) {
+        for (j in 1:nreps) {
+          ya[i,t,j] ~ dbin(pobs[t], N[site_obs[i],t])
+        } # j
+      } # t
+    } # i
+
+    for (i in 1:nsite_obs) {
+      for (t in 1:(nyear-1)) {
+        for (j in 1:nreps) {
+          yj[i,t,j] ~ dbin(pobs[t+1], R[site_obs[i],t])
+        } # j
+      } # t
+    } # i
+
+    ### encounter history
+    for (t in 1:nyear) {
+      for (i in 1:nsite) {
+        for (j in 1:nsite) {
+          po[i,j,t] <- ifelse(i==j, pcap_mat[i,t], 0)
+        } # j
+        po[i,nsite+1,t] <- 1 - pcap_mat[i,t]
+      } # i
+      for (i in 1:nsite) {
+        po[nsite+1,i,t] <- 0
+      } # i
+      po[nsite+1,nsite+1,t] <- 1
+    } # t
+
+    for (i in 1:nind) {
+      for (t in (first[i]+1):nyear) {
+        for (j in 1:ncaps) {
+          his[i,t,j] ~ dcat(po[z[i,t],1:(nsite+1),t])
+        } # j
+      } # t
+    } # i

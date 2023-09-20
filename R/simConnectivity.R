@@ -220,7 +220,10 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
 #' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 
-simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear){
+simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0,
+                          nObservers, sdRoute, sdYear, sdObs,
+                          model = c("2002", "S", "Sh", "D", "Dh"),
+                          fixedyear = 1, ){
 
   if(length(routePerPop) == 1){
     nRoutes <- nPops*routePerPop # Total number of routes

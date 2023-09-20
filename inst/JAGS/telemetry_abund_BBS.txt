@@ -1,0 +1,132 @@
+model{
+
+  # telemetry likelihood
+  for(i in 1:nstrata){
+    telmat[i, 1:ndest] ~ dmulti(psi[i, 1:ndest], ntel[i])
+  }
+
+  # transition priors
+  for(i in 1:nstrata){
+    for(k in 1:ndest){
+      m0[i, k] ~ dbeta(1, 1)
+      psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
+      pi[i, k] <- relN[i] * psi[i, k]
+    } #k
+  }#i
+
+  ##### origin abundance model #####
+  for(k in 1:ncounts){
+    Eloglambda[k] <- yeareffect[strat[k],year[k]]+obs[obser[k]]+eta*firstyr[k]
+    loglambda[k] ~ dt(Eloglambda[k],tau.noise,nu)
+    log(lambda[k]) <- loglambda[k]
+    count[k] ~ dpois(lambda[k])
+  }
+  tau.noise ~ dgamma(0.001,0.001)
+  scale.noise <- 1 / pow(tau.noise, 0.5)
+  sd.noise <- 1/pow(tau.noise,0.5)
+  nu ~ dgamma(2,0.10)
+
+  # Observer effects
+  for(i in 1:nobservers){
+    obs[i] ~ dnorm(0.0,tau.obs)
+  }
+  eta ~ dnorm(0.0,1.0E-6)
+  tau.obs ~ dgamma(0.001,0.001)
+  sd.obs <- 1/pow(tau.obs,0.5)
+  #scaling factor adjustment
+  t1 <- pow(nu,0.906)
+  k.nu <- (1.422*t1)/(1+1.422*t1)
+  zscale.noise <- scale.noise/k.nu
+
+
+  # Stratum effects
+  for(s in 1:nstrata){
+    strata[s] ~ dnorm(mu.strata,tau.strata)
+    log(tau.year[s]) <- log.tau.year[s]
+    log.tau.year[s] ~ dnorm(mu.log.tau.year,tau.log.tau.year)
+    sd.year[s] <- 1/pow(tau.year[s],0.5)
+
+    yeareffect[s,fixedyear] <- strata[s]
+    for(y in 1:(fixedyear-1)){
+      yeareffect[s,fixedyear-y] ~ dnorm(yeareffect[s,fixedyear-y+1],tau.year[s])
+    }
+
+    for(y in (fixedyear+1):nyears){
+      yeareffect[s,y] ~ dnorm(yeareffect[s,y-1],tau.year[s])
+    }
+  }
+  mu.strata ~ dnorm(0.0,1.0E-6)
+  tau.strata ~ dgamma(0.001,0.001)
+  sd.strata <- 1/sqrt(tau.strata)
+  mu.log.tau.year ~ dnorm(0.0,1.0E-6)
+  tau.log.tau.year ~ dgamma(0.001,0.001)
+  sd.log.tau.year <- 1/sqrt(tau.log.tau.year)
+
+  # Summary statistics
+  for(s in 1:nstrata){
+    for(y in 1:nyears){
+      n[s,y] <- nonzeroweight[s]*exp(yeareffect[s,y]+0.5*zscale.noise*zscale.noise+0.5*sd.obs*sd.obs)
+    }
+    relN[s] <- n[s,refyear] / sum(n[1:nstrata, refyear])
+  }
+
+  ##### target abundance model #####
+  lratio ~ dnorm(0, 1)
+  log(ratio) <- lratio
+
+  for(k in 1:ndestcounts){
+    destEloglambda[k] <- destyeareffect[deststrat[k],destyear[k]]+destobs[destobser[k]]+beta*destfirstyr[k]
+    destloglambda[k] ~ dt(destEloglambda[k],dest.tau.noise,mu)
+    log(destlambda[k]) <- destloglambda[k]
+    destcount[k] ~ dpois(destlambda[k])
+  }
+  dest.tau.noise ~ dgamma(0.001,0.001)
+  dest.scale.noise <- 1 / pow(dest.tau.noise, 0.5)
+  dest.sd.noise <- 1/pow(dest.tau.noise,0.5)
+  mu ~ dgamma(2,0.10)
+
+  # Observer effects
+  for(i in 1:ndestobservers){
+    destobs[i] ~ dnorm(0.0,dest.tau.obs)
+  }
+  beta ~ dnorm(0.0,1.0E-6)
+  dest.tau.obs ~ dgamma(0.001,0.001)
+  dest.sd.obs <- 1/pow(dest.tau.obs,0.5)
+  #scaling factor adjustment
+  t2 <- pow(mu,0.906)
+  k.mu <- (1.422*t2)/(1+1.422*t2)
+  dest.zscale.noise <- dest.scale.noise/k.mu
+
+  # refyear (origin) should be the same year as destfixedyear (target)
+  # Stratum effects
+  for(s in 1:ndest){
+    W[s] <- sum(pi[1:nstrata, s])
+    exp(deststrata[s]) <- W[s] * ratio * sum(n[1:nstrata, refyear]) / destweight[s]
+    log(dest.tau.year[s]) <- dest.log.tau.year[s]
+    dest.log.tau.year[s] ~ dnorm(dest.mu.log.tau.year,dest.tau.log.tau.year)
+    dest.sd.year[s] <- 1/pow(dest.tau.year[s],0.5)
+
+    destyeareffect[s,destfixedyear] <- deststrata[s]
+    for(y in 1:(destfixedyear-1)){
+      destyeareffect[s,destfixedyear-y] ~ dnorm(destyeareffect[s,destfixedyear-y+1],dest.tau.year[s])
+    }
+
+    for(y in (dest.fixedyear+1):ndestyears){
+      destyeareffect[s,y] ~ dnorm(destyeareffect[s,y-1],dest.tau.year[s])
+    }
+  }
+  dest.mu.strata ~ dnorm(0.0,1.0E-6)
+  dest.tau.strata ~ dgamma(0.001,0.001)
+  dest.sd.strata <- 1/sqrt(dest.tau.strata)
+  dest.mu.log.tau.year ~ dnorm(0.0,1.0E-6)
+  dest.tau.log.tau.year ~ dgamma(0.001,0.001)
+  dest.sd.log.tau.year <- 1/sqrt(dest.tau.log.tau.year)
+
+  # Summary statistics
+  for(k in 1:ndest){
+    for(y in 1:nyearsDest){
+      destn[k,y] <- destweight[k]*exp(destyeareffect[k,y]+0.5*dest.zscale.noise*dest.zscale.noise+0.5*dest.sd.obs*dest.sd.obs)
+    }
+  } #k
+
+}
