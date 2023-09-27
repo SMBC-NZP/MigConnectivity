@@ -182,25 +182,25 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' Simulates Breeding Bird Survey-style count data
 #'
 #'
-#' @param nPops Number of populations/regions
-#' @param routePerPop Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population
+#' @param nStrata Number of populations/regions
+#' @param routesPerStrata Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population
 #' @param nYears Number of years surveys were conducted
-#' @param alphaPop Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaPop) == 1, expected counts are identical for each population
+#' @param alphaStrat Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaStrat) == 1, expected counts are identical for each population
 #' @param beta Coefficient of linear year effect (default = 0)
 #' @param sdRoute Standard deviation of random route-level variation
 #' @param sdYear Standard deviation of random year-level variation
 #'
 #' @return \code{simCountData} returns a list containing:
 #'  \describe{
-#'    \item{\code{nPops}}{Number of populations/regions.}
+#'    \item{\code{nStrata}}{Number of populations/regions.}
 #'    \item{\code{nRoutes}}{Total number of routes.}
 #'    \item{\code{nYears}}{Number of years.}
-#'    \item{\code{routePerPop}}{Number of routes per population.}
+#'    \item{\code{routesPerStrata}}{Number of routes per population.}
 #'    \item{\code{year}}{Vector of length nYears with standardized year values.}
-#'    \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
-#'    \item{\code{alphaPop}}{log expected count for each populations.}
-#'    \item{\code{epsRoute}}{realized deviation from alphaPop for each route.}
-#'    \item{\code{epsYear}}{realized deviation from alphaPop for each year.}
+#'    \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+#'    \item{\code{alphaStrat}}{log expected count for each populations.}
+#'    \item{\code{epsRoute}}{realized deviation from alphaStrat for each route.}
+#'    \item{\code{epsYear}}{realized deviation from alphaStrat for each year.}
 #'    \item{\code{beta}}{linear year effect.}
 #'    \item{\code{sdRoute}}{standard deviation of random route-level variation.}
 #'    \item{\code{sdYear}}{standard deviation of random year-level variation.}
@@ -220,52 +220,101 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
 #' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 
-simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0,
-                          nObservers, sdRoute, sdYear, sdObs,
-                          model = c("2002", "S", "Sh", "D", "Dh"),
-                          fixedyear = 1, ){
-
-  if(length(routePerPop) == 1){
-    nRoutes <- nPops*routePerPop # Total number of routes
-    pop <- gl(nPops, routePerPop, nRoutes) # Population index for each route
-  }else{
-    nRoutes <- sum(routePerPop)
-    pop <- as.factor(rep(seq(1:nPops), routePerPop)) # Population index for each route
+simCountData <- function (nStrata, routesPerStrata, nYears, alphaStrat, beta = 0,
+                          eta = 0, sdRoute = 0, sdYear = 0, sdObs = 0, sdCount = 0,
+                          model = c("S", "Sh", "D", "Dh"), obsSurvival = 1,
+                          fixedyear = round(nYears/2), nuCount = 1){
+  model <- match.arg(model)
+  if(length(routesPerStrata) == 1){
+    routesPerStrata <- rep(routesPerStrata, nStrata)
   }
+  nRoutes <- sum(routesPerStrata)
 
-  if(length(alphaPop) == 1) {
-    alphaPop <- rep(alphaPop, nPops)
+  strat <- rep(1:nStrata, routesPerStrata) # Population index for each route
+
+  if(length(alphaStrat) == 1) {
+    alphaStrat <- rep(alphaStrat, nStrata)
+  }
+  if(length(beta) == 1) {
+    beta <- rep(beta, nStrata)
+  }
+  if(length(sdRoute) == 1) {
+    sdRoute <- rep(sdRoute, nStrata)
+  }
+  if(length(sdYear) == 1) {
+    sdYear <- rep(sdYear, nStrata)
   }
 
 
   # Generate data structure to hold counts and log (lambda)
-  C <- log.expectedCount <- array(NA, dim = c(nYears, nRoutes))
+  first <- obser <- C <- log.expectedCount <- array(0, dim = c(nYears, nRoutes))
+  expectedCount <- array(0, dim = c(nYears, nRoutes))
+  epsYear <- array(0, dim = c(nYears, nStrata))
 
   # Generate covariate values
   year <- 1:nYears
-  yr <- (year - (nYears/2))/(nYears/2) # Standardize
+  yr <- year - fixedyear # Standardize
+
+  # Generate sequence of observers
+  nObs <- 0
+  for (r in 1:nRoutes) {
+    nObs <- nObs + 1
+    obser[1, r] <- nObs
+    first[1, r] <- 1
+    for (y in 2:nYears) {
+      if (rbinom(1, 1, obsSurvival)==0){
+        nObs <- nObs + 1
+        first[y, r] <- 1
+      }
+      obser[y, r] <- nObs
+    }
+  }
 
   # Draw two sets of random effects from their respective distributions
-  epsRoute <- rnorm(n = nRoutes, mean = 0, sd = sdRoute)
-  epsYear <- rnorm(n = nYears, mean = 0, sd = sdYear)
-
+  epsObs <- rnorm(n = nObs, mean = 0, sd = sdObs)
+  epsCount <- rnorm(n = nRoutes * nYears, mean = 0, sd = sdCount)
+  if (model == "Sh" || model == "Dh"){
+    V <- rgamma(n = nRoutes * nYears, shape = nuCount/2, rate = nuCount/2)
+    epsCount <- epsCount / sqrt(V)
+  }
+  epsRoute <- vector("list", nStrata)
+  place <- 0
+  for (s in 1:nStrata) {
+    epsRoute[[s]] <- rnorm(n = routesPerStrata[s], mean = 0, sd = sdRoute[s])
+    if (model %in% c("S", "Sh"))
+      epsYear[ , s] <- rnorm(n = nYears, mean = 0, sd = sdYear[s])
+    else {
+      for (y in ((fixedyear-1):1))
+        epsYear[y, s] <- rnorm(n = 1, mean = epsYear[y+1, s], sd = sdYear[s])
+      for (y in ((fixedyear+1):nYears))
+        epsYear[y, s] <- rnorm(n = 1, mean = epsYear[y-1, s], sd = sdYear[s])
+    }
+  }
   # Loop over routes
   for (i in 1:nRoutes){
-
-    # Build up systematic part of the GLM including random effects
-    log.expectedCount[,i] <- alphaPop[pop[i]] + beta*yr + epsRoute[i] +
-      epsYear
-    expectedCount <- exp(log.expectedCount[,i])
+    if (model %in% c("S", "Sh"))
+      # Build up systematic part of the GLM including random effects
+      log.expectedCount[,i] <- alphaStrat[strat[i]] + beta[strat[i]]*yr +
+        epsRoute[[strat[i]]][i] + epsYear[ , strat[i]] + epsCount[(i-1)*nYears + 1:nYears] +
+        epsObs[obser[ , i]] + eta * first[ , i]
+    else { # model D or Dh, ignore beta
+      log.expectedCount[,i] <- alphaStrat[strat[i]] +
+        epsRoute[[strat[i]]][i] + epsYear[ , strat[i]] + epsCount[(i-1)*nYears + 1:nYears] +
+        epsObs[obser[ , i]] + eta * first[ , i]
+    }
+    expectedCount[ , i] <- exp(log.expectedCount[,i])
 
     C[,i] <- rpois(n = nYears, lambda = expectedCount)
   }
 
-  return(list(nPops = nPops, nRoutes = nRoutes, nYears = nYears,
-              routePerPop = routePerPop, year = yr, pop = pop,
-              alphaPop = alphaPop, epsRoute = epsRoute,
-              epsYear = epsYear, beta = beta,
-              sdRoute = sdRoute, sdYear = sdYear,
-              expectedCount = expectedCount, C = C))
+  return(list(C = C, strat = strat, obser = obser, first = first,
+              epsRoute = epsRoute, epsYear = epsYear, epsObs = epsObs,
+              epsCount = epsCount, expectedCount = expectedCount,
+              input = list(nStrata = nStrata, nRoutes = nRoutes, nYears = nYears,
+                           routesPerStrata = routesPerStrata, year = yr,
+                           alphaStrat = alphaStrat, beta = beta,
+                           sdRoute = sdRoute, sdYear = sdYear, sdObs = sdObs,
+                           sdCount = sdCount)))
 }
 
 
@@ -281,8 +330,8 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0,
 #' @param count_data List containing the following elements:
 #' ' \describe{
 #'    \item{\code{C}}{nYears by nRoutes matrix containing the observed number of individuals counted at each route in each year.}
-#'    \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
-#'    \item{\code{routePerPop}}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population.}
+#'    \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+#'    \item{\code{routesPerStrata}}{Vector of length 1 or nStrata containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population.}
 #' }
 #' @param ni Number of MCMC iterations. Default = 20000.
 #' @param nt Thinning rate. Default = 5.
@@ -304,13 +353,13 @@ simCountData <- function (nPops, routePerPop, nYears, alphaPop, beta = 0,
 #' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
 
 modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 3) {
-  nPops <- length(unique(count_data$pop))
+  nPops <- length(unique(count_data$strat))
   nRoutes <- dim(count_data$C)[2]
   nYears = dim(count_data$C)[1]
-  if(length(count_data$routePerPop) == 1){
-    routePerPop = rep(count_data$routePerPop, nPops)
+  if(length(count_data$routesPerStrata) == 1){
+    routesPerStrata = rep(count_data$routesPerStrata, nPops)
   } else {
-    routePerPop = count_data$routePerPop
+    routesPerStrata = count_data$routesPerStrata
   }
 
   # Initial values
@@ -321,9 +370,9 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   params <- c("mu", "alpha", "beta1", "sd.alpha", "sd.rte", "sd.noise", "totalN", "popN", "relN")
 
   # Data
-  jags.data <- list(C = count_data$C, nPops = length(unique(count_data$pop)), nRoutes = nRoutes,
-                    routePerPop = routePerPop,
-                    year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, pop = count_data$pop)
+  jags.data <- list(C = count_data$C, nPops = length(unique(count_data$strat)), nRoutes = nRoutes,
+                    routesPerStrata = routesPerStrata,
+                    year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, strat = count_data$strat)
 
 
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,

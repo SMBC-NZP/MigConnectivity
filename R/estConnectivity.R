@@ -632,61 +632,21 @@ estTransitionBoot <- function(originSites = NULL,
     originSites <- sf::st_as_sf(originSites)}
   if(inherits(targetSites,"SpatialPolygonsDataFrame")){
     targetSites <- sf::st_as_sf(targetSites)}
-  # if targetRaster is NULL #
-  if (is.null(targetRaster)){
-    targetPointsAssigned <- FALSE
-    targetSingleCell <- NULL
-    targetRasterXYZ <- NULL
-    targetRasterXYZcrs <- NULL
-  }else{
-    if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
-      if(is.na(raster::crs(targetRaster))){
-        stop("Please provide a crs for targetRaster\n")
-      }
-      targetRasterXYZ <- raster::rasterToPoints(targetRaster)
-      targetRasterXYZcrs <- raster::crs(targetRaster)
-      targetSingleCell <- NULL
-      targetPointsAssigned <- FALSE
-    }else{if (inherits(targetRaster, "isoAssign")) {
-      targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
-                                  is.na(targetRaster$SingleCell))
-      targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
-      targetRasterXYZcrs <- raster::crs(targetRaster$probassign)
-      targetSingleCell <- targetRaster$SingleCell
-    }else {
-      stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-    }
-    }
-  }
 
-  if (is.null(originRaster)){
-    originPointsAssigned <- FALSE
-    originSingleCell <- NULL
-    originRasterXYZ <- NULL
-    originRasterXYZcrs <- NULL
-  }
-  else {
-    if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
-      if(is.na(raster::crs(originRaster))){
-        stop("Please provide a crs for originRaster\n")
-      }
-      originRasterXYZ <- raster::rasterToPoints(originRaster)
-      originRasterXYZcrs <- raster::crs(originRaster)
-      originSingleCell <- NULL
-      originPointsAssigned <- FALSE
-    }
-    else if (inherits(originRaster, "isoAssign")) {
-      originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
-                                  any(is.na(originRaster$SingleCell)))
-      originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
-      originRasterXYZcrs <- raster::crs(originRaster$probassign)
-      originSingleCell <- originRaster$SingleCell
-    }
-    else {
-      stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-    }
-  }
-  #print(targetAssignment)
+  targetStats <- assignRasterStats(targetRaster)
+  targetPointsAssigned <- targetStats$PointsAssigned
+  targetSingleCell <- targetStats$SingleCell
+  targetRasterXYZ <- targetStats$RasterXYZ
+  targetRasterXYZcrs <- targetStats$RasterXYZcrs
+  targetRaster <- targetStats$Raster
+
+  originStats <- assignRasterStats(originRaster)
+  originPointsAssigned <- originStats$PointsAssigned
+  originSingleCell <- originStats$SingleCell
+  originRasterXYZ <- originStats$RasterXYZ
+  originRasterXYZcrs <- originStats$RasterXYZcrs
+  originRaster <- originStats$Raster
+
   if (dataOverlapSetting != "dummy") {
     if (verbose > 0)
       cat("Configuring data overlap settings\n")
@@ -699,10 +659,8 @@ estTransitionBoot <- function(originSites = NULL,
                          isRaster = isRaster, isProb = isProb,
                          captured = captured,
                          originRasterXYZ = originRasterXYZ,
-                         #originRasterXYZcrs = originRasterXYZcrs,
                          originSingleCell = originSingleCell,
                          targetRasterXYZ = targetRasterXYZ,
-                         #targetRasterXYZcrs = targetRasterXYZcrs,
                          targetSingleCell = targetSingleCell,
                          targetSites = targetSites, originSites = originSites)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
@@ -778,6 +736,31 @@ estTransitionBoot <- function(originSites = NULL,
   else if (method == "bootstrap")
     m <- nAnimalsTotal
 
+  if (any(isRaster & !isProb)) {
+    conversion <- rasterToProb(originSites = originSites,
+                               targetSites = targetSites,
+                               originAssignment = originAssignment,
+                               targetAssignment = targetAssignment,
+                               isRaster = isRaster, isProb = isProb,
+                               captured = captured, targetRaster = targetRaster,
+                               originRaster = originRaster)
+    if (!conversion$failTarget)
+      targetAssignment <- conversion$targetAssignment
+    if (!conversion$failOrigin)
+      originAssignment <- conversion$originAssignment
+    isRaster <- conversion$isRaster
+    isProb <- conversion$isProb
+  }
+
+  if (!is.null(originPoints) && !is.null(originSites))
+    if(!identical(sf::st_crs(originPoints), sf::st_crs(originSites)))
+      # project if needed
+      originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
+  if (!is.null(targetPoints) && !is.null(targetSites))
+    if(!identical(sf::st_crs(targetPoints), sf::st_crs(targetSites)))
+      # project if needed
+      targetPoints <- sf::st_transform(targetPoints, sf::st_crs(targetSites))
+
   # IF originAssignment is NULL - we need to generate originAssignments from
   # the data provided
   if (is.null(originAssignment)){
@@ -785,10 +768,6 @@ estTransitionBoot <- function(originSites = NULL,
       cat("Creating originAssignment\n")
     # if geolocator, telemetry and captured in origin then simply get the origin site
     if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
-      if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
-        # project if needed
-        originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
-      }
       originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                           y = originSites,
                                                           sparse = TRUE)))
@@ -1051,7 +1030,7 @@ estTransitionBoot <- function(originSites = NULL,
 
   targetPointsInSites <- FALSE
 
-  if (targetPointsAssigned && !is.null(targetSites)) {
+  if (targetPointsAssigned && !is.null(targetSites) && any(isRaster)) {
     if (verbose > 0){
       cat('Checking if single cell target points in targetSites, may take a moment\n')}
     targetPointSample2 <- apply(targetSingleCell,
@@ -1075,7 +1054,7 @@ estTransitionBoot <- function(originSites = NULL,
   }else {targetCon <- NULL}
 
   originPointsInSites <- FALSE
-  if (originPointsAssigned && !is.null(originSites)) {
+  if (originPointsAssigned && !is.null(originSites) && any(isRaster)) {
     if (verbose > 0)
       cat('Checking if single cell origin points in originSites, may take a moment\n')
     nSamples <- dim(originSingleCell)[1]
@@ -1591,11 +1570,11 @@ estTransitionBoot <- function(originSites = NULL,
 #' geolocators (GL), telemetry/GPS, intrinsic markers such as isotopes and
 #' genetics, and band/ring reencounter data.
 #'
-#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
-#'  SpatialPolygons) defining the geographic representation of sites in the
+#' @param originSites A polygon spatial layer (sf - MULTIPOLYGON)
+#'  defining the geographic representation of sites in the
 #'  origin season.
-#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON or sp -
-#'  SpatialPolygons) defining the geographic representation of sites in the
+#' @param targetSites A polygon spatial layer (sf - MULTIPOLYGON)
+#'  defining the geographic representation of sites in the
 #'  target season.
 #' @param originPoints A \code{sf} or \code{SpatialPoints} object, with number
 #'  of rows or length being the number of animals tracked. Each point indicates
@@ -2263,10 +2242,10 @@ estMCisotope <- function(targetDist=NULL,
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
-     if("SpatialPolygonsDataFrame" %in% class(targetSites)){
-       targetSites <- rgeos::gUnaryUnion(targetSites, id = targetSites$targetSite)
-       targetSites <- sf::st_as_sf(targetSites)
-     }
+  if(inherits(targetSites, "SpatialPolygonsDataFrame")){
+    targetSites <- sf::st_as_sf(targetSites)
+    targetSites <- sf::st_union(targetSites)
+  }
 
   if (is.null(targetDist))
     targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites)))
@@ -2277,13 +2256,16 @@ estMCisotope <- function(targetDist=NULL,
 
   pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
 
-  if("SpatialPolygonsDataFrame" %in% class(originSites)){
-    originSites <- sp::SpatialPolygons(originSites@polygons,proj4string=originSites@proj4string)}
-  if("SpatialPolygonsDataFrame" %in% class(targetSites)){
-    targetSites <- sp::SpatialPolygons(targetSites@polygons,proj4string=targetSites@proj4string)}
-  if (is.null(originAssignment))
+  if(inherits(originSites, "SpatialPolygonsDataFrame")){
+    originSites <- sf::st_as_sf(originSites)
+    originSites <- sf::st_union(originSites)
+  }
 
-    originAssignment <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = originPoints, y = originSites, sparse = TRUE))))
+  if (is.null(originAssignment))
+    originAssignment <-
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = originPoints,
+                                                            y = originSites,
+                                                            sparse = TRUE))))
 
   nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
   targetSites <- sf::st_transform(targetSites, resampleProjection)
@@ -2598,9 +2580,9 @@ estMCisotope <- function(targetDist=NULL,
 #'  intrinsic data, this must be the geographic definition of sites in the
 #'  non-release season.  Optional for intrinsic data; if left out, the function
 #'  will use the \code{targetSites} defined in \code{targetIntrinsic}
-#' @param originPoints A \code{SpatialPoints} from sp or \code{POINT} sf object, with length number of
+#' @param originPoints A \code{POINT} sf object, with length number of
 #'    animals tracked.  Each point indicates the release location of an animal
-#' @param targetPoints For GL or GPS data, a \code{SpatialPoints} from sp or \code{POINT} sf object, with
+#' @param targetPoints For GL or GPS data, a \code{POINT} sf object, with
 #'    length number of animals tracked.  Each point indicates the point estimate
 #'    location in the non-release season
 #' @param originAssignment Assignment of \code{originPoints} to release season
@@ -2850,10 +2832,10 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' by Mantel correlation (rM), from geolocators, GPS, and/or raster (e.g.,
 #' genoscape or isotope) data.
 #'
-#' @param targetPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf
+#' @param targetPoints A \code{POINTS} from sf
 #'  object, with length number of animals tracked.  Each point indicates the
 #'  point estimate location in the non-release season.
-#' @param originPoints A \code{SpatialPoints} from sp or \code{POINTS} from sf
+#' @param originPoints A \code{POINTS} from sf
 #'  object, with length number of animals tracked.  Each point indicates the
 #'  release location of an animal.
 #' @param isGL Indicates whether or which animals were tracked with geolocators
@@ -2975,7 +2957,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  targetPoints = OVENdata$targetPoints, # Target locations
 #'                  verbose = 1,   # output options
 #'                  nBoot = 100, # This is set low for example
-#'                  resampleProjection = raster::projection(OVENdata$targetSites))
+#'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
 #' rM1
 #' str(rM1, max.level = 2)
 #' @seealso \code{\link{estMC}}
@@ -3017,61 +2999,17 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
       any(isGL) && any(captured != "target"))
     stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in meters)")
 
-  if (is.null(targetRaster)){
-    targetPointsAssigned <- FALSE
-    targetSingleCell <- NULL
-    targetRasterXYZ <- NULL
-    targetRasterXYZcrs <- NULL
-  }
-  else{
-    if (inherits(targetRaster, c("RasterStack", "RasterBrick"))){
-      if(is.na(raster::crs(targetRaster))){
-        stop("Please provide a crs for targetRaster\n")
-      }
-      targetRasterXYZ <- raster::rasterToPoints(targetRaster)
-      targetRasterXYZcrs <- raster::crs(targetRaster)
-      targetSingleCell <- NULL
-      targetPointsAssigned <- FALSE
-    }
-    else{
-      if (inherits(targetRaster, "isoAssign")) {
-        targetPointsAssigned <- !(is.null(targetRaster$SingleCell) ||
-                                    is.na(targetRaster$SingleCell))
-        targetRasterXYZ <- raster::rasterToPoints(targetRaster$probassign)
-        targetRasterXYZcrs <- raster::crs(targetRaster$probassign)
-        targetSingleCell <- targetRaster$SingleCell
-      }
-      else {
-        stop("Currently, targetRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-      }
-    }
-  }
+  targetStats <- assignRasterStats(targetRaster)
+  targetPointsAssigned <- targetStats$PointsAssigned
+  targetSingleCell <- targetStats$SingleCell
+  targetRasterXYZ <- targetStats$RasterXYZ
+  targetRasterXYZcrs <- targetStats$RasterXYZcrs
 
-  if (is.null(originRaster)){
-    originPointsAssigned <- FALSE
-    originSingleCell <- NULL
-    originRasterXYZ <- NULL
-    originRasterXYZcrs <- NULL
-  }
-  else if (inherits(originRaster, c("RasterStack", "RasterBrick"))){
-    if(is.na(raster::crs(originRaster))){
-      stop("Please provide a crs for originRaster\n")
-    }
-    originRasterXYZ <- raster::rasterToPoints(originRaster)
-    originRasterXYZcrs <- raster::crs(originRaster)
-    originSingleCell <- NULL
-    originPointsAssigned <- FALSE
-  }else if (inherits(originRaster, "isoAssign")) {
-    originPointsAssigned <- !(is.null(originRaster$SingleCell) ||
-                                any(is.na(originRaster$SingleCell)))
-    originRasterXYZ <- raster::rasterToPoints(originRaster$probassign)
-    originRasterXYZcrs <- raster::crs(originRaster$probassign)
-    originSingleCell <- originRaster$SingleCell
-  }
-  else {
-    stop("Currently, originRaster must be of classes isoAssign, RasterStack, or RasterBrick")
-  }
-
+  originStats <- assignRasterStats(originRaster)
+  originPointsAssigned <- originStats$PointsAssigned
+  originSingleCell <- originStats$SingleCell
+  originRasterXYZ <- originStats$RasterXYZ
+  originRasterXYZcrs <- originStats$RasterXYZcrs
 
   if (is.null(targetPoints)) {
     if (any(isGL) || any(isTelemetry) || !all(captured=="origin") ||
@@ -3140,8 +3078,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     #if sp object covert to sf #
     if("SpatialPolygonsDataFrame" %in% class(targetSites)){
       targetSites <- sf::st_as_sf(targetSites)
-      #targetSites <- sp::SpatialPolygons(targetSites@polygons)
-      }
+    }
 
     if(is.na(sf::st_crs(targetSites))){
       stop('Coordinate system definition needed for targetSites')
@@ -3151,7 +3088,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   }
   targetPointsInSites <- FALSE
 
-  if (targetPointsAssigned && !is.null(targetSites)) {
+  if (targetPointsAssigned && !is.null(targetSites) && any(isRaster)) {
     if (verbose > 0){
       cat('Checking if single cell target points in targetSites, may take a moment\n')}
     targetPointSample2 <- apply(targetSingleCell,
@@ -3183,7 +3120,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   }
 
   originPointsInSites <- FALSE
-  if (originPointsAssigned && !is.null(originSites)) {
+  if (originPointsAssigned && !is.null(originSites) && any(isRaster)) {
     if (verbose > 0)
       cat('Checking if single cell origin points in originSites, may take a moment\n')
     nSamples <- dim(originSingleCell)[1]
@@ -3603,20 +3540,23 @@ getCMRexample <- function(number = 1) {
 #' @examples
 #' \dontrun{
 #' data('OVENdata')
-#' ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+#' ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
+#'                  isTelemetry = !OVENdata$isGL,
 #'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-#'                  targetDist = OVENdata$targetDist, # targetSites distance matrix
-#'                  originDist = OVENdata$originDist, # originSites distance matrix
 #'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
 #'                  originSites = OVENdata$originSites, # Breeding origin sites
 #'                  originPoints = OVENdata$originPoints, # Capture Locations
 #'                  targetPoints = OVENdata$targetPoints, # Device target locations
-#'                  originRelAbund = OVENdata$originRelAbund,#Origin relative abund
 #'                  verbose = 1,   # output options
-#'                  calcCorr = FALSE, # do not estimate rM as well
 #'                  nSamples = 1000, # This is set low for example
-#'                  resampleProjection = raster::projection(OVENdata$targetSites))
+#'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
+#' ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
+#'                  originDist = OVENdata$originDist, # originSites distance matrix
+#'                  originRelAbund = OVENdata$originRelAbund,#Origin relative abund
+#'                  psi = ovenPsi,
+#'                  verbose = 1,   # output options
+#'                  nSamples = 1000)
 #' fm <- getCMRexample()
 #' originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
 #'                         rep(seq(49, 31, -2), 10)), 100, 2)
@@ -3630,7 +3570,7 @@ getCMRexample <- function(number = 1) {
 #' targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
 #' originRelAbundTrue <- rep(0.25, 4)
 
-#' theorEst <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
+#' theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
 #'                   originDist = originDist, targetDist = targetDist,
 #'                   originSites = 5:8, targetSites = c(3,2,1,4),
 #'                   nSamples = 1000, verbose = 0,

@@ -101,7 +101,7 @@ model{
   # Stratum effects
   for(s in 1:ndest){
     W[s] <- sum(pi[1:nstrata, s])
-    exp(deststrata[s]) <- W[s] * ratio * sum(n[1:nstrata, refyear]) / destweight[s]
+    deststrata[s] <- log(W[s] * ratio * sum(n[1:nstrata, refyear]) / destweight[s])
     log(dest.tau.year[s]) <- dest.log.tau.year[s]
     dest.log.tau.year[s] ~ dnorm(dest.mu.log.tau.year,dest.tau.log.tau.year)
     dest.sd.year[s] <- 1/pow(dest.tau.year[s],0.5)
@@ -111,7 +111,7 @@ model{
       destyeareffect[s,destfixedyear-y] ~ dnorm(destyeareffect[s,destfixedyear-y+1],dest.tau.year[s])
     }
 
-    for(y in (dest.fixedyear+1):ndestyears){
+    for(y in (destfixedyear+1):ndestyears){
       destyeareffect[s,y] ~ dnorm(destyeareffect[s,y-1],dest.tau.year[s])
     }
   }
@@ -124,7 +124,7 @@ model{
 
   # Summary statistics
   for(k in 1:ndest){
-    for(y in 1:nyearsDest){
+    for(y in 1:ndestyears){
       destn[k,y] <- destweight[k]*exp(destyeareffect[k,y]+0.5*dest.zscale.noise*dest.zscale.noise+0.5*dest.sd.obs*dest.sd.obs)
     }
   } #k

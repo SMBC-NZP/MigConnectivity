@@ -619,9 +619,12 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
   else {
     nAnimals <- dim(targetIntrinsic$probassign)[3]
   }
-  if (!pointsInSites)
+  if (!pointsInSites){
+    if (!inherits(targetIntrinsic$probassign, "SpatRaster"))
+      targetIntrinsic$probassign <- terra::rast(targetIntrinsic$probassign)
     # converts raster to matrix of XY then probs
-    matvals <- raster::rasterToPoints(targetIntrinsic$probassign)
+    matvals <- terra::as.data.frame(targetIntrinsic$probassign, xy = TRUE)
+  }
   target.sample <- rep(NA, nAnimals)
   target.point.sample <- matrix(NA, nAnimals, 2)
   toSample <- 1:nAnimals
@@ -1465,4 +1468,107 @@ reverseEstTransition <- function(psi, originRelAbund, pi = NULL,
   class(rev) <- c("estGamma", "estTargetRelAbund", "estPi", "estMigConnectivity")
   return(rev)
 
+}
+
+assignmentToMatrix <- function(assignment, nSites) {
+  nInds <- length(assignment)
+  assignMatrix <- array(0, c(nInds, nSites))
+  for (i in 1:nInds)
+    if (!is.na(assignment[i]))
+      assignMatrix[i, assignment[i]] <- 1
+  return(assignMatrix)
+}
+
+rasterToProb <- function(originSites = NULL, targetSites = NULL,
+                         originAssignment = NULL, targetAssignment = NULL,
+                         isRaster = FALSE, isProb = FALSE,
+                         captured = "origin",
+                         originRaster = NULL, targetRaster = NULL) {
+  failTarget <- failOrigin <- FALSE
+  nInds <- length(captured)
+  if (is.null(originSites))
+    failOrigin <- TRUE
+  else
+    nOriginSites <- nrow(originSites)
+  if (is.null(targetSites))
+    failTarget <- TRUE
+  else
+    nTargetSites <- nrow(targetSites)
+  inds <- isRaster & !isProb
+  capTarget <- captured=="target"
+  capOrigin <- captured=="origin"
+  whichTarget <- which(inds & !capTarget)
+  whichOrigin <- which(inds & !capOrigin)
+  if (length(whichTarget>0) && !is.null(targetSites)) {
+    targetSum <- terra::extract(targetRaster,
+                                terra::vect(targetSites), fun = sum,
+                                na.rm = TRUE, ID = FALSE)
+    targetSum <- t(targetSum[, whichTarget, drop = FALSE])
+    targetSum <- sweep(targetSum, 1, rowSums(targetSum), "/")
+    if (is.null(targetAssignment)){
+      targetAssignment <- array(0, c(nInds, nTargetSites))
+    }
+    else if (!is.array(targetAssignment) || length(dim(targetAssignment))<2)
+      targetAssignment <- assignmentToMatrix(targetAssignment, nTargetSites)
+    targetAssignment[whichTarget, ] <- targetSum
+    isRaster[whichTarget] <- FALSE
+    isProb[whichTarget] <- TRUE
+  }
+  if (length(whichOrigin>0) && !is.null(targetSites)) {
+    originSum <- terra::extract(originRaster,
+                                terra::vect(originSites), fun = sum,
+                                na.rm = TRUE, ID = FALSE)
+    originSum <- t(originSum[, whichOrigin, drop = FALSE])
+    originSum <- sweep(originSum, 1, rowSums(originSum), "/")
+    if (is.null(originAssignment)){
+      originAssignment <- array(0, c(nInds, nOriginSites))
+    }
+    else if (!is.array(originAssignment) || length(dim(originAssignment))<2)
+      originAssignment <- assignmentToMatrix(originAssignment, nOriginSites)
+    originAssignment[whichOrigin, ] <- originSum
+    isRaster[whichOrigin] <- FALSE
+    isProb[whichOrigin] <- TRUE
+  }
+  return(list(originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              failOrigin = failOrigin, failTarget = failTarget,
+              isRaster = isRaster, isProb = isProb))
+}
+
+assignRasterStats <- function(theRaster) {
+  if (is.null(theRaster)){
+    PointsAssigned <- FALSE
+    SingleCell <- NULL
+    RasterXYZ <- NULL
+    RasterXYZcrs <- NULL
+    outRaster <- NULL
+  }
+  else {
+    if (inherits(theRaster, "isoAssign")) {
+      if (!inherits(theRaster$probassign, "SpatRaster"))
+        theRaster$probassign <- terra::rast(theRaster$probassign)
+      PointsAssigned <- !is.null(theRaster$SingleCell) &&
+                                  !is.null(dim(theRaster$SingleCell))
+      RasterXYZ <- terra::as.data.frame(theRaster$probassign, xy = TRUE)
+      RasterXYZcrs <- terra::crs(theRaster$probassign)
+      SingleCell <- theRaster$SingleCell
+      outRaster <- theRaster$probassign
+    }
+    else {
+      if (!inherits(theRaster, "SpatRaster")) {
+        theRaster <- terra::rast(theRaster)
+      }
+      if (is.na(terra::crs(theRaster))){
+        stop("Please provide a projection (crs) for each raster\n")
+      }
+      RasterXYZ <- terra::as.data.frame(theRaster, xy = TRUE)
+      RasterXYZcrs <- terra::crs(theRaster)
+      SingleCell <- NULL
+      PointsAssigned <- FALSE
+      outRaster <- theRaster
+    }
+  }
+  return(list(Raster = outRaster, PointsAssigned = PointsAssigned,
+              SingleCell = SingleCell, RasterXYZ = RasterXYZ,
+              RasterXYZcrs = RasterXYZcrs))
 }
