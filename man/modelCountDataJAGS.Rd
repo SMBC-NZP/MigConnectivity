@@ -10,8 +10,8 @@ modelCountDataJAGS(count_data, ni = 20000, nt = 5, nb = 5000, nc = 3)
 \item{count_data}{List containing the following elements:
 ' \describe{
    \item{\code{C}}{nYears by nRoutes matrix containing the observed number of individuals counted at each route in each year.}
-   \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
-   \item{\code{routePerPop}}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population.}
+   \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+   \item{\code{routesPerStrata}}{Vector of length 1 or nStrata containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population.}
 }}
 
 \item{ni}{Number of MCMC iterations. Default = 20000.}

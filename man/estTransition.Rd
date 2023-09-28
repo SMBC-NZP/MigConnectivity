@@ -89,12 +89,12 @@ estPsi(
 )
 }
 \arguments{
-\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
-SpatialPolygons) defining the geographic representation of sites in the
+\item{originSites}{A polygon spatial layer (sf - MULTIPOLYGON)
+defining the geographic representation of sites in the
 origin season.}
 
-\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON or sp -
-SpatialPolygons) defining the geographic representation of sites in the
+\item{targetSites}{A polygon spatial layer (sf - MULTIPOLYGON)
+defining the geographic representation of sites in the
 target season.}
 
 \item{originPoints}{A \code{sf} or \code{SpatialPoints} object, with number
@@ -435,7 +435,6 @@ data(OVENdata) # Ovenbird
 nSamplesGLGPS <- 100 # Number of bootstrap iterations
 #\dontrun{
 #  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
-#  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
 #}
 
 # Estimate MC only, treat all data as geolocator
@@ -675,7 +674,7 @@ getRDS <- function(speciesDist) {
 }
 OVENdist <- getRDS("OVENdist")
 
-raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
+terra::crs(OVENdist) <- MigConnectivity::projections$WGS84
 
 OVENdist <- sf::st_as_sf(OVENdist)
 
@@ -722,8 +721,8 @@ iso <- isoAssign(isovalues = OVENvals[,2],
 nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(FALSE, nAnimals); isRaster <- rep(TRUE, nAnimals)
 isProb <- rep(FALSE, nAnimals); isTelemetry <- rep(FALSE, nAnimals)
-targetSites <- rgeos::gUnaryUnion(iso$targetSites, id = iso$targetSites$targetSite)
-targetSites <- sf::st_as_sf(targetSites)
+targetSites <- sf::st_as_sf(iso$targetSites)
+targetSites <- sf::st_union(targetSites, by_feature = TRUE)
 
 
 system.time(psi5 <-

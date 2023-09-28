@@ -151,9 +151,9 @@ summary.intrinsicAssign<-function(object, ...){
 #' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
 #' @examples
 #' \dontrun{
-#' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+#' OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' terra::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #'
 #' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
@@ -180,18 +180,18 @@ plot.intrinsicAssign <- function(x,map,...){
       stop("map must be either probability, population, or odds")}
     op <- graphics::par(no.readonly = TRUE)
     if(map == "population"){
-      raster::plot(x$popassign,horiz = TRUE,...)
+      terra::plot(x$popassign,horiz = TRUE,...)
       }
     if(map == "probability"){
-      for(i in 1:raster::nlayers(x$probassign)){
-        raster::plot(x$probassign[[i]],horiz = TRUE,...)
+      for(i in 1:terra::nlyr(x$probassign)){
+        terra::plot(x$probassign[[i]],horiz = TRUE,...)
         graphics::par(ask = TRUE)
       }
     graphics::par(op)
     }
     if(map == "odds"){
-      for(i in 1:raster::nlayers(x$probassign)){
-        raster::plot(x$oddsassign[[i]],horiz = TRUE,...)
+      for(i in 1:terra::nlyr(x$probassign)){
+        terra::plot(x$oddsassign[[i]],horiz = TRUE,...)
         graphics::par(ask = TRUE)
       }
     graphics::par(op)
@@ -674,7 +674,7 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
 #          originPoints = OVENdata$originPoints, # Capture Locations
 #          targetPoints = OVENdata$targetPoints, # Target locations from devices
 #          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
-#          resampleProjection = raster::projection(OVENdata$targetPoints),
+#          resampleProjection = terra::crs(OVENdata$targetPoints),
 #          verbose = 0,   # output options - see help ??estMC
 #          nSamples = 10000) # This is set low for example
 #
@@ -686,17 +686,6 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
     subsetTarget <- 1:nTargetSites
   originNames <- x$input$originNames
   targetNames <- x$input$targetNames
-  # meanPsi <- apply(M$samplePsi, 2:3, mean)
-# lowPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.025)
-# highPsi <- apply(M$samplePsi, 2:3, quantile, probs = 0.975)
-# library(rgeos)
-# library(shape)
-# library(raster)
-# library(maptools)
-# library(rgdal)
-# data(wrld_simpl)
-# wrld_simple<-sp::spTransform(wrld_simpl,raster::crs(OVENdata$targetSites))
-  # maxWidth <- 1000000
   if (is.null(xOffset))
     xOffset <- matrix(0, nOriginSites, nTargetSites)
   if (is.null(yOffset))

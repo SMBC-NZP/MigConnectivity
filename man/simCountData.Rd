@@ -4,16 +4,31 @@
 \alias{simCountData}
 \title{Simulates Breeding Bird Survey-style count data}
 \usage{
-simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear)
+simCountData(
+  nStrata,
+  routesPerStrata,
+  nYears,
+  alphaStrat,
+  beta = 0,
+  eta = 0,
+  sdRoute = 0,
+  sdYear = 0,
+  sdObs = 0,
+  sdCount = 0,
+  model = c("S", "Sh", "D", "Dh"),
+  obsSurvival = 1,
+  fixedyear = round(nYears/2),
+  nuCount = 1
+)
 }
 \arguments{
-\item{nPops}{Number of populations/regions}
+\item{nStrata}{Number of populations/regions}
 
-\item{routePerPop}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routePerPop) == 1, number of routes is identical for each population}
+\item{routesPerStrata}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population}
 
 \item{nYears}{Number of years surveys were conducted}
 
-\item{alphaPop}{Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaPop) == 1, expected counts are identical for each population}
+\item{alphaStrat}{Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaStrat) == 1, expected counts are identical for each population}
 
 \item{beta}{Coefficient of linear year effect (default = 0)}
 
@@ -24,15 +39,15 @@ simCountData(nPops, routePerPop, nYears, alphaPop, beta = 0, sdRoute, sdYear)
 \value{
 \code{simCountData} returns a list containing:
  \describe{
-   \item{\code{nPops}}{Number of populations/regions.}
+   \item{\code{nStrata}}{Number of populations/regions.}
    \item{\code{nRoutes}}{Total number of routes.}
    \item{\code{nYears}}{Number of years.}
-   \item{\code{routePerPop}}{Number of routes per population.}
+   \item{\code{routesPerStrata}}{Number of routes per population.}
    \item{\code{year}}{Vector of length nYears with standardized year values.}
-   \item{\code{pop}}{Vector of length nRoutes indicating the population/region in which each route is located.}
-   \item{\code{alphaPop}}{log expected count for each populations.}
-   \item{\code{epsRoute}}{realized deviation from alphaPop for each route.}
-   \item{\code{epsYear}}{realized deviation from alphaPop for each year.}
+   \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+   \item{\code{alphaStrat}}{log expected count for each populations.}
+   \item{\code{epsRoute}}{realized deviation from alphaStrat for each route.}
+   \item{\code{epsYear}}{realized deviation from alphaStrat for each year.}
    \item{\code{beta}}{linear year effect.}
    \item{\code{sdRoute}}{standard deviation of random route-level variation.}
    \item{\code{sdYear}}{standard deviation of random year-level variation.}

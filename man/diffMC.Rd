@@ -57,20 +57,23 @@ independent (e.g., different species).
 \examples{
 \dontrun{
 data('OVENdata')
-ovenEst <- estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
+                 isTelemetry = !OVENdata$isGL,
                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-                 targetDist = OVENdata$targetDist, # targetSites distance matrix
-                 originDist = OVENdata$originDist, # originSites distance matrix
                  targetSites = OVENdata$targetSites, # Non-breeding target sites
                  originSites = OVENdata$originSites, # Breeding origin sites
                  originPoints = OVENdata$originPoints, # Capture Locations
                  targetPoints = OVENdata$targetPoints, # Device target locations
-                 originRelAbund = OVENdata$originRelAbund,#Origin relative abund
                  verbose = 1,   # output options
-                 calcCorr = FALSE, # do not estimate rM as well
                  nSamples = 1000, # This is set low for example
-                 resampleProjection = raster::projection(OVENdata$targetSites))
+                 resampleProjection = sf::st_crs(OVENdata$targetSites))
+ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
+                 originDist = OVENdata$originDist, # originSites distance matrix
+                 originRelAbund = OVENdata$originRelAbund,#Origin relative abund
+                 psi = ovenPsi,
+                 verbose = 1,   # output options
+                 nSamples = 1000)
 fm <- getCMRexample()
 originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                         rep(seq(49, 31, -2), 10)), 100, 2)
@@ -83,7 +86,7 @@ targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
 originDist <- distFromPos(originPosCMR, 'ellipsoid')
 targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
 originRelAbundTrue <- rep(0.25, 4)
-theorEst <- estMC(originRelAbund = originRelAbundTrue, psi = fm,
+theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
                   originDist = originDist, targetDist = targetDist,
                   originSites = 5:8, targetSites = c(3,2,1,4),
                   nSamples = 1000, verbose = 0,

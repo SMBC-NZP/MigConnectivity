@@ -60,11 +60,11 @@ estCorr(
 )
 }
 \arguments{
-\item{targetPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf
+\item{targetPoints}{A \code{POINTS} from sf
 object, with length number of animals tracked.  Each point indicates the
 point estimate location in the non-release season.}
 
-\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINTS} from sf
+\item{originPoints}{A \code{POINTS} from sf
 object, with length number of animals tracked.  Each point indicates the
 release location of an animal.}
 
@@ -212,7 +212,7 @@ rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  targetPoints = OVENdata$targetPoints, # Target locations
                  verbose = 1,   # output options
                  nBoot = 100, # This is set low for example
-                 resampleProjection = raster::projection(OVENdata$targetSites))
+                 resampleProjection = sf::st_crs(OVENdata$targetSites))
 rM1
 str(rM1, max.level = 2)
 }

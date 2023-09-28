@@ -22,9 +22,9 @@ Basic plot function for the different isoAssign outputs
 }
 \examples{
 \dontrun{
-OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+terra::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 

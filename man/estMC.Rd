@@ -73,10 +73,10 @@ intrinsic data, this must be the geographic definition of sites in the
 non-release season.  Optional for intrinsic data; if left out, the function
 will use the \code{targetSites} defined in \code{targetIntrinsic}}
 
-\item{originPoints}{A \code{SpatialPoints} from sp or \code{POINT} sf object, with length number of
+\item{originPoints}{A \code{POINT} sf object, with length number of
 animals tracked.  Each point indicates the release location of an animal}
 
-\item{targetPoints}{For GL or GPS data, a \code{SpatialPoints} from sp or \code{POINT} sf object, with
+\item{targetPoints}{For GL or GPS data, a \code{POINT} sf object, with
 length number of animals tracked.  Each point indicates the point estimate
 location in the non-release season}
 

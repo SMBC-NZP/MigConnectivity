@@ -672,15 +672,13 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 
             point.sample <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
 
-            point.sample1 <- sp::SpatialPoints(point.sample,
-                                               proj4string = sp::CRS("+proj=longlat +datum=WGS84 +no_defs"))
-
             # covert to sf
-            point.sample1 <- sf::st_as_sf(point.sample1, crs = sf::st_crs(4326))
+            point.sample1 <- sf::st_as_sf(as.data.frame(point.sample),
+                                          coords = c("x","y"),
+                                          crs = 4326)
 
             # Check which points are in target sites
 
-            #target.sample0 <- sp::over(point.sample1, y = targetSites)
             target.sample0 <- suppressMessages(as.numeric(unclass(sf::st_intersects(x = point.sample1,
                                                                                     y = targetSites,
                                                                                     sparse = TRUE))))
