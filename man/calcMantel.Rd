@@ -12,13 +12,12 @@ calcMantel(
 )
 }
 \arguments{
-\item{targetPoints}{A sp \code{SpatialPoints} or sf \code{POINTS} object,
-with length number of animals tracked.  Each point indicates the point
-estimate location in the non-release season.}
+\item{targetPoints}{A sf \code{POINTS} object, with length number of animals
+tracked.  Each point indicates the point estimate location in the
+non-release season.}
 
-\item{originPoints}{A sp \code{SpatialPoints} or sf \code{POINTS} , with
-length number of animals tracked.  Each point indicates the release
- location of an animal.}
+\item{originPoints}{A sf \code{POINTS} object, with length number of animals
+tracked.  Each point indicates the release location of an animal.}
 
 \item{targetDist}{Distances between the target locations of the tracked
 animals.  Symmetric matrix with number of animals rows and columns,
@@ -39,7 +38,7 @@ although really you only need the lower triangle filled in.}
 }
 }
 \description{
-Calculation of rM from SpatialPoints geolocators and/or GPS
+Calculation of rM from POINTS geolocators and/or GPS
 data, not accounting for uncertainty. If you've already calculated
 distances between points, you can use those instead.
 }

@@ -125,16 +125,15 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 
 #' Calculate Mantel correlation (rM) from points and/or distances.
 #'
-#' Calculation of rM from SpatialPoints geolocators and/or GPS
+#' Calculation of rM from POINTS geolocators and/or GPS
 #' data, not accounting for uncertainty. If you've already calculated
 #' distances between points, you can use those instead.
 #'
-#' @param targetPoints A sp \code{SpatialPoints} or sf \code{POINTS} object,
-#'     with length number of animals tracked.  Each point indicates the point
-#'     estimate location in the non-release season.
-#' @param originPoints A sp \code{SpatialPoints} or sf \code{POINTS} , with
-#'    length number of animals tracked.  Each point indicates the release
-#'     location of an animal.
+#' @param targetPoints A sf \code{POINTS} object, with length number of animals
+#'     tracked.  Each point indicates the point estimate location in the
+#'     non-release season.
+#' @param originPoints A sf \code{POINTS} object, with length number of animals
+#'     tracked.  Each point indicates the release location of an animal.
 #' @param targetDist Distances between the target locations of the tracked
 #'    animals.  Symmetric matrix with number of animals rows and columns,
 #'    although really you only need the lower triangle filled in.
