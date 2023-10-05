@@ -100,11 +100,7 @@
   # Ovenbird example with GL and GPS data
   data(OVENdata) # Ovenbird
 
-  nSamplesGLGPS <- 100 # Number of bootstrap iterations
-  #\dontrun{
-  #  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
-  #  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
-  #}
+  nSamplesGLGPS <- 100 # Number of bootstrap iterations, set low for example
 
   # Estimate transition probabilities
   Combined.psi<-estTransition(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)

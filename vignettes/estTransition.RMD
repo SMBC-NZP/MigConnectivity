@@ -55,30 +55,25 @@ The figure below shows the two breeding regions (squares), and the three non-bre
 # Load packages used below
 library(sf)
 library(terra)
-library(maptools)
+library(maps)
 
-# read in simple geopolitical boundaries for visualization purposes
-data(wrld_simpl, package="maptools")
-
-# convert to sf object and set the crs to WGS84
-wrld_simpl <- sf::st_as_sf(wrld_simpl, crs = 4326)
-
-# Create a simple plot of the origin and and target sites 
+# Set the crs to WGS84
+originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
+targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
+# # Create a simple plot of the origin and and target sites 
 par(mar=c(0,0,0,0))
-plot(OVENdata$originSites,
-     xlim=c(terra::ext(OVENdata$targetSites)[1],
-            terra::ext(OVENdata$targetSites)[2]),
-     
-     ylim=c(terra::ext(OVENdata$targetSites)[3],
-            terra::ext(OVENdata$originSites)[4]))
+plot(originSitesWGS84,
+     xlim=c(terra::ext(targetSitesWGS84)[1],
+            terra::ext(targetSitesWGS84)[2]),
 
-plot(OVENdata$targetSites,
+     ylim=c(terra::ext(targetSitesWGS84)[3],
+            terra::ext(originSitesWGS84)[4]))
+
+plot(targetSitesWGS84,
      add = TRUE,
      col=c("gray70","gray35","gray10"))
 
-wrld_simple<-sf::st_transform(wrld_simpl, sf::st_crs(OVENdata$originSites))
-
-plot(sf::st_geometry(wrld_simple),add=TRUE)
+map("world", add=TRUE)
 ```
 
 The following code demonstrates how to estimate transition probabilities using location data from light-level geolocators and PinPoint-10 GPS tags. <b>Note:</b> When using a combination of light-level geolocators and other more precise tracking technology such as GPS tags, be sure to include both `isGL` and `isTelemetry` vectors. Below, we create the `isTelemetry` vector as the inverse of the `isGL` vector. 

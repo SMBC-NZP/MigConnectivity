@@ -82,7 +82,7 @@ model{
   }
   dest.tau.noise ~ dgamma(0.001,0.001)
   dest.scale.noise <- 1 / pow(dest.tau.noise, 0.5)
-  dest.sd.noise <- 1/pow(dest.tau.noise,0.5)
+  dest.sd.noise <- 1 / pow(dest.tau.noise, 0.5)
   mu ~ dgamma(2,0.10)
 
   # Observer effects
