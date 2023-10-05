@@ -576,35 +576,35 @@ names(OVENdata)
 The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r eval = FALSE}
-install.packages(c('rgeos', 'shape', 'raster', 'maptools', 'rgdal'))
+install.packages(c('rgeos', 'shape', 'terra', 'maps', 'rgdal'))
 ```
 
 ```{r, message = FALSE, warning = FALSE, error=FALSE}
 library(rgeos)
 library(shape)
 library(raster)
-library(maptools)
+library(maps)
 library(rgdal)
+library(terra)
 
-data(wrld_simpl)
+# Set the crs to WGS84
+originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
+targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
 
-wrld_simpl <- sf::st_as_sf(wrld_simpl, crs = 4326)
-
+# Create a simple plot of the origin and and target sites 
 par(mar=c(0,0,0,0))
-plot(OVENdata$originSites,
-     xlim=c(raster::extent(OVENdata$targetSites)[1],
-            raster::extent(OVENdata$targetSites)[2]),
-     
-     ylim=c(raster::extent(OVENdata$targetSites)[3],
-            raster::extent(OVENdata$originSites)[4]))
+plot(originSitesWGS84,
+     xlim=c(terra::ext(targetSitesWGS84)[1],
+            terra::ext(targetSitesWGS84)[2]),
 
-plot(OVENdata$targetSites,
+     ylim=c(terra::ext(targetSitesWGS84)[3],
+            terra::ext(originSitesWGS84)[4]))
+
+plot(targetSitesWGS84,
      add = TRUE,
      col=c("gray70","gray35","gray10"))
 
-wrld_simple<-sf::st_transform(wrld_simpl, sf::st_crs(OVENdata$originSites))
-
-plot(sf::st_geometry(wrld_simple),add=TRUE)
+map("world", add=TRUE)
 ```
 
 The following code demonstrates how to estimate MC using location data from light-level geolocators and PinPoint-10 GPS tags. 

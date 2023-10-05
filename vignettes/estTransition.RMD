@@ -60,7 +60,7 @@ library(maps)
 # Set the crs to WGS84
 originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
 targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
-# # Create a simple plot of the origin and and target sites 
+# Create a simple plot of the origin and and target sites 
 par(mar=c(0,0,0,0))
 plot(originSitesWGS84,
      xlim=c(terra::ext(targetSitesWGS84)[1],
