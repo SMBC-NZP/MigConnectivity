@@ -371,10 +371,6 @@ rmseAbund
 data(OVENdata) # Ovenbird
 
 nSamplesGLGPS <- 100 # Number of bootstrap iterations
-#\dontrun{
-#  nSamplesGLGPS <- 10000 # Number of bootstrap iterations
-#  install.packages(c('raster', 'maptools', 'rgdal', 'rgeos', 'Rcpp'))
-#}
 
 # Estimate MC only, treat all data as geolocator
 GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)

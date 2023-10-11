@@ -457,7 +457,7 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 #' @export
 #'
 # @examples
-simGLData <- function(psi, originRelAbund, sampleSize,
+simGLData <- function(psi, originRelAbund = NULL, sampleSize,
                   originSites = NULL, targetSites = NULL,
                   #captured = "origin",
                   geoBias = NULL, geoVCov = NULL,
@@ -466,9 +466,13 @@ simGLData <- function(psi, originRelAbund, sampleSize,
                   requireEveryOrigin = FALSE) {
   nOriginSites <- nrow(psi)
   nTargetSites <- ncol(psi)
-  rev <- reversePsiRelAbund(psi, originRelAbund)
-  gamma <- rev$gamma
-  targetRelAbund <- rev$targetRelAbund
+  if (!is.null(originRelAbund)) {
+    rev <- reversePsiRelAbund(psi, originRelAbund)
+    gamma <- rev$gamma
+    targetRelAbund <- rev$targetRelAbund
+  }
+  else if (!is.null(sampleSize[[2]]) || length(sampleSize[[1]]) < 2)
+    stop("Need to enter in originRelAbund for target data or for single origin sample size")
   if (length(dim(S))<2) {
     S <- matrix(S, nOriginSites, nTargetSites, byrow = TRUE)
   }

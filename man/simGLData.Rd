@@ -6,7 +6,7 @@
 \usage{
 simGLData(
   psi,
-  originRelAbund,
+  originRelAbund = NULL,
   sampleSize,
   originSites = NULL,
   targetSites = NULL,
