@@ -461,7 +461,7 @@ simGLData <- function(psi, originRelAbund = NULL, sampleSize,
                   originSites = NULL, targetSites = NULL,
                   #captured = "origin",
                   geoBias = NULL, geoVCov = NULL,
-                  geoBiasOrigin=NULL, geoVCovOrigin=NULL,
+                  geoBiasOrigin = geoBias, geoVCovOrigin = geoVCov,
                   S = 1, p = list(1, 1),
                   requireEveryOrigin = FALSE) {
   nOriginSites <- nrow(psi)

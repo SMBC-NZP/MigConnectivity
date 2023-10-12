@@ -24,12 +24,13 @@ estMantel(
   isTelemetry = !isGL,
   isRaster = FALSE,
   captured = "origin",
-  geoBiasOrigin = NULL,
-  geoVCovOrigin = NULL,
+  geoBiasOrigin = geoBias,
+  geoVCovOrigin = geoVCov,
   targetRaster = NULL,
   originRaster = NULL,
   dataOverlapSetting = c("dummy", "none", "named"),
-  originRelAbund = NULL
+  originRelAbund = NULL,
+  targetRelAbund = NULL
 )
 
 estCorr(
@@ -51,12 +52,13 @@ estCorr(
   isTelemetry = !isGL,
   isRaster = FALSE,
   captured = "origin",
-  geoBiasOrigin = NULL,
-  geoVCovOrigin = NULL,
+  geoBiasOrigin = geoBias,
+  geoVCovOrigin = geoVCov,
   targetRaster = NULL,
   originRaster = NULL,
   dataOverlapSetting = c("dummy", "none", "named"),
-  originRelAbund = NULL
+  originRelAbund = NULL,
+  targetRelAbund = NULL
 )
 }
 \arguments{
@@ -83,7 +85,9 @@ in longitude and latitude of \code{targetPoints}, in
 
 \item{targetSites}{A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
 or \code{POLYGONS} sf object indicating valid target location(s). Not
-needed unless you want to mask out certain areas (e.g. water).}
+needed unless you want to mask out certain areas (e.g. water) and
+\code{captured} is "origin" or you want to use a weighted bootstrap based on
+\code{targetRelAbund} for animals captured on the target side.}
 
 \item{nBoot}{Number of bootstrap runs. Animals are sampled with replacement
 for each, to estimate sampling uncertainty.}
@@ -116,7 +120,8 @@ to TRUE to also keep the old structure. Defaults to FALSE.}
 \item{originSites}{A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
 or \code{POLYGONS} sf object indicating valid origin location(s). Not
 needed unless you want to mask out certain areas (e.g. water) and
-\code{captured} is "target".}
+\code{captured} is "target" or you want to use a weighted bootstrap based on
+\code{originRelAbund} for animals captured on the origin side.}
 
 \item{isTelemetry}{Indicates whether or which animals were tracked with
 telemetry/GPS (no location uncertainty on either end).
@@ -174,13 +179,23 @@ to leave this on the default.}
 
 \item{originRelAbund}{the proportion of the total abundance in each of B
 \code{originSites}. Used to set up the bootstrap to be weighted by relative
-abundance. Either a numeric vector of length B that sums to 1, or an mcmc
-object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
-with at least \code{nSamples} rows. If there are more than B columns, the
-relevant columns should be labeled "relN[1]" through "relN[B]". Optional,
-but if you don't set it there's potential for rM to be biased (if sampling
-isn't proportional to abundance). Leaving this NULL will also trigger a
-warning.}
+abundance (for animals captured on the origin side). Either a numeric vector
+of length B that sums to 1, or an mcmc object (such as is produced by
+\code{\link{modelCountDataJAGS}}) or matrix with at least B columns.
+If there are more than B columns, the relevant columns should be
+labeled "relN[1]" through "relN[B]". Optional, but if you don't set it and
+at least some animals are captured on the origin side, there's potential for
+rM to be biased (if sampling isn't proportional to abundance).}
+
+\item{targetRelAbund}{the proportion of the total abundance in each of W
+\code{targetSites}. Used to set up the bootstrap to be weighted by relative
+abundance (for animals captured on the target side). Either a numeric vector
+of length W that sums to 1, or an mcmc object (such as is produced by
+\code{\link{modelCountDataJAGS}}) or matrix with at least W columns.
+If there are more than W columns, the relevant columns should be
+labeled "relN[1]" through "relN[W]". Optional, but if you don't set it and
+at least some animals are captured on the target side, there's potential for
+rM to be biased (if sampling isn't proportional to abundance).}
 }
 \value{
 \code{estMantel} returns a list with elements:

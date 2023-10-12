@@ -592,8 +592,8 @@ estTransitionBoot <- function(originSites = NULL,
                               captured = "origin",
                               geoBias = NULL,
                               geoVCov = NULL,
-                              geoBiasOrigin = NULL,
-                              geoVCovOrigin = NULL,
+                              geoBiasOrigin = geoBias,
+                              geoVCovOrigin = geoVCov,
                               targetRaster = NULL,
                               originRaster = NULL,
                               verbose = 0,
@@ -1839,7 +1839,7 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           nSamples = 1000, isGL = FALSE, isTelemetry = FALSE,
                           isRaster = FALSE, isProb = FALSE,
                           captured = "origin", geoBias = NULL, geoVCov = NULL,
-                          geoBiasOrigin = NULL, geoVCovOrigin = NULL,
+                          geoBiasOrigin = geoBias, geoVCovOrigin = geoVCov,
                           targetRaster = NULL, originRaster = NULL,
                           banded = NULL, reencountered = NULL,
                           verbose = 0, alpha = 0.05,
@@ -2850,7 +2850,9 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'  \code{resampleProjection} units (default meters).
 #' @param targetSites A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
 #'  or \code{POLYGONS} sf object indicating valid target location(s). Not
-#'  needed unless you want to mask out certain areas (e.g. water).
+#'  needed unless you want to mask out certain areas (e.g. water) and
+#'  \code{captured} is "origin" or you want to use a weighted bootstrap based on
+#'  \code{targetRelAbund} for animals captured on the target side.
 #' @param nBoot Number of bootstrap runs. Animals are sampled with replacement
 #'  for each, to estimate sampling uncertainty.
 #' @param nSim Tuning parameter for GL or raster data. Affects only the speed;
@@ -2875,7 +2877,8 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' @param originSites A \code{SpatialPolygons}, \code{SpatialPolygonsDataFrame},
 #'  or \code{POLYGONS} sf object indicating valid origin location(s). Not
 #'  needed unless you want to mask out certain areas (e.g. water) and
-#'  \code{captured} is "target".
+#'  \code{captured} is "target" or you want to use a weighted bootstrap based on
+#'  \code{originRelAbund} for animals captured on the origin side.
 #' @param isTelemetry Indicates whether or which animals were tracked with
 #'  telemetry/GPS (no location uncertainty on either end).
 #'  Should be either single TRUE or FALSE value, or vector with length of
@@ -2924,13 +2927,22 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'  to leave this on the default.
 #' @param originRelAbund the proportion of the total abundance in each of B
 #'  \code{originSites}. Used to set up the bootstrap to be weighted by relative
-#'  abundance. Either a numeric vector of length B that sums to 1, or an mcmc
-#'  object (such as is produced by \code{\link{modelCountDataJAGS}}) or matrix
-#'  with at least \code{nSamples} rows. If there are more than B columns, the
-#'  relevant columns should be labeled "relN[1]" through "relN[B]". Optional,
-#'  but if you don't set it there's potential for rM to be biased (if sampling
-#'  isn't proportional to abundance). Leaving this NULL will also trigger a
-#'  warning.
+#'  abundance (for animals captured on the origin side). Either a numeric vector
+#'  of length B that sums to 1, or an mcmc object (such as is produced by
+#'  \code{\link{modelCountDataJAGS}}) or matrix with at least B columns.
+#'  If there are more than B columns, the relevant columns should be
+#'  labeled "relN[1]" through "relN[B]". Optional, but if you don't set it and
+#'  at least some animals are captured on the origin side, there's potential for
+#'  rM to be biased (if sampling isn't proportional to abundance).
+#' @param targetRelAbund the proportion of the total abundance in each of W
+#'  \code{targetSites}. Used to set up the bootstrap to be weighted by relative
+#'  abundance (for animals captured on the target side). Either a numeric vector
+#'  of length W that sums to 1, or an mcmc object (such as is produced by
+#'  \code{\link{modelCountDataJAGS}}) or matrix with at least W columns.
+#'  If there are more than W columns, the relevant columns should be
+#'  labeled "relN[1]" through "relN[W]". Optional, but if you don't set it and
+#'  at least some animals are captured on the target side, there's potential for
+#'  rM to be biased (if sampling isn't proportional to abundance).
 #'
 #' @return \code{estMantel} returns a list with elements:
 #' \describe{
@@ -2978,11 +2990,11 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                       resampleProjection = 'ESRI:102010',
                       maxTries = 300, maintainLegacyOutput = FALSE,
                       originSites = NULL, isTelemetry = !isGL, isRaster = FALSE,
-                      captured = "origin", geoBiasOrigin = NULL,
-                      geoVCovOrigin = NULL,
+                      captured = "origin", geoBiasOrigin = geoBias,
+                      geoVCovOrigin = geoVCov,
                       targetRaster = NULL, originRaster = NULL,
                       dataOverlapSetting = c("dummy", "none", "named"),
-                      originRelAbund = NULL) {
+                      originRelAbund = NULL, targetRelAbund = NULL) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   # double check that spatial data coming in is in sf format #
   if (inherits(targetPoints, "SpatialPoints"))
@@ -3149,14 +3161,19 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   }
 
   weights <- array(0, c(nBoot, nAnimals))
-  if (is.null(originRelAbund)) {
+  if (is.null(originRelAbund) && any(captured!="target") ||
+      is.null(targetRelAbund) && any(captured!="origin")) {
     warning("rM can be biased if you don't weight by abundance")
-    weights[,] <- 1/nAnimals
   }
-  else if (is.null(originSites)) {
+  if (is.null(originSites) && !is.null(originRelAbund)) {
     stop("If you want to set origin relative abundances, you need to define the origin sites")
   }
-  else {
+  if (is.null(targetSites) && !is.null(targetRelAbund)) {
+    stop("If you want to set target relative abundances, you need to define the target sites")
+  }
+  if (is.null(originRelAbund) && is.null(targetRelAbund))
+    weights[,] <- 1/nAnimals
+  else if (!is.null(originRelAbund) && any(captured!="target")) {
     nOriginSites <- nrow(originSites)
     if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
       originRelAbund <- as.matrix(originRelAbund)
@@ -3186,49 +3203,17 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
       originRelAbund <- matrix(originRelAbund, nBoot, nOriginSites, TRUE)
     }
     if (verbose > 0)
-      cat("Creating originAssignment\n")
+      cat("Creating origin assignment\n")
     # if geolocator, telemetry and captured in origin then simply get the origin site
-    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
+    if (!is.null(originPoints)){
       if(!identical(sf::st_crs(originPoints),sf::st_crs(originSites))){
         # project if needed
-        originPoints <- sf::st_transform(originPoints, sf::st_crs(originSites))
+        originSites <- sf::st_transform(originSites, sf::st_crs(originPoints))
       }
       originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
                                                                      y = originSites,
                                                                      sparse = TRUE)))
-      # if raster and not captured in origin sites then determine the origin site
     }
-    else if (all(isRaster & captured != "origin")) {
-      # if isRaster == TRUE and captured != origin
-      # WEIGHTED XY COORDIANTES FROM THE RASTER
-      # get geographically weighted median value
-      xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
-                            MARGIN = 2,
-                            FUN = function(x){
-                              #select the cell with the highest posterior probability #
-                              xy <- cbind(originRasterXYZ[which.max(x)[1],1],
-                                          originRasterXYZ[which.max(x)[1],2])
-                              return(xy)})
-      # returns a point estimate for each bird - turn it into a sf object
-      xyOriginRast <- t(xyOriginRast)
-      colnames(xyOriginRast) <- c("x","y")
-      # right now the assignment CRS is WGS84 - should be the same as the origin raster
-
-      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast),
-                                       coords = c("x","y"),
-                                       crs = originRasterXYZcrs)
-
-      # transform to match originSites
-      originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
-      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
-                                                                     y = originSites,
-                                                                     sparse = TRUE)))
-    }   # originAssignment <- what # need point assignment for raster (mean location?)
-    else if (!is.null(originPoints))
-      # originAssignment <- what # points over where we have them, raster assignment otherwise
-      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
-                                                                     y = originSites,
-                                                                     sparse = TRUE)))
     else
       originAssignment <- NULL
     if (!is.null(originAssignment)) {
@@ -3238,7 +3223,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
         originAssignment <- lapply(originAssignment, function (x) x[1])
       }
       originAssignment <- array(unlist(originAssignment))
-      duds <- is.na(originAssignment) & captured[1:nAnimals] == "origin"
+      duds <- is.na(originAssignment) & captured[1:nAnimals] != "target"
       if (any(duds)){
         if (verbose > 0)
           cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
@@ -3249,13 +3234,89 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                                  y = originSites)
 
       }
+      nOriginAnimals <- rep(NA, nOriginSites)
+      for (i in 1:nOriginSites) {
+        nOriginAnimals[i] <- sum(originAssignment==i & captured!="target", na.rm = TRUE)
+        if (nOriginAnimals[i] > 0)
+          weights[ , originAssignment==i] <- originRelAbund[, i]/nOriginAnimals[i]
+      }
     }
+    else{
+      warning("Can't assign animals to origin sites; using unweighted sampling",
+              immediate. = TRUE)
+      weights[ , captured!="target"] <- 1/sum(captured!="target")
+    }
+  }
+  if (!is.null(targetRelAbund) && any(captured=="target")) {
+    nTargetSites <- nrow(targetSites)
+    if (coda::is.mcmc(targetRelAbund) || coda::is.mcmc.list(targetRelAbund)) {
+      targetRelAbund <- as.matrix(targetRelAbund)
+    }
+    if (is.matrix(targetRelAbund) && dim(targetRelAbund)[1]>1) {
+      abundFixedT <- FALSE
+      if (dim(targetRelAbund)[2]>nTargetSites)
+        abundParams <- paste('relN[', 1:nTargetSites, ']', sep='')
+      else if (dim(targetRelAbund)[2]==nTargetSites)
+        abundParams <- 1:nTargetSites
+      else
+        stop('Number of target sites must be constant between sites and abundance')
+      if (dim(targetRelAbund)[1] >= nBoot)
+        abundRows <- round(seq(from = 1, to = dim(targetRelAbund)[1],
+                               length.out = nBoot))
+      else
+        abundRows <- sample.int(n = dim(targetRelAbund)[1], replace = TRUE,
+                                size = nBoot)
+      targetRelAbund <- as.matrix(targetRelAbund[abundRows, abundParams])
+    }
+    else {
+      abundFixedT <- TRUE
+      if (length(targetRelAbund)!=nTargetSites)
+        stop('Number of target sites must be constant between sites and abundance')
+      targetRelAbund <- matrix(targetRelAbund, nBoot, nTargetSites, TRUE)
+    }
+    if (verbose > 0)
+      cat("Creating target assignment\n")
+    # if geolocator, telemetry and captured in target then simply get the target site
+    if (!is.null(targetPoints)){
+      if(!identical(sf::st_crs(targetPoints),sf::st_crs(targetSites))){
+        # project if needed
+        targetSites <- sf::st_transform(targetSites, sf::st_crs(targetPoints))
+      }
+      targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                                     y = targetSites,
+                                                                     sparse = TRUE)))
+    }
+    else
+      targetAssignment <- NULL
+    if (!is.null(targetAssignment)) {
+      targetAssignment[lengths(targetAssignment)==0] <- NA
+      if (any(lengths(targetAssignment)>1)){
+        warning("Overlapping targetSites may cause issues\n")
+        targetAssignment <- lapply(targetAssignment, function (x) x[1])
+      }
+      targetAssignment <- array(unlist(targetAssignment))
+      duds <- is.na(targetAssignment) & captured[1:nAnimals] == "target"
+      if (any(duds)){
+        if (verbose > 0)
+          cat("Not all target capture locations are within targetSites. Assigning to closest site\n")
+        warning("Not all target capture locations are within targetSites. Assigning to closest site.\n",
+                "Affects animals: ", paste(which(duds), collapse = ","))
+        targetAssignment[duds] <-
+          sf::st_nearest_feature(x = targetPoints[duds,],
+                                 y = targetSites)
 
-    nOriginAnimals <- rep(NA, nOriginSites)
-    for (i in 1:nOriginSites) {
-      nOriginAnimals[i] <- sum(originAssignment==i)
-      if (nOriginAnimals[i] > 0)
-        weights[ , originAssignment==i] <- originRelAbund[, i]/nOriginAnimals[i]
+      }
+      nTargetAnimals <- rep(NA, nTargetSites)
+      for (i in 1:nTargetSites) {
+        nTargetAnimals[i] <- sum(targetAssignment==i & captured=="target", na.rm = TRUE)
+        if (nTargetAnimals[i] > 0)
+          weights[ , targetAssignment==i] <- targetRelAbund[, i]/nTargetAnimals[i]
+      }
+    }
+    else{
+      warning("Can't assign animals to targetsites; using unweighted sampling",
+              immediate. = TRUE)
+      weights[ , captured=="target"] <- 1/sum(captured=="target")
     }
   }
 
@@ -3435,6 +3496,7 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                           input = list(targetPoints = targetPoints,
                                        originPoints = originPoints, isGL = isGL,
                                        geoBias = geoBias, geoVCov = geoVCov,
+                                       targetSites = targetSites,
                                        targetSites = targetSites, nBoot = nBoot,
                                        nSim = nSim, verbose = verbose,
                                        alpha = alpha,
@@ -3455,7 +3517,17 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                                        alpha = alpha,
                                        resampleProjection = resampleProjection,
                                        maxTries = maxTries,
-                                       maintainLegacyOutput = FALSE)),
+                                       maintainLegacyOutput = FALSE,
+                                       originSites = originSites,
+                                       isTelemetry = isTelemetry,
+                                       isRaster = isRaster, captured = captured,
+                                       geoBiasOrigin = geoBiasOrigin,
+                                       geoVCovOrigin = geoVCovOrigin,
+                                       targetRaster = targetRaster,
+                                       originRaster = originRaster,
+                                       dataOverlapSetting = dataOverlapSetting,
+                                       originRelAbund = originRelAbund,
+                                       targetRelAbund = targetRelAbund)),
                      class = c("estMantel", "estMigConnectivity")))
 }
 
