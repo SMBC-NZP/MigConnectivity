@@ -2329,25 +2329,8 @@ estMCisotope <- function(targetDist=NULL,
 
 
   if (calcCorr) {
-    targetDist1 <- matrix(NA, nAnimals, nAnimals)
-
-    targetDist1[lower.tri(targetDist1)] <- 1
-
-    distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
-
     originPoints2 <- sf::st_coordinates(sf::st_transform(originPoints, 4326))
-    originDistStart <- matrix(NA, nAnimals, nAnimals)
-
-    originDistStart[lower.tri(originDistStart)] <- 1
-
-    distIndices <- which(!is.na(originDistStart), arr.ind = TRUE)
-    originDist0 <- geosphere::distGeo(originPoints2[distIndices[,'row'],],
-                                      originPoints2[distIndices[,'col'],])
-    originDistStart[lower.tri(originDistStart)] <- originDist0
-    diag(originDistStart) <- 0
-    originDistStart <- t(originDistStart)
-    originDistStart[lower.tri(originDistStart)] <- originDist0
-
+    originDistStart <- distFromPos(sf::st_coordinates(originPoints2))
   }
 
 
@@ -3332,34 +3315,12 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
     pointCorr <- NA
     if (!is.null(targetPoints)){
       targetPoints2 <- sf::st_transform(targetPoints,4326)
-      targetDistStart <- matrix(NA, nAnimals, nAnimals)
-
-      targetDistStart[lower.tri(originDistStart)] <- 1
-
-      distIndices <- which(!is.na(targetDistStart), arr.ind = TRUE)
-      targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
-                                        sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
-      targetDistStart <- matrix(NA, nAnimals, nAnimals)
-      targetDistStart[lower.tri(targetDistStart)] <- targetDist0
-      diag(targetDistStart) <- 0
-      targetDistStart <- t(targetDistStart)
-      targetDistStart[lower.tri(targetDistStart)] <- targetDist0
+      targetDistStart <- distFromPos(sf::st_coordinates(targetPoints2))
     }
     else { # Can't both be null
       originPoints2 <- sf::st_transform(originPoints,4326)
 
-      originDistStart <- matrix(NA, nAnimals, nAnimals)
-
-      originDistStart[lower.tri(originDistStart)] <- 1
-
-      distIndices <- which(!is.na(originDistStart), arr.ind = TRUE)
-      originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
-                                        sf::st_coordinates(originPoints2[distIndices[,'col'],]))
-      originDistStart <- matrix(NA, nAnimals, nAnimals)
-      originDistStart[lower.tri(originDistStart)] <- originDist0
-      diag(originDistStart) <- 0
-      originDistStart <- t(originDistStart)
-      originDistStart[lower.tri(originDistStart)] <- originDist0
+      originDistStart <- distFromPos(sf::st_coordinates(originPoints2))
     }
   }
 
