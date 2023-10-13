@@ -193,11 +193,8 @@ simLocationError <- function(targetPoints,
               							 verbose = 0, 
               							 nSim = 1000) {
   
-if(inherits(targetPoints,"SpatialPoints")){
+if(!inherits(targetPoints,"sf")){
   targetPoints <- sf::st_as_sf(targetPoints)}
-if(inherits(targetSites,"SpatialPolygons") |
-   inherits(targetSites,"SpatialPolygonsDataFrame")){
-  targetSites <- sf::st_as_sf(targetPoints)}
 
 nAnimals <- nrow(targetPoints)
 
@@ -227,7 +224,6 @@ for(i in 1:nAnimals){
                   crs = sf::st_crs(targetPoints))
 	  
     # filtered to stay in NB areas (land)
-    #target.sample0 <- sp::over(point.sample, targetSites)
     
     target.sample0 <- unlist(unclass(sf::st_intersects(point.sample,
                                                        targetSites)))
@@ -254,45 +250,39 @@ toPoly <- function(siteCentroids,
 {
 # This automatically sets the resolution so that all polygons touch and
 # cover the entire surface. Alternatively the user can supply the 
-# resolution of the raster cells in the units of the input projection 
-#(projection.in) 
+# resolution of the cells in the units of the input projection (projection.in) 
   colnames(siteCentroids) <- c("Longitude","Latitude")
   
   if(is.na(resolution)){
      long <- unique(siteCentroids[,1])
      lat <- unique(siteCentroids[,2])
-     long.res <- long[2]-long[1]
-     lat.res <- lat[2]-lat[1]
-     resolution <- c(long.res,long.res)
+     if (length(long)>1)
+       long.res <- abs(long[2]-long[1])
+     else
+       long.res <- 1
+     if (length(lat)>1)
+       lat.res <- abs(lat[2]-lat[1])
+     else
+       lat.res <- 1
+     resolution <- c(long.res,lat.res)
   }
-  rast <- suppressWarnings(
-          raster::rasterFromXYZ(cbind(cbind(siteCentroids),
-                                (1:nrow(siteCentroids))),
-                                 res = resolution,
-                                  crs = sf::st_crs(projection.in)$proj4string))
-  
-  polys <- raster::rasterToPolygons(rast)
-  
-  # Give unique names to polygons #
-  polys <- sf::st_as_sf(polys)
-  sf::st_crs(polys) <- sf::st_crs(projection.in)
- # polys <- sp::SpatialPolygons(polys@polygons)
- # raster::crs(polys)<-projection.in
-  
-  # Reorders the polygons to match that of the input #
   centers <- sf::st_as_sf(data.frame(siteCentroids),
                           coords = c("Longitude","Latitude"),
                           crs = projection.in)
-  #centers <- sp::SpatialPoints(siteCentroids, sp::CRS(projection.in))
+  polys <- sf::st_as_sf(sf::st_make_grid(centers,
+                                 crs = projection.in, 
+                                 cellsize = resolution, 
+                                 offset = apply(siteCentroids, 2, min) - 
+                                   resolution/2))
   
+
   if(order.by.input){
- # orders <- sp::over(centers,polys)
-  orders <- suppressMessages(unlist(unclass(sf::st_intersects(centers,
-                                                       polys,
-                                                       sparse = TRUE))))
-  polys <- polys[orders,] 
+    # Reorders the polygons to match that of the input #
+    orders <- suppressMessages(unlist(unclass(sf::st_intersects(centers,
+                                                         polys,
+                                                         sparse = TRUE))))
+    polys <- polys[orders,] 
   }
-  #sp::spChFIDs(polys,as.character(1:length(polys)))
   
   if(!is.na(projection.out)){
     polys <- sf::st_transform(polys, projection.out)
@@ -455,7 +445,7 @@ captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
 
 colnames(captureLocations) <- c("Longitude","Latitude")
 
-# Convert capture locations into SpatialPoints #
+# Convert capture locations into points #
 
 CapLocs <- sf::st_as_sf(data.frame(captureLocations),
                       coords = c("Longitude","Latitude"),
@@ -576,20 +566,17 @@ names(OVENdata)
 The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
 ```{r eval = FALSE}
-install.packages(c('rgeos', 'shape', 'terra', 'maps', 'rgdal'))
+install.packages(c('shape', 'terra', 'maps'))
 ```
 
 ```{r, message = FALSE, warning = FALSE, error=FALSE}
-library(rgeos)
 library(shape)
-library(raster)
 library(maps)
-library(rgdal)
 library(terra)
 
 # Set the crs to WGS84
-originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
-targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
+originSitesWGS84 <- sf::st_transform(OVENdata$originSites, 4326)
+targetSitesWGS84 <- sf::st_transform(OVENdata$targetSites, 4326)
 
 # Create a simple plot of the origin and and target sites 
 par(mar=c(0,0,0,0))
@@ -1788,16 +1775,7 @@ winteringPolys2 <- lapply(winteringPos14,
                           projection.in = 4326,
                           projection.out = 'ESRI:54027')
 
-# Double check that the input center points and output polygons are ordered
-# correctly 
-#cbind(breedingPos14[[1]][,1:2],
-#      t(sapply(slot(breedingPolys[[1]], "polygons"),
-#               function(x){ slot(x,"labpt")})))
 
-#cbind(winteringPos14[[1]][,1:2],
-#      t(sapply(slot(winteringPolys[[1]], "polygons"),
-#               function(x){ slot(x,"labpt")})))
-  
 # Simulate capture and non-breeding locations of 100 individuals #
 
 nSample14.2 <- 100 # Total number sampled per simulation
@@ -1835,9 +1813,6 @@ compare14.2.array <- array(NA, c(nSimsLarge14.2, 2),
 
 results14 <- vector("list", nScenarios14)
 results14.2 <- vector("list", nSimsLarge14.2)
-originDist1 <- targetDist1 <- matrix(NA, nSample14.2, nSample14.2)
-targetDist1[lower.tri(targetDist1)] <- 1
-distIndices <- which(!is.na(targetDist1), arr.ind = TRUE)
 
 # Run simulations
 set.seed(7)
@@ -1880,11 +1855,7 @@ for (i in 13) { # only run one scenario
     
     compare14.2.array[sim, 'MC'] <- results14[[i]]$MC
     
-    originDist0 <- geosphere::distVincentyEllipsoid(
-                                     as(breedingTruePoints14[distIndices[,'row'],],"Spatial"),
-                                     as(breedingTruePoints14[distIndices[,'col'],],"Spatial"))
-    
-    originDist1[lower.tri(originDist1)] <- originDist0
+    originDist1 <- distFromPos(sf::st_coordinates(breedingTruePoints14))
     
     target.point.sample <- sf::st_as_sf(
       data.frame(results14.2[[sim]]$targetPointSample),
@@ -1893,10 +1864,7 @@ for (i in 13) { # only run one scenario
     
     target.point.sample2 <- sf::st_transform(target.point.sample, 4326)
     
-    targetDist0 <-geosphere::distGeo(as(target.point.sample2[distIndices[,'row'],],"Spatial"),
-                                     as(target.point.sample2[distIndices[,'col'],],"Spatial"))
-    
-    targetDist1[lower.tri(targetDist1)] <- targetDist0
+    targetDist1 <-distFromPos(sf::st_coordinates(target.point.sample2))
     
     compare14.2.array[sim, 'Mantel'] <- calcMantel(originDist = originDist1, 
                                                    targetDist = targetDist1)$pointCorr
