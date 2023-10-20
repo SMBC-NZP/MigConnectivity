@@ -183,25 +183,11 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
     if(is.na(sf::st_crs(targetPoints))){
       stop('Coordinate system definition needed for targetPoints')
     }
-    # NEED A CHECK HERE TO ENSURE THAT targetPoints and originPoints
-    # are sf objects
-
-
-    targetDist <- matrix(NA, nAnimals, nAnimals)
-
-    targetDist[lower.tri(targetDist)] <- 1
-
-    distIndices <- which(!is.na(targetDist), arr.ind = TRUE)
 
     # project target points to WGS #
     targetPoints2 <- sf::st_transform(targetPoints,4326)
-    targetDist0 <- geosphere::distGeo(sf::st_coordinates(targetPoints2[distIndices[,'row'],]),
-                                      sf::st_coordinates(targetPoints2[distIndices[,'col'],]))
 
-    targetDist[lower.tri(targetDist)] <- targetDist0
-    diag(targetDist) <- 0
-    targetDist <- t(targetDist)
-    targetDist[lower.tri(targetDist)] <- targetDist0
+    targetDist <- distFromPos(sf::st_coordinates(targetPoints2), 'ellipsoid')
   }
   if (is.null(originDist)) {
     if(!is.null(originPoints) & !(inherits(originPoints, "sf"))){
@@ -211,17 +197,7 @@ calcMantel <- function(targetPoints = NULL, originPoints = NULL,
       stop('Coordinate system definition needed for originPoints')
     }
     originPoints2 <- sf::st_transform(originPoints, 4326)
-    originDist <- matrix(NA, nAnimals, nAnimals)
-
-    originDist[lower.tri(originDist)] <- 1
-
-    distIndices <- which(!is.na(originDist), arr.ind = TRUE)
-    originDist0 <- geosphere::distGeo(sf::st_coordinates(originPoints2[distIndices[,'row'],]),
-                                      sf::st_coordinates(originPoints2[distIndices[,'col'],]))
-    originDist[lower.tri(originDist)] <- originDist0
-    diag(originDist) <- 0
-    originDist <- t(originDist)
-    originDist[lower.tri(originDist)] <- originDist0
+    originDist <- distFromPos(sf::st_coordinates(originPoints2), 'ellipsoid')
   }
   pointCorr <- ncf::mantel.test(originDist, targetDist, resamp=0, quiet = TRUE)$correlation
   return(list(pointCorr = pointCorr, originDist = originDist, targetDist = targetDist))

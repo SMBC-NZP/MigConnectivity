@@ -6,14 +6,14 @@
 \usage{
 simGLData(
   psi,
-  originRelAbund,
+  originRelAbund = NULL,
   sampleSize,
   originSites = NULL,
   targetSites = NULL,
   geoBias = NULL,
   geoVCov = NULL,
-  geoBiasOrigin = NULL,
-  geoVCovOrigin = NULL,
+  geoBiasOrigin = geoBias,
+  geoVCovOrigin = geoVCov,
   S = 1,
   p = list(1, 1),
   requireEveryOrigin = FALSE

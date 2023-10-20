@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.2.9002
-Date: 2023-09-29
+Version: 0.4.2.9003
+Date: 2023-10-11
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
            role = c("cre", "aut")),
@@ -31,7 +31,7 @@ Depends:
     R (>= 3.5.0)
 Imports:
     coda,
-    geosphere (>= 1.5),
+    geodist,
     gplots,
     MASS,
     ncf,

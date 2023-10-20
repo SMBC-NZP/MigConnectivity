@@ -733,14 +733,25 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 #'
 #' @param pos Number of sites by 2 matrix with positions of each site.  If
 #'    \code{surface} is 'ellipsoid' or 'sphere', then column 1 should be
-#'    longitude and column 2 should be latitude.  If \code{surface} is 'plane',
+#'    longitude and column 2 should be latitude. If \code{surface} is 'plane',
 #'    column 1 can be x-position and column 2 y-position.
 #' @param surface Surface to calculate distances on.  Either 'ellipsoid'
 #'    (default), 'sphere', or 'plane'.
+#' @param units Units of return distance matrix. If \code{surface} is 'plane',
+#'    then this argument is ignored and the return units will be the same as the
+#'    \code{pos} units. Options are 'km' (kilometers, default), 'm' (meters),
+#'    'miles', and 'nautical miles'.
 #'
 #' @return Square matrix of distances between sites. If \code{surface} is
-#'    'ellipsoid' or 'sphere', then units will be km; if \code{surface} is
-#'    'plane', the units will be the same as the \code{pos} units.
+#'    'ellipsoid' or 'sphere', then argument \code{units} will determine units;
+#'    if \code{surface} is 'plane', the units will be the same as the \code{pos}
+#'    units.
+#'
+#' @note In version 0.4.3 we switched package dependencies from \code{geosphere}
+#'    to \code{geodist}. As a result, spherical distances (and possibly
+#'    ellipsoid distances) may differ slightly from those calculated with earlier
+#'    versions of our package.
+#'
 #' @export
 #'
 #' @examples
@@ -761,22 +772,31 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
 #' nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 #' breedDist[1:12, 1:12]
 #' breedDist[1:12, c(1,91,100)]
-distFromPos <- function(pos, surface = 'ellipsoid') {
+distFromPos <- function(pos, surface = 'ellipsoid',
+                        units = c("km", "m", "miles", "nautical miles")) {
+  if (!is.matrix(pos) || dim(pos)[2] != 2)
+    stop("pos should be a matrix with two column (e.g., longitude and latitude)")
+  units <- match.arg(units)
   if (!(surface %in% c('plane', 'sphere', 'ellipsoid')))
     stop('surface must be "plane", "sphere", or "ellipsoid".')
-  nSites <- nrow(pos)
-  dist <- matrix(0, nSites, nSites)
-  for (b1 in 2:nSites) {
-    for (b2 in 1:(b1-1)) {
-      if (surface == 'ellipsoid')
-        dist[b1, b2] <- geosphere::distGeo(pos[b1, ], pos[b2, ]) / 1000
-      else if (surface == 'sphere')
-        dist[b1, b2] <- geosphere::distVincentySphere(pos[b1, ],
-                                                      pos[b2, ]) / 1000
-      else
+  if (is.null(colnames(pos)) && surface != 'plane')
+    colnames(pos) <- c("lon", "lat")
+  div <- ifelse(units == "km", 1000,
+                 ifelse(units == "m", 1,
+                        ifelse(units == "miles", 1609.34, 1852)))
+  if (surface == 'ellipsoid')
+    dist <- geodist::geodist(pos, measure = "geodesic") / div
+  else if (surface == 'sphere')
+    dist <- geodist::geodist(pos, measure = "vincenty") / div
+  else {
+    nSites <- nrow(pos)
+    dist <- matrix(0, nSites, nSites)
+    for (b1 in 2:nSites) {
+      for (b2 in 1:(b1-1)) {
         dist[b1, b2] <- sqrt((pos[b1, 1] - pos[b2, 1]) ^ 2 +
                               (pos[b1, 2] - pos[b2, 2]) ^ 2)
-      dist[b2, b1] <- dist[b1, b2]
+        dist[b2, b1] <- dist[b1, b2]
+      }
     }
   }
   return(dist)

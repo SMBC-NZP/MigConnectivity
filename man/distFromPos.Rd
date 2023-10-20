@@ -4,24 +4,40 @@
 \alias{distFromPos}
 \title{Distance matrix from position matrix}
 \usage{
-distFromPos(pos, surface = "ellipsoid")
+distFromPos(
+  pos,
+  surface = "ellipsoid",
+  units = c("km", "m", "miles", "nautical miles")
+)
 }
 \arguments{
 \item{pos}{Number of sites by 2 matrix with positions of each site.  If
 \code{surface} is 'ellipsoid' or 'sphere', then column 1 should be
-longitude and column 2 should be latitude.  If \code{surface} is 'plane',
+longitude and column 2 should be latitude. If \code{surface} is 'plane',
 column 1 can be x-position and column 2 y-position.}
 
 \item{surface}{Surface to calculate distances on.  Either 'ellipsoid'
 (default), 'sphere', or 'plane'.}
+
+\item{units}{Units of return distance matrix. If \code{surface} is 'plane',
+then this argument is ignored and the return units will be the same as the
+\code{pos} units. Options are 'km' (kilometers, default), 'm' (meters),
+'miles', and 'nautical miles'.}
 }
 \value{
 Square matrix of distances between sites. If \code{surface} is
-   'ellipsoid' or 'sphere', then units will be km; if \code{surface} is
-   'plane', the units will be the same as the \code{pos} units.
+   'ellipsoid' or 'sphere', then argument \code{units} will determine units;
+   if \code{surface} is 'plane', the units will be the same as the \code{pos}
+   units.
 }
 \description{
 Distance matrix from position matrix
+}
+\note{
+In version 0.4.3 we switched package dependencies from \code{geosphere}
+   to \code{geodist}. As a result, spherical distances (and possibly
+   ellipsoid distances) may differ slightly from those calculated with earlier
+   versions of our package.
 }
 \examples{
 nBreeding <- 100
