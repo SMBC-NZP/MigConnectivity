@@ -10,15 +10,6 @@
 ################################################################################
 # load required packages
 
-library(raster)
-library(sp)
-library(rgeos)
-library(rgdal)
-library(SpatialTools)
-library(geosphere)
-library(maptools)
-library(shape)
-library(ade4)
 library(sf)
 
 # ###################################################################
@@ -167,7 +158,7 @@ library(sf)
 #
 # NB_KDE_names<-list.files("data-raw/NonBreeding_Clipped_KDE", pattern="*_clip.txt",full.names=TRUE)
 #
-# NB_KDE<-lapply(NB_KDE_names,raster)
+# NB_KDE<-lapply(NB_KDE_names, terra::rast)
 #
 # nGL <- length(NB_KDE_names)
 #
@@ -298,7 +289,7 @@ library(sf)
 # NHbreedPoly<-spChFIDs(NHbreedPoly,"NH")
 # MDbreedPoly<-spChFIDs(MDbreedPoly,"MD")
 #
-# crs(NHbreedPoly) <- crs(MDbreedPoly) <- sp::CRS(Lambert)
+# crs(NHbreedPoly) <- crs(MDbreedPoly) <- crs(Lambert)
 #
 # originSites<-suppressWarnings(spRbind(NHbreedPoly,MDbreedPoly))
 # crs(originSites)<-Lambert
@@ -313,7 +304,7 @@ library(sf)
 # ###################################################################
 #
 # # Breeding Bird Survey Abundance Data #
-# BBSoven<-raster("data-raw/Spatial_Layers/bbsoven.txt")
+# BBSoven<-terra::rast("data-raw/Spatial_Layers/bbsoven.txt") #?
 # crs(BBSoven)<-sf::st_crs(4326)$proj4string
 #
 # BBSovenMeters<-projectRaster(BBSoven,crs=EquidistConic)

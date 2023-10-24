@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-09-04" />
+<meta name="date" content="2023-10-24" />
 
 <title>MigConnectivity package: worked example</title>
 
@@ -363,7 +363,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">MigConnectivity package: worked
 example</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-09-04</h4>
+<h4 class="date">2023-10-24</h4>
 
 
 
@@ -376,9 +376,9 @@ by the users.</p>
 <p>There are examples at the end of this vignette that illustrate ways
 to calculate bias and variance metrics using light-level geolocator data
 derived from the <a href="#SGAT_bias">SGAT</a> and <a href="#FLightR_bias">FLightR</a> packages.</p>
-<div id="using-data-integration-to-estimate-the-strength-of-migratory-connectivitiy" class="section level2">
+<div id="using-data-integration-to-estimate-the-strength-of-migratory-connectivity" class="section level2">
 <h2>Using data integration to estimate the strength of migratory
-connectivitiy</h2>
+connectivity</h2>
 <p>This MigConnectivity package provides tools for estimating the
 pattern and strength of migratory connectivity. We’ve developed methods
 to integrate intrinsic markers, tracking, and band reencounter data
@@ -744,7 +744,7 @@ eBird data products</a>.</p>
 <span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  thing <span class="ot">&lt;-</span> abund[[wks]]</span>
 <span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>  <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(regions)){</span>
 <span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a>    region <span class="ot">&lt;-</span> regions[j, ]</span>
-<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>    rastvals <span class="ot">&lt;-</span> raster<span class="sc">::</span><span class="fu">extract</span>(thing, region)[,<span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(wks)]</span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>    rastvals <span class="ot">&lt;-</span> terra<span class="sc">::</span><span class="fu">extract</span>(thing, terra<span class="sc">::</span><span class="fu">vect</span>(region))[,<span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(wks)]</span>
 <span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a>    <span class="cf">if</span> (seasonalAlready) {</span>
 <span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a>      regionSum[j] <span class="ot">&lt;-</span> <span class="fu">sum</span>(rastvals, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a>    }</span>
@@ -763,20 +763,23 @@ eBird data products</a>.</p>
 <span id="cb19-24"><a href="#cb19-24" tabindex="-1"></a>  <span class="fu">return</span>(testII)</span>
 <span id="cb19-25"><a href="#cb19-25" tabindex="-1"></a>}</span>
 <span id="cb19-26"><a href="#cb19-26" tabindex="-1"></a></span>
-<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>relAbundYEWAWint <span class="ot">&lt;-</span> <span class="fu">eBirdRelAbund</span>(w, rastAbundMed, targetSitesProj,</span>
-<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a>                                  targetNames)</span>
-<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a>relAbundYEWABreed <span class="ot">&lt;-</span> <span class="fu">eBirdRelAbund</span>(b, rastAbundMed, originSitesProj,</span>
-<span id="cb19-30"><a href="#cb19-30" tabindex="-1"></a>                                   originNames)</span></code></pre></div>
+<span id="cb19-27"><a href="#cb19-27" tabindex="-1"></a>targetSitesProj <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(targetSitesYEWA, terra<span class="sc">::</span><span class="fu">crs</span>(rastAbundMed))</span>
+<span id="cb19-28"><a href="#cb19-28" tabindex="-1"></a>originSitesProj <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(YEWA_origin_sites, terra<span class="sc">::</span><span class="fu">crs</span>(rastAbundMed))</span>
+<span id="cb19-29"><a href="#cb19-29" tabindex="-1"></a></span>
+<span id="cb19-30"><a href="#cb19-30" tabindex="-1"></a>relAbundYEWAWint <span class="ot">&lt;-</span> <span class="fu">eBirdRelAbund</span>(w, rastAbundMed, targetSitesProj,</span>
+<span id="cb19-31"><a href="#cb19-31" tabindex="-1"></a>                                  targetNames, mean)</span>
+<span id="cb19-32"><a href="#cb19-32" tabindex="-1"></a>relAbundYEWABreed <span class="ot">&lt;-</span> <span class="fu">eBirdRelAbund</span>(b, rastAbundMed, originSitesProj,</span>
+<span id="cb19-33"><a href="#cb19-33" tabindex="-1"></a>                                   originNames, mean)</span></code></pre></div>
 <div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>relAbundYEWAWint</span></code></pre></div>
 <pre><code>## Pacific and Central Mexico    Atlantic Lowland Mexico 
-##                 0.08807831                 0.16450576 
+##                 0.08557703                 0.16889791 
 ##            Central America              South America 
-##                 0.42872615                 0.31868978</code></pre>
+##                 0.46434053                 0.28118453</code></pre>
 <div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>relAbundYEWABreed</span></code></pre></div>
 <pre><code>##            Arctic Pacific Northwest         Southwest           Central 
-##         0.1690379         0.1245764         0.2838745         0.2471317 
+##         0.1711898         0.1180323         0.2857159         0.2415061 
 ##              East 
-##         0.1753794</code></pre>
+##         0.1835559</code></pre>
 <p>There are a few other things we would need for eventually running
 <code>estStrength</code>: the distances between breeding regions, and
 the distances between nonbreeding regions.</p>
@@ -784,20 +787,13 @@ the distances between nonbreeding regions.</p>
 <span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>originCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_centroid</span>(YEWA_origin_sites)</span></code></pre></div>
 <pre><code>## Warning: st_centroid assumes attributes are constant over geometries</code></pre>
 <div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>originCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(originCentersYEWA, <span class="dv">4326</span>)</span>
-<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>originDistYEWA <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(<span class="fu">st_coordinates</span>(originCentersYEWA<span class="sc">$</span>geometry))</span></code></pre></div>
-<pre><code>## The legacy packages maptools, rgdal, and rgeos, underpinning the sp package,
-## which was just loaded, will retire in October 2023.
-## Please refer to R-spatial evolution reports for details, especially
-## https://r-spatial.org/r/2023/05/15/evolution4.html.
-## It may be desirable to make the sf package available;
-## package maintainers should consider adding sf to Suggests:.
-## The sp package is now running under evolution status 2
-##      (status 2 uses the sf package in place of rgdal)</code></pre>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="co"># calculate distance between targetSites </span></span>
-<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>targetCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_centroid</span>(YEWA_target_sites)</span></code></pre></div>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>originDistYEWA <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(<span class="fu">st_coordinates</span>(originCentersYEWA<span class="sc">$</span>geometry))</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a><span class="co"># calculate distance between targetSites </span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>targetCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_centroid</span>(YEWA_target_sites)</span></code></pre></div>
 <pre><code>## Warning: st_centroid assumes attributes are constant over geometries</code></pre>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>targetCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(targetCentersYEWA, <span class="dv">4326</span>)</span>
-<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>targetDistYEWA <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(<span class="fu">st_coordinates</span>(targetCentersYEWA<span class="sc">$</span>geometry))</span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>targetCentersYEWA <span class="ot">&lt;-</span> <span class="fu">st_transform</span>(targetCentersYEWA, <span class="dv">4326</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>targetDistYEWA <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(<span class="fu">st_coordinates</span>(targetCentersYEWA<span class="sc">$</span>geometry))</span></code></pre></div>
 <p>We now have all the data in order to run <code>estTransition</code>
 and then <code>estStrength</code>.</p>
 <p>Note - there was no overlap of data sources for individuals, i.e., we
@@ -805,28 +801,28 @@ only had one type of data for each bird - so we set the overlap setting
 to “none”. If there are multiple types for an individual animal or only
 one type of data overall, it’s best to leave
 <code>dataOverlapSetting</code> at its default (“dummy”).</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="do">## Run analysis for psi</span></span>
-<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a><span class="fu">system.time</span>((psiYEWA <span class="ot">&lt;-</span> <span class="fu">estTransition</span>(<span class="at">originSites =</span> YEWA_origin_sites,</span>
-<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a>                                     <span class="at">targetSites =</span> YEWA_target_sites,</span>
-<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a>                                     <span class="at">originPoints =</span> originPointsYEWA,</span>
-<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a>                                     <span class="at">targetPoints =</span> targetPointsYEWA,</span>
-<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a>                                     <span class="at">originAssignment =</span> YEWA_genetics,</span>
-<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a>                                     <span class="at">originNames =</span> originNames,</span>
-<span id="cb31-8"><a href="#cb31-8" tabindex="-1"></a>                                     <span class="at">targetNames =</span> targetNames,</span>
-<span id="cb31-9"><a href="#cb31-9" tabindex="-1"></a>                                     <span class="at">nSamples =</span> <span class="dv">10</span>, <span class="co"># Set low for demonstration speed</span></span>
-<span id="cb31-10"><a href="#cb31-10" tabindex="-1"></a>                                     <span class="at">isGL =</span> isGLYEWA,</span>
-<span id="cb31-11"><a href="#cb31-11" tabindex="-1"></a>                                     <span class="at">isTelemetry =</span> isTelemetryYEWA,</span>
-<span id="cb31-12"><a href="#cb31-12" tabindex="-1"></a>                                     <span class="at">isRaster =</span> isRasterYEWA,</span>
-<span id="cb31-13"><a href="#cb31-13" tabindex="-1"></a>                                     <span class="at">isProb =</span> isProbYEWA,</span>
-<span id="cb31-14"><a href="#cb31-14" tabindex="-1"></a>                                     <span class="at">captured =</span> capturedYEWA,</span>
-<span id="cb31-15"><a href="#cb31-15" tabindex="-1"></a>                                     <span class="at">geoBias =</span> geoBiasYEWA,</span>
-<span id="cb31-16"><a href="#cb31-16" tabindex="-1"></a>                                     <span class="at">geoVCov =</span> geoVCovYEWA,</span>
-<span id="cb31-17"><a href="#cb31-17" tabindex="-1"></a>                                     <span class="at">verbose =</span> <span class="dv">2</span>, </span>
-<span id="cb31-18"><a href="#cb31-18" tabindex="-1"></a>                                     <span class="at">maxTries =</span> <span class="dv">400</span>,</span>
-<span id="cb31-19"><a href="#cb31-19" tabindex="-1"></a>                                     <span class="at">resampleProjection =</span> <span class="fu">st_crs</span>(YEWA_origin_sites),</span>
-<span id="cb31-20"><a href="#cb31-20" tabindex="-1"></a>                                     <span class="at">nSim =</span> <span class="dv">40</span>,</span>
-<span id="cb31-21"><a href="#cb31-21" tabindex="-1"></a>                                     <span class="at">dataOverlapSetting =</span> <span class="st">&quot;none&quot;</span>,</span>
-<span id="cb31-22"><a href="#cb31-22" tabindex="-1"></a>                                     <span class="at">targetRelAbund =</span> relAbundYEWAWint)))</span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a><span class="do">## Run analysis for psi</span></span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">system.time</span>((psiYEWA <span class="ot">&lt;-</span> <span class="fu">estTransition</span>(<span class="at">originSites =</span> YEWA_origin_sites,</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>                                     <span class="at">targetSites =</span> YEWA_target_sites,</span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>                                     <span class="at">originPoints =</span> originPointsYEWA,</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>                                     <span class="at">targetPoints =</span> targetPointsYEWA,</span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>                                     <span class="at">originAssignment =</span> YEWA_genetics,</span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>                                     <span class="at">originNames =</span> originNames,</span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a>                                     <span class="at">targetNames =</span> targetNames,</span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a>                                     <span class="at">nSamples =</span> <span class="dv">10</span>, <span class="co"># Set low for demonstration speed</span></span>
+<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a>                                     <span class="at">isGL =</span> isGLYEWA,</span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>                                     <span class="at">isTelemetry =</span> isTelemetryYEWA,</span>
+<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a>                                     <span class="at">isRaster =</span> isRasterYEWA,</span>
+<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a>                                     <span class="at">isProb =</span> isProbYEWA,</span>
+<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a>                                     <span class="at">captured =</span> capturedYEWA,</span>
+<span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>                                     <span class="at">geoBias =</span> geoBiasYEWA,</span>
+<span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a>                                     <span class="at">geoVCov =</span> geoVCovYEWA,</span>
+<span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a>                                     <span class="at">verbose =</span> <span class="dv">2</span>, </span>
+<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a>                                     <span class="at">maxTries =</span> <span class="dv">400</span>,</span>
+<span id="cb29-19"><a href="#cb29-19" tabindex="-1"></a>                                     <span class="at">resampleProjection =</span> <span class="fu">st_crs</span>(YEWA_origin_sites),</span>
+<span id="cb29-20"><a href="#cb29-20" tabindex="-1"></a>                                     <span class="at">nSim =</span> <span class="dv">40</span>,</span>
+<span id="cb29-21"><a href="#cb29-21" tabindex="-1"></a>                                     <span class="at">dataOverlapSetting =</span> <span class="st">&quot;none&quot;</span>,</span>
+<span id="cb29-22"><a href="#cb29-22" tabindex="-1"></a>                                     <span class="at">targetRelAbund =</span> relAbundYEWAWint)))</span></code></pre></div>
 <pre><code>## Configuring data overlap settings</code></pre>
 <pre><code>## Warning in reassignInds(dataOverlapSetting = dataOverlapSetting, originPoints = originPoints, : Not all origin capture locations are within originSites. Assigning to closest site.
 ## Affects animal: 1</code></pre>
@@ -841,69 +837,69 @@ one type of data overall, it’s best to leave
 <pre><code>## Warning in estTransitionBoot(isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster, : Not all target capture locations are within targetSites. Assigning to closest site.
 ## Affects animals: 133,134,135,136,137,138,139,140,141,142,143,144,145,146,184,189,190,191,192</code></pre>
 <pre><code>## Starting bootstrap
-## Bootstrap Run 1 of 10 at Mon Sep  4 11:26:06 2023 
-## Bootstrap Run 2 of 10 at Mon Sep  4 11:26:06 2023 
-## Bootstrap Run 3 of 10 at Mon Sep  4 11:26:06 2023 
-## Bootstrap Run 4 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 5 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 6 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 7 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 8 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 9 of 10 at Mon Sep  4 11:26:07 2023 
-## Bootstrap Run 10 of 10 at Mon Sep  4 11:26:08 2023</code></pre>
+## Bootstrap Run 1 of 10 at Tue Oct 24 13:14:34 2023 
+## Bootstrap Run 2 of 10 at Tue Oct 24 13:14:34 2023 
+## Bootstrap Run 3 of 10 at Tue Oct 24 13:14:34 2023 
+## Bootstrap Run 4 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 5 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 6 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 7 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 8 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 9 of 10 at Tue Oct 24 13:14:35 2023 
+## Bootstrap Run 10 of 10 at Tue Oct 24 13:14:36 2023</code></pre>
 <pre><code>##    user  system elapsed 
-##    2.38    0.14    2.58</code></pre>
-<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a><span class="co"># Take a look at the results # </span></span>
-<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a>psiYEWA</span></code></pre></div>
+##    2.28    0.14    2.48</code></pre>
+<div class="sourceCode" id="cb39"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" tabindex="-1"></a><span class="co"># Take a look at the results # </span></span>
+<span id="cb39-2"><a href="#cb39-2" tabindex="-1"></a>psiYEWA</span></code></pre></div>
 <pre><code>## Migratory Connectivity Estimates
 ## 
 ## Transition probability (psi) estimates (mean):
 ##                   Pacific and Central Mexico Atlantic Lowland Mexico
-## Arctic                               0.00000                 0.69052
-## Pacific Northwest                    0.03399                 0.20007
-## Southwest                            0.40454                 0.05044
-## Central                              0.00000                 0.07954
+## Arctic                               0.00000                 0.66862
+## Pacific Northwest                    0.03196                 0.18025
+## Southwest                            0.36810                 0.07400
+## Central                              0.00000                 0.09209
 ## East                                 0.00000                 0.00000
 ##                   Central America South America
-## Arctic                     0.3095        0.0000
-## Pacific Northwest          0.7659        0.0000
-## Southwest                  0.5450        0.0000
-## Central                    0.6548        0.2657
+## Arctic                     0.3314        0.0000
+## Pacific Northwest          0.7878        0.0000
+## Southwest                  0.5579        0.0000
+## Central                    0.6610        0.2469
 ## East                       0.0000        1.0000
 ## +/- SE:
 ##                   Pacific and Central Mexico Atlantic Lowland Mexico
-## Arctic                               0.00000                 0.10022
-## Pacific Northwest                    0.03399                 0.10069
-## Southwest                            0.08618                 0.05105
-## Central                              0.00000                 0.03132
+## Arctic                               0.00000                 0.11299
+## Pacific Northwest                    0.03291                 0.10918
+## Southwest                            0.08676                 0.05479
+## Central                              0.00000                 0.04034
 ## East                                 0.00000                 0.00000
 ##                   Central America South America
-## Arctic                    0.10022       0.00000
-## Pacific Northwest         0.09439       0.00000
-## Southwest                 0.08967       0.00000
-## Central                   0.04502       0.05268
+## Arctic                    0.11299       0.00000
+## Pacific Northwest         0.10442       0.00000
+## Southwest                 0.08593       0.00000
+## Central                   0.05060       0.04891
 ## East                      0.00000       0.00000
 ## 95% confidence interval (simple quantile):
 ##                   Pacific and Central Mexico Atlantic Lowland Mexico
-## Arctic            0.00000 - 0.00000          0.52596 - 0.81554      
-## Pacific Northwest 0.00000 - 0.08445          0.06290 - 0.36175      
-## Southwest         0.27221 - 0.53978          0.00000 - 0.15060      
-## Central           0.00000 - 0.00000          0.02733 - 0.13160      
+## Arctic            0.00000 - 0.00000          0.48986 - 0.80069      
+## Pacific Northwest 0.00000 - 0.08084          0.01607 - 0.34510      
+## Southwest         0.23651 - 0.51704          0.02400 - 0.18500      
+## Central           0.00000 - 0.00000          0.02864 - 0.16416      
 ## East              0.00000 - 0.00000          0.00000 - 0.00000      
 ##                   Central America   South America    
-## Arctic            0.18446 - 0.47404 0.00000 - 0.00000
-## Pacific Northwest 0.61241 - 0.90730 0.00000 - 0.00000
-## Southwest         0.38899 - 0.64245 0.00000 - 0.00000
-## Central           0.58500 - 0.70402 0.21425 - 0.36849
+## Arctic            0.19931 - 0.51014 0.00000 - 0.00000
+## Pacific Northwest 0.61735 - 0.92664 0.00000 - 0.00000
+## Southwest         0.40643 - 0.66167 0.00000 - 0.00000
+## Central           0.60148 - 0.74489 0.18236 - 0.32934
 ## East              0.00000 - 0.00000 1.00000 - 1.00000
 ## 
 ## This is a subset of what&#39;s available inside this estMigConnectivity output.
 ## For more info, try ?estTransition or str(obj_name, max.levels = 2).</code></pre>
 <p>Plot the results using the built-in plotting function</p>
-<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">0</span>))</span>
-<span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a><span class="fu">plot</span>(psiYEWA, <span class="at">legend =</span> <span class="st">&quot;top&quot;</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">0</span>))</span>
+<span id="cb41-2"><a href="#cb41-2" tabindex="-1"></a><span class="fu">plot</span>(psiYEWA, <span class="at">legend =</span> <span class="st">&quot;top&quot;</span>, <span class="at">cex =</span> <span class="fl">0.4</span>)</span></code></pre></div>
 <div class="float">
-<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAAAk1BMVEUAAAAAADoAAGYAOjoAOpAAZmYAZrYil+Y6AAA6ADo6AGY6OgA6OpA6kJA6kLY6kNth0E9mAABmADpmAGZmZgBmZjpmZmZmkJBmtrZmtv+QOgCQOjqQZgCQkGaQtpCQ2/+2ZgC2kDq225C2/7a2/9u2///bkDrb/7bb/9vb///fU2v/tmb/trb/25D//7b//9v///+zSHnvAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAYyklEQVR4nO2dDXfjtpVAOVOvZWfbCp5Nk9jb1mrS0ewMK1v//9ctQRD8hEQIBggQvPecKJIs4D2QVyAIEcPi7EoBsADugjqXTIcc2nCZHFqHoBmTQ+sQNGNyaB2CZkwOrUPQjMmhdQiaMTm0DkEzJofWIWjG5NA6BM2YHFqHoBmTQ+vMgp5++qqflkXx6dVcNFBKS5JDGy6TQ+uMgr49fdaClpWdpdnQLJofO4Gg5NA6k6BVp6kFfX/ZV4+He2PRgGktRQ5tuEwOrTMIWhb7Ugt6eniuHo9thzooGjSxZbjehoO6nMb09Xx7qjbMsSj+Iv8/T3cQen+parz7bvzQuKo3VXlVZK8+YCj4diWBde2hnfFd8xi0E/Txtf9yWNRTYjGZEbT24e3J7FP1h71tnFbQsnbtYBo0TVXrBFUZHC6YfYlV7aHdzmjojKBqww4GoR4u1EuHYRvGbVKCXhqDX+28Rugq1BGpUs5g2hVB/+uLLP72Pz8jqOKaoF1RX6lFZNCGybeuEbS2Sh7ua12O9UG/cuf0UI3V/6gdOvYGAs0H355+e1Ilqj9++kezBY+NYf/52pTat5+U1d19+/IPOf5v62gEvT/Ifre8+7ss3hST466qD38bJFCqv5lalzi7ndlQDvHd88lxodeDyvPEo7RMPjRe6P/0e6rMvX5dPcgnh2rjlc1UXaVaV7v84+lh335SVSdDdnVoQcv67b1MSBeT56+V74MEykJW0cbIYg/NCLqhk6RLgso9/iaPsXJjaA/7gvbHosMPVk/UFmwGnYNP1s+rLa0/2VbVq0MLKiemq7cPUsimWPXfH19eBwmoOZfueJfFHrou6JammQyCqncaqUp52G0GkQNB9Xua+oO1XNWD2pTlVFD1ViOm/GTbIQ/rqAV9f3mujvDfK0HbYjK9+/MgAfX/Lp0s9tB1QTc1UX9pDCqpBnmff6/2vBrzjAR97G0f/UGt3bEvaP8QXzZfCIOggzpUqeN9dYSXCbXFzvUBfZCAUrM72cpiD10WVG3N44Z+6rxwFn9udr18mOtB2w8ae9D2JKlyq/3aTwQd1qF2xOmnf//v67ntQdXbv9TnSVvsQe2KekwjFjbzoJJaM3UKcn0M2vug0q4ZxU+nmdqObiLosA4l6PvLr9Uw9NArVsn+fy/7jY5B7Yp6TCMWtoKq/qye3al2f2XM5Cy+OXq3H9Ta1X8s26NQPVH//qLnA+TZUyfovutBuzqaQ1k94NRn8bpYfYrVS2AzZ/F2RT2mEQtbQdVIpz4Xb+dBO0H786D6g62gg3lQ+Vb7U6cs1Ryk64dDcfdNV9fV0QhaDzgPeh70c92b6m9KDvOgl0DQjMmhdQiaMTm0DkEzJofWIWjG5NA6BM2YHFqHoBmTQ+sQNGNyaB2CXuegV1v0LuToY3r/cOWy4ssXObc/1zuu7zCQxR5C0GucHv9W/5Y+uNKoh9GYjwrqtr7DQBZ7CEE1PxSDvx/rq4qWFdRxfYeBLPYQgmoMgtZXYt7LX8eL5mfI4YKO7v3+r529a0zqXx77P1UaKjkPfg11Xt8x07q1gqAtBkHLZtlG24OOF3SYV31oQfW1G/Iiu2MhL0namyoZrwpxW98x07q1gqAtBkGlI2oVhhJxsqDDdMVdK2h79Vu9qOmXu++nx1dTJYNVIc7rO2Zat1YQtGUqqOy7znX/1huDDhZ0GFd9aEHb64drK//501d9ddy1VSHO6ztmWrdWELRlKuixXV6hRRwv6DCu+hgKWh/U96c/f6v6xHtjJZNVIU7rO2Zat1YQtGUiaHMNcr2qU4k4WdBh14NWw8d/Vc799cVcybgHdVvfMdO6tYKgl2kXErUnQ5MFHXZj0Mq4n6uTnD89vhorGawKcV7fcWvrVgKCXqbrCffNcozJgo52mUZv1cf0LF6dr9c/DZkqGawKcV7fcWvrVgKCXqQ7elanSc1yjMmCjoNpHrRdTt/OVMoTrfqU681UyWge1G19x42tWwsImjE5tA5BMyaH1iFoxuTQOgTNmBxah6AZk0PrEDRjcmgdgmZMDq1D0IzJoXUI2keM/+5w0xjJ4foE+vnm1UVuZLGHNiio6J4O2yCEGLx2umnMuVvJFJvV7qEeCNq9XdP/oNNNY87dSqbYrHYP9UDQ9l0xMdTppjHdSqZKcPnZvfzsc68GWWp4+5r2Hjd+We0e6oGg+k0xMdTtpjG9lUynB/lMOiyvSe5qUFc1dauL2nvceGa1e6gHgrbvTnpQt5vG9FYy1dcvNQ/Pwxr6V3a2NfhmtXuoB4J2b4+P8G43jemtZGqvnZcPkxoGTpYhjvGr3UM9ELT3/khQt5vG9FYyDQUd19AtZNI1+Ga1e6gHgvb/MJpmcr5pzFmtZDL0oL0ahquLOMSbQdALf5E43TSmt5JpIOikhnYI0dbgm9XuoR4Ieg2Xm8b0VjINBJ3U0K4u6u5x45nV7qEeCHqV228a01/J9PtA0EkN7Txod48bv6x2D/VA0IzJoXUImjE5tA5BMyaH1iFoxuTQOgTNmBxah6AZk0PrELTPbtE8grPaPdQDQXvsdiND62lQ88XxhvvPJLLQo2O1e6gHgvYYC6p+fry44mOkWyoLPTpWu4d6IGjHbjcy9FBf9jG4blljEDSVhR4dq91DPRC0ZTcWdGBmqVd81L9T/qruP/PrQ3cZZzILPcytWysI2rKbGFoW993T5/bfAu8uZtJrO+pPpLLQw9y6tYKgmt1uaqjsBetxZfvvbQ8F3fcuDklmoYexdasFQTUmQc/1P91Q94HdHWWGl4Omt9DD2LrVgqANu90FQ2vr2nu+XBQ0nYUeptatFwS9jO7ryuba+Gs9aEILPTpWu4d6IOhl9Fl8NYLsjUGH90BMcKFHx2r3UA8EvUJ94xi17kOfxcv1SdWwtFvxkd5CD9vWrQMEvUb9U6fqG/U9X+Rbv/VWfKS30MO6dasAQTMmh9YhaMbk0DoEzZgcWoegGZND6xA0Y3JoHYJmTA6tQ9CMyaF14QX94RwgFKJ7msMuvEwOrUPQjMmhdSZBS/3rieR48bJvBE2dHFpnEFRe99BehCN/OL5wRQOCpk4OrZsKqi7cUevFmgt6DoZVYwiaPjm0biqouu7hqFbQZi9o3kTbxP4wCFpf8V02S7wzP8RD6kwFVcPPdhA6OGNSJW77fiIofIA5QdUqMONVtQgK4Zk5xA8GpOOidhEQFD7AzEnS6Hg/LGoXAUHhA8xMMylbS3pQiMTcRD1jUIiK6Vz8qE7cmznQoriw8hBBITwbv1gEUgdBIWkQFJIGQSFpEBSSBkEhaTYoqBAidgpgzTYFFbFzAFs2KCiH+DWBoJA0CApJg6CQNAgKSYOgkDQICkmDoJA0CApJg6CQNAgKSYOgkDQICkmDoJA0CApJg6CQNAgKSYOgkDQICkmDoJA0CApJg6CQNAgKSYOgkDQIuk1E7ARsQdBtImInYAuCbhMROwFbEHSbiNgJ2BJc0B8/kjNUxE4gAUTsBGxB0G0iYidgC4JuExE7AVsQdJuI2AnYwknSNhGxE7AFQbeJiJ2ALQi6TUTsBGxB0G0iYidgC4JuExE7AVsQdJuI2AnYgqDbRMROwBYE3SYidgK2IOg2EbETsAVBt4mInYAtCLpNROwEbEHQTbKe25Ui6CZZzw11EXSTrMZPBN0oInYCtiDoNhGxE7AFQbeJiJ2ALQhKBkmDoGSQNAhKBkmDoGSQNAhKBkmDoGSQNAhKBkmDoGSQNAhKBkmDoGSQNAhKBkmDoGSQNAhKBkljErQsik+v+sXpoSjuzUXtIqQnaHxE7AQSyMASg6BlZWepDS3vvp/fnoyGIqgzInYCCWRgyVTQ95d99Xi47704fv5qKmoXAUGniNgJJJCBJVNBTw/P59bJ0+PrpEhb1C4Cgk4RsRNIIANLDILWTpZK0PLzH09FsR+W0NhFQNApInYCCWRgyVQzNfxsBqHHohL1/YUxqF9E7AQSyMCSOUE/9brTcVG7CAg6RcROIIEMLJk5xKuhqBqWToraRUDQKSJ2AglkYMnMSZLy1HyqhKDOiNgJJJCBJTPTTG9P0lYO8Z4RsRNIIANL5ibqj3ffG2WnRe0iIOgUETuBBDKwxDRZdFQ/daqT97IYTTN1Re0iIOgUETuBBDKwZIsXi8RHxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgsZAxE5gPSBoDETsBNYDgkZgPTcijA+CRmA9t3KND4JGAD/tQdAQzG0asUQSeYCgIUBQbyBoCBDUGwgaAgT1BoKGAEG9gaAhQFBvIGgIENQb4QXdIgjqDQQNAYJ6A0FDgKDeQNAQIKg3EDQECOoNBA0BgnoDQUOAoN5A0BAgqDcQNAQI6g0EDQGCegNBQ4Cg3kDQECCoNxA0BAjqDQQNAYJ6A0FDgKDeQNAQIKg3EDQECOoNBA0BgnqjKIw3irUq6jWRrEBQb9CDhgBBvbG8oMI54HpAUG8gaAgQ1BsIGgIE9QaChgBBvYGgIUBQbyBoCBDUGwgaAgT1BoKGAEG9gaAhQFBvIGgIENQbCBoCBPUGgoYAQb2BoCFAUG8gaAgQ1BsIGgIE9QaChgBBvYGgIUBQbyBoCBDUGwgaAgT1BoKGAEG9gaAhQFBvIGgIENQbCBoCBPUGgoYAQb2BoCFAUG8gaAgQ1BsmQcui+PTae324+24s6hZRuBVbFQjqDYOgZWVn2TO0LBD0RhDUG1NB31/21ePhXr9+e0LQGynmBk5ikTSyYLopTw/P1eOx/VcZj3d/R9AboQf1hkHQR3l0L7Wg1cvhGLRocYso3IqtCgT1xlQzNfzUg1B5wOck6VYQ1Btzgh4rORH0VhDUGzOH+PoFgt4Kgnpj5iTp2Aw3n01F3SIKt2KrAkG9MT/NRA96OwjqDYuJegS9Ge4v4Q3TZNFR/dT5/tL0ogh6KwjqDS4WCQGCegNBQ4Cg3kDQECCoNxA0BAjqDQQNAYJ6A0FDsEJBd7ETuACChgBBvYGgIUBQb2xB0B+LR0RQbyBoCBDUGwgaAgT1BoKGAEG9gaAhQFBvIGgIENQbCBoCBPUGgoYAQb2BoCFAUG8gaAgQ1BsIGgIE9QaChgBBvYGgIUBQbyBoCBDUGwgaAgT1BoKGAEG9gaAhQFBvIGgIENQbCBoCBPUGgoYAQb2xuKBCCOeIjiCoBQjaIJY3FEEtQNAGetA0QVCNcA7oCoJagKAa4RzQFQS1AEE1wjmgKwhqAYJqhHNAVxDUAgTVCOeAriCoBQiqEc4BXUFQCxBUI5wDuoKgFiCoRjgHdAVBLUBQjXAO6AqCWoCgGuEc0BUEtQBBNcI5oCsIagGCaoRzQFcQ1AIE1QjngK4gqAUIqhHOAV1BUAsQVCOcA7qyvKArBEE1wjmgKwg6z26XqKEIChIEbRHOAV1B0Fl2u1QNRVCoSVNPBIUGBNUI54CuIKgFCKoRzgFdQVALEFQjnAO6gqAWIKhGOAd0BUEtQFCNcA7oCoJagKAa4RzQFQS1AEE1wjmgKwhqAYJqhHNAVxDUAgTVCOeAriCoBQiqEc4BXUFQCxBUI5wDuoKgFiCoRjgHdAVBLUBQjXAO6AqCWoCgGuEc0BUEtQBBNcI5oCsIagGCaoRzQFcQ1AIE1QjngK4gqAUIqhHOAV1BUAvWJGhZFJ9em+fvL0VR7M1F3SIKt2IfAEFXjEHQsrKzbAx9f6meHIt7Y1G3iMKt2AdA0BUzFfT9RXaYB+Xk6eG5ejx+/moq6hZRuBX7AAi6YqaCGpws2yP+oKhbROFW7AMg6IoxCPoobSz7gh5W3YP++IGh62UqqOou+51mOThLKlrcIgq3Yu4g6JqxELQ0nyPRg8ICzB/iywuzTKsRlDHompk9STpe8hNBYQFmppkqP58vFnWLKNyKfQAEXTEzE/Wnh0v9J4LCEpjOxY/qp873l3v5VMI8KERi+YtFlgdBVwyCQtIgKCQNgkLSICgkDYJC0iAoJA2CQtIgKCQNgkLSICgkDYJC0iAoJA2CbiOD1YKg28hgtSDoNjJYLQi6jQxWC4JuI4PVgqDbyGC1IOg2MlgtCLqNDFYLgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0iAoGSQNgpJB0uQo6Dix+DuHDJxB0CWInsF6b0mOoEsQPQMETQkEnSaAoAmBoClm4AiCLgEZOIOgS0AGziDoEpCBMwi6BGTgDIIuARk4swVB4xNfj/gZOIKgSxBfj/gZOIKgSxBfj/gZOIKgC5DA7zjRE3AFQRcAQd1B0AVAUHcQdAni6xE/A0cQdAni6xE/A0cQdAni6xE/A0cQdAni6xE/A0cQdAni6xE/A0cyFLT4QJsCEV+P+Bk4kqGgCSYWX4/4GTiCoEsQX4/4GTiCoEsQX4/4GTiCoEuwWj3ig6BLgKDOIOgSIKgzCLoECOoMgi4BgjpjErQsik+vxhfDosGS+iDpJYagzhgELSshSy3l4MWoaNDEPkB6iSGoM1NB31/21ePhfvpiXDRoYh8gvcQQ1JmpoKeH5+rx+Pnr5MW4qKcUdp7qabk5Me8ZjJkVNHgG0fkxXlYg7MoZBH2UB/SyEbT/Ylz0Qo12gVt2O997J34GY+YEjb8N/DPKYCyoEMKumklL1IizGXcOXugSmgsV3rht4u+cDAWNf0XXOAODoMKunvE7c4J2RS/UaBO2Y7cL78cGM4jtZ8Ae9KOHeAAbhN3HEjhJArhMjtNMkBE5TtRDRpjO9o7q1833l/vuhalo2MwAznleLAIZgaCQNAgKSYOgkDQICkmDoJA0CApJg6CQNAgKSfMRQQEWwKPtV3VeKA4ZZJYBgpJB0hkgKBkknQGCkkHSGSAoGSSdAYKSQdIZICgZJJ0BgpJB0hkgKBkknQGCkkHSGcRPGeAKCApJg6CQNAgKSYOgkDQICkmDoJA0CApJg6CQNAgKSYOgkDQICkmDoJA0oQQ9FPvpm+Xz+e3p+UO11pj+zfy64mNR/GUU4P1F3QLicPfdMZvSLuO3pyoz4+0mfEey4f2lymbSZHOUj+2TGZpdZszFpr2BBD09/m26rz6+IZRlb0/mLV/9YfqtqPbUfVd0lI1NRpZZl4X82MH076V7jmSXzf5aNsHiTpl2DLfFDSTo8fPvD5PovgS9dFsHY4D3lz/VN3sKLai6FYr6h/0NNSwrqLp9UJWNwQ4EPdf7Se2qty//kIe9ozwunx6qjv5bndTxwnF6jqa19faXx466gaqyqrUywOc/RgGqPI73umhZvb1XWdWHnW9Pv1Zlnutc6y5QfuqoPnSW1RV1pZe3cb/F3QsdRqbyVofwGMmGY1PPf74226LO5rcnHeWb2i3NJlxMUL3LbmlvGEFlF3eU3Zw6Gsun1eG37Uma17fX2+tBZY9VhxhVPg5QKVG/JYtKM96e7lVW6sMq0WNty319XyhZ9vSwV9+CqoT1If6+e6rDqL3vOdI8g2+LjqIzUNnIDak34VKC6ng3tTeMoIdagP2593DuDnVObrb1ntXO//KqetJp5cMAcmdJK6qi6rZkpdxH+3P3waqW2vhf7r6fHtXf5N0f9Q0gbXdf3X9/Peu7n5VKhU5Qf5Fm6be/jaIzaLPpbcIFTpL2Xbyb2htEUPmFrVKr8qhzaEZErT+n6fDUkoNubE0pDxjjyscBpKBSmUpQ9Xazj7ruVin09uWfP0lV1Pi2/pDajjfsvuqETHcQ/TABIl2nL2gvyiib+q9FEVrQwVG8iXdDe4MIemy+NU3b1S1pe4I+ms9x5um1topRn4iNKx8HUKO+z19bQZt9NBD0fNif/vzty2t1ECrb3OuZmlt3X/WtnIQJE+kK/UN8G2UqqN6ESwmq493U3hCCNtunHYZ57EHb1tZ1yAebHrQquL/ag1aDgH/dnw9/fXkezRAcmgP1LDpkVfxqD/rxSDbok6RqoNdGmWTTbsKFBG3jqfct2xtCUL1Nju0wzO8YtI4hjxLqbGR+DCo78f8ejEHHgp5++rk6aZETUsOtpvvBWXSnVeU1HOq2oz5fkWzoTTO1lU4E7W3CRQRt4+l0ogmqc6qGos2xpDK2PpvedyfZxhlD25r1N1+ORtvKR2fxTYDmf4dicBbffG16psq75hZ6ykF+v+uvmdZsHlW4niDXYaQf1dHs2XMku2z2sul6lqPtr2ot9l0PWm/CBXvQOt5N7Q0gaHeAPTSzknpa8uBpHrSp8tNr/VNJOw/aCTqcB5X/UxMr/QnKNpv6lTyjU+d2dVn1ZVc30j3YzU7WP3WqY0cTpn7rNznu9BvJhjobVVsTpRsF9/ZCvQkXOYuXc1x6l93SXi4WgaRBUEgaBIWk+X85rnx8vb1vcQAAAABJRU5ErkJggg==" alt="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods" />
+<img src="data:image/png;base64,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" alt="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods" />
 <div class="figcaption">Estimated transition probabilities of the Yellow
 Warbler between breeding and nonbreeding periods</div>
 </div>
@@ -919,123 +915,123 @@ bias and location error using coordinates derived from light-level
 geolocators (see <span class="citation">Cohen et al. (2018)</span>)
 analyzed using the SGAT package <span class="citation">(Wotherspoon
 2017, Lisovski et al. 2020)</span>.</p>
-<div class="sourceCode" id="cb44"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" tabindex="-1"></a><span class="co"># Load in projections</span></span>
-<span id="cb44-2"><a href="#cb44-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;projections&quot;</span>)</span>
-<span id="cb44-3"><a href="#cb44-3" tabindex="-1"></a></span>
-<span id="cb44-4"><a href="#cb44-4" tabindex="-1"></a><span class="co"># Define deployment locations (winter) # </span></span>
-<span id="cb44-5"><a href="#cb44-5" tabindex="-1"></a>captureLocations<span class="ot">&lt;-</span><span class="fu">matrix</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="fl">77.93</span>,<span class="fl">18.04</span>,   <span class="co"># Jamaica</span></span>
-<span id="cb44-6"><a href="#cb44-6" tabindex="-1"></a>                           <span class="sc">-</span><span class="fl">80.94</span>,<span class="fl">25.13</span>,   <span class="co"># Florida</span></span>
-<span id="cb44-7"><a href="#cb44-7" tabindex="-1"></a>                           <span class="sc">-</span><span class="fl">66.86</span>,<span class="fl">17.97</span>),  <span class="co"># Puerto Rico</span></span>
-<span id="cb44-8"><a href="#cb44-8" tabindex="-1"></a>                            <span class="at">nrow=</span><span class="dv">3</span>, <span class="at">ncol=</span><span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb44-9"><a href="#cb44-9" tabindex="-1"></a></span>
-<span id="cb44-10"><a href="#cb44-10" tabindex="-1"></a><span class="fu">colnames</span>(captureLocations) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,<span class="st">&quot;Latitude&quot;</span>)</span>
-<span id="cb44-11"><a href="#cb44-11" tabindex="-1"></a></span>
-<span id="cb44-12"><a href="#cb44-12" tabindex="-1"></a><span class="co"># Convert capture locations into SpatialPoints #</span></span>
-<span id="cb44-13"><a href="#cb44-13" tabindex="-1"></a></span>
-<span id="cb44-14"><a href="#cb44-14" tabindex="-1"></a>CapLocs <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(captureLocations),</span>
-<span id="cb44-15"><a href="#cb44-15" tabindex="-1"></a>                      <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,<span class="st">&quot;Latitude&quot;</span>),</span>
-<span id="cb44-16"><a href="#cb44-16" tabindex="-1"></a>                      <span class="at">crs =</span> <span class="dv">4326</span>)</span>
-<span id="cb44-17"><a href="#cb44-17" tabindex="-1"></a></span>
-<span id="cb44-18"><a href="#cb44-18" tabindex="-1"></a><span class="co"># Project Capture locations # </span></span>
-<span id="cb44-19"><a href="#cb44-19" tabindex="-1"></a></span>
-<span id="cb44-20"><a href="#cb44-20" tabindex="-1"></a>CapLocsM<span class="ot">&lt;-</span>sf<span class="sc">::</span><span class="fu">st_transform</span>(CapLocs, <span class="st">&#39;ESRI:54027&#39;</span>)</span>
-<span id="cb44-21"><a href="#cb44-21" tabindex="-1"></a></span>
-<span id="cb44-22"><a href="#cb44-22" tabindex="-1"></a><span class="co"># Retrieve raw non-breeding locations from github </span></span>
-<span id="cb44-23"><a href="#cb44-23" tabindex="-1"></a><span class="co"># First grab the identity of the bird so we can loop through the files </span></span>
-<span id="cb44-24"><a href="#cb44-24" tabindex="-1"></a><span class="co"># For this example we are only interested in the error </span></span>
-<span id="cb44-25"><a href="#cb44-25" tabindex="-1"></a><span class="co"># around non-breeding locations </span></span>
-<span id="cb44-26"><a href="#cb44-26" tabindex="-1"></a><span class="co"># here we grab only the birds captured during the non-breeding season </span></span>
-<span id="cb44-27"><a href="#cb44-27" tabindex="-1"></a><span class="co"># Using paste0 for vignette formatting purposes</span></span>
-<span id="cb44-28"><a href="#cb44-28" tabindex="-1"></a></span>
-<span id="cb44-29"><a href="#cb44-29" tabindex="-1"></a>winterBirds <span class="ot">&lt;-</span> <span class="fu">dget</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,</span>
-<span id="cb44-30"><a href="#cb44-30" tabindex="-1"></a>                    <span class="st">&quot;SMBC-NZP/MigConnectivity/master/&quot;</span>,</span>
-<span id="cb44-31"><a href="#cb44-31" tabindex="-1"></a>                    <span class="st">&quot;data-raw/GL_NonBreedingFiles/winterBirds.txt&quot;</span>))</span>
-<span id="cb44-32"><a href="#cb44-32" tabindex="-1"></a></span>
-<span id="cb44-33"><a href="#cb44-33" tabindex="-1"></a><span class="co"># create empty list to store the location data #</span></span>
-<span id="cb44-34"><a href="#cb44-34" tabindex="-1"></a>Non_breeding_files <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&#39;list&#39;</span>,<span class="fu">length</span>(winterBirds))</span>
-<span id="cb44-35"><a href="#cb44-35" tabindex="-1"></a></span>
-<span id="cb44-36"><a href="#cb44-36" tabindex="-1"></a><span class="co"># Get raw location data from Github #</span></span>
-<span id="cb44-37"><a href="#cb44-37" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(winterBirds)){</span>
-<span id="cb44-38"><a href="#cb44-38" tabindex="-1"></a>Non_breeding_files[[i]] <span class="ot">&lt;-</span> <span class="fu">dget</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,</span>
-<span id="cb44-39"><a href="#cb44-39" tabindex="-1"></a>                                        <span class="st">&quot;SMBC-NZP/MigConnectivity/master/data-raw/&quot;</span>,</span>
-<span id="cb44-40"><a href="#cb44-40" tabindex="-1"></a>                                        <span class="st">&quot;GL_NonBreedingFiles/NonBreeding_&quot;</span>,</span>
-<span id="cb44-41"><a href="#cb44-41" tabindex="-1"></a>                                        winterBirds[i],<span class="st">&quot;.txt&quot;</span>))</span>
-<span id="cb44-42"><a href="#cb44-42" tabindex="-1"></a>}</span>
-<span id="cb44-43"><a href="#cb44-43" tabindex="-1"></a></span>
-<span id="cb44-44"><a href="#cb44-44" tabindex="-1"></a><span class="co"># Remove locations around spring Equinox and potential migration points</span></span>
-<span id="cb44-45"><a href="#cb44-45" tabindex="-1"></a><span class="co"># same NB time frame as Hallworth et al. 2015 </span></span>
-<span id="cb44-46"><a href="#cb44-46" tabindex="-1"></a></span>
-<span id="cb44-47"><a href="#cb44-47" tabindex="-1"></a><span class="co"># two steps because subset on shapefile doesn&#39;t like it in a single step</span></span>
-<span id="cb44-48"><a href="#cb44-48" tabindex="-1"></a></span>
-<span id="cb44-49"><a href="#cb44-49" tabindex="-1"></a>Non_breeding_files <span class="ot">&lt;-</span> <span class="fu">lapply</span>(Non_breeding_files,</span>
-<span id="cb44-50"><a href="#cb44-50" tabindex="-1"></a>                      <span class="at">FUN =</span> <span class="cf">function</span>(x){</span>
-<span id="cb44-51"><a href="#cb44-51" tabindex="-1"></a>                      month <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">format</span>(x<span class="sc">$</span>Date,<span class="at">format =</span> <span class="st">&quot;%m&quot;</span>))</span>
-<span id="cb44-52"><a href="#cb44-52" tabindex="-1"></a>                               x[<span class="fu">which</span>(month <span class="sc">!=</span> <span class="dv">3</span> <span class="sc">&amp;</span> month <span class="sc">!=</span> <span class="dv">4</span>),]})</span>
-<span id="cb44-53"><a href="#cb44-53" tabindex="-1"></a></span>
-<span id="cb44-54"><a href="#cb44-54" tabindex="-1"></a>   </span>
-<span id="cb44-55"><a href="#cb44-55" tabindex="-1"></a>Jam <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>)   <span class="co"># locations w/in list of winterBirds captured in Jamaica</span></span>
-<span id="cb44-56"><a href="#cb44-56" tabindex="-1"></a>Fla <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span><span class="sc">:</span><span class="dv">12</span>) <span class="co"># locations w/in list of winterBirds in Florida</span></span>
-<span id="cb44-57"><a href="#cb44-57" tabindex="-1"></a>PR <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">13</span><span class="sc">:</span><span class="dv">16</span>)  <span class="co"># locations w/in list of winterBirds in Puerto Rico</span></span>
-<span id="cb44-58"><a href="#cb44-58" tabindex="-1"></a></span>
-<span id="cb44-59"><a href="#cb44-59" tabindex="-1"></a><span class="co"># Turn the locations into shapefiles #</span></span>
-<span id="cb44-60"><a href="#cb44-60" tabindex="-1"></a></span>
-<span id="cb44-61"><a href="#cb44-61" tabindex="-1"></a>NB_GL <span class="ot">&lt;-</span> <span class="fu">lapply</span>(Non_breeding_files, </span>
-<span id="cb44-62"><a href="#cb44-62" tabindex="-1"></a>                <span class="at">FUN =</span> <span class="cf">function</span>(x){</span>
-<span id="cb44-63"><a href="#cb44-63" tabindex="-1"></a>                  sf<span class="sc">::</span><span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(x),</span>
-<span id="cb44-64"><a href="#cb44-64" tabindex="-1"></a>                               <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,</span>
-<span id="cb44-65"><a href="#cb44-65" tabindex="-1"></a>                                          <span class="st">&quot;Latitude&quot;</span>),</span>
-<span id="cb44-66"><a href="#cb44-66" tabindex="-1"></a>                               <span class="at">crs =</span> <span class="dv">4326</span>)})</span>
-<span id="cb44-67"><a href="#cb44-67" tabindex="-1"></a></span>
-<span id="cb44-68"><a href="#cb44-68" tabindex="-1"></a><span class="co"># Project into UTM projection #</span></span>
-<span id="cb44-69"><a href="#cb44-69" tabindex="-1"></a></span>
-<span id="cb44-70"><a href="#cb44-70" tabindex="-1"></a>NB_GLmeters <span class="ot">&lt;-</span> <span class="fu">lapply</span>(NB_GL,</span>
-<span id="cb44-71"><a href="#cb44-71" tabindex="-1"></a>                      <span class="at">FUN =</span> <span class="cf">function</span>(x){sf<span class="sc">::</span><span class="fu">st_transform</span>(x,<span class="st">&#39;ESRI:54027&#39;</span>)})</span>
-<span id="cb44-72"><a href="#cb44-72" tabindex="-1"></a></span>
-<span id="cb44-73"><a href="#cb44-73" tabindex="-1"></a><span class="co"># Process to determine geolocator bias and variance-covariance in meters #</span></span>
-<span id="cb44-74"><a href="#cb44-74" tabindex="-1"></a></span>
-<span id="cb44-75"><a href="#cb44-75" tabindex="-1"></a><span class="co"># generate empty vector to store data #</span></span>
-<span id="cb44-76"><a href="#cb44-76" tabindex="-1"></a>LongError<span class="ot">&lt;-</span><span class="fu">rep</span>(<span class="cn">NA</span>,<span class="fu">length</span>(winterBirds)) </span>
-<span id="cb44-77"><a href="#cb44-77" tabindex="-1"></a>LatError<span class="ot">&lt;-</span><span class="fu">rep</span>(<span class="cn">NA</span>,<span class="fu">length</span>(winterBirds))  </span>
-<span id="cb44-78"><a href="#cb44-78" tabindex="-1"></a></span>
-<span id="cb44-79"><a href="#cb44-79" tabindex="-1"></a><span class="co"># Calculate the error in longitude derived </span></span>
-<span id="cb44-80"><a href="#cb44-80" tabindex="-1"></a><span class="co"># from geolocators from the true capture location </span></span>
-<span id="cb44-81"><a href="#cb44-81" tabindex="-1"></a></span>
-<span id="cb44-82"><a href="#cb44-82" tabindex="-1"></a>LongError[Jam] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Jam],</span>
-<span id="cb44-83"><a href="#cb44-83" tabindex="-1"></a>                         <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
-<span id="cb44-84"><a href="#cb44-84" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">1</span>,<span class="dv">1</span>])}))</span>
-<span id="cb44-85"><a href="#cb44-85" tabindex="-1"></a></span>
-<span id="cb44-86"><a href="#cb44-86" tabindex="-1"></a>LongError[Fla] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Fla],</span>
-<span id="cb44-87"><a href="#cb44-87" tabindex="-1"></a>                         <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
-<span id="cb44-88"><a href="#cb44-88" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">2</span>,<span class="dv">1</span>])}))</span>
-<span id="cb44-89"><a href="#cb44-89" tabindex="-1"></a></span>
-<span id="cb44-90"><a href="#cb44-90" tabindex="-1"></a>LongError[PR] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[PR],</span>
-<span id="cb44-91"><a href="#cb44-91" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
-<span id="cb44-92"><a href="#cb44-92" tabindex="-1"></a>                                                 sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">3</span>,<span class="dv">1</span>])}))</span>
-<span id="cb44-93"><a href="#cb44-93" tabindex="-1"></a></span>
-<span id="cb44-94"><a href="#cb44-94" tabindex="-1"></a><span class="co"># Calculate the error in latitude derived from</span></span>
-<span id="cb44-95"><a href="#cb44-95" tabindex="-1"></a><span class="co"># geolocators from the true capture location </span></span>
-<span id="cb44-96"><a href="#cb44-96" tabindex="-1"></a></span>
-<span id="cb44-97"><a href="#cb44-97" tabindex="-1"></a>LatError[Jam] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Jam],</span>
-<span id="cb44-98"><a href="#cb44-98" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
-<span id="cb44-99"><a href="#cb44-99" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">1</span>,<span class="dv">2</span>])}))</span>
-<span id="cb44-100"><a href="#cb44-100" tabindex="-1"></a></span>
-<span id="cb44-101"><a href="#cb44-101" tabindex="-1"></a>LatError[Fla] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Fla],</span>
-<span id="cb44-102"><a href="#cb44-102" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
-<span id="cb44-103"><a href="#cb44-103" tabindex="-1"></a>                                                 sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">2</span>,<span class="dv">2</span>])}))</span>
-<span id="cb44-104"><a href="#cb44-104" tabindex="-1"></a></span>
-<span id="cb44-105"><a href="#cb44-105" tabindex="-1"></a>LatError[PR] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[PR],</span>
-<span id="cb44-106"><a href="#cb44-106" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
-<span id="cb44-107"><a href="#cb44-107" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">3</span>,<span class="dv">2</span>])}))</span>
-<span id="cb44-108"><a href="#cb44-108" tabindex="-1"></a></span>
-<span id="cb44-109"><a href="#cb44-109" tabindex="-1"></a><span class="co"># Get co-variance matrix for error of </span></span>
-<span id="cb44-110"><a href="#cb44-110" tabindex="-1"></a><span class="co"># known non-breeding deployment sites </span></span>
-<span id="cb44-111"><a href="#cb44-111" tabindex="-1"></a></span>
-<span id="cb44-112"><a href="#cb44-112" tabindex="-1"></a><span class="co"># lm does multivariate normal models if you give it a matrix dependent variable!</span></span>
-<span id="cb44-113"><a href="#cb44-113" tabindex="-1"></a></span>
-<span id="cb44-114"><a href="#cb44-114" tabindex="-1"></a>geo.error.model <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">cbind</span>(LongError,LatError) <span class="sc">~</span> <span class="dv">1</span>) </span>
-<span id="cb44-115"><a href="#cb44-115" tabindex="-1"></a></span>
-<span id="cb44-116"><a href="#cb44-116" tabindex="-1"></a>geo.bias <span class="ot">&lt;-</span> <span class="fu">coef</span>(geo.error.model)</span>
-<span id="cb44-117"><a href="#cb44-117" tabindex="-1"></a>geo.vcov <span class="ot">&lt;-</span> <span class="fu">vcov</span>(geo.error.model)</span></code></pre></div>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" tabindex="-1"></a><span class="co"># Load in projections</span></span>
+<span id="cb42-2"><a href="#cb42-2" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;projections&quot;</span>)</span>
+<span id="cb42-3"><a href="#cb42-3" tabindex="-1"></a></span>
+<span id="cb42-4"><a href="#cb42-4" tabindex="-1"></a><span class="co"># Define deployment locations (winter) # </span></span>
+<span id="cb42-5"><a href="#cb42-5" tabindex="-1"></a>captureLocations<span class="ot">&lt;-</span><span class="fu">matrix</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="fl">77.93</span>,<span class="fl">18.04</span>,   <span class="co"># Jamaica</span></span>
+<span id="cb42-6"><a href="#cb42-6" tabindex="-1"></a>                           <span class="sc">-</span><span class="fl">80.94</span>,<span class="fl">25.13</span>,   <span class="co"># Florida</span></span>
+<span id="cb42-7"><a href="#cb42-7" tabindex="-1"></a>                           <span class="sc">-</span><span class="fl">66.86</span>,<span class="fl">17.97</span>),  <span class="co"># Puerto Rico</span></span>
+<span id="cb42-8"><a href="#cb42-8" tabindex="-1"></a>                            <span class="at">nrow=</span><span class="dv">3</span>, <span class="at">ncol=</span><span class="dv">2</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb42-9"><a href="#cb42-9" tabindex="-1"></a></span>
+<span id="cb42-10"><a href="#cb42-10" tabindex="-1"></a><span class="fu">colnames</span>(captureLocations) <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,<span class="st">&quot;Latitude&quot;</span>)</span>
+<span id="cb42-11"><a href="#cb42-11" tabindex="-1"></a></span>
+<span id="cb42-12"><a href="#cb42-12" tabindex="-1"></a><span class="co"># Convert capture locations into SpatialPoints #</span></span>
+<span id="cb42-13"><a href="#cb42-13" tabindex="-1"></a></span>
+<span id="cb42-14"><a href="#cb42-14" tabindex="-1"></a>CapLocs <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(captureLocations),</span>
+<span id="cb42-15"><a href="#cb42-15" tabindex="-1"></a>                      <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,<span class="st">&quot;Latitude&quot;</span>),</span>
+<span id="cb42-16"><a href="#cb42-16" tabindex="-1"></a>                      <span class="at">crs =</span> <span class="dv">4326</span>)</span>
+<span id="cb42-17"><a href="#cb42-17" tabindex="-1"></a></span>
+<span id="cb42-18"><a href="#cb42-18" tabindex="-1"></a><span class="co"># Project Capture locations # </span></span>
+<span id="cb42-19"><a href="#cb42-19" tabindex="-1"></a></span>
+<span id="cb42-20"><a href="#cb42-20" tabindex="-1"></a>CapLocsM<span class="ot">&lt;-</span>sf<span class="sc">::</span><span class="fu">st_transform</span>(CapLocs, <span class="st">&#39;ESRI:54027&#39;</span>)</span>
+<span id="cb42-21"><a href="#cb42-21" tabindex="-1"></a></span>
+<span id="cb42-22"><a href="#cb42-22" tabindex="-1"></a><span class="co"># Retrieve raw non-breeding locations from github </span></span>
+<span id="cb42-23"><a href="#cb42-23" tabindex="-1"></a><span class="co"># First grab the identity of the bird so we can loop through the files </span></span>
+<span id="cb42-24"><a href="#cb42-24" tabindex="-1"></a><span class="co"># For this example we are only interested in the error </span></span>
+<span id="cb42-25"><a href="#cb42-25" tabindex="-1"></a><span class="co"># around non-breeding locations </span></span>
+<span id="cb42-26"><a href="#cb42-26" tabindex="-1"></a><span class="co"># here we grab only the birds captured during the non-breeding season </span></span>
+<span id="cb42-27"><a href="#cb42-27" tabindex="-1"></a><span class="co"># Using paste0 for vignette formatting purposes</span></span>
+<span id="cb42-28"><a href="#cb42-28" tabindex="-1"></a></span>
+<span id="cb42-29"><a href="#cb42-29" tabindex="-1"></a>winterBirds <span class="ot">&lt;-</span> <span class="fu">dget</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,</span>
+<span id="cb42-30"><a href="#cb42-30" tabindex="-1"></a>                    <span class="st">&quot;SMBC-NZP/MigConnectivity/master/&quot;</span>,</span>
+<span id="cb42-31"><a href="#cb42-31" tabindex="-1"></a>                    <span class="st">&quot;data-raw/GL_NonBreedingFiles/winterBirds.txt&quot;</span>))</span>
+<span id="cb42-32"><a href="#cb42-32" tabindex="-1"></a></span>
+<span id="cb42-33"><a href="#cb42-33" tabindex="-1"></a><span class="co"># create empty list to store the location data #</span></span>
+<span id="cb42-34"><a href="#cb42-34" tabindex="-1"></a>Non_breeding_files <span class="ot">&lt;-</span> <span class="fu">vector</span>(<span class="st">&#39;list&#39;</span>,<span class="fu">length</span>(winterBirds))</span>
+<span id="cb42-35"><a href="#cb42-35" tabindex="-1"></a></span>
+<span id="cb42-36"><a href="#cb42-36" tabindex="-1"></a><span class="co"># Get raw location data from Github #</span></span>
+<span id="cb42-37"><a href="#cb42-37" tabindex="-1"></a><span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">length</span>(winterBirds)){</span>
+<span id="cb42-38"><a href="#cb42-38" tabindex="-1"></a>Non_breeding_files[[i]] <span class="ot">&lt;-</span> <span class="fu">dget</span>(<span class="fu">paste0</span>(<span class="st">&quot;https://raw.githubusercontent.com/&quot;</span>,</span>
+<span id="cb42-39"><a href="#cb42-39" tabindex="-1"></a>                                        <span class="st">&quot;SMBC-NZP/MigConnectivity/master/data-raw/&quot;</span>,</span>
+<span id="cb42-40"><a href="#cb42-40" tabindex="-1"></a>                                        <span class="st">&quot;GL_NonBreedingFiles/NonBreeding_&quot;</span>,</span>
+<span id="cb42-41"><a href="#cb42-41" tabindex="-1"></a>                                        winterBirds[i],<span class="st">&quot;.txt&quot;</span>))</span>
+<span id="cb42-42"><a href="#cb42-42" tabindex="-1"></a>}</span>
+<span id="cb42-43"><a href="#cb42-43" tabindex="-1"></a></span>
+<span id="cb42-44"><a href="#cb42-44" tabindex="-1"></a><span class="co"># Remove locations around spring Equinox and potential migration points</span></span>
+<span id="cb42-45"><a href="#cb42-45" tabindex="-1"></a><span class="co"># same NB time frame as Hallworth et al. 2015 </span></span>
+<span id="cb42-46"><a href="#cb42-46" tabindex="-1"></a></span>
+<span id="cb42-47"><a href="#cb42-47" tabindex="-1"></a><span class="co"># two steps because subset on shapefile doesn&#39;t like it in a single step</span></span>
+<span id="cb42-48"><a href="#cb42-48" tabindex="-1"></a></span>
+<span id="cb42-49"><a href="#cb42-49" tabindex="-1"></a>Non_breeding_files <span class="ot">&lt;-</span> <span class="fu">lapply</span>(Non_breeding_files,</span>
+<span id="cb42-50"><a href="#cb42-50" tabindex="-1"></a>                      <span class="at">FUN =</span> <span class="cf">function</span>(x){</span>
+<span id="cb42-51"><a href="#cb42-51" tabindex="-1"></a>                      month <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(<span class="fu">format</span>(x<span class="sc">$</span>Date,<span class="at">format =</span> <span class="st">&quot;%m&quot;</span>))</span>
+<span id="cb42-52"><a href="#cb42-52" tabindex="-1"></a>                               x[<span class="fu">which</span>(month <span class="sc">!=</span> <span class="dv">3</span> <span class="sc">&amp;</span> month <span class="sc">!=</span> <span class="dv">4</span>),]})</span>
+<span id="cb42-53"><a href="#cb42-53" tabindex="-1"></a></span>
+<span id="cb42-54"><a href="#cb42-54" tabindex="-1"></a>   </span>
+<span id="cb42-55"><a href="#cb42-55" tabindex="-1"></a>Jam <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>)   <span class="co"># locations w/in list of winterBirds captured in Jamaica</span></span>
+<span id="cb42-56"><a href="#cb42-56" tabindex="-1"></a>Fla <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">10</span><span class="sc">:</span><span class="dv">12</span>) <span class="co"># locations w/in list of winterBirds in Florida</span></span>
+<span id="cb42-57"><a href="#cb42-57" tabindex="-1"></a>PR <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">13</span><span class="sc">:</span><span class="dv">16</span>)  <span class="co"># locations w/in list of winterBirds in Puerto Rico</span></span>
+<span id="cb42-58"><a href="#cb42-58" tabindex="-1"></a></span>
+<span id="cb42-59"><a href="#cb42-59" tabindex="-1"></a><span class="co"># Turn the locations into shapefiles #</span></span>
+<span id="cb42-60"><a href="#cb42-60" tabindex="-1"></a></span>
+<span id="cb42-61"><a href="#cb42-61" tabindex="-1"></a>NB_GL <span class="ot">&lt;-</span> <span class="fu">lapply</span>(Non_breeding_files, </span>
+<span id="cb42-62"><a href="#cb42-62" tabindex="-1"></a>                <span class="at">FUN =</span> <span class="cf">function</span>(x){</span>
+<span id="cb42-63"><a href="#cb42-63" tabindex="-1"></a>                  sf<span class="sc">::</span><span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(x),</span>
+<span id="cb42-64"><a href="#cb42-64" tabindex="-1"></a>                               <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;Longitude&quot;</span>,</span>
+<span id="cb42-65"><a href="#cb42-65" tabindex="-1"></a>                                          <span class="st">&quot;Latitude&quot;</span>),</span>
+<span id="cb42-66"><a href="#cb42-66" tabindex="-1"></a>                               <span class="at">crs =</span> <span class="dv">4326</span>)})</span>
+<span id="cb42-67"><a href="#cb42-67" tabindex="-1"></a></span>
+<span id="cb42-68"><a href="#cb42-68" tabindex="-1"></a><span class="co"># Project into UTM projection #</span></span>
+<span id="cb42-69"><a href="#cb42-69" tabindex="-1"></a></span>
+<span id="cb42-70"><a href="#cb42-70" tabindex="-1"></a>NB_GLmeters <span class="ot">&lt;-</span> <span class="fu">lapply</span>(NB_GL,</span>
+<span id="cb42-71"><a href="#cb42-71" tabindex="-1"></a>                      <span class="at">FUN =</span> <span class="cf">function</span>(x){sf<span class="sc">::</span><span class="fu">st_transform</span>(x,<span class="st">&#39;ESRI:54027&#39;</span>)})</span>
+<span id="cb42-72"><a href="#cb42-72" tabindex="-1"></a></span>
+<span id="cb42-73"><a href="#cb42-73" tabindex="-1"></a><span class="co"># Process to determine geolocator bias and variance-covariance in meters #</span></span>
+<span id="cb42-74"><a href="#cb42-74" tabindex="-1"></a></span>
+<span id="cb42-75"><a href="#cb42-75" tabindex="-1"></a><span class="co"># generate empty vector to store data #</span></span>
+<span id="cb42-76"><a href="#cb42-76" tabindex="-1"></a>LongError<span class="ot">&lt;-</span><span class="fu">rep</span>(<span class="cn">NA</span>,<span class="fu">length</span>(winterBirds)) </span>
+<span id="cb42-77"><a href="#cb42-77" tabindex="-1"></a>LatError<span class="ot">&lt;-</span><span class="fu">rep</span>(<span class="cn">NA</span>,<span class="fu">length</span>(winterBirds))  </span>
+<span id="cb42-78"><a href="#cb42-78" tabindex="-1"></a></span>
+<span id="cb42-79"><a href="#cb42-79" tabindex="-1"></a><span class="co"># Calculate the error in longitude derived </span></span>
+<span id="cb42-80"><a href="#cb42-80" tabindex="-1"></a><span class="co"># from geolocators from the true capture location </span></span>
+<span id="cb42-81"><a href="#cb42-81" tabindex="-1"></a></span>
+<span id="cb42-82"><a href="#cb42-82" tabindex="-1"></a>LongError[Jam] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Jam],</span>
+<span id="cb42-83"><a href="#cb42-83" tabindex="-1"></a>                         <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
+<span id="cb42-84"><a href="#cb42-84" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">1</span>,<span class="dv">1</span>])}))</span>
+<span id="cb42-85"><a href="#cb42-85" tabindex="-1"></a></span>
+<span id="cb42-86"><a href="#cb42-86" tabindex="-1"></a>LongError[Fla] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Fla],</span>
+<span id="cb42-87"><a href="#cb42-87" tabindex="-1"></a>                         <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
+<span id="cb42-88"><a href="#cb42-88" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">2</span>,<span class="dv">1</span>])}))</span>
+<span id="cb42-89"><a href="#cb42-89" tabindex="-1"></a></span>
+<span id="cb42-90"><a href="#cb42-90" tabindex="-1"></a>LongError[PR] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[PR],</span>
+<span id="cb42-91"><a href="#cb42-91" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">1</span>]<span class="sc">-</span></span>
+<span id="cb42-92"><a href="#cb42-92" tabindex="-1"></a>                                                 sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">3</span>,<span class="dv">1</span>])}))</span>
+<span id="cb42-93"><a href="#cb42-93" tabindex="-1"></a></span>
+<span id="cb42-94"><a href="#cb42-94" tabindex="-1"></a><span class="co"># Calculate the error in latitude derived from</span></span>
+<span id="cb42-95"><a href="#cb42-95" tabindex="-1"></a><span class="co"># geolocators from the true capture location </span></span>
+<span id="cb42-96"><a href="#cb42-96" tabindex="-1"></a></span>
+<span id="cb42-97"><a href="#cb42-97" tabindex="-1"></a>LatError[Jam] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Jam],</span>
+<span id="cb42-98"><a href="#cb42-98" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
+<span id="cb42-99"><a href="#cb42-99" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">1</span>,<span class="dv">2</span>])}))</span>
+<span id="cb42-100"><a href="#cb42-100" tabindex="-1"></a></span>
+<span id="cb42-101"><a href="#cb42-101" tabindex="-1"></a>LatError[Fla] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[Fla],</span>
+<span id="cb42-102"><a href="#cb42-102" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
+<span id="cb42-103"><a href="#cb42-103" tabindex="-1"></a>                                                 sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">2</span>,<span class="dv">2</span>])}))</span>
+<span id="cb42-104"><a href="#cb42-104" tabindex="-1"></a></span>
+<span id="cb42-105"><a href="#cb42-105" tabindex="-1"></a>LatError[PR] <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">lapply</span>(NB_GLmeters[PR],</span>
+<span id="cb42-106"><a href="#cb42-106" tabindex="-1"></a>                        <span class="at">FUN =</span> <span class="cf">function</span>(x){<span class="fu">mean</span>(sf<span class="sc">::</span><span class="fu">st_coordinates</span>(x)[,<span class="dv">2</span>]<span class="sc">-</span></span>
+<span id="cb42-107"><a href="#cb42-107" tabindex="-1"></a>                                                  sf<span class="sc">::</span><span class="fu">st_coordinates</span>(CapLocsM)[<span class="dv">3</span>,<span class="dv">2</span>])}))</span>
+<span id="cb42-108"><a href="#cb42-108" tabindex="-1"></a></span>
+<span id="cb42-109"><a href="#cb42-109" tabindex="-1"></a><span class="co"># Get co-variance matrix for error of </span></span>
+<span id="cb42-110"><a href="#cb42-110" tabindex="-1"></a><span class="co"># known non-breeding deployment sites </span></span>
+<span id="cb42-111"><a href="#cb42-111" tabindex="-1"></a></span>
+<span id="cb42-112"><a href="#cb42-112" tabindex="-1"></a><span class="co"># lm does multivariate normal models if you give it a matrix dependent variable!</span></span>
+<span id="cb42-113"><a href="#cb42-113" tabindex="-1"></a></span>
+<span id="cb42-114"><a href="#cb42-114" tabindex="-1"></a>geo.error.model <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">cbind</span>(LongError,LatError) <span class="sc">~</span> <span class="dv">1</span>) </span>
+<span id="cb42-115"><a href="#cb42-115" tabindex="-1"></a></span>
+<span id="cb42-116"><a href="#cb42-116" tabindex="-1"></a>geo.bias <span class="ot">&lt;-</span> <span class="fu">coef</span>(geo.error.model)</span>
+<span id="cb42-117"><a href="#cb42-117" tabindex="-1"></a>geo.vcov <span class="ot">&lt;-</span> <span class="fu">vcov</span>(geo.error.model)</span></code></pre></div>
 </div>
 <div id="FLightR_bias" class="section level4">
 <h4>FLightR</h4>
@@ -1043,72 +1039,72 @@ analyzed using the SGAT package <span class="citation">(Wotherspoon
 bias and location error using location estimates derived from
 light-level geolocators analyzed in FLightR <span class="citation">(Rakhimberdiev et al. 2017, Lisovski et al.
 2020)</span>. The geolocator data were processed and reported by <span class="citation">Witynski and Bonter (2018)</span>.</p>
-<div class="sourceCode" id="cb45"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" tabindex="-1"></a><span class="co"># Capture locations #</span></span>
-<span id="cb45-2"><a href="#cb45-2" tabindex="-1"></a><span class="co"># See dates and summary data from Table 1. page 44.</span></span>
-<span id="cb45-3"><a href="#cb45-3" tabindex="-1"></a><span class="co"># Maine #129</span></span>
-<span id="cb45-4"><a href="#cb45-4" tabindex="-1"></a><span class="co"># Maine #132</span></span>
-<span id="cb45-5"><a href="#cb45-5" tabindex="-1"></a><span class="co"># Maine #136</span></span>
-<span id="cb45-6"><a href="#cb45-6" tabindex="-1"></a><span class="co"># Maine #137</span></span>
-<span id="cb45-7"><a href="#cb45-7" tabindex="-1"></a><span class="co"># Wisconsin #139</span></span>
-<span id="cb45-8"><a href="#cb45-8" tabindex="-1"></a><span class="co"># Wisconsin #144</span></span>
-<span id="cb45-9"><a href="#cb45-9" tabindex="-1"></a><span class="co"># Wisconsin #146</span></span>
-<span id="cb45-10"><a href="#cb45-10" tabindex="-1"></a></span>
-<span id="cb45-11"><a href="#cb45-11" tabindex="-1"></a>caplocs <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">c</span>(<span class="fu">rep</span>(<span class="sc">-</span><span class="fl">70.6142</span>,<span class="dv">4</span>),<span class="fu">rep</span>(<span class="sc">-</span><span class="fl">87.8123</span>,<span class="dv">3</span>)),</span>
-<span id="cb45-12"><a href="#cb45-12" tabindex="-1"></a>                 <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fl">42.9891</span>,<span class="dv">4</span>),<span class="fu">rep</span>(<span class="fl">42.5000</span>,<span class="dv">3</span>)))</span>
-<span id="cb45-13"><a href="#cb45-13" tabindex="-1"></a></span>
-<span id="cb45-14"><a href="#cb45-14" tabindex="-1"></a><span class="co"># Departures #</span></span>
-<span id="cb45-15"><a href="#cb45-15" tabindex="-1"></a>departs <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(<span class="fu">c</span>(<span class="st">&quot;2015-09-04&quot;</span>,<span class="st">&quot;2015-08-22&quot;</span>,<span class="st">&quot;2015-09-04&quot;</span>,<span class="st">&quot;2015-08-28&quot;</span>,<span class="st">&quot;2015-08-24&quot;</span>,<span class="st">&quot;2015-08-24&quot;</span>,<span class="st">&quot;2015-08-30&quot;</span>))</span>
-<span id="cb45-16"><a href="#cb45-16" tabindex="-1"></a></span>
-<span id="cb45-17"><a href="#cb45-17" tabindex="-1"></a><span class="co"># read in the daily location data #</span></span>
-<span id="cb45-18"><a href="#cb45-18" tabindex="-1"></a>EstLocs <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;Yellow Warbler_Witynski (1).csv&quot;</span>)</span>
-<span id="cb45-19"><a href="#cb45-19" tabindex="-1"></a></span>
-<span id="cb45-20"><a href="#cb45-20" tabindex="-1"></a>YEWAsf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(EstLocs, <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;location.long&quot;</span>,<span class="st">&quot;location.lat&quot;</span>), <span class="at">crs =</span> <span class="dv">4326</span>)</span>
-<span id="cb45-21"><a href="#cb45-21" tabindex="-1"></a></span>
-<span id="cb45-22"><a href="#cb45-22" tabindex="-1"></a>caplocs_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(<span class="at">bird =</span> <span class="fu">c</span>(<span class="dv">129</span>,<span class="dv">132</span>,<span class="dv">136</span>,<span class="dv">137</span>,<span class="dv">139</span>,<span class="dv">144</span>,<span class="dv">146</span>),</span>
-<span id="cb45-23"><a href="#cb45-23" tabindex="-1"></a>                                  <span class="at">longitude =</span> caplocs[,<span class="dv">1</span>],</span>
-<span id="cb45-24"><a href="#cb45-24" tabindex="-1"></a>                                  <span class="at">latitude =</span> caplocs[,<span class="dv">2</span>]),</span>
-<span id="cb45-25"><a href="#cb45-25" tabindex="-1"></a>                       <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;longitude&quot;</span>,<span class="st">&quot;latitude&quot;</span>),</span>
-<span id="cb45-26"><a href="#cb45-26" tabindex="-1"></a>                       <span class="at">crs =</span> <span class="dv">4326</span>)</span>
-<span id="cb45-27"><a href="#cb45-27" tabindex="-1"></a></span>
-<span id="cb45-28"><a href="#cb45-28" tabindex="-1"></a><span class="co"># project into meters #</span></span>
-<span id="cb45-29"><a href="#cb45-29" tabindex="-1"></a>YEWAmeters <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(YEWAsf,<span class="st">&#39;ESRI:102010&#39;</span>)</span>
-<span id="cb45-30"><a href="#cb45-30" tabindex="-1"></a>CapMeters <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(caplocs_sf, <span class="st">&#39;ESRI:102010&#39;</span>)</span>
-<span id="cb45-31"><a href="#cb45-31" tabindex="-1"></a></span>
-<span id="cb45-32"><a href="#cb45-32" tabindex="-1"></a><span class="co"># split birds into their own data #</span></span>
-<span id="cb45-33"><a href="#cb45-33" tabindex="-1"></a></span>
-<span id="cb45-34"><a href="#cb45-34" tabindex="-1"></a>YEWAests <span class="ot">&lt;-</span> <span class="fu">split</span>(YEWAmeters, <span class="at">f=</span>YEWAmeters<span class="sc">$</span><span class="st">&#39;individual.local.identifier&#39;</span>)</span>
-<span id="cb45-35"><a href="#cb45-35" tabindex="-1"></a></span>
-<span id="cb45-36"><a href="#cb45-36" tabindex="-1"></a><span class="co"># Empirical estimates of bias and vcov, but on mean locations by bird</span></span>
-<span id="cb45-37"><a href="#cb45-37" tabindex="-1"></a>ests2 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(<span class="at">x =</span> YEWAests,</span>
-<span id="cb45-38"><a href="#cb45-38" tabindex="-1"></a>                <span class="at">lats =</span> <span class="fu">st_coordinates</span>(CapMeters)[,<span class="dv">2</span>],</span>
-<span id="cb45-39"><a href="#cb45-39" tabindex="-1"></a>                <span class="at">lng =</span> <span class="fu">st_coordinates</span>(CapMeters)[,<span class="dv">1</span>],</span>
-<span id="cb45-40"><a href="#cb45-40" tabindex="-1"></a>                <span class="at">z =</span> departs,</span>
-<span id="cb45-41"><a href="#cb45-41" tabindex="-1"></a>                <span class="at">FUN =</span> <span class="cf">function</span>(x,lats,lng,z){</span>
-<span id="cb45-42"><a href="#cb45-42" tabindex="-1"></a>                  <span class="co"># keep only data from deployment until departure from breeding #</span></span>
-<span id="cb45-43"><a href="#cb45-43" tabindex="-1"></a>                  newdata <span class="ot">&lt;-</span> x[x<span class="sc">$</span>timestamp<span class="sc">&lt;</span>z,]</span>
-<span id="cb45-44"><a href="#cb45-44" tabindex="-1"></a></span>
-<span id="cb45-45"><a href="#cb45-45" tabindex="-1"></a>                  <span class="co"># calculate the difference in meters from estimated location</span></span>
-<span id="cb45-46"><a href="#cb45-46" tabindex="-1"></a>                  <span class="co"># to actual capture location</span></span>
-<span id="cb45-47"><a href="#cb45-47" tabindex="-1"></a>                  long <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">st_coordinates</span>(newdata)[,<span class="dv">1</span>]) <span class="sc">-</span> lng</span>
-<span id="cb45-48"><a href="#cb45-48" tabindex="-1"></a>                  lat <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">st_coordinates</span>(newdata)[,<span class="dv">2</span>]) <span class="sc">-</span> lats</span>
-<span id="cb45-49"><a href="#cb45-49" tabindex="-1"></a></span>
-<span id="cb45-50"><a href="#cb45-50" tabindex="-1"></a>                  <span class="fu">return</span>(<span class="fu">c</span>(<span class="at">difflong =</span> long,</span>
-<span id="cb45-51"><a href="#cb45-51" tabindex="-1"></a>                                    <span class="at">difflat =</span> lat))},</span>
-<span id="cb45-52"><a href="#cb45-52" tabindex="-1"></a></span>
-<span id="cb45-53"><a href="#cb45-53" tabindex="-1"></a>               <span class="at">SIMPLIFY =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb45-54"><a href="#cb45-54" tabindex="-1"></a></span>
-<span id="cb45-55"><a href="#cb45-55" tabindex="-1"></a>(geoBiasYEWA <span class="ot">&lt;-</span> <span class="fu">apply</span>(ests2, <span class="dv">1</span>, mean)) <span class="co">#Bias</span></span>
-<span id="cb45-56"><a href="#cb45-56" tabindex="-1"></a><span class="co">#  difflong   difflat</span></span>
-<span id="cb45-57"><a href="#cb45-57" tabindex="-1"></a><span class="co"># -6512.898 50964.969</span></span>
-<span id="cb45-58"><a href="#cb45-58" tabindex="-1"></a></span>
-<span id="cb45-59"><a href="#cb45-59" tabindex="-1"></a><span class="fu">apply</span>(ests2, <span class="dv">1</span>, var) <span class="co">#Variances</span></span>
-<span id="cb45-60"><a href="#cb45-60" tabindex="-1"></a><span class="fu">apply</span>(ests2, <span class="dv">1</span>, sd)</span>
-<span id="cb45-61"><a href="#cb45-61" tabindex="-1"></a></span>
-<span id="cb45-62"><a href="#cb45-62" tabindex="-1"></a>(geoVCovYEWA <span class="ot">&lt;-</span> <span class="fu">cov</span>(<span class="fu">t</span>(ests2))) <span class="co">#Variance-covariance matrix</span></span>
-<span id="cb45-63"><a href="#cb45-63" tabindex="-1"></a></span>
-<span id="cb45-64"><a href="#cb45-64" tabindex="-1"></a><span class="co">#            difflong    difflat</span></span>
-<span id="cb45-65"><a href="#cb45-65" tabindex="-1"></a><span class="co"># difflong  259401516 -894387951</span></span>
-<span id="cb45-66"><a href="#cb45-66" tabindex="-1"></a><span class="co"># difflat  -894387951 4708578511</span></span></code></pre></div>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" tabindex="-1"></a><span class="co"># Capture locations #</span></span>
+<span id="cb43-2"><a href="#cb43-2" tabindex="-1"></a><span class="co"># See dates and summary data from Table 1. page 44.</span></span>
+<span id="cb43-3"><a href="#cb43-3" tabindex="-1"></a><span class="co"># Maine #129</span></span>
+<span id="cb43-4"><a href="#cb43-4" tabindex="-1"></a><span class="co"># Maine #132</span></span>
+<span id="cb43-5"><a href="#cb43-5" tabindex="-1"></a><span class="co"># Maine #136</span></span>
+<span id="cb43-6"><a href="#cb43-6" tabindex="-1"></a><span class="co"># Maine #137</span></span>
+<span id="cb43-7"><a href="#cb43-7" tabindex="-1"></a><span class="co"># Wisconsin #139</span></span>
+<span id="cb43-8"><a href="#cb43-8" tabindex="-1"></a><span class="co"># Wisconsin #144</span></span>
+<span id="cb43-9"><a href="#cb43-9" tabindex="-1"></a><span class="co"># Wisconsin #146</span></span>
+<span id="cb43-10"><a href="#cb43-10" tabindex="-1"></a></span>
+<span id="cb43-11"><a href="#cb43-11" tabindex="-1"></a>caplocs <span class="ot">&lt;-</span> <span class="fu">cbind</span>(<span class="fu">c</span>(<span class="fu">rep</span>(<span class="sc">-</span><span class="fl">70.6142</span>,<span class="dv">4</span>),<span class="fu">rep</span>(<span class="sc">-</span><span class="fl">87.8123</span>,<span class="dv">3</span>)),</span>
+<span id="cb43-12"><a href="#cb43-12" tabindex="-1"></a>                 <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fl">42.9891</span>,<span class="dv">4</span>),<span class="fu">rep</span>(<span class="fl">42.5000</span>,<span class="dv">3</span>)))</span>
+<span id="cb43-13"><a href="#cb43-13" tabindex="-1"></a></span>
+<span id="cb43-14"><a href="#cb43-14" tabindex="-1"></a><span class="co"># Departures #</span></span>
+<span id="cb43-15"><a href="#cb43-15" tabindex="-1"></a>departs <span class="ot">&lt;-</span> <span class="fu">as.POSIXct</span>(<span class="fu">c</span>(<span class="st">&quot;2015-09-04&quot;</span>,<span class="st">&quot;2015-08-22&quot;</span>,<span class="st">&quot;2015-09-04&quot;</span>,<span class="st">&quot;2015-08-28&quot;</span>,<span class="st">&quot;2015-08-24&quot;</span>,<span class="st">&quot;2015-08-24&quot;</span>,<span class="st">&quot;2015-08-30&quot;</span>))</span>
+<span id="cb43-16"><a href="#cb43-16" tabindex="-1"></a></span>
+<span id="cb43-17"><a href="#cb43-17" tabindex="-1"></a><span class="co"># read in the daily location data #</span></span>
+<span id="cb43-18"><a href="#cb43-18" tabindex="-1"></a>EstLocs <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">&quot;Yellow Warbler_Witynski (1).csv&quot;</span>)</span>
+<span id="cb43-19"><a href="#cb43-19" tabindex="-1"></a></span>
+<span id="cb43-20"><a href="#cb43-20" tabindex="-1"></a>YEWAsf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(EstLocs, <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;location.long&quot;</span>,<span class="st">&quot;location.lat&quot;</span>), <span class="at">crs =</span> <span class="dv">4326</span>)</span>
+<span id="cb43-21"><a href="#cb43-21" tabindex="-1"></a></span>
+<span id="cb43-22"><a href="#cb43-22" tabindex="-1"></a>caplocs_sf <span class="ot">&lt;-</span> <span class="fu">st_as_sf</span>(<span class="fu">data.frame</span>(<span class="at">bird =</span> <span class="fu">c</span>(<span class="dv">129</span>,<span class="dv">132</span>,<span class="dv">136</span>,<span class="dv">137</span>,<span class="dv">139</span>,<span class="dv">144</span>,<span class="dv">146</span>),</span>
+<span id="cb43-23"><a href="#cb43-23" tabindex="-1"></a>                                  <span class="at">longitude =</span> caplocs[,<span class="dv">1</span>],</span>
+<span id="cb43-24"><a href="#cb43-24" tabindex="-1"></a>                                  <span class="at">latitude =</span> caplocs[,<span class="dv">2</span>]),</span>
+<span id="cb43-25"><a href="#cb43-25" tabindex="-1"></a>                       <span class="at">coords =</span> <span class="fu">c</span>(<span class="st">&quot;longitude&quot;</span>,<span class="st">&quot;latitude&quot;</span>),</span>
+<span id="cb43-26"><a href="#cb43-26" tabindex="-1"></a>                       <span class="at">crs =</span> <span class="dv">4326</span>)</span>
+<span id="cb43-27"><a href="#cb43-27" tabindex="-1"></a></span>
+<span id="cb43-28"><a href="#cb43-28" tabindex="-1"></a><span class="co"># project into meters #</span></span>
+<span id="cb43-29"><a href="#cb43-29" tabindex="-1"></a>YEWAmeters <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(YEWAsf,<span class="st">&#39;ESRI:102010&#39;</span>)</span>
+<span id="cb43-30"><a href="#cb43-30" tabindex="-1"></a>CapMeters <span class="ot">&lt;-</span> sf<span class="sc">::</span><span class="fu">st_transform</span>(caplocs_sf, <span class="st">&#39;ESRI:102010&#39;</span>)</span>
+<span id="cb43-31"><a href="#cb43-31" tabindex="-1"></a></span>
+<span id="cb43-32"><a href="#cb43-32" tabindex="-1"></a><span class="co"># split birds into their own data #</span></span>
+<span id="cb43-33"><a href="#cb43-33" tabindex="-1"></a></span>
+<span id="cb43-34"><a href="#cb43-34" tabindex="-1"></a>YEWAests <span class="ot">&lt;-</span> <span class="fu">split</span>(YEWAmeters, <span class="at">f=</span>YEWAmeters<span class="sc">$</span><span class="st">&#39;individual.local.identifier&#39;</span>)</span>
+<span id="cb43-35"><a href="#cb43-35" tabindex="-1"></a></span>
+<span id="cb43-36"><a href="#cb43-36" tabindex="-1"></a><span class="co"># Empirical estimates of bias and vcov, but on mean locations by bird</span></span>
+<span id="cb43-37"><a href="#cb43-37" tabindex="-1"></a>ests2 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(<span class="at">x =</span> YEWAests,</span>
+<span id="cb43-38"><a href="#cb43-38" tabindex="-1"></a>                <span class="at">lats =</span> <span class="fu">st_coordinates</span>(CapMeters)[,<span class="dv">2</span>],</span>
+<span id="cb43-39"><a href="#cb43-39" tabindex="-1"></a>                <span class="at">lng =</span> <span class="fu">st_coordinates</span>(CapMeters)[,<span class="dv">1</span>],</span>
+<span id="cb43-40"><a href="#cb43-40" tabindex="-1"></a>                <span class="at">z =</span> departs,</span>
+<span id="cb43-41"><a href="#cb43-41" tabindex="-1"></a>                <span class="at">FUN =</span> <span class="cf">function</span>(x,lats,lng,z){</span>
+<span id="cb43-42"><a href="#cb43-42" tabindex="-1"></a>                  <span class="co"># keep only data from deployment until departure from breeding #</span></span>
+<span id="cb43-43"><a href="#cb43-43" tabindex="-1"></a>                  newdata <span class="ot">&lt;-</span> x[x<span class="sc">$</span>timestamp<span class="sc">&lt;</span>z,]</span>
+<span id="cb43-44"><a href="#cb43-44" tabindex="-1"></a></span>
+<span id="cb43-45"><a href="#cb43-45" tabindex="-1"></a>                  <span class="co"># calculate the difference in meters from estimated location</span></span>
+<span id="cb43-46"><a href="#cb43-46" tabindex="-1"></a>                  <span class="co"># to actual capture location</span></span>
+<span id="cb43-47"><a href="#cb43-47" tabindex="-1"></a>                  long <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">st_coordinates</span>(newdata)[,<span class="dv">1</span>]) <span class="sc">-</span> lng</span>
+<span id="cb43-48"><a href="#cb43-48" tabindex="-1"></a>                  lat <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">st_coordinates</span>(newdata)[,<span class="dv">2</span>]) <span class="sc">-</span> lats</span>
+<span id="cb43-49"><a href="#cb43-49" tabindex="-1"></a></span>
+<span id="cb43-50"><a href="#cb43-50" tabindex="-1"></a>                  <span class="fu">return</span>(<span class="fu">c</span>(<span class="at">difflong =</span> long,</span>
+<span id="cb43-51"><a href="#cb43-51" tabindex="-1"></a>                                    <span class="at">difflat =</span> lat))},</span>
+<span id="cb43-52"><a href="#cb43-52" tabindex="-1"></a></span>
+<span id="cb43-53"><a href="#cb43-53" tabindex="-1"></a>               <span class="at">SIMPLIFY =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb43-54"><a href="#cb43-54" tabindex="-1"></a></span>
+<span id="cb43-55"><a href="#cb43-55" tabindex="-1"></a>(geoBiasYEWA <span class="ot">&lt;-</span> <span class="fu">apply</span>(ests2, <span class="dv">1</span>, mean)) <span class="co">#Bias</span></span>
+<span id="cb43-56"><a href="#cb43-56" tabindex="-1"></a><span class="co">#  difflong   difflat</span></span>
+<span id="cb43-57"><a href="#cb43-57" tabindex="-1"></a><span class="co"># -6512.898 50964.969</span></span>
+<span id="cb43-58"><a href="#cb43-58" tabindex="-1"></a></span>
+<span id="cb43-59"><a href="#cb43-59" tabindex="-1"></a><span class="fu">apply</span>(ests2, <span class="dv">1</span>, var) <span class="co">#Variances</span></span>
+<span id="cb43-60"><a href="#cb43-60" tabindex="-1"></a><span class="fu">apply</span>(ests2, <span class="dv">1</span>, sd)</span>
+<span id="cb43-61"><a href="#cb43-61" tabindex="-1"></a></span>
+<span id="cb43-62"><a href="#cb43-62" tabindex="-1"></a>(geoVCovYEWA <span class="ot">&lt;-</span> <span class="fu">cov</span>(<span class="fu">t</span>(ests2))) <span class="co">#Variance-covariance matrix</span></span>
+<span id="cb43-63"><a href="#cb43-63" tabindex="-1"></a></span>
+<span id="cb43-64"><a href="#cb43-64" tabindex="-1"></a><span class="co">#            difflong    difflat</span></span>
+<span id="cb43-65"><a href="#cb43-65" tabindex="-1"></a><span class="co"># difflong  259401516 -894387951</span></span>
+<span id="cb43-66"><a href="#cb43-66" tabindex="-1"></a><span class="co"># difflat  -894387951 4708578511</span></span></code></pre></div>
 </div>
 <div id="literature-cited" class="section level3">
 <h3>Literature Cited</h3>

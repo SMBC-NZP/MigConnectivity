@@ -25,7 +25,7 @@ bias and variance metrics using light-level geolocator data derived from the
 [SGAT](#SGAT_bias) and [FLightR](#FLightR_bias) packages.
 
 
-## Using data integration to estimate the strength of migratory connectivitiy 
+## Using data integration to estimate the strength of migratory connectivity 
 
 This MigConnectivity package provides tools for estimating the pattern and strength
 of migratory connectivity. We've developed methods to integrate intrinsic markers,
@@ -469,7 +469,7 @@ eBirdRelAbund <- function(wks, abund, regions, names=regions[,1], fun = max,
   thing <- abund[[wks]]
   for (j in 1:nrow(regions)){
     region <- regions[j, ]
-    rastvals <- raster::extract(thing, region)[,1 + 1:length(wks)]
+    rastvals <- terra::extract(thing, terra::vect(region))[,1 + 1:length(wks)]
     if (seasonalAlready) {
       regionSum[j] <- sum(rastvals, na.rm = TRUE)
     }
@@ -488,19 +488,23 @@ eBirdRelAbund <- function(wks, abund, regions, names=regions[,1], fun = max,
   return(testII)
 }
 
+targetSitesProj <- sf::st_transform(targetSitesYEWA, terra::crs(rastAbundMed))
+originSitesProj <- sf::st_transform(YEWA_origin_sites, terra::crs(rastAbundMed))
+
 relAbundYEWAWint <- eBirdRelAbund(w, rastAbundMed, targetSitesProj,
-                                  targetNames)
+                                  targetNames, mean)
 relAbundYEWABreed <- eBirdRelAbund(b, rastAbundMed, originSitesProj,
-                                   originNames)
+                                   originNames, mean)
 
 ```
 ```{r, echo = FALSE}
-relAbundYEWABreed <- c(Arctic = 0.1690379, 'Pacific Northwest' = 0.1245764,  
-                       Southwest = 0.2838745, Central = 0.2471317,
-                       East = 0.1753794)
-relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.08807831,    
-                      'Atlantic Lowland Mexico' = 0.16450576,
-                      'Central America' = 0.42872615, 'South America' = 0.31868978)
+relAbundYEWABreed <- c(Arctic = 0.1711898, 'Pacific Northwest' = 0.1180323,  
+                       Southwest = 0.2857159, Central = 0.2415061,
+                       East = 0.1835559)
+relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.08557703,    
+                      'Atlantic Lowland Mexico' = 0.16889791,
+                      'Central America' = 0.46434053, 
+                      'South America' = 0.28118453)
 ```
 ```{r}
 relAbundYEWAWint
