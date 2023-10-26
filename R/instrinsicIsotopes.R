@@ -1,39 +1,50 @@
 #' Generate probabilistic isotope assignments
 #'
-#' The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
-#' a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
-#' Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
-#' waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation.
-#' See \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+#' The \code{isoAssign} function generates origin assignments using
+#' stable-hydrogen isotopes in tissue. The function generates a probability
+#' surface of origin assignment from a vector of stable-isotope values for each
+#' animal/sample of interest. Probabilistic assignments are constructed by first
+#' converting observed stable-isotope ratios (isoscape) in either precipitation
+#' or surface waters into a 'tissuescape' using a user-provided intercept, slope
+#' and standard deviation. See
+#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
 #'
 #' @param isovalues vector of tissue isotope values
 #' @param isoSTD standard deviation from calibration
 #' @param intercept intercept value from calibration
 #' @param slope value from calibration
-#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.67
-#' @param restrict2Likely if \code{TRUE} restricts locations to fall within the 'likely' assignment
-#'        locations.
-#' @param nSamples integer specifying how many random samples to draw from a multinomial distribution.
-#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON) defining species range. Assignments are restricted to these
-#'        areas.
-#' @param relAbund raster (\code{SpatRast}) with relative abundance (must match extent of isotope assignment)
+#' @param odds odds ratio to use to set likely and unlikely locations defaults
+#'        to 0.67
+#' @param restrict2Likely if \code{TRUE} restricts locations to fall within the
+#'        'likely' assignment locations
+#' @param nSamples integer specifying how many random samples to draw from a
+#'        multinomial distribution.
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON) defining
+#'        species range. Assignments are restricted to these areas.
+#' @param relAbund raster (\code{SpatRast}) with relative abundance (must match
+#'        extent of isotope assignment)
 #' @param isoWeight weighting value to apply to isotope assignment
 #' @param abundWeight weighting value to apply to relative abundance prior
-#' @param population vector identifying location where animal was captured. Same order as \code{isovalues}
-#' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
-#'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
+#' @param population vector identifying location where animal was captured.
+#'        Same order as \code{isovalues}
+#' @param assignExtent definition for the extent of the assignment. Can be used
+#'        in place of \code{sppShapefile} to limit assignment. Input should
+#'        follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and
+#'        latitude
 #' @param element The elemental isotope of interest. Currently the only
-#'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
+#'        elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
 #' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
-#'     which returns the isotopes ratio found in precipitation.
+#'        which returns the isotopes ratio found in precipitation
 #' @param period The time period of interest. If 'Annual' returns a raster
-#'     of mean annual values in precipitation for the \code{element}. If
-#'     'GrowingSeason' returns growing season values in precipitation for
-#'      \code{element} of interest.
-#' @param seed numeric value fed to \code{set.seed} for random number generation. Default = NULL.
-#' @param verbose takes values 0, 1 (default) or 2. 0 prints no output during run. 1 prints
-#'  a message detailing where in the process the function is. 2 prints the animal currently being sampled.
+#'        of mean annual values in precipitation for the \code{element}. If
+#'        'GrowingSeason' returns growing season values in precipitation for
+#'        \code{element} of interest
+#' @param seed numeric value fed to \code{set.seed} for random number
+#'        generation. Default = NULL
+#' @param verbose takes values 0, 1 (default) or 2. 0 prints no output during
+#'        run. 1 prints a message detailing where in the process the function
+#'        is. 2 prints the animal currently being sampled.
 #' @return returns an \code{isoAssign} object containing the following:
 #'  \describe{
 #'   \item{\code{probassign}}{SpatRast stack of individual probabilistic assignments}
@@ -43,9 +54,12 @@
 #'   \item{\code{probDF}}{data.frame of individual probability surfaces}
 #'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
 #'   \item{\code{popDF}}{data.frame of population level assignment}
-#'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
-#'   \item{\code{targetSites}}{\code{sf - MULTIPOLYGON} layer representing isotope bands equivalent to \code{isoSTD}}
-#'   \item{\code{RandomSeed}}{the RNG seed used when generating locations from the multinomial distribution}
+#'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for
+#'   single cell assignment}
+#'   \item{\code{targetSites}}{\code{sf - MULTIPOLYGON} layer representing
+#'   isotope bands equivalent to \code{isoSTD}}
+#'   \item{\code{RandomSeed}}{the RNG seed used when generating locations from
+#'   the multinomial distribution}
 #'   }
 #'
 #' @seealso{\code{\link{weightAssign}}}
@@ -102,7 +116,7 @@ isoAssign <- function(isovalues,
                       surface = FALSE,
                       period = "Annual",
                       seed = NULL,
-                      verbose=1){
+                      verbose=1) {
 # force verbose to default when outside specified range.
 if(!(verbose %in% c(0,1,2))){verbose = 1}
 
@@ -422,8 +436,8 @@ return(isoAssignReturn)
 #'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
 #' @param surface if "TRUE" returns surface water values. Default is 'FALSE'
 #'     which returns the isotopes ratio found in precipitation.
-#' @param period The time period of interest. If 'Annual' (default) returns a raster
-#'     of mean annual values in precipitation for the \code{element}. If
+#' @param period The time period of interest. If 'Annual' (default) returns a
+#'     raster of mean annual values in precipitation for the \code{element}. If
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
 #'
@@ -679,33 +693,38 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 #'
-#' @param knownLocs matrix of capture locations of the same length as \code{isovalues}
+#' @param knownLocs matrix of capture locations of the same length as
+#'        \code{isovalues}
 #' @param isovalues vector of tissue isotope values from known locations
 #' @param isoSTD standard deviation from calibration
 #' @param intercept intercept value from calibration
 #' @param slope value from calibration
-#' @param odds odds ratio to use to set likely and unlikely locations defaults to 0.67
+#' @param odds odds ratio to use to set likely and unlikely locations defaults
+#'        to 0.67
 #' @param relAbund raster layer of relative abundance that sums to 1.
-#' @param weightRange vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
-#'        Default = c(-1,1)
-#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
-#'        areas.
-#' @param assignExtent definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
-#'        limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
+#' @param weightRange vector of length 2 within minimum and maximum values to
+#'        weight isotope and relative abundance. Default = c(-1,1)
+#' @param sppShapefile A polygon spatial layer (sf - MULTIPOLYGON) defining
+#'        species range. Assignments are restricted to these areas.
+#' @param assignExtent definition for the extent of the assignment. Can be used
+#'        in place of \code{sppShapefile} to limit assignment. Input should
+#'        follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
 #' @param element The elemental isotope of interest. Currently the only
-#'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
+#'        elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
 #' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
-#'     which returns the isotopes ratio found in precipitation.
+#'        which returns the isotopes ratio found in precipitation.
 #' @param period The time period of interest. If 'Annual' returns a raster
-#'     of mean annual values in precipitation for the \code{element}. If
-#'     'GrowingSeason' returns growing season values in precipitation for
-#'      \code{element} of interest.
+#'        of mean annual values in precipitation for the \code{element}. If
+#'        'GrowingSeason' returns growing season values in precipitation for
+#'        \code{element} of interest.
 #'
 #' @return returns an \code{weightAssign} object containing the following:
 #'   \describe{
 #'    \item{\code{top}}{data.frame with the optimal weightings}
-#'    \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
-#'    \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
+#'    \item{\code{frontier}}{data.frame with values that fall along the Pareto
+#'      frontier}
+#'    \item{\code{performance}}{data.frame with error rate and assignment area
+#'      for each weight combination}
 #' }
 #'
 #' @references
