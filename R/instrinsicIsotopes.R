@@ -36,9 +36,9 @@
 #'  a message detailing where in the process the function is. 2 prints the animal currently being sampled.
 #' @return returns an \code{isoAssign} object containing the following:
 #'  \describe{
-#'   \item{\code{probassign}}{raster stack of individual probabilistic assignments}
-#'   \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
-#'   \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
+#'   \item{\code{probassign}}{SpatRast stack of individual probabilistic assignments}
+#'   \item{\code{oddsassign}}{SpatRast stack that includes likely vs unlikely origin for each animal}
+#'   \item{\code{popassign}}{a SpatRast for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
 #'   If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
 #'   \item{\code{probDF}}{data.frame of individual probability surfaces}
 #'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}

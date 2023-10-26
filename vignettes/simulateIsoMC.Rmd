@@ -20,9 +20,9 @@ knitr::opts_chunk$set(collapse = TRUE,
 
 Load required packages
 ```{r eval = FALSE}
-library(raster)
+library(terra)
 library(MigConnectivity)
-library(rgeos)
+library(sf)
 ```
 
 The following is a simulation that tests the how the spatial arrangement of target sites influences MC from stable-hydrogen isotopes. The following simulation is run using data generated within the code but we use the Ovenbird as an example species. 
@@ -35,15 +35,15 @@ download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity
                      "/master/data-raw/Spatial_Layers/bbsoven.txt"),
               destfile = "bbsoven.txt")
 
-OVENabund <- raster::raster("bbsoven.txt")
+OVENabund <- terra::rast("bbsoven.txt")
 
 OVENdist <- OVENabund
 OVENdist[OVENdist>0]<-1
 OVENdist[OVENdist==0]<-NA
 
-OVEN_single_poly <- raster::rasterToPolygons(OVENdist, dissolve = TRUE)
-raster::crs(OVEN_single_poly) <- MigConnectivity::projections$WGS84
-raster::crs(OVENabund) <- MigConnectivity::projections$WGS84
+OVEN_single_poly <- terra::as.polygons(OVENdist)
+terra::crs(OVEN_single_poly) <- MigConnectivity::projections$WGS84
+terra::crs(OVENabund) <- MigConnectivity::projections$WGS84
 ```
 To complete the simulation we need a template to ensure the raster resolution is the same as the assignment raster. To do this, we use the isotope data as our template. We grab the isotope base-map using the <code>getIsoMap</code> function. 
 ```{r eval = FALSE}
@@ -53,13 +53,13 @@ rasterTemplate <- MigConnectivity::getIsoMap()
 
 ### Crop template to distribution and mask with distribution
 ```{r eval = FALSE}
-rasterTemplate <- raster::mask(raster::crop(rasterTemplate, OVEN_single_poly),
+rasterTemplate <- terra::mask(terra::crop(terra::rast(rasterTemplate), OVEN_single_poly),
                                OVEN_single_poly)
 
 # rasterize the distribution for relative abundance so that raster
 # dimensions and resolution match the isotope layer
-relativeAbund <- projectRaster(OVENabund,rasterTemplate)
-relativeAbund  <- relativeAbund/cellStats(relativeAbund,sum)
+relativeAbund <- terra::project(OVENabund,rasterTemplate)
+relativeAbund  <- relativeAbund/terra::global(relativeAbund, fun = "sum")
 ```
 
 ## Generate target sites
@@ -68,54 +68,66 @@ The simulation is focused on the effect of target sites on MC when using stable-
 # generate target sites
 targetRanges <- vector('list',5)
 # 3' latitude
-targetRanges[[1]] <- rasterToPolygons(raster(xmn = -180,
-                                         xmx = -40,
-                                         ymn = 25,
-                                         ymx = 85,
-                                         res = c(140,3)))
+targetRanges[[1]] <- terra::as.polygons(terra::rast(xmin = -180,
+                                         xmax = -40,
+                                         ymin = 25,
+                                         ymax = 85,
+                                         resolution = c(140,3)))
 
 # 5' latitude
-targetRanges[[2]] <- rasterToPolygons(raster(xmn = -180,
-                                             xmx = -40,
-                                             ymn = 25,
-                                             ymx = 85,
-                                             res = c(140,5)))
+targetRanges[[2]] <- terra::as.polygons(terra::rast(xmin = -180,
+                                             xmax = -40,
+                                             ymin = 25,
+                                             ymax = 85,
+                                             resolution = c(140,5)))
 
 # 10' latitude
-targetRanges[[3]] <- rasterToPolygons(raster(xmn = -180,
-                                         xmx = -40,
-                                         ymn = 25,
-                                         ymx = 85,
-                                         res = c(140,10)))
+targetRanges[[3]] <- terra::as.polygons(terra::rast(xmin = -180,
+                                         xmax = -40,
+                                         ymin = 25,
+                                         ymax = 85,
+                                         resolution = c(140,10)))
 
 # 12 isotope units
 featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
-iso <- crop(featherIso, extent(c(-180,-40,25,85)))
-isocut <- cut(iso, breaks= seq(cellStats(iso,min),cellStats(iso,max),12))
-targetRanges[[4]] <- rasterToPolygons(isocut, dissolve = TRUE)
+iso <- terra::crop(terra::rast(featherIso), terra::ext(c(-180,-40,25,85)))
+isocut <- terra::classify(iso, rcl = seq(terra::global(iso, fun = "min", na.rm = TRUE)$min, terra::global(iso, fun = "max", na.rm = TRUE)$max,12))
+targetRanges[[4]] <- terra::as.polygons(isocut)
 
 
 # 12*2 isotope units
-isocut <- cut(iso, breaks= seq(cellStats(iso,min),cellStats(iso,max),24))
-targetRanges[[5]] <- rasterToPolygons(isocut, dissolve = TRUE)
+isocut <- terra::classify(iso, rcl = seq(terra::global(iso, fun = "min", na.rm = TRUE)$min, terra::global(iso,fun = "max",na.rm = TRUE)$max,24))
+targetRanges[[5]] <- terra::as.polygons(isocut)
 
+
+TR <- lapply(targetRanges, sf::st_as_sf)
+vTR <- lapply(TR, sf::st_make_valid)
+vTR <- lapply(vTR, FUN = function(x){sf::st_set_crs(x, 4326)})
+
+sf_use_s2(FALSE)
+OVEN_single_poly <- sf::st_as_sf(OVEN_single_poly) %>% sf::st_make_valid()
 
 
 # Keep only the targetSites that intersect with the OVEN polygon
-targetRanges <- lapply(targetRanges,raster::intersect,OVEN_single_poly)
-targetRanges <- lapply(targetRanges, sp::spTransform,CRS(projections$WGS84))
+targetRanges <- lapply(vTR, FUN = function(x){sf::st_intersection(x,OVEN_single_poly)})
+
+targetRanges <- lapply(targetRanges, FUN = function(x){y <- sf::st_as_sf(x)
+                                                       z <- sf::st_transform(y,4326)
+                                                       return(z)})
 
 for(i in 1:5){
 targetRanges[[i]]$Target <- 1:nrow(targetRanges[[i]])
 }
+
+sf_use_s2(TRUE)
 ```
 
 #### Generate simulated data
 ```{r, eval = FALSE}
 #Generate random breeding locations using the 10' target sites
-Site1 <- spsample(targetRanges[[3]][1:2,],n=100,type = "random")
-Site2 <- spsample(targetRanges[[3]][2:3,],n=100, type = "random")
-Site3 <- spsample(targetRanges[[3]][2:4,], n= 100, type = "random")
+Site1 <- st_as_sf(sf::st_sample(targetRanges[[3]][1:2,], size =100, type = "random"))
+Site2 <- st_as_sf(sf::st_sample(targetRanges[[3]][2:3,], size =100, type = "random"))
+Site3 <- st_as_sf(sf::st_sample(targetRanges[[3]][2:4,], size =100, type = "random"))
 
 # Capture coordinates
 capCoords <- array(NA,c(3,2))
@@ -127,11 +139,11 @@ featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
 
 # Extract simulated data
 iso_dat <- data.frame(Site = rep(1:3,each = 100),
-                      xcoords = c(Site1@coords[,1],Site2@coords[,1],Site3@coords[,1]),
-                      ycoords = c(Site1@coords[,2],Site2@coords[,2],Site3@coords[,2]),
-                      targetSite = over(rbind(Site1,Site2,Site3),
-                                        targetRanges[[3]])$Target,
-                      featherIso = extract(featherIso,rbind(Site1,Site2,Site3)))
+                      xcoords = c(sf::st_coordinates(Site1)[,1],sf::st_coordinates(Site2)[,1],sf::st_coordinates(Site3)[,1]),
+                      ycoords = c(sf::st_coordinates(Site1)[,2],sf::st_coordinates(Site2)[,2],sf::st_coordinates(Site3)[,2]),
+                      targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,Site2,Site3),
+                                        targetRanges[[3]]))),
+                      featherIso = terra::extract(terra::rast(featherIso),terra::vect(rbind(Site1,Site2,Site3))))
 
 iso_dat <- iso_dat[complete.cases(iso_dat),]
 
@@ -142,15 +154,14 @@ for(i in 1:nrow(sim_psi)){
   sim_psi[i,]<-sim_psi[i,]/sum(sim_psi[i,])
 }
 
-states <- raster::getData("GADM", country = "United States", level = 1)
-originSites <- states[(states$NAME_1 %in% c("Texas","Louisiana","Florida")),]
-originSites <- sp::spTransform(originSites, 
-                               sp::CRS(MigConnectivity::projections$WGS84))
-
-originDist <- MigConnectivity::distFromPos(rgeos::gCentroid(originSites,
-                                                            byid = TRUE)@coords)
-targetDistMC <- MigConnectivity::distFromPos(rgeos::gCentroid(targetRanges[[3]], 
-                                                              byid = TRUE)@coords)
+states <- rnaturalearth::ne_states(country = "United States of America", returnclass = "sf")
+originSites <- states[(states$woe_name %in% c("Texas","Louisiana","Florida")),]
+originSites <- sf::st_transform(originSites, 4326)
+                               
+originDist <- MigConnectivity::distFromPos(st_coordinates(sf::st_centroid(originSites,
+                                                            byid = TRUE)))
+targetDistMC <- MigConnectivity::distFromPos(sf::st_coordinates(sf::st_centroid(targetRanges[[3]], 
+                                                              byid = TRUE)))
 ```
 
 ## Start of simulations
@@ -189,17 +200,18 @@ a <- Sys.time()
 output.sims <- foreach(target=1:nTargetSetups,
                        .combine = rbind,
                        .export = ls(.GlobalEnv),
-                       .packages = c("raster","sp","MigConnectivity")) %dopar% {
+                       .packages = c("terra","sf","MigConnectivity")) %dopar% {
 #for(target in 1:nTargetSetups){
   set.seed(9001)
   targetSites <- targetRanges[[target]]
-  targetDist <- distFromPos(rgeos::gCentroid(targetSites, byid = TRUE)@coords)
+  targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites, byid = TRUE)))
   # Extract simulated data
   iso_dat <- data.frame(Site = rep(1:3,each = 100),
-                        xcoords = c(Site1@coords[,1],Site2@coords[,1],Site3@coords[,1]),
-                        ycoords = c(Site1@coords[,2],Site2@coords[,2],Site3@coords[,2]),
-                        targetSite = over(rbind(Site1,Site2,Site3),targetSites)$Target,
-                        featherIso = extract(featherIso,rbind(Site1,Site2,Site3)))
+                        xcoords = c(sf::st_coordinates(Site1)[,1],sf::st_coordinates(Site2)[,1],sf::st_coordinates(Site3)[,1]),
+                        ycoords = c(sf::st_coordinates(Site1)[,2],sf::st_coordinates(Site2)[,2],sf::st_coordinates(Site3)[,2]),
+                        targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,Site2,Site3),
+                                        targetSites))),
+                        featherIso = terra::extract(terra::rast(featherIso),terra::vect(rbind(Site1,Site2,Site3))))
 
   iso_dat <- iso_dat[complete.cases(iso_dat),]
 
@@ -218,18 +230,19 @@ output.sims <- foreach(target=1:nTargetSetups,
     originAssignment <- sim_move$animalLoc[,1,1,1]
     targetAssignment <- sim_move$animalLoc[,2,1,1]
     for (i in 1:300) {
-      targetPoint1 <- spsample(targetSites[targetAssignment[i],], 
-                               n= 1, type = "random", iter = 25)
-      targetPoints0[i,] <- targetPoint1@coords
+      targetPoint1 <- sf::st_sample(targetSites[targetAssignment[i],], 
+                               size = 1, type = "random", iter = 25)
+      targetPoints0[i,] <- sf::st_coordinates(targetPoint1)
     }
-    targetPoints <- SpatialPoints(targetPoints0, CRS(projections$WGS84))
+    targetPoints <- sf::st_as_sf(targetPoints0, crs = 4326)
   
     # Extract simulated data
     iso_dat <- data.frame(Site = originAssignment,
                           xcoords = targetPoints0[,1],
                           ycoords = targetPoints0[,2],
-                          targetSite = over(targetPoints,targetSites)$Target,
-                          featherIso = extract(featherIso,targetPoints))
+                          targetSite = unlist(unclass(sf::st_intersects(targetPoints,targetSites))),
+                          featherIso = terra::extract(terra::rast(featherIso),terra::vect(targetPoints)))
+
   
     iso_dat <- iso_dat[complete.cases(iso_dat),]
   
@@ -259,8 +272,8 @@ output.sims <- foreach(target=1:nTargetSetups,
     originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),1] <- capCoords[3,1]
     originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),2] <- capCoords[3,2]
   
-    originPoints <- SpatialPoints(originCap)
-    crs(originPoints) <- sp::CRS(MigConnectivity::projections$WGS84)
+    originPoints <- sf::st_as_sf(originCap)
+    sf::st_set_crs(originPoints, 4326) 
   
     MC.realized <- calcMC(originDist = originDist,
                           targetDist = targetDist,
