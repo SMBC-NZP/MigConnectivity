@@ -44,6 +44,7 @@ Imports:
     VGAM
 Suggests:
     knitr,
+    rnaturalearth,
     Rcpp,
     rmarkdown,
     shape,

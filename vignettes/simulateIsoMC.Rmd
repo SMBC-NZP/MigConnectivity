@@ -53,6 +53,7 @@ rasterTemplate <- MigConnectivity::getIsoMap()
 
 ### Crop template to distribution and mask with distribution
 ```{r eval = FALSE}
+terra::crs(rasterTemplate) <- MigConnectivity::projections$WGS84
 rasterTemplate <- terra::mask(terra::crop(terra::rast(rasterTemplate), OVEN_single_poly),
                                OVEN_single_poly)
 
