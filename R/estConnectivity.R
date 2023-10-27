@@ -2242,7 +2242,7 @@ estMCisotope <- function(targetDist=NULL,
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
-  if(inherits(targetSites, "SpatialPolygonsDataFrame")){
+  if(!inherits(targetSites, "sf")){
     targetSites <- sf::st_as_sf(targetSites)
     targetSites <- sf::st_union(targetSites)
   }
@@ -2254,7 +2254,8 @@ estMCisotope <- function(targetDist=NULL,
   if (!inherits(targetIntrinsic, 'isoAssign'))
     stop("targetIntrinsic should be output of isoAssign when isIntrinsic == TRUE")
 
-  pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) || is.na(targetIntrinsic$SingleCell))
+  pointsAssigned <- !(is.null(targetIntrinsic$SingleCell) ||
+                        all(is.na(targetIntrinsic$SingleCell)))
 
   if(inherits(originSites, "SpatialPolygonsDataFrame")){
     originSites <- sf::st_as_sf(originSites)
@@ -2267,7 +2268,8 @@ estMCisotope <- function(targetDist=NULL,
                                                             y = originSites,
                                                             sparse = TRUE))))
 
-  nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3], dim(targetIntrinsic$probassign)[3])
+  nAnimals <- ifelse(pointsAssigned, dim(targetIntrinsic$SingleCell)[3],
+                     dim(targetIntrinsic$probassign)[3])
   targetSites <- sf::st_transform(targetSites, resampleProjection)
 
   if (length(originAssignment)!=nAnimals)

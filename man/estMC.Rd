@@ -385,7 +385,7 @@ GL_mc<-estMC(isGL=TRUE, # Logical vector: light-level geolocator(T)/GPS(F)
              originRelAbund = OVENdata$originRelAbund,#Origin relative abund.
              verbose = 1,   # output options
              nSamples = nSamplesGLGPS,# This is set low for example
-             resampleProjection = raster::projection(OVENdata$targetSites))
+             resampleProjection = terra::crs(OVENdata$targetSites))
 
 # Estimate MC and rM, treat all data as is
 Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
@@ -402,7 +402,7 @@ Combined<-estMC(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
                 calcCorr = TRUE, # estimate rM as well
                 nSamples = nSamplesGLGPS, # This is set low for example
                 approxSigTest = TRUE,
-                resampleProjection = raster::projection(OVENdata$targetSites),
+                resampleProjection = terra::crs(OVENdata$targetSites),
                 originNames = OVENdata$originNames,
                 targetNames = OVENdata$targetNames)
 
@@ -459,20 +459,21 @@ text(1.1, 0.98, cex = 1,
 # Generate probabilistic assignments using intrinsic markers (stable-hydrogen isotopes)
 getCSV <- function(filename) {
   tmp <- tempdir()
-  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/',
                  filename, '?raw=true')
   temp <- paste(tmp, filename, sep = '/')
   utils::download.file(url1, temp, mode = 'wb')
   csv <- read.csv(temp)
   unlink(temp)
   return(csv)
-
 }
+
 getRDS <- function(speciesDist) {
   tmp <- tempdir()
   extension <- '.rds'
   filename <- paste0(speciesDist, extension)
-  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/Spatial_Layers/',
+  url1 <- paste0(
+    'https://github.com/SMBC-NZP/MigConnectivity/blob/noSpWeightMantel/data-raw/Spatial_Layers/',
                  filename, '?raw=true')
   temp <- paste(tmp, filename, sep = '/')
   utils::download.file(url1, temp, mode = 'wb')
@@ -481,10 +482,6 @@ getRDS <- function(speciesDist) {
   return(shp)
 }
 OVENdist <- getRDS("OVENdist")
-
-raster::crs(OVENdist) <- MigConnectivity::projections$WGS84
-
-OVENdist <- sf::st_as_sf(OVENdist)
 
 OVENvals <- getCSV("deltaDvalues.csv")
 

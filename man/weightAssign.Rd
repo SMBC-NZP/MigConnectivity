@@ -22,7 +22,8 @@ weightAssign(
 )
 }
 \arguments{
-\item{knownLocs}{matrix of capture locations of the same length as \code{isovalues}}
+\item{knownLocs}{matrix of capture locations of the same length as
+\code{isovalues}}
 
 \item{isovalues}{vector of tissue isotope values from known locations}
 
@@ -32,18 +33,20 @@ weightAssign(
 
 \item{slope}{value from calibration}
 
-\item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.67}
+\item{odds}{odds ratio to use to set likely and unlikely locations defaults
+to 0.67}
 
 \item{relAbund}{raster layer of relative abundance that sums to 1.}
 
-\item{weightRange}{vector of length 2 within minimum and maximum values to weight isotope and relative abundance.
-Default = c(-1,1)}
+\item{weightRange}{vector of length 2 within minimum and maximum values to
+weight isotope and relative abundance. Default = c(-1,1)}
 
-\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
-areas.}
+\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON) defining
+species range. Assignments are restricted to these areas.}
 
-\item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
-limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
+\item{assignExtent}{definition for the extent of the assignment. Can be used
+in place of \code{sppShapefile} to limit assignment. Input should
+follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
 
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
@@ -54,14 +57,16 @@ which returns the isotopes ratio found in precipitation.}
 \item{period}{The time period of interest. If 'Annual' returns a raster
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
- \code{element} of interest.}
+\code{element} of interest.}
 }
 \value{
 returns an \code{weightAssign} object containing the following:
   \describe{
    \item{\code{top}}{data.frame with the optimal weightings}
-   \item{\code{frontier}}{data.frame with values that fall along the Pareto frontier}
-   \item{\code{performance}}{data.frame with error rate and assignment area for each weight combination}
+   \item{\code{frontier}}{data.frame with values that fall along the Pareto
+     frontier}
+   \item{\code{performance}}{data.frame with error rate and assignment area
+     for each weight combination}
 }
 }
 \description{

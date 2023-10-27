@@ -48,19 +48,21 @@ terra::crs(OVENabund) <- MigConnectivity::projections$WGS84
 To complete the simulation we need a template to ensure the raster resolution is the same as the assignment raster. To do this, we use the isotope data as our template. We grab the isotope base-map using the <code>getIsoMap</code> function. 
 ```{r eval = FALSE}
 ### get isotope raster for template
-rasterTemplate <- MigConnectivity::getIsoMap()
+rasterTemplate <- getIsoMap()
 ```
 
 ### Crop template to distribution and mask with distribution
 ```{r eval = FALSE}
 terra::crs(rasterTemplate) <- MigConnectivity::projections$WGS84
-rasterTemplate <- terra::mask(terra::crop(terra::rast(rasterTemplate), OVEN_single_poly),
-                               OVEN_single_poly)
+rasterTemplate <- terra::crop(terra::mask(rasterTemplate, 
+                                          OVEN_single_poly),
+                              OVEN_single_poly)
 
 # rasterize the distribution for relative abundance so that raster
 # dimensions and resolution match the isotope layer
 relativeAbund <- terra::project(OVENabund,rasterTemplate)
-relativeAbund  <- relativeAbund/terra::global(relativeAbund, fun = "sum")
+relativeAbund  <- relativeAbund / 
+  unlist(c(terra::global(relativeAbund, fun = "sum", na.rm = T)))
 ```
 
 ## Generate target sites
@@ -91,13 +93,21 @@ targetRanges[[3]] <- terra::as.polygons(terra::rast(xmin = -180,
 
 # 12 isotope units
 featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
-iso <- terra::crop(terra::rast(featherIso), terra::ext(c(-180,-40,25,85)))
-isocut <- terra::classify(iso, rcl = seq(terra::global(iso, fun = "min", na.rm = TRUE)$min, terra::global(iso, fun = "max", na.rm = TRUE)$max,12))
+iso <- terra::crop(featherIso, terra::ext(c(-180,-40,25,85)))
+isocut <- terra::classify(iso, 
+                          rcl = seq(terra::global(iso, fun = "min", 
+                                                  na.rm = TRUE)$min,
+                                    terra::global(iso, fun = "max", 
+                                                  na.rm = TRUE)$max,12))
 targetRanges[[4]] <- terra::as.polygons(isocut)
 
 
 # 12*2 isotope units
-isocut <- terra::classify(iso, rcl = seq(terra::global(iso, fun = "min", na.rm = TRUE)$min, terra::global(iso,fun = "max",na.rm = TRUE)$max,24))
+isocut <- terra::classify(iso, 
+                          rcl = seq(terra::global(iso, fun = "min", 
+                                                  na.rm = TRUE)$min, 
+                                    terra::global(iso,fun = "max",
+                                                  na.rm = TRUE)$max, 24))
 targetRanges[[5]] <- terra::as.polygons(isocut)
 
 
@@ -117,7 +127,7 @@ targetRanges <- lapply(targetRanges, FUN = function(x){y <- sf::st_as_sf(x)
                                                        return(z)})
 
 for(i in 1:5){
-targetRanges[[i]]$Target <- 1:nrow(targetRanges[[i]])
+  targetRanges[[i]]$Target <- 1:nrow(targetRanges[[i]])
 }
 
 sf_use_s2(TRUE)
@@ -139,29 +149,38 @@ capCoords[3,] <- cbind(-85.000,29.836)
 featherIso <- (0.95*getIsoMap(period = "GrowingSeason")+(-17.57))
 
 # Extract simulated data
-iso_dat <- data.frame(Site = rep(1:3,each = 100),
-                      xcoords = c(sf::st_coordinates(Site1)[,1],sf::st_coordinates(Site2)[,1],sf::st_coordinates(Site3)[,1]),
-                      ycoords = c(sf::st_coordinates(Site1)[,2],sf::st_coordinates(Site2)[,2],sf::st_coordinates(Site3)[,2]),
-                      targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,Site2,Site3),
+iso_dat <- data.frame(Site = rep(1:3, each = 100),
+                      xcoords = c(sf::st_coordinates(Site1)[,1], 
+                                  sf::st_coordinates(Site2)[,1], 
+                                  sf::st_coordinates(Site3)[,1]),
+                      ycoords = c(sf::st_coordinates(Site1)[,2], 
+                                  sf::st_coordinates(Site2)[,2],
+                                  sf::st_coordinates(Site3)[,2]),
+                      targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,
+                                                                          Site2,
+                                                                          Site3),
                                         targetRanges[[3]]))),
-                      featherIso = terra::extract(terra::rast(featherIso),terra::vect(rbind(Site1,Site2,Site3))))
+                      featherIso = terra::extract(featherIso,
+                                                  terra::vect(rbind(Site1,Site2,
+                                                                    Site3))))
 
 iso_dat <- iso_dat[complete.cases(iso_dat),]
 
 # generate transition data from simulation
-sim_psi <- table(iso_dat$Site,iso_dat$targetSite)
+sim_psi <- table(iso_dat$Site, iso_dat$targetSite)
 
 for(i in 1:nrow(sim_psi)){
   sim_psi[i,]<-sim_psi[i,]/sum(sim_psi[i,])
 }
 
-states <- rnaturalearth::ne_states(country = "United States of America", returnclass = "sf")
+states <- rnaturalearth::ne_states(country = "United States of America", 
+                                   returnclass = "sf")
 originSites <- states[(states$woe_name %in% c("Texas","Louisiana","Florida")),]
 originSites <- sf::st_transform(originSites, 4326)
                                
-originDist <- MigConnectivity::distFromPos(st_coordinates(sf::st_centroid(originSites,
+originDist <- distFromPos(st_coordinates(sf::st_centroid(originSites,
                                                             byid = TRUE)))
-targetDistMC <- MigConnectivity::distFromPos(sf::st_coordinates(sf::st_centroid(targetRanges[[3]], 
+targetDistMC <- distFromPos(sf::st_coordinates(sf::st_centroid(targetRanges[[3]], 
                                                               byid = TRUE)))
 ```
 
@@ -176,7 +195,7 @@ nSims <- 1            #SET LOW FOR EXAMPLE
 # nSims <- 200        
 nOriginSites = 3
 
-targetPoints0 <- matrix(NA, 300, 2)
+targetPoints0 <- matrix(NA, 300, 2, dimnames = list(NULL, c("x", "y")))
 
 sim.output <- data.frame(targetSetup = rep(NA,nSims),
                          sim = rep(NA,nSims),
@@ -205,21 +224,35 @@ output.sims <- foreach(target=1:nTargetSetups,
 #for(target in 1:nTargetSetups){
   set.seed(9001)
   targetSites <- targetRanges[[target]]
-  targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites, byid = TRUE)))
+  sf_use_s2(FALSE)
+  targetSites <- sf::st_make_valid(targetSites)
+  targetDist <- distFromPos(sf::st_coordinates(sf::st_centroid(targetSites, 
+                                                               byid = TRUE)))
+
   # Extract simulated data
   iso_dat <- data.frame(Site = rep(1:3,each = 100),
-                        xcoords = c(sf::st_coordinates(Site1)[,1],sf::st_coordinates(Site2)[,1],sf::st_coordinates(Site3)[,1]),
-                        ycoords = c(sf::st_coordinates(Site1)[,2],sf::st_coordinates(Site2)[,2],sf::st_coordinates(Site3)[,2]),
-                        targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,Site2,Site3),
+                        xcoords = c(sf::st_coordinates(Site1)[,1],
+                                    sf::st_coordinates(Site2)[,1],
+                                    sf::st_coordinates(Site3)[,1]),
+                        ycoords = c(sf::st_coordinates(Site1)[,2],
+                                    sf::st_coordinates(Site2)[,2],
+                                    sf::st_coordinates(Site3)[,2]),
+                        targetSite = unlist(unclass(sf::st_intersects(rbind(Site1,
+                                                                            Site2,
+                                                                            Site3),
                                         targetSites))),
-                        featherIso = terra::extract(terra::rast(featherIso),terra::vect(rbind(Site1,Site2,Site3))))
+                        featherIso = terra::extract(featherIso,
+                                                    terra::vect(rbind(Site1,
+                                                                      Site2,
+                                                                      Site3))))
 
   iso_dat <- iso_dat[complete.cases(iso_dat),]
 
   # generate transition data from simulation
   sim_psi <- prop.table(table(iso_dat$Site,factor(iso_dat$targetSite,
                                                   1:nrow(targetSites))), 1)
-
+  
+  sf_use_s2(TRUE)
   MC.generated <- calcMC(originDist = originDist,
                           targetDist = targetDist,
                           originRelAbund = originRelAbund,
@@ -230,19 +263,23 @@ output.sims <- foreach(target=1:nTargetSetups,
     sim_move <- simMove(rep(100, nOriginSites), originDist, targetDist, sim_psi, 1, 1)
     originAssignment <- sim_move$animalLoc[,1,1,1]
     targetAssignment <- sim_move$animalLoc[,2,1,1]
+    sf_use_s2(FALSE)
     for (i in 1:300) {
       targetPoint1 <- sf::st_sample(targetSites[targetAssignment[i],], 
                                size = 1, type = "random", iter = 25)
       targetPoints0[i,] <- sf::st_coordinates(targetPoint1)
     }
-    targetPoints <- sf::st_as_sf(targetPoints0, crs = 4326)
+    targetPoints <- sf::st_as_sf(as.data.frame(targetPoints0), crs = 4326,
+                                 coords = c("x", "y"))
   
     # Extract simulated data
     iso_dat <- data.frame(Site = originAssignment,
                           xcoords = targetPoints0[,1],
                           ycoords = targetPoints0[,2],
-                          targetSite = unlist(unclass(sf::st_intersects(targetPoints,targetSites))),
-                          featherIso = terra::extract(terra::rast(featherIso),terra::vect(targetPoints)))
+                          targetSite = unlist(unclass(sf::st_intersects(targetPoints,
+                                                                        targetSites))),
+                          featherIso = terra::extract(featherIso,
+                                                      terra::vect(targetPoints)))
 
   
     iso_dat <- iso_dat[complete.cases(iso_dat),]
@@ -273,9 +310,9 @@ output.sims <- foreach(target=1:nTargetSetups,
     originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),1] <- capCoords[3,1]
     originCap[which(pmatch(wherecaught,"Site3",dup = TRUE)==1),2] <- capCoords[3,2]
   
-    originPoints <- sf::st_as_sf(originCap)
-    sf::st_set_crs(originPoints, 4326) 
-  
+    originPoints <- sf::st_as_sf(as.data.frame(originCap), crs = 4326, coords = 1:2)
+    sf_use_s2(TRUE)
+
     MC.realized <- calcMC(originDist = originDist,
                           targetDist = targetDist,
                           originRelAbund = originRelAbund,
@@ -288,7 +325,7 @@ output.sims <- foreach(target=1:nTargetSetups,
     targetPointDists <- distFromPos(cbind(iso_dat$xcoords, iso_dat$ycoords))
   
   
-    simAssign <- isoAssign(isovalues = iso_dat$featherIso,
+    simAssign <- isoAssign(isovalues = iso_dat$featherIso.GrowingSeasonD,
                            isoSTD = 12,
                            intercept = -17.57,
                            slope = 0.95,
@@ -297,7 +334,7 @@ output.sims <- foreach(target=1:nTargetSetups,
                            nSamples = 500,
                            sppShapefile = OVEN_single_poly,
                            relAbund = relativeAbund,
-                           verbose = 0,
+                           verbose = 2,
                            isoWeight = -0.7,
                            abundWeight = 0,
                            assignExtent = c(-179,-60,15,89),

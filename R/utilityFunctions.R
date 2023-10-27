@@ -1590,3 +1590,30 @@ assignRasterStats <- function(theRaster) {
               SingleCell = SingleCell, RasterXYZ = RasterXYZ,
               RasterXYZcrs = RasterXYZcrs))
 }
+
+# function to make an odds ratio (likely vs unlikely) assignment
+oddsFun <- function(x, odds = odds){
+  predict(smooth.spline(x = cumsum(sort(x)),
+                        sort(x),
+                        spar = 0.1),(1-odds))$y
+}
+
+propSpatRaster <- function(assignments) {
+  if (terra::nlyr(assignments)<2){
+    assign2prob  <- assignments /
+      unlist(c(terra::global(assignments, fun = "sum", na.rm = T)))
+    return(assign2prob)
+  }
+  summy <- terra::global(assignments, "sum", na.rm = TRUE)
+  test <- lapply(summy[,1],
+                 function(x) terra::rast(nrows = terra::nrow(assignments),
+                                         ncols = terra::ncol(assignments),
+                                         xmin = terra::xmin(assignments),
+                                         xmax = terra::xmax(assignments),
+                                         ymin = terra::ymin(assignments),
+                                         ymax = terra::ymax(assignments),
+                                         vals = x))
+  test <- terra::rast(test)
+  assign2prob <- assignments / test
+  return(assign2prob)
+}

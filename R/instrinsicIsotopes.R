@@ -67,9 +67,26 @@
 #'
 #' @examples
 #' \dontrun{
+#' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+#' for (ext in extensions) {
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/Spatial_Layers/OVENdist.",
+#'                      ext),
+#'               destfile = paste0("OVENdist.", ext))
+#' }
+#' OVENdist <- sf::st_read("OVENdist.shp")
+#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+#' sf::st_crs(OVENdist) <- sf::st_crs(4326)
+#'
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/deltaDvalues.csv"),
+#'               destfile = "deltaDvalues.csv")
+#' OVENvals <- read.csv("deltaDvalues.csv")
+#'
 #' OVENdist <- sf::st_as_sf("data-raw/Spatial_Layers/OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' sf::st_crs(OVENdist) <- sf::st_crs(4326) # "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' sf::st_crs(OVENdist) <- sf::st_crs(4326)
+#' # "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #'
 #' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
@@ -117,188 +134,187 @@ isoAssign <- function(isovalues,
                       period = "Annual",
                       seed = NULL,
                       verbose=1) {
-# force verbose to default when outside specified range.
-if(!(verbose %in% c(0,1,2))){verbose = 1}
-
-# download isoscape map
-isomap <- getIsoMap(element = element, surface = surface, period = period)
-
-# 1. if sppShapefile == NULL - use extent option
-if(is.null(sppShapefile)){
-  isomap <- terra::crop(isomap,terra::extent(assignExtent))
-}
-
-# Series of checks for a species range map inputs
-if(!is.null(sppShapefile)){
-# 2. if sppShapefile provided check that it has a projection defined
-#    if not stop - if so, mask the isoscape to range
-  if(is.na(terra::crs(sppShapefile))){
-    stop("coordinate system needed for sppShapefile")}
-# 3. if the projections don't match - project into same as isomap then mask
-  # quick check
-  if(inherits(sppShapefile, "SpatialPolygons") |
-     inherits(sppShapefile, "SpatialPolygonsDataFrame")){
-    warning("The sp package is no longer supported or maintained - consider using the sf package instead")
-    #if sp object convert to sf
-    sppShapefile <- sf::st_as_sf(sppShapefile)
-    if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
-      sppShapefile <- sf::st_transform(sppShapefile, 4326)
-    }
+  # force verbose to default when outside specified range.
+  if(!(verbose %in% c(0,1,2))){
+    verbose = 1
   }
-  if(class(sppShapefile)[1] %in% "sf"){
-    if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
-      sppShapefile <- sf::st_transform(sppShapefile, 4326)
+
+  # download isoscape map
+  isomap <- getIsoMap(element = element, surface = surface, period = period)
+
+  # 1. if sppShapefile == NULL - use extent option
+  if(is.null(sppShapefile)){
+    isomap <- terra::crop(isomap,terra::extent(assignExtent))
+  } else {
+  # Series of checks for a species range map inputs
+  # 2. if sppShapefile provided check that it has a projection defined
+  #    if not stop - if so, mask the isoscape to range
+    if(is.na(terra::crs(sppShapefile))){
+      stop("coordinate system needed for sppShapefile")
     }
+  # 3. if the projections don't match - project into same as isomap then mask
+    # quick check
+    if(inherits(sppShapefile, "SpatialPolygons") ||
+       inherits(sppShapefile, "SpatialPolygonsDataFrame")){
+      warning("The sp package is no longer supported or maintained - consider using the sf package instead")
+      #if sp object convert to sf
+      sppShapefile <- sf::st_as_sf(sppShapefile)
+      if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
+        sppShapefile <- sf::st_transform(sppShapefile, 4326)
+      }
+    }
+    if(class(sppShapefile)[1] %in% "sf"){
+      if(!identical(sf::st_crs(sppShapefile),sf::st_crs(4326))){
+        sppShapefile <- sf::st_transform(sppShapefile, 4326)
+      }
     }
 
-if(verbose>0){cat("\n Restricting possible assignments to species distribution \n")}
+    if(verbose>0){
+      cat("\n Restricting possible assignments to species distribution \n")
+    }
 
-sppShapefile$INOUT<-1
-
-# mask the isomap to sppShapefile
-isomap <- terra::crop(isomap, terra::vect(sppShapefile))
-isomap <- terra::mask(isomap, terra::vect(sppShapefile))
-}
-if(!is.null(relAbund) && !inherits(relAbund,"RasterLayer")){stop("relAbund should be a raster layer")}
-if(!is.null(relAbund) && inherits(relAbund,"RasterLayer")){
-  warning("The raster package relies on rgdal which is no longer supported - consider using the terra package instead \n")
-  if(inherits(relAbund,"RasterLayer")){
+    sppShapefile$INOUT<-1
+    if (!inherits(sppShapefile, "SpatVector")) {
+      sppShapefile <- terra::vect(sppShapefile)
+    }
+    isomap <- terra::project(isomap, terra::crs(sppShapefile))
+    # mask the isomap to sppShapefile
+    isomap <- terra::crop(isomap, sppShapefile)
+    isomap <- terra::mask(isomap, sppShapefile)
+  }
+  if(!is.null(relAbund) && inherits(relAbund,"RasterLayer")){
+    warning("The raster package relies on rgdal which is no longer supported - consider using the terra package instead \n")
+  }
+  if(!is.null(relAbund) && !inherits(relAbund,"SpatRaster")){
     #convert from raster to terra
-    relAbund <- terra::rast(relAbund)}
-# if isomap and relAbund don't have the same resolution and/or extent
-# change to relAbund to match isomap
-if(!terra::compareGeom(isomap,relAbund)){
-# project to match isomap
-relAbund <- terra::project(relAbund,isomap)
-# re-scale to ensure sums to 1
-relAbund <- relAbund/terra::global(relAbund, fun = "sum")
-}
-# if relAbund isn't a probability surface - generate probability surface #
-if(terra::global(relAbund,fun = "sum")!=1){relAbund <- relAbund/terra::global(relAbund,fun = "sum")}
-}
-# generate a 'feather'/animal isoscape
-animap <- terra::global(isomap, fun = function(x){y <- slope*x+intercept})
+    relAbund <- terra::rast(relAbund)
+  }
+  # if isomap and relAbund don't have the same resolution and/or extent
+  # change to relAbund to match isomap
+  if(!terra::compareGeom(isomap,relAbund)){
+    # project to match isomap
+    relAbund <- terra::project(relAbund,isomap)
+    # re-scale to ensure sums to 1
+    relAbund <- propSpatRaster(relAbund)
+  }
+  # generate a 'feather'/animal isoscape
+  animap <- terra::app(isomap, fun = function(x){y <- slope*x+intercept})
 
-# generate targetSites - seq from min to max values by isoSTD
-isocut <- terra::classify(animap, rcl= seq(from = terra::global(animap,fun = "min"),
-                                  to = terra::global(animap,fun = "max"),
-                                  by = isoSTD))
+  # generate targetSites - seq from min to max values by isoSTD
+  isocut <- terra::classify(animap,
+                            rcl= seq(from = unlist(terra::global(animap,
+                                                                 fun = "min",
+                                                                 na.rm = TRUE)),
+                                     to = unlist(terra::global(animap,
+                                                               fun = "max",
+                                                               na.rm = TRUE)),
+                                     by = isoSTD))
 
-# use those cuts to make polygons
-targetSites <- terra::as.polygons(isocut, aggregate = TRUE)
-terra::crs(targetSites) <- terra::crs(isomap)
+  # use those cuts to make polygons
+  targetSites <- terra::as.polygons(isocut, aggregate = TRUE)
+  terra::crs(targetSites) <- terra::crs(isomap)
 
-#if sppShapefile !NULL then clip targetSites to distribution
-if(!is.null(sppShapefile)){
-targetSites <- terra::intersect(terra::vect(targetSites),terra::vect(sppShapefile))
-}
-# rename the targetSites to simplify output
-targetSites<-targetSites[,1]
-names(targetSites) <- c("targetSite")
-#targetSites <- rgeos::gUnaryUnion(targetSites, id=targetSites$targetSite)
-# spatially explicit assignment
-assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
+  #if sppShapefile !NULL then clip targetSites to distribution
+  if(!is.null(sppShapefile)){
+    targetSites <- terra::intersect(targetSites,
+                                    sppShapefile)
+  }
+  # rename the targetSites to simplify output
+  targetSites<-targetSites[,1]
+  names(targetSites) <- c("targetSite")
+  #targetSites <- rgeos::gUnaryUnion(targetSites, id=targetSites$targetSite)
+  # spatially explicit assignment
+  assign <- function(x,y) {
+    ((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))
+  }
 
-# apply the assignment function to all input values
-if(verbose>0){cat("\n Generating probabilistic assignments \n")}
+  # apply the assignment function to all input values
+  if(verbose>0){
+    cat("\n Generating probabilistic assignments \n")
+  }
 
-assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
+  assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
 
-# stack the assignment probabilities into a single raster stack
-assignments <- terra::c(assignments)
+  # stack the assignment probabilities into a single raster stack
+  assignments <- terra::rast(assignments)
+  terra::set.names(assignments, paste0("lyr.", 1:terra::nlyr(assignments)))
+  # Transform the assignments into a true probability surface #
+  assign2prob <- propSpatRaster(assignments)
+  # Weighted Assignments
+  if(inherits(relAbund,"spatRast") && is.null(isoWeight) && is.null(abundWeight)){
+    if(verbose>0){
+      cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")
+    }
+    test <- assign2prob*relAbund
+    assign2prob <- propSpatRaster(test)
+  }
+  else if(inherits(relAbund,"spatRast") && !is.null(isoWeight) && !is.null(abundWeight)){
+    if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
+    if (is.null(isoWeight))
+      isoWeight <- 0
+    if (is.null(abundWeight))
+      abundWeight <- 0
+    isoWeight <- 10^isoWeight
+    abundWeight <- 10^abundWeight
+    assign2prob <- (assign2prob^isoWeight)*(relAbund^abundWeight)
+    assign2prob <- propSpatRaster(assign2prob)
+  }
 
-# Transform the assignments into a true probability surface #
-assign2prob <- assignments/terra::global(assignments, fun = "sum")
+  # Create a dataframe with XY coords and probabilites for each animal
+  assign2probDF <- data.frame(terra::as.points(assign2prob))
 
-# Weighted Assignments
-if(inherits(relAbund,"spatRast") && is.null(isoWeight) && is.null(abundWeight)){
-  if(verbose>0){cat("\n Creating posterior assignments where isotope & abundance have equal weight \n")}
-assign2prob <- assign2prob*relAbund
-assign2prob <- assign2prob/terra::global(assign2prob, fun = "sum")
-}
-if(inherits(relAbund,"spatRast") && !is.null(isoWeight) && !is.null(abundWeight)){
-  if(verbose>0){cat("\n Creating weighted posterior assignments \n")}
-  isoWeight <- 10^isoWeight
-  abundWeight <- 10^abundWeight
-assign2prob <- (assign2prob^isoWeight)*(relAbund^abundWeight)
-assign2prob <- assign2prob/terra::global(assign2prob,fun = "sum")
-}
 
-if(inherits(relAbund,"spatRast") && is.null(isoWeight) && !is.null(abundWeight)){
-  if(verbose>0){cat("\n Creating posterior abundance weighted assignments \n")}
-  abundWeight <- 10^abundWeight
-assign2prob <- assign2prob*(relAbund^abundWeight)
-assign2prob <- assign2prob/terra::global(assign2prob, fun = "sum")
-}
-if(inherits(relAbund,"spatRast") && !is.null(isoWeight) && is.null(abundWeight)){
-  if(verbose>0){cat("\n Creating posterior isotope weighted assignments \n")}
-  isoWeight <- 10^isoWeight
-assign2prob <- (assign2prob^isoWeight)*relAbund
-assign2prob <- assign2prob/terra::global(assign2prob, fun = "sum")
-}
-# Create a dataframe with XY coords and probabilites for each animal
-assign2probDF <- data.frame(terra::as.points(assign2prob))
+  # if odds is left null - use default of 0.33
+  if (is.null(odds)){odds <- 0.67}
 
-# function to make an odds ratio (likely vs unlikely) assignment
-oddsFun <- function(x,odds = odds){
-  predict(smooth.spline(x = cumsum(sort(x)),
-                        sort(x),
-                        spar = 0.1),(1-odds))$y
-}
+  # extract values from the probability assignment
+  matvals <- terra::as.data.frame(assign2prob, xy = TRUE)
+  # XY coords of raster
+  matvalsXY <- matvals[,1:2]
 
-# if odds is left null - use default of 0.33
-if (is.null(odds)){odds <- 0.67}
+  # drop XY from matvals
+  matvals <- matvals[,-(1:2)]
+  print(dim(matvals))
+  if(verbose>0){cat("\n Generating likely vs unlikely assignments \n")}
+  # apply the odds function
 
-# extract values from the probability assignment
-matvals <- terra::as.points(assign2prob)
-# XY coords of raster
-matvalsXY <- matvals[,1:2]
+  cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
+  # reclassify the rasters based on likely v unlikely
 
-# drop XY from matvals
-matvals <- matvals[,-(1:2)]
+  step1 <- mapply(FUN = function(x,y){terra::classify(assign2prob[[x]],rcl=cbind(0,y,0))},
+                  x = 1:terra::nlyr(assign2prob),
+                  y = cuts)
+  step1 <- terra::rast(step1)
+  step2 <- mapply(FUN = function(x,y){terra::classify(step1[[x]], rcl=cbind(y,1,1))},
+                  x = 1:terra::nlyr(step1),
+                  y = cuts)
+  step2 <- terra::rast(step2)
 
-if(verbose>0){cat("\n Generating likely vs unlikely assignments \n")}
-# apply the odds function
 
-cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)
+  # convert to data frame
+  LikelyUnlikely <- terra::as.points(step2)
 
-# reclassify the rasters based on likely v unlikely
+  step2DF <- data.frame(LikelyUnlikely)
 
-step1 <- mapply(FUN = function(x,y){terra::classify(assign2prob[[x]],rcl=cbind(0,y,0))},
-                x = 1:terra::nlyr(assign2prob),
-                y = cuts)
-step1 <- terra::c(step1)
-step2 <- mapply(FUN = function(x,y){terra::classify(step1[[x]], rcl=cbind(y,1,1))},
-                x = 1:terra::nlyr(step1),
-                y = cuts)
-step2 <- terra::c(step2)
-
-#step1 <- raster::reclassify(assign2prob,cbind(0,cuts,0))
-#step2 <- raster::reclassify(step1,cbind(cuts,1,1))
-
-# convert to dataframe
-LikelyUnlikely <- terra::as.points(step2)
-step2DF <- data.frame(LikelyUnlikely)
-
-if(is.null(population)){
-# Return the population level odds assignment - i.e, how many animals
-SamplePop <- sum(step2)
-# convert to dataframe
-SamplePopDF <- data.frame(terra::as.points(SamplePop))
-} else {
-nPop <- length(unique(population))
-Pops <- unique(population)
-POPs <- POPSdf <- vector("list",nPop)
-for(p in 1:nPop){
-aniPop <- which(population == Pops[p])
-pop_p <- step2[[aniPop]]
-POPs[[p]] <- sum(pop_p)
-POPSdf[[p]] <- data.frame(terra::as.points(POPs[[p]]))
-}
-SamplePop <- terra::c(POPs)
-names(SamplePop)<-Pops
-SamplePopDF <- do.call('cbind',POPSdf)
-}
+  if(is.null(population)){
+  # Return the population level odds assignment - i.e, how many animals
+    SamplePop <- sum(step2)
+  # convert to data frame
+  SamplePopDF <- data.frame(terra::as.points(SamplePop))
+  } else {
+    nPop <- length(unique(population))
+    Pops <- unique(population)
+    POPs <- POPSdf <- vector("list",nPop)
+    for(p in 1:nPop){
+      aniPop <- which(population == Pops[p])
+      pop_p <- step2[[aniPop]]
+      POPs[[p]] <- sum(pop_p)
+      POPSdf[[p]] <- data.frame(terra::as.points(POPs[[p]]))
+    }
+    SamplePop <- terra::rast(POPs)
+    names(SamplePop)<-Pops
+    SamplePopDF <- do.call('cbind', POPSdf)
+  }
 
 # SINGLE CELL PROBABILITY ASSIGNMENTS - this makes MC possible with isotopes
 if (is.null(nSamples)){ nSamples <- 1000}
@@ -310,7 +326,9 @@ set.seed(seed)
 # generate empty array to fill with locations
 # make a simulated array twice the size to weed out locations
 # that fall outside of distribution
+
 xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,terra::nlyr(assign2prob)))
+
 # give names for sf to convert down the line
 dimnames(xysimulation)[[2]] <- c("Longitude","Latitude")
 
@@ -489,7 +507,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
         m_s_d <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
       }else{
-        m_s_d <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d2h_GS.tif"))
+        dir <- grep(haveIsoMap,pattern = "/GlobalPrecipGS$", value = TRUE)
+        m_s_d <- terra::rast(paste0(dir, "/d2h_GS.tif"))
       }
       names(m_s_d)<-"MeanSurfaceD"
       return(m_s_d)
@@ -521,7 +540,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
         m_s_o <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
       }else{
-        m_s_o <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d18o_GS.tif"))
+        dir <- grep(haveIsoMap,pattern = "/GlobalPrecipGS$", value = TRUE)
+        m_s_o <- terra::rast(paste0(dir, "/d18o_GS.tif"))
       }
       names(m_s_o)<-"MeanSurfaceO"
       return(m_s_o)
@@ -561,7 +581,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
       m_a_d <- terra::rast(paste0(getwd(),"/GlobalPrecip/d2h_MA.tif"))
     }else{
-      m_a_d <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecip")],"/d2h_MA.tif"))
+      dir <- grep(haveIsoMap,pattern = "/GlobalPrecip$", value = TRUE)
+      m_a_d <- terra::rast(paste0(dir, "/d2h_MA.tif"))
     }
     names(m_a_d)<-"MeanAnnualD"
     return(m_a_d)
@@ -594,7 +615,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
       g_s_d <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
     }else{
-      g_s_d <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d2h_GS.tif"))
+      dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
+      g_s_d <- terra::rast(paste0(dir, "/d2h_GS.tif"))
     }
     g_s_d[g_s_d == -999]<-NA
     names(g_s_d)<-"GrowingSeasonD"
@@ -633,7 +655,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
       m_a_o <- terra::rast(paste0(getwd(),"/GlobalPrecip/d18o_MA.tif"))
     }else{
-      m_a_o <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecip")],"/d18o_MA.tif"))
+      dir <- grep(haveIsoMap, pattern = "/GlobalPrecip$", value = TRUE)
+      m_a_o <- terra::rast(paste0(dir, "/d18o_MA.tif"))
     }
     names(m_a_o)<-"MeanAnnualO"
     return(m_a_o)
@@ -666,7 +689,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 
       g_s_o <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
     }else{
-      g_s_o <- terra::rast(paste0(haveIsoMap[grep(haveIsoMap,pattern = "/GlobalPrecipGS")],"/d18o_GS.tif"))
+      dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
+      g_s_o <- terra::rast(paste0(dir, "/d18o_GS.tif"))
     }
     g_s_o[g_s_o == -999]<-NA
     names(g_s_o)<-"GrowingSeasonO"
@@ -848,10 +872,9 @@ a <- Sys.time()
   assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
 
   # stack the assignment probabilities into a single raster stack
-  assignments <-terra::c(assignments)
-    # Transform the assignments into a true probability surface #
-  assignIsoprob <- assignments/terra::global(assignments, fun = "sum")
-
+  assignments <- terra::rast(assignments)
+  # Transform the assignments into a true probability surface #
+  assign2prob <- propSpatRaster(assignments)
   # function to make an odds ratio (likely vs unlikely) assignment
   oddsFun <- function(x,odds = odds){
     predict(smooth.spline(x = cumsum(sort(x)),
@@ -876,16 +899,16 @@ for(i in 1:nrow(weights)){
     tempAssign <- (assignIsoprob^weights$iso_weight[i])*
                   (relAbund^weights$abun_weight[i])
 
-    tempAssign <- tempAssign/terra::global(tempAssign,fun = "sum")
+    tempAssign <- propSpatRaster(tempAssign)
 
     matvalsWeight <- terra::as.points(tempAssign)
 
     cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
 
-    step1 <- terra::c(terra::classify(tempAssign,rcl=cbind(0,cuts,0)))
-    step2 <- terra::c(terra::classify(step1,rcl=cbind(cuts,1,1)))
+    step1 <- c(terra::classify(tempAssign,rcl=cbind(0,cuts,0)))
+    step2 <- c(terra::classify(step1,rcl=cbind(cuts,1,1)))
 
-    correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs), ID = FALSE)
+    correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs), ID = FALSE))
     errorRate <- 1-mean(correctAssign)
     areaAssign <- terra::global(terra::area(step2)*step2,fun = "sum")
 
@@ -901,10 +924,10 @@ matvalsWeight <- terra::as.points(assignIsoprob)
 
 cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
 
-step1 <- terra::c(terra::classify(assignIsoprob,rcl=cbind(0,cuts,0)))
-step2 <- terra::c(terra::classify(step1,rcl=cbind(cuts,1,1)))
+step1 <- c(terra::classify(assignIsoprob,rcl=cbind(0,cuts,0)))
+step2 <- c(terra::classify(step1,rcl=cbind(cuts,1,1)))
 
-correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs),ID = FALSE)
+correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs),ID = FALSE))
 errorRate <- 1-mean(correctAssign)
 areaAssign <- terra::global(terra::area(step2)*step2,fun = "sum")
 

@@ -565,7 +565,7 @@ names(OVENdata)
 
 The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
 
-```{r eval = FALSE}
+```{r}
 install.packages(c('shape', 'terra', 'maps'))
 ```
 

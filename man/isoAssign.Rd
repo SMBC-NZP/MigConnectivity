@@ -34,70 +34,101 @@ isoAssign(
 
 \item{slope}{value from calibration}
 
-\item{odds}{odds ratio to use to set likely and unlikely locations defaults to 0.67}
+\item{odds}{odds ratio to use to set likely and unlikely locations defaults
+to 0.67}
 
-\item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the 'likely' assignment
-locations.}
+\item{restrict2Likely}{if \code{TRUE} restricts locations to fall within the
+'likely' assignment locations}
 
-\item{nSamples}{integer specifying how many random samples to draw from a multinomial distribution.}
+\item{nSamples}{integer specifying how many random samples to draw from a
+multinomial distribution.}
 
-\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON or sp - SpatialPolygons) defining species range. Assignments are restricted to these
-areas.}
+\item{sppShapefile}{A polygon spatial layer (sf - MULTIPOLYGON) defining
+species range. Assignments are restricted to these areas.}
 
-\item{relAbund}{raster with relative abundance (must match extent of isotope assignment)}
+\item{relAbund}{raster (\code{SpatRast}) with relative abundance (must match
+extent of isotope assignment)}
 
 \item{isoWeight}{weighting value to apply to isotope assignment}
 
 \item{abundWeight}{weighting value to apply to relative abundance prior}
 
-\item{population}{vector identifying location where animal was captured. Same order as \code{isovalues}}
+\item{population}{vector identifying location where animal was captured.
+Same order as \code{isovalues}}
 
-\item{assignExtent}{definition for the extent of the assignment. Can be used in place of \code{sppShapefile} to
-limit assignment. Input should follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
+\item{assignExtent}{definition for the extent of the assignment. Can be used
+in place of \code{sppShapefile} to limit assignment. Input should
+follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and
+latitude}
 
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
 
 \item{surface}{if "TRUE" returns surface water values. Defaults is 'FALSE'
-which returns the isotopes ratio found in precipitation.}
+which returns the isotopes ratio found in precipitation}
 
 \item{period}{The time period of interest. If 'Annual' returns a raster
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
- \code{element} of interest.}
+\code{element} of interest}
 
-\item{seed}{numeric value fed to \code{set.seed} for random number generation. Default = NULL.}
+\item{seed}{numeric value fed to \code{set.seed} for random number
+generation. Default = NULL}
 
-\item{verbose}{takes values 0, 1 (default) or 2. 0 prints no output during run. 1 prints
-a message detailing where in the process the function is. 2 prints the animal currently being sampled.}
+\item{verbose}{takes values 0, 1 (default) or 2. 0 prints no output during
+run. 1 prints a message detailing where in the process the function
+is. 2 prints the animal currently being sampled.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:
  \describe{
-  \item{\code{probassign}}{raster stack of individual probabilistic assignments}
-  \item{\code{oddsassign}}{raster stack that includes likely vs unlikely origin for each animal}
-  \item{\code{popassign}}{a raster for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
+  \item{\code{probassign}}{SpatRast stack of individual probabilistic assignments}
+  \item{\code{oddsassign}}{SpatRast stack that includes likely vs unlikely origin for each animal}
+  \item{\code{popassign}}{a SpatRast for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
   If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
   \item{\code{probDF}}{data.frame of individual probability surfaces}
   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
   \item{\code{popDF}}{data.frame of population level assignment}
-  \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for single cell assignment}
-  \item{\code{targetSites}}{\code{SpatialPolygons} layer representing isotope bands equivilant to \code{isoSTD}}
-  \item{\code{RandomSeed}}{the RNG seed used when generating locations from the multinomial distribution}
+  \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for
+  single cell assignment}
+  \item{\code{targetSites}}{\code{sf - MULTIPOLYGON} layer representing
+  isotope bands equivalent to \code{isoSTD}}
+  \item{\code{RandomSeed}}{the RNG seed used when generating locations from
+  the multinomial distribution}
   }
 }
 \description{
-The \code{isoAssign} function generates origin assignments using stable-hydrogen isotopes in tissue. The function generates
-a probability surface of origin assignment from a vector of stable-isotope values for each animal/sample of interest.
-Probabilistic assignments are constructed by first converting observed stable-isotope ratios (isoscape) in either precipitation or surface
-waters into a 'tissuescape' using a user-provided intercept, slope and standard deviation.
-See \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+The \code{isoAssign} function generates origin assignments using
+stable-hydrogen isotopes in tissue. The function generates a probability
+surface of origin assignment from a vector of stable-isotope values for each
+animal/sample of interest. Probabilistic assignments are constructed by first
+converting observed stable-isotope ratios (isoscape) in either precipitation
+or surface waters into a 'tissuescape' using a user-provided intercept, slope
+and standard deviation. See
+\href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \examples{
 \dontrun{
-OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+for (ext in extensions) {
+download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+                     "/master/data-raw/Spatial_Layers/OVENdist.",
+                     ext),
+              destfile = paste0("OVENdist.", ext))
+}
+OVENdist <- sf::st_read("OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+sf::st_crs(OVENdist) <- sf::st_crs(4326)
+
+download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+                     "/master/data-raw/deltaDvalues.csv"),
+              destfile = "deltaDvalues.csv")
+OVENvals <- read.csv("deltaDvalues.csv")
+
+OVENdist <- sf::st_as_sf("data-raw/Spatial_Layers/OVENdist.shp")
+OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+sf::st_crs(OVENdist) <- sf::st_crs(4326)
+# "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 

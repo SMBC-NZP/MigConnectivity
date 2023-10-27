@@ -44,7 +44,6 @@ met. This helps estTransition or estMC not throw an error. Default FALSE}
   \item{\code{targetAssignment}}{Vector with true target site of each animal}
   \item{\code{genProbs}}{Table of assignment site probabilities for each
    animal}
-  \item{\code{genRasters}}{raster stack?}
   \item{\code{input}}{List containing the inputs to function}
 }
 }

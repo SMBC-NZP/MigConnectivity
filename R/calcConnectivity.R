@@ -567,7 +567,7 @@ calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
       nTargetSites <- length(unique(targetAssignment))
     else
       nTargetSites <- length(targetNames)
-    counts <- as(table(factor(originAssignment, levels = 1:nOriginSites),
+    counts <- methods::as(table(factor(originAssignment, levels = 1:nOriginSites),
                        factor(targetAssignment, levels = 1:nTargetSites)),
                  "matrix")
     dimnames(counts) <- list(originNames, targetNames)

@@ -473,12 +473,12 @@ plot(OVENdata$targetSites,add=TRUE)
 tp<-sf::st_coordinates(OVENdata$targetPoints)
 text(tp[,1], tp[,2], label=c(1:39))
 
-tp[5,2]<- -1899469
-tp[10,2]<- -1927848
-tp[1,2]<- -1927930
-tp[11,2]<- -2026511
-tp[15,2]<- -2021268
-tp[16,2]<- -1976063
+tp[5,2] <- 2450000
+tp[10,2]<- 2240496
+tp[1,2]<- 2240496
+tp[11,2]<- 2026511
+tp[15,2]<- 2031268
+tp[16,2]<- 2031268
 
 oven_targetPoints<-sf::st_as_sf(as.data.frame(tp),
                                 coords = c("X","Y"),
@@ -486,6 +486,7 @@ oven_targetPoints<-sf::st_as_sf(as.data.frame(tp),
 inter <- sf::st_intersects(oven_targetPoints, OVENdata$targetSites)
 any(lengths(inter)<1)
 plot(oven_targetPoints,add=TRUE, col = "green")
+plot(oven_targetPoints[lengths(inter)<1,],add=TRUE, col = "darkblue")
 
 # Estimate MC only, treat all data as GPS
 GPS_psi <- estTransition(isTelemetry = TRUE,
@@ -651,7 +652,7 @@ MC4
 ###############################################################################
 getCSV <- function(filename) {
   tmp <- tempdir()
-  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/',
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/',
                  filename, '?raw=true')
   temp <- paste(tmp, filename, sep = '/')
   utils::download.file(url1, temp, mode = 'wb')
@@ -660,11 +661,12 @@ getCSV <- function(filename) {
   return(csv)
 
 }
+
 getRDS <- function(speciesDist) {
   tmp <- tempdir()
   extension <- '.rds'
   filename <- paste0(speciesDist, extension)
-  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/isodev/data-raw/Spatial_Layers/',
+  url1 <- paste0('https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/Spatial_Layers/',
                  filename, '?raw=true')
   temp <- paste(tmp, filename, sep = '/')
   utils::download.file(url1, temp, mode = 'wb')
@@ -674,9 +676,9 @@ getRDS <- function(speciesDist) {
 }
 OVENdist <- getRDS("OVENdist")
 
-terra::crs(OVENdist) <- MigConnectivity::projections$WGS84
-
 OVENdist <- sf::st_as_sf(OVENdist)
+
+OVENdist <- sf::st_transform(OVENdist, 4326)
 
 OVENvals <- getCSV("deltaDvalues.csv")
 

@@ -14,8 +14,8 @@ elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
 \item{surface}{if "TRUE" returns surface water values. Default is 'FALSE'
 which returns the isotopes ratio found in precipitation.}
 
-\item{period}{The time period of interest. If 'Annual' (default) returns a raster
-of mean annual values in precipitation for the \code{element}. If
+\item{period}{The time period of interest. If 'Annual' (default) returns a
+raster of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
 }
