@@ -2325,13 +2325,15 @@ estMCisotope <- function(targetDist=NULL,
   if (is.null(sampleSize))
     sampleSize <- nAnimals
 
-  if (dim(originDist)!=rep(nOriginSites,2) ||
-      dim(targetDist)!=rep(nTargetSites,2))
+  cat(nOriginSites, "\n")
+  cat(nTargetSites, "\n")
+  if (any(dim(originDist)!=rep(nOriginSites,2)) ||
+      any(dim(targetDist)!=rep(nTargetSites,2)))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')
 
 
   if (calcCorr) {
-    originPoints2 <- sf::st_coordinates(sf::st_transform(originPoints, 4326))
+    originPoints2 <- sf::st_transform(originPoints, 4326)
     originDistStart <- distFromPos(sf::st_coordinates(originPoints2))
   }
 
@@ -2391,7 +2393,9 @@ estMCisotope <- function(targetDist=NULL,
     if (calcCorr) {
       originDist1 <- originDistStart[animal.sample, animal.sample]
       colnames(target.point.sample) <- c("x","y")
-      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample), coords = c("x","y"), crs = resampleProjection)
+      target.point.sample <- sf::st_as_sf(data.frame(target.point.sample),
+                                          coords = c("x","y"),
+                                          crs = resampleProjection)
       #target.point.sample <- sf::st_sfc(t.p.s.geom, crs = resampleProjection)
       #target.point.sample <- sp::SpatialPoints(target.point.sample,sp::CRS(resampleProjection))
       corr[boot] <- calcMantel(originDist = originDist1, targetPoints = target.point.sample)$pointCorr

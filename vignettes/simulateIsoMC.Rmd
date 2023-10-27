@@ -350,7 +350,7 @@ output.sims <- foreach(target=1:nTargetSetups,
                     originSites = originSites,
                     originDist = originDist,
                     nSamples = 100,
-                    verbose = 0,
+                    verbose = 3,
                     calcCorr = TRUE,
                     alpha = 0.05,
                     approxSigTest = FALSE,
@@ -362,16 +362,16 @@ output.sims <- foreach(target=1:nTargetSetups,
     sim.output$sim[sim]<-sim
     sim.output$MC.generated[sim] <- MC.generated
     sim.output$MC.realized[sim] <- MC.realized
-    sim.output$MC.est[sim] <- simEst$meanMC
-    sim.output$MC.low[sim] <- simEst$bcCI[1]
-    sim.output$MC.high[sim] <- simEst$bcCI[2]
+    sim.output$MC.est[sim] <- simEst$MC$mean
+    sim.output$MC.low[sim] <- simEst$MC$bcCI[1]
+    sim.output$MC.high[sim] <- simEst$MC$bcCI[2]
     sim.output$rM.realized[sim] <- ncf::mantel.test(originPointDists, 
                                                     targetPointDists,
                                                     resamp=0, 
                                                     quiet = TRUE)$correlation
-    sim.output$rM.est[sim] <- simEst$meanCorr
-    sim.output$rM.low[sim] <- simEst$bcCICorr[1]
-    sim.output$rM.high[sim] <- simEst$bcCICorr[2]
+    sim.output$rM.est[sim] <- simEst$corr$mean
+    sim.output$rM.low[sim] <- simEst$corr$bcCI[1]
+    sim.output$rM.high[sim] <- simEst$corr$bcCI[2]
   
   }
   return(sim.output)

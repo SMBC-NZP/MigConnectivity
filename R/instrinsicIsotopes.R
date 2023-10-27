@@ -274,8 +274,10 @@ isoAssign <- function(isovalues,
 
   # drop XY from matvals
   matvals <- matvals[,-(1:2)]
-  print(dim(matvals))
-  if(verbose>0){cat("\n Generating likely vs unlikely assignments \n")}
+
+  if(verbose>0){
+    cat("\n Generating likely vs unlikely assignments \n")
+  }
   # apply the odds function
 
   cuts <- apply(matvals,2,FUN = oddsFun,odds = odds)

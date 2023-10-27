@@ -633,12 +633,12 @@ targetSampleIsotope <- function(targetIntrinsic, animal.sample,
     draws <- 1
     samp <- sample.int(nrandomDraws, size = length(toSample), replace = TRUE)
     samp2 <- samp + (animal.sample[toSample] - 1) * nrandomDraws
-    point.sample <- targetIntrinsic2[samp2]
+    point.sample <- targetIntrinsic2[samp2, ]
     # Changed to make sure x,y coords stack correctly
     #target.point.sample[toSample,1]<- point.sample@coords[,1]
     #target.point.sample[toSample,2]<- point.sample@coords[,2]
     target.point.sample[toSample,1] <- sf::st_coordinates(point.sample)[,1]
-    target.point.sample[toSample,1] <- sf::st_coordinates(point.sample)[,2]
+    target.point.sample[toSample,2] <- sf::st_coordinates(point.sample)[,2]
     if (!is.null(targCon))
       # Grab the relevant target sites
       target.sample[toSample] <- targCon[samp2]
