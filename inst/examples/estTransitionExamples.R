@@ -332,6 +332,7 @@ nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(FALSE, nAnimals); isRaster <- rep(TRUE, nAnimals)
 isProb <- rep(FALSE, nAnimals); isTelemetry <- rep(FALSE, nAnimals)
 targetSites <- sf::st_as_sf(iso$targetSites)
+targetSites <- sf::st_make_valid(targetSites)
 targetSites <- sf::st_union(targetSites, by_feature = TRUE)
 
 

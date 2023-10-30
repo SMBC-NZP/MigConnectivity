@@ -191,7 +191,7 @@ isoAssign <- function(isovalues,
   }
   # if isomap and relAbund don't have the same resolution and/or extent
   # change to relAbund to match isomap
-  if(!terra::compareGeom(isomap,relAbund)){
+  if(!is.null(relAbund) && !terra::compareGeom(isomap,relAbund)){
     # project to match isomap
     relAbund <- terra::project(relAbund,isomap)
     # re-scale to ensure sums to 1
