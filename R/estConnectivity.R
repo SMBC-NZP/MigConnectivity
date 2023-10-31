@@ -2238,12 +2238,14 @@ estMCisotope <- function(targetDist=NULL,
     stop('If calcCorr is TRUE, need to define originPoints')}
 
   if (is.null(targetIntrinsic)){
-    stop("Need to define targetIntrinsic")}
+    stop("Need to define targetIntrinsic")
+  }
 
   if (is.null(targetSites))
     targetSites <- targetIntrinsic$targetSites
   if(!inherits(targetSites, "sf")){
     targetSites <- sf::st_as_sf(targetSites)
+    targetSites <- sf::st_make_valid(targetSites)
     targetSites <- sf::st_union(targetSites)
   }
 
@@ -2296,10 +2298,12 @@ estMCisotope <- function(targetDist=NULL,
   }
   else
     targCon <- NULL
-
+  # print(originAssignment)
+  # print(targetSites)
+  # print(targetDist)
   nOriginSites <- length(unique(originAssignment))
   nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
-
+  # cat("nSites figured\n")
 
   if (any(is.na(originAssignment)))
     stop("NAs in origin sites (make sure all points fall within polygons)")
@@ -2321,12 +2325,13 @@ estMCisotope <- function(targetDist=NULL,
   if (is.null(originNames))
     # need to conserve names from inputs
     originNames <- 1:nrow(originSites)
+  # cat("names figured", targetNames, originNames, "\n")
 
   if (is.null(sampleSize))
     sampleSize <- nAnimals
 
-  cat(nOriginSites, "\n")
-  cat(nTargetSites, "\n")
+  # cat(nOriginSites, "\n")
+  # cat(nTargetSites, "\n")
   if (any(dim(originDist)!=rep(nOriginSites,2)) ||
       any(dim(targetDist)!=rep(nTargetSites,2)))
     stop('Distance matrices should be square with same number of sites of each type as assignments/points (with distances in meters)')

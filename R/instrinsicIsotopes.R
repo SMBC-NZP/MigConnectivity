@@ -294,16 +294,17 @@ isoAssign <- function(isovalues,
 
 
   # convert to data frame
-  LikelyUnlikely <- terra::as.points(step2)
+  step2DF <- terra::as.data.frame(step2, xy = TRUE)
+  LikelyUnlikely <- as.matrix(step2DF)
 
-  step2DF <- data.frame(LikelyUnlikely)
 
   if(is.null(population)){
-  # Return the population level odds assignment - i.e, how many animals
+    # Return the population level odds assignment - i.e, how many animals
     SamplePop <- sum(step2)
-  # convert to data frame
-  SamplePopDF <- data.frame(terra::as.points(SamplePop))
-  } else {
+    # convert to data frame
+    SamplePopDF <- data.frame(terra::as.points(SamplePop))
+  }
+  else {
     nPop <- length(unique(population))
     Pops <- unique(population)
     POPs <- POPSdf <- vector("list",nPop)
@@ -318,35 +319,35 @@ isoAssign <- function(isovalues,
     SamplePopDF <- do.call('cbind', POPSdf)
   }
 
-# SINGLE CELL PROBABILITY ASSIGNMENTS - this makes MC possible with isotopes
-if (is.null(nSamples)){ nSamples <- 1000}
-if(is.null(seed)){seed <- as.numeric(Sys.time())}
+  # SINGLE CELL PROBABILITY ASSIGNMENTS - this makes MC possible with isotopes
+  if (is.null(nSamples)){ nSamples <- 1000}
+  if(is.null(seed)){seed <- as.numeric(Sys.time())}
 
-# Set random number generator to replicate results
-set.seed(seed)
+  # Set random number generator to replicate results
+  set.seed(seed)
 
-# generate empty array to fill with locations
-# make a simulated array twice the size to weed out locations
-# that fall outside of distribution
+  # generate empty array to fill with locations
+  # make a simulated array twice the size to weed out locations
+  # that fall outside of distribution
 
-xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,terra::nlyr(assign2prob)))
+  xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,terra::nlyr(assign2prob)))
 
-# give names for sf to convert down the line
-dimnames(xysimulation)[[2]] <- c("Longitude","Latitude")
+  # give names for sf to convert down the line
+  dimnames(xysimulation)[[2]] <- c("Longitude","Latitude")
 
-xysim <- array(NA, c(nSamples, 2, terra::nlyr(assign2prob)))
-# name the array
-  #dimnames(xysim)[[1]] <- 1:nSamples
-  dimnames(xysim)[[2]] <- c("Longitude","Latitude")
-  dimnames(xysim)[[3]] <- names(assign2prob)
+  xysim <- array(NA, c(nSamples, 2, terra::nlyr(assign2prob)))
+  # name the array
+    #dimnames(xysim)[[1]] <- 1:nSamples
+    dimnames(xysim)[[2]] <- c("Longitude","Latitude")
+    dimnames(xysim)[[3]] <- names(assign2prob)
 
-# converts raster to matrix of XY then probs
-#matvals <- raster::rasterToPoints(assign2prob)
+  # converts raster to matrix of XY then probs
+  #matvals <- raster::rasterToPoints(assign2prob)
 
-# Restrict random point estimates to 'likely' origin area #
-if(restrict2Likely){
+  # Restrict random point estimates to 'likely' origin area #
+  if(restrict2Likely){
     matvals<- matvals* LikelyUnlikely[,3:ncol(LikelyUnlikely)]
-}
+  }
 
   if(verbose>0){cat("\n Generating single cell assignments \n")}
   # This draws samples nSamples per animal (faster than looping over nSamples) and fills the xysim with x,y coords
