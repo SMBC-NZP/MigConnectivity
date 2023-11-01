@@ -22,19 +22,42 @@ simCountData(
 )
 }
 \arguments{
-\item{nStrata}{Number of populations/regions}
+\item{nStrata}{Number of populations/regions/strata}
 
-\item{routesPerStrata}{Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population}
+\item{routesPerStrata}{Vector of length 1 or nStrata containing the number of
+routes (i.e. counts) per stratum. If length(routesPerStrata) == 1, number of
+routes is identical for each population}
 
 \item{nYears}{Number of years surveys were conducted}
 
-\item{alphaStrat}{Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaStrat) == 1, expected counts are identical for each population}
+\item{alphaStrat}{Vector of length 1 or nStrata containing the log expected
+number of individuals counted at each route for each population. If
+length(alphaStrat) == 1, expected counts are identical for each population}
 
-\item{beta}{Coefficient of linear year effect (default = 0)}
+\item{beta}{Coefficient of linear year effect (default 0)}
 
-\item{sdRoute}{Standard deviation of random route-level variation}
+\item{eta}{Coefficient of first time run effect (default 0)}
 
-\item{sdYear}{Standard deviation of random year-level variation}
+\item{sdRoute}{Standard deviation of random route-level variation. Default is
+0, and if you're setting sdObs, it's probably best to keep it that way}
+
+\item{sdYear}{Standard deviation of random year-level variation (default 0)}
+
+\item{sdObs}{Standard deviation of random observer variation (default 0)}
+
+\item{sdCount}{Standard deviation of random count-level variation (default 0)}
+
+\item{model}{One of "S" (default), "Sh", "D", and "Dh". See Link et al.
+(2020) for descriptions of these models}
+
+\item{obsSurvival}{Annual probability that the observer that ran a route one
+year will run it the next. Default 1 (each route has only one observer)}
+
+\item{fixedyear}{The year within nYears that alphaStrat applies directly to
+(default halfway through)}
+
+\item{nuCount}{For the "h" models, parameter for extra variation in counts
+(default 1)}
 }
 \value{
 \code{simCountData} returns a list containing:
@@ -44,19 +67,22 @@ simCountData(
    \item{\code{nYears}}{Number of years.}
    \item{\code{routesPerStrata}}{Number of routes per population.}
    \item{\code{year}}{Vector of length nYears with standardized year values.}
-   \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+   \item{\code{strat}}{Vector of length nRoutes indicating the
+     population/region in which each route is located.}
    \item{\code{alphaStrat}}{log expected count for each populations.}
    \item{\code{epsRoute}}{realized deviation from alphaStrat for each route.}
    \item{\code{epsYear}}{realized deviation from alphaStrat for each year.}
    \item{\code{beta}}{linear year effect.}
    \item{\code{sdRoute}}{standard deviation of random route-level variation.}
    \item{\code{sdYear}}{standard deviation of random year-level variation.}
-   \item{\code{expectedCount}}{nRoutes by nYears matrix containing deterministic expected counts.}
+   \item{\code{expectedCount}}{nRoutes by nYears matrix containing
+     deterministic expected counts.}
    \item{\code{C}}{nRoutes by nYears matrix containing observed counts.}
   }
 }
 \description{
-Simulates Breeding Bird Survey-style count data
+Recently updated (version 0.4.3) to more properly match current BBS models.
+\code{modelCountDataJAGS} has not been updated yet
 }
 \examples{
 set.seed(150)
@@ -64,13 +90,13 @@ set.seed(150)
 ### Set parameters for simulation ----
 
 # Number of populations
-nPops. <- 4
+nStrata. <- 4
 # Number of routes w/i each population (assumed to be balanced)
-routePerPop. <- 30 # reduced for example speed
+routePerStrat. <- 30 # reduced for example speed
 # Number of years
 nYears. <- 5 # reduced for example speed
 # log(Expected number of birds counted at each route)
-alphaPop. <- 1.95
+alphaStrat. <- 1.95
 # standard deviation of normal distribution assumed for route/observer random
 # effects
 sdRoute. <- 0.6
@@ -92,7 +118,7 @@ nc. <- 1 # reduced for example speed
 \dontrun{
   # Slower, more thorough version
   # Number of routes w/i each population (assumed to be balanced)
-  routePerPop. <- 90
+  routePerStrat. <- 90
   # Number of years
   nYears. <- 10
   # Number of simulated datasets to create and model
@@ -118,8 +144,8 @@ system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\n")
 
   # Simulate data
-  sim_data <- simCountData(nPops = nPops., routePerPop = routePerPop.,
-                           nYears = nYears., alphaPop = alphaPop.,
+  sim_data <- simCountData(nStrata = nStrata., routesPerStrata = routePerStrat.,
+                           nYears = nYears., alphaStrat = alphaStrat.,
                            sdRoute = sdRoute., sdYear = sdYear.)
   sim_in[[s]] <- sim_data
 
@@ -136,11 +162,11 @@ system.time(for(s in 1:nsims){
 
 
 ### Check that relative abundance is, on average, equal for each population
-prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$pop))), 2)
+prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$strat))), 2)
 
 #nSamples <- (ni. - nb.)/nt. * nc.
 #rel_abund0 <- array(NA, c(nsims, nSamples, nPops.))
-rel_names <- paste0('relN[', 1:nPops., ']')
+rel_names <- paste0('relN[', 1:nStrata., ']')
 rel_abund1 <- data.frame(sim=1:nsims,
                          ra1.mean=NA, ra2.mean=NA, ra3.mean=NA, ra4.mean=NA,
                          ra1.low=NA, ra2.low=NA, ra3.low=NA, ra4.low=NA,
@@ -160,6 +186,7 @@ rel_abund1 <- transform(rel_abund1,
 
 summary(rel_abund1)
 }
+
 }
 \references{
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
@@ -167,6 +194,6 @@ and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513-524.
 \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 
-Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
-change with application to Cerulean Warblers. Ecology 83: 2832-2840.
+Link, W. A., J. R. Sauer, and D. K. Niven. 2020. Model selection for the
+North American Breeding Bird Survey. Ecological Applications 30: e02137.
 }

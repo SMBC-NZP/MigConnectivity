@@ -227,16 +227,16 @@ nb. <- 500 # reduced for example speed
 # Number of MCMC chains
 nc. <- 1 # reduced for example speed
 
-sim_data <- simCountData(nPops = nOriginSites, routePerPop = routePerPop.,
-                         nYears = nYears., alphaPop = alphaPop.,
+sim_data <- simCountData(nStrata = nOriginSites, routesPerStrata = routePerPop.,
+                         nYears = nYears., alphaStrat = alphaPop.,
                          sdRoute = sdRoute., sdYear = sdYear.)
 # Estimate population-level abundance
 out_mcmc <- modelCountDataJAGS(count_data = sim_data, ni = ni., nt = nt.,
                                nb = nb., nc = nc.)
 # Estimate winter abundance (needed for movement data collected in winter,
 # genoscape probabilities in this case)
-sim_data2 <- simCountData(nPops = nTargetSites, routePerPop = routePerPop.,
-                          nYears = nYears., alphaPop = rev$targetRelAbund * 2,
+sim_data2 <- simCountData(nStrata = nTargetSites, routesPerStrata = routePerPop.,
+                          nYears = nYears., alphaStrat = rev$targetRelAbund * 2,
                           sdRoute = sdRoute., sdYear = sdYear.)
 out_mcmc2 <- modelCountDataJAGS(count_data = sim_data2, ni = ni., nt = nt.,
                                 nb = nb., nc = nc.)

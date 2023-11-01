@@ -35,13 +35,13 @@ set.seed(150)
 ### Set parameters for simulation ----
 
 # Number of populations
-nPops. <- 4
+nStrata. <- 4
 # Number of routes w/i each population (assumed to be balanced)
-routePerPop. <- 30 # reduced for example speed
+routePerStrat. <- 30 # reduced for example speed
 # Number of years
 nYears. <- 5 # reduced for example speed
 # log(Expected number of birds counted at each route)
-alphaPop. <- 1.95
+alphaStrat. <- 1.95
 # standard deviation of normal distribution assumed for route/observer random
 # effects
 sdRoute. <- 0.6
@@ -63,7 +63,7 @@ nc. <- 1 # reduced for example speed
 \dontrun{
   # Slower, more thorough version
   # Number of routes w/i each population (assumed to be balanced)
-  routePerPop. <- 90
+  routePerStrat. <- 90
   # Number of years
   nYears. <- 10
   # Number of simulated datasets to create and model
@@ -89,8 +89,8 @@ system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\n")
 
   # Simulate data
-  sim_data <- simCountData(nPops = nPops., routePerPop = routePerPop.,
-                           nYears = nYears., alphaPop = alphaPop.,
+  sim_data <- simCountData(nStrata = nStrata., routesPerStrata = routePerStrat.,
+                           nYears = nYears., alphaStrat = alphaStrat.,
                            sdRoute = sdRoute., sdYear = sdYear.)
   sim_in[[s]] <- sim_data
 
@@ -107,11 +107,11 @@ system.time(for(s in 1:nsims){
 
 
 ### Check that relative abundance is, on average, equal for each population
-prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$pop))), 2)
+prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$strat))), 2)
 
 #nSamples <- (ni. - nb.)/nt. * nc.
 #rel_abund0 <- array(NA, c(nsims, nSamples, nPops.))
-rel_names <- paste0('relN[', 1:nPops., ']')
+rel_names <- paste0('relN[', 1:nStrata., ']')
 rel_abund1 <- data.frame(sim=1:nsims,
                          ra1.mean=NA, ra2.mean=NA, ra3.mean=NA, ra4.mean=NA,
                          ra1.low=NA, ra2.low=NA, ra3.low=NA, ra4.low=NA,
@@ -131,6 +131,7 @@ rel_abund1 <- transform(rel_abund1,
 
 summary(rel_abund1)
 }
+
 }
 \references{
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,

@@ -181,14 +181,32 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 ###############################################################################
 #' Simulates Breeding Bird Survey-style count data
 #'
+#' Recently updated (version 0.4.3) to more properly match current BBS models.
+#' \code{modelCountDataJAGS} has not been updated yet
 #'
-#' @param nStrata Number of populations/regions
-#' @param routesPerStrata Vector of length 1 or nPops containing the number of routes (i.e. counts) per population. If length(routesPerStrata) == 1, number of routes is identical for each population
+#' @param nStrata Number of populations/regions/strata
+#' @param routesPerStrata Vector of length 1 or nStrata containing the number of
+#'  routes (i.e. counts) per stratum. If length(routesPerStrata) == 1, number of
+#'  routes is identical for each population
 #' @param nYears Number of years surveys were conducted
-#' @param alphaStrat Vector of length 1 or nPops containing the log expected number of individuals counted at each route for each population. If length(alphaStrat) == 1, expected counts are identical for each population
-#' @param beta Coefficient of linear year effect (default = 0)
-#' @param sdRoute Standard deviation of random route-level variation
-#' @param sdYear Standard deviation of random year-level variation
+#' @param alphaStrat Vector of length 1 or nStrata containing the log expected
+#'  number of individuals counted at each route for each population. If
+#'  length(alphaStrat) == 1, expected counts are identical for each population
+#' @param beta Coefficient of linear year effect (default 0)
+#' @param eta Coefficient of first time run effect (default 0)
+#' @param sdRoute Standard deviation of random route-level variation. Default is
+#'  0, and if you're setting sdObs, it's probably best to keep it that way
+#' @param sdYear Standard deviation of random year-level variation (default 0)
+#' @param sdObs Standard deviation of random observer variation (default 0)
+#' @param sdCount Standard deviation of random count-level variation (default 0)
+#' @param model One of "S" (default), "Sh", "D", and "Dh". See Link et al.
+#'  (2020) for descriptions of these models
+#' @param obsSurvival Annual probability that the observer that ran a route one
+#'  year will run it the next. Default 1 (each route has only one observer)
+#' @param fixedyear The year within nYears that alphaStrat applies directly to
+#'  (default halfway through)
+#' @param nuCount For the "h" models, parameter for extra variation in counts
+#'  (default 1)
 #'
 #' @return \code{simCountData} returns a list containing:
 #'  \describe{
@@ -197,14 +215,16 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #'    \item{\code{nYears}}{Number of years.}
 #'    \item{\code{routesPerStrata}}{Number of routes per population.}
 #'    \item{\code{year}}{Vector of length nYears with standardized year values.}
-#'    \item{\code{strat}}{Vector of length nRoutes indicating the population/region in which each route is located.}
+#'    \item{\code{strat}}{Vector of length nRoutes indicating the
+#'      population/region in which each route is located.}
 #'    \item{\code{alphaStrat}}{log expected count for each populations.}
 #'    \item{\code{epsRoute}}{realized deviation from alphaStrat for each route.}
 #'    \item{\code{epsYear}}{realized deviation from alphaStrat for each year.}
 #'    \item{\code{beta}}{linear year effect.}
 #'    \item{\code{sdRoute}}{standard deviation of random route-level variation.}
 #'    \item{\code{sdYear}}{standard deviation of random year-level variation.}
-#'    \item{\code{expectedCount}}{nRoutes by nYears matrix containing deterministic expected counts.}
+#'    \item{\code{expectedCount}}{nRoutes by nYears matrix containing
+#'      deterministic expected counts.}
 #'    \item{\code{C}}{nRoutes by nYears matrix containing observed counts.}
 #'   }
 #'
@@ -217,8 +237,8 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' Methods in Ecology and Evolution 9: 513-524.
 #' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
-#' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
-#' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
+#' Link, W. A., J. R. Sauer, and D. K. Niven. 2020. Model selection for the
+#' North American Breeding Bird Survey. Ecological Applications 30: e02137.
 
 simCountData <- function (nStrata, routesPerStrata, nYears, alphaStrat, beta = 0,
                           eta = 0, sdRoute = 0, sdYear = 0, sdObs = 0, sdCount = 0,
@@ -357,9 +377,9 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
   nRoutes <- dim(count_data$C)[2]
   nYears = dim(count_data$C)[1]
   if(length(count_data$routesPerStrata) == 1){
-    routesPerStrata = rep(count_data$routesPerStrata, nPops)
+    routesPerStrata = rep(count_data$input$routesPerStrata, nPops)
   } else {
-    routesPerStrata = count_data$routesPerStrata
+    routesPerStrata = count_data$input$routesPerStrata
   }
 
   # Initial values
@@ -371,8 +391,8 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
 
   # Data
   jags.data <- list(C = count_data$C, nPops = length(unique(count_data$strat)), nRoutes = nRoutes,
-                    routesPerStrata = routesPerStrata,
-                    year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, strat = count_data$strat)
+                    routePerPop = routesPerStrata,
+                    year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, pop = count_data$strat)
 
 
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
