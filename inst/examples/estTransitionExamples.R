@@ -320,13 +320,14 @@ iso <- isoAssign(isovalues = OVENvals[,2],
                  odds = NULL,
                  restrict2Likely = FALSE,
                  nSamples = 1000,
-                 sppShapefile = OVENdist,
+                 sppShapefile = terra::vect(OVENdist),
                  assignExtent = c(-179,-60,15,89),
                  element = "Hydrogen",
                  surface = FALSE,
                  period = "Annual",
                  seed = 12345,
                  verbose=1)
+
 
 nAnimals <- dim(iso$probassign)[3]
 isGL <-rep(FALSE, nAnimals); isRaster <- rep(TRUE, nAnimals)

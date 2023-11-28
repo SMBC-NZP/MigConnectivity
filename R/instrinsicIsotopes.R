@@ -153,9 +153,11 @@ isoAssign <- function(isovalues,
   # Series of checks for a species range map inputs
   # 2. if sppShapefile provided check that it has a projection defined
   #    if not stop - if so, mask the isoscape to range
-    if(is.na(terra::crs(sppShapefile))){
-      stop("coordinate system needed for sppShapefile")
-    }
+    if(inherits(sppShapefile,"SpatVector") & is.na(terra::crs(sppShapefile))){stop("coordinate system needed for sppShapefile")}
+    if(inherits(sppShapefile,"sf") & is.na(sf::st_crs(sppShapefile))){stop("coorindate system needed for sppShapfile")}
+    #if(is.na(terra::crs(sppShapefile))){
+    #  stop("coordinate system needed for sppShapefile")
+    #}
   # 3. if the projections don't match - project into same as isomap then mask
     # quick check
     if(inherits(sppShapefile, "SpatialPolygons") ||
@@ -219,9 +221,12 @@ isoAssign <- function(isovalues,
   # we could add an on error clause
   targetSites_iso <- terra::makeValid(terra::as.polygons(isocut))
 
+  # rename the targetSites to simplify output
+  targetSites_iso <- targetSites_iso[,1]
+  names(targetSites_iso) <- c("targetSite")
 
   # ensure that the targetSites are aggregated
-  targetSites <- terra::aggregate(targetSites_iso, by = "lyr.1",dissolve = TRUE)
+  targetSites <- terra::aggregate(targetSites_iso, by = "targetSite", dissolve = TRUE)
 
   terra::crs(targetSites) <- terra::crs(isomap)
 
@@ -229,10 +234,10 @@ isoAssign <- function(isovalues,
   if(!is.null(sppShapefile)){
     targetSites <- terra::intersect(targetSites,
                                     sppShapefile)
+
+    targetSites <- terra::aggregate(targetSites_iso, by = "targetSite", dissolve = TRUE)
   }
-  # rename the targetSites to simplify output
-  targetSites<-targetSites[,1]
-  names(targetSites) <- c("targetSite")
+
   #targetSites <- rgeos::gUnaryUnion(targetSites, id=targetSites$targetSite)
   # spatially explicit assignment
   assign <- function(x,y) {
