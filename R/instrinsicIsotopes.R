@@ -211,7 +211,14 @@ isoAssign <- function(isovalues,
                                      by = isoSTD))
 
   # use those cuts to make polygons
-  targetSites <- terra::as.polygons(isocut, aggregate = TRUE)
+  # added makeValid - just in case but prevents errors -
+  # we could add an on error clause
+  targetSites_iso <- terra::makeValid(terra::as.polygons(isocut))
+
+
+  # ensure that the targetSites are aggregated
+  targetSites <- terra::aggregate(targetSites_iso, by = "lyr.1",dissolve = TRUE)
+
   terra::crs(targetSites) <- terra::crs(isomap)
 
   #if sppShapefile !NULL then clip targetSites to distribution
