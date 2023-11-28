@@ -45,6 +45,9 @@
 #' @param verbose takes values 0, 1 (default) or 2. 0 prints no output during
 #'        run. 1 prints a message detailing where in the process the function
 #'        is. 2 prints the animal currently being sampled.
+#' @param generateSingleCell if 'TRUE' generates a single origin location using
+#'        the posterior assignment distribution - this takes a while to run.
+#'        If 'FALSE' (default), no coordinates are generated.
 #' @return returns an \code{isoAssign} object containing the following:
 #'  \describe{
 #'   \item{\code{probassign}}{SpatRast stack of individual probabilistic assignments}
@@ -133,7 +136,8 @@ isoAssign <- function(isovalues,
                       surface = FALSE,
                       period = "Annual",
                       seed = NULL,
-                      verbose=1) {
+                      verbose=1,
+                      generateSingleCell = FALSE) {
   # force verbose to default when outside specified range.
   if(!(verbose %in% c(0,1,2))){
     verbose = 1
@@ -336,6 +340,7 @@ isoAssign <- function(isovalues,
   # generate empty array to fill with locations
   # make a simulated array twice the size to weed out locations
   # that fall outside of distribution
+  if(generateSingleCell){
 
   xysimulation <- array(NA,c(nSamples+floor((nSamples/2)),2,terra::nlyr(assign2prob)))
 
@@ -401,6 +406,8 @@ for(i in 1:ncol(matvals)) {
     xysim[,1,i] <- xysimulation[randsamples,1,i]
     xysim[,2,i] <- xysimulation[randsamples,2,i]
     }
+} # end generateSingleCell
+
     # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
   #samplenum <- 1
   #while(numInDist<nSamples){
@@ -437,7 +444,7 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         probDF = assign2probDF,
                         oddsDF = step2DF,
                         popDF = SamplePopDF,
-                        SingleCell = xysim,
+                        SingleCell = ifelse(generateSingleCell,xysim,NA),
                         targetSites = targetSites,
                         RandomSeed = seed),
                         class = c("isoAssign", "intrinsicAssign"))
