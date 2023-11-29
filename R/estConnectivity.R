@@ -658,8 +658,10 @@ estTransitionBoot <- function(originSites = NULL,
                          isGL = isGL, isTelemetry = isTelemetry,
                          isRaster = isRaster, isProb = isProb,
                          captured = captured,
+                         originRaster = originRaster,
                          originRasterXYZ = originRasterXYZ,
                          originSingleCell = originSingleCell,
+                         targetRaster = targetRaster,
                          targetRasterXYZ = targetRasterXYZ,
                          targetSingleCell = targetSingleCell,
                          targetSites = targetSites, originSites = originSites)
@@ -670,8 +672,10 @@ estTransitionBoot <- function(originSites = NULL,
     targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
     isRaster <- temp$isRaster; isProb <- temp$isProb
+    originRaster <- temp$originRaster
     originRasterXYZ <- temp$originRasterXYZ
     originSingleCell <- temp$originSingleCell
+    targetRaster <- temp$targetRaster
     targetRasterXYZ <- temp$targetRasterXYZ
     targetSingleCell <- temp$targetSingleCell
   }

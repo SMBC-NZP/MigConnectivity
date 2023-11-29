@@ -354,9 +354,9 @@ isoAssign <- function(isovalues,
 
   xysim <- array(NA, c(nSamples, 2, terra::nlyr(assign2prob)))
   # name the array
-    #dimnames(xysim)[[1]] <- 1:nSamples
-    dimnames(xysim)[[2]] <- c("Longitude","Latitude")
-    dimnames(xysim)[[3]] <- names(assign2prob)
+  #dimnames(xysim)[[1]] <- 1:nSamples
+  dimnames(xysim)[[2]] <- c("Longitude","Latitude")
+  dimnames(xysim)[[3]] <- names(assign2prob)
 
   # converts raster to matrix of XY then probs
   #matvals <- raster::rasterToPoints(assign2prob)
@@ -440,7 +440,10 @@ for(i in 1:ncol(matvals)) {
    # while numInDist is less than nSamples - redraw and fill NA with multinomial draw
    # samplenum <- samplenum+1
   #}
-}
+  }
+  else {
+    xysim <- NULL
+  }
 
 
 isoAssignReturn <- structure(list(probassign = assign2prob,
@@ -449,7 +452,7 @@ isoAssignReturn <- structure(list(probassign = assign2prob,
                         probDF = assign2probDF,
                         oddsDF = step2DF,
                         popDF = SamplePopDF,
-                        SingleCell = ifelse(generateSingleCell,xysim,NA),
+                        SingleCell = xysim,
                         targetSites = targetSites,
                         RandomSeed = seed),
                         class = c("isoAssign", "intrinsicAssign"))

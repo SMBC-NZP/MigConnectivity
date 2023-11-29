@@ -22,7 +22,8 @@ isoAssign(
   surface = FALSE,
   period = "Annual",
   seed = NULL,
-  verbose = 1
+  verbose = 1,
+  generateSingleCell = FALSE
 )
 }
 \arguments{
@@ -78,6 +79,10 @@ generation. Default = NULL}
 \item{verbose}{takes values 0, 1 (default) or 2. 0 prints no output during
 run. 1 prints a message detailing where in the process the function
 is. 2 prints the animal currently being sampled.}
+
+\item{generateSingleCell}{if 'TRUE' generates a single origin location using
+the posterior assignment distribution - this takes a while to run.
+If 'FALSE' (default), no coordinates are generated.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:

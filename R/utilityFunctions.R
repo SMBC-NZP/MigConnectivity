@@ -808,9 +808,11 @@ reassignInds <- function(dataOverlapSetting = "none",
                          isGL = FALSE, isTelemetry = FALSE,
                          isRaster = FALSE, isProb = FALSE,
                          captured = "origin",
+                         originRaster = NULL,
                          originRasterXYZ = NULL,
                          originRasterXYZcrs = NULL,
                          originSingleCell = NULL,
+                         targetRaster = NULL,
                          targetRasterXYZ = NULL,
                          targetRasterXYZcrs = NULL,
                          targetSingleCell = NULL,
@@ -1014,8 +1016,10 @@ reassignInds <- function(dataOverlapSetting = "none",
     if (!is.null(originRasterXYZ)) {
       if (all(isRaster & captured != "origin")) {
         originRasterXYZ2 <- originRasterXYZ
+        originRaster2 <- originRaster
       }
       else {
+        originRaster2 <- terra::rast()
         originRasterXYZ2 <- originRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
@@ -1023,11 +1027,13 @@ reassignInds <- function(dataOverlapSetting = "none",
             column <- column + 1
             originRasterXYZ2 <- cbind(originRasterXYZ2,
                                       originRasterXYZ[, column])
+            originRaster2 <- c(originRaster2, originRaster[[column - 2]])
           }
-          else
+          else {
+            originRaster2 <- c(originRaster2, originRaster[[1]])
             originRasterXYZ2 <- cbind(originRasterXYZ2,
                                       array(1/dimORast[1], c(dimORast[1], 1)))
-
+          }
         }
         if (!is.null(originSingleCell)) {
           dimOCell <- dim(originSingleCell)
@@ -1049,13 +1055,17 @@ reassignInds <- function(dataOverlapSetting = "none",
         }
       }
     }
-    else
+    else{
       originRasterXYZ2 <- NULL
+      originRaster2 <- NULL
+    }
     if (!is.null(targetRasterXYZ)) {
       if (all(isRaster & captured != "target")) {
         targetRasterXYZ2 <- targetRasterXYZ
+        targetRaster2 <- targetRaster
       }
       else {
+        targetRaster2 <- terra::rast()
         targetRasterXYZ2 <- targetRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
@@ -1063,11 +1073,14 @@ reassignInds <- function(dataOverlapSetting = "none",
             column <- column + 1
             targetRasterXYZ2 <- cbind(targetRasterXYZ2,
                                       targetRasterXYZ[, column])
+            targetRaster2 <- suppressMessages(c(targetRaster2,
+                                                targetRaster[[column - 2]]))
           }
-          else
+          else{
             targetRasterXYZ2 <- cbind(targetRasterXYZ2,
                                       array(1/dimTRast[1], c(dimTRast[1], 1)))
-
+            targetRaster2 <- suppressMessages((c(targetRaster2, targetRaster[[1]])))
+          }
         }
         if (!is.null(targetSingleCell)) {
           dimTCell <- dim(targetSingleCell)
@@ -1088,8 +1101,10 @@ reassignInds <- function(dataOverlapSetting = "none",
         }
       }
     }
-    else
+    else {
       targetRasterXYZ2 <- NULL
+      targetRaster2 <- NULL
+    }
   }
   else {
     originRasterXYZ2 <- originRasterXYZ; targetRasterXYZ2 <- targetRasterXYZ
@@ -1193,8 +1208,10 @@ reassignInds <- function(dataOverlapSetting = "none",
               targetAssignment = targetAssignment2,
               isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster,
               isProb = isProb, captured = captured,
+              originRaster = originRaster2,
               originRasterXYZ = originRasterXYZ2,
               originSingleCell = originSingleCell,
+              targetRaster = targetRaster2,
               targetRasterXYZ = targetRasterXYZ2,
               targetSingleCell = targetSingleCell))
 }
@@ -1532,7 +1549,7 @@ rasterToProb <- function(originSites = NULL, targetSites = NULL,
     isRaster[whichTarget] <- FALSE
     isProb[whichTarget] <- TRUE
   }
-  if (length(whichOrigin>0) && !is.null(targetSites)) {
+  if (length(whichOrigin>0) && !is.null(originSites)) {
     originSum <- terra::extract(originRaster,
                                 terra::vect(originSites), fun = sum,
                                 na.rm = TRUE, ID = FALSE)
