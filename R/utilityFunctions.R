@@ -1019,7 +1019,12 @@ reassignInds <- function(dataOverlapSetting = "none",
         originRaster2 <- originRaster
       }
       else {
-        originRaster2 <- terra::rast()
+        xvalues <- range(originRasterXYZ[,1])
+        yvalues <- range(originRasterXYZ[,2])
+        originRaster2 <- terra::rast(xmin = xvalues[1],xmax = xvalues[2],
+                                     ymin = yvalues[1],ymax = yvalue[2],
+                                     resolution = c(0.0833333, 0.0833333),
+                                     vals = 1)
         originRasterXYZ2 <- originRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
@@ -1065,7 +1070,12 @@ reassignInds <- function(dataOverlapSetting = "none",
         targetRaster2 <- targetRaster
       }
       else {
-        targetRaster2 <- terra::rast()
+        xvalues <- range(targetRasterXYZ[,1])
+        yvalues <- range(targetRasterXYZ[,2])
+        targetRaster2 <- terra::rast(xmin = xvalues[1],xmax = xvalues[2],
+                                     ymin = yvalues[1],ymax = yvalue[2],
+                                     resolution = c(0.0833333, 0.0833333),
+                                     vals = 1)
         targetRasterXYZ2 <- targetRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
