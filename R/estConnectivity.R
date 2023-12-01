@@ -672,8 +672,13 @@ estTransitionBoot <- function(originSites = NULL,
     targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
     isRaster <- temp$isRaster; isProb <- temp$isProb
-    originRaster <- temp$originRaster
     originRasterXYZ <- temp$originRasterXYZ
+    if (!is.null(temp$originRasterXYZ)){
+      originRaster <- terra::rast(originRasterXYZ, crs = originRasterXYZcrs,
+                                  extent = terra::ext(originRaster), type = "xyz")
+      print(originRasterXYZ)
+      print(originRaster)
+    }
     originSingleCell <- temp$originSingleCell
     targetRaster <- temp$targetRaster
     targetRasterXYZ <- temp$targetRasterXYZ
@@ -855,7 +860,8 @@ estTransitionBoot <- function(originSites = NULL,
                                 rep(1:nOriginSites, banded)))
     }
   }
-
+  # print(originAssignment)
+  # print(which(is.na(originAssignment), arr.ind = TRUE))
 
   if (is.null(targetAssignment)){
     if (verbose > 0)
