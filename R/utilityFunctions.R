@@ -261,7 +261,6 @@ locSample <- function(isGL,
                             c(nSim, 2, sum(isGL & toSampleBool))) - geoBias2
 
       dimnames(point.sample0)[[2]] <- c("x","y")
-      #print(str(point.sample0, max.level = 1))
 
       # Convert those to SpatialPoints
 
@@ -270,20 +269,11 @@ locSample <- function(isGL,
                                                             coords = c("x","y"),
                                                             crs = resampleProjection)},
                              MARGIN = 3)
-      #print(str(point.sample0))
-      #point.sample <- lapply(point.sample1, st_as_sf)
       if (!is.null(sites)) {
         # Find out which sampled points are in a target site
         if(!sf::st_crs(sites)==sf::st_crs(point.sample0[[1]])){
           sites <- sf::st_transform(sites, crs = resampleProjection)
         }
-        # inter <- sf::st_intersects(x = point.sample0[[1]], y = sites,
-        #                            sparse = TRUE)
-        # sf::st_intersects(x = originSitesPABU, y = originSitesPABU,
-        #                   sparse = TRUE)
-        # inter[lengths(inter)==0] <- 0
-        # inter[lengths(inter)>1] <- sapply(inter[lengths(inter)>1], function(x) x[1])
-        # test <- as.numeric(unlist(unclass(inter)))
         site.sample0 <- sapply(point.sample0, FUN = function(z){
           inter <- sf::st_intersects(x = z, y = sites,
                                      sparse = TRUE)
@@ -303,7 +293,6 @@ locSample <- function(isGL,
       # cat(good.sample0, "\n")
     }
     if (any(isProb & toSampleBool)) {
-      #print(assignment)
       site.sample1 <- apply(assignment[isProb & toSampleBool, , drop = FALSE],
                             1, sample.int, n = ncol(assignment), size = nSim,
                             replace = TRUE)
@@ -578,7 +567,6 @@ locSample <- function(isGL,
       }
     }
     toSample <- which(is.na(site.sample))
-    #print(toSample)
   }
   if (length(toSample) > 0){
     notfind <- data.frame(Animal = toSample, isGL = isGL[toSample],
@@ -888,7 +876,6 @@ reassignInds <- function(dataOverlapSetting = "none",
           tt2[i, targetAssignment[i]] <- 1
         targetAssignment <- tt2
         dimTAss <- dim(targetAssignment)
-        #print(targetAssignment)
       }
       else
         nTAss <- dimTAss[1]
@@ -1019,12 +1006,6 @@ reassignInds <- function(dataOverlapSetting = "none",
         originRaster2 <- originRaster
       }
       else {
-        # xvalues <- range(originRasterXYZ[,1])
-        # yvalues <- range(originRasterXYZ[,2])
-        # resolution <- terra::res(originRaster)
-        # extent <- terra::ext(originRaster)
-        # originRaster2 <- terra::rast(terra::rast(extent,
-        #                                          vals = 1))
         originRasterXYZ2 <- originRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
@@ -1032,25 +1013,12 @@ reassignInds <- function(dataOverlapSetting = "none",
             column <- column + 1
             originRasterXYZ2 <- cbind(originRasterXYZ2,
                                       originRasterXYZ[, column])
-            # originRaster2 <- c(originRaster2, originRaster[[column - 2]])
           }
           else {
-            # originRaster2 <- c(originRaster2,
-            #                    terra::rast(xmin = xvalues[1],xmax = xvalues[2],
-            #                                ymin = yvalues[1],ymax = yvalues[2],
-            #                                resolution = resolution,
-            #                                vals = 1))
             originRasterXYZ2 <- cbind(originRasterXYZ2,
                                       array(1/dimORast[1], c(dimORast[1], 1)))
           }
         }
-        # print(dim(originRasterXYZ2))
-        # print(class(originRasterXYZ2))
-        # colnames(originRasterXYZ2) <- c("x", "y", paste0("lyr.", 1:nTotal))
-        # print(head(originRasterXYZ2))
-        # print(extent)
-        # originRaster2 <- terra::rast(originRasterXYZ2, crs = originRasterXYZcrs,
-        #                              extent = extent, type = "xyz")
         if (!is.null(originSingleCell)) {
           dimOCell <- dim(originSingleCell)
           dummyVals <- c(originSingleCell[ , , 1])
@@ -1073,20 +1041,14 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else{
       originRasterXYZ2 <- NULL
-      originRaster2 <- NULL
     }
     if (!is.null(targetRasterXYZ)) {
       if (all(isRaster & captured != "target")) {
         targetRasterXYZ2 <- targetRasterXYZ
-        targetRaster2 <- targetRaster
       }
       else {
         xvalues <- range(targetRasterXYZ[,1])
         yvalues <- range(targetRasterXYZ[,2])
-        targetRaster2 <- terra::rast(xmin = xvalues[1],xmax = xvalues[2],
-                                     ymin = yvalues[1],ymax = yvalue[2],
-                                     resolution = c(0.0833333, 0.0833333),
-                                     vals = 1)
         targetRasterXYZ2 <- targetRasterXYZ[, 1:2]
         column <- 2
         for (i in 1:nTotal) {
@@ -1094,13 +1056,10 @@ reassignInds <- function(dataOverlapSetting = "none",
             column <- column + 1
             targetRasterXYZ2 <- cbind(targetRasterXYZ2,
                                       targetRasterXYZ[, column])
-            targetRaster2 <- suppressMessages(c(targetRaster2,
-                                                targetRaster[[column - 2]]))
           }
           else{
             targetRasterXYZ2 <- cbind(targetRasterXYZ2,
                                       array(1/dimTRast[1], c(dimTRast[1], 1)))
-            targetRaster2 <- suppressMessages((c(targetRaster2, targetRaster[[1]])))
           }
         }
         if (!is.null(targetSingleCell)) {
@@ -1124,7 +1083,6 @@ reassignInds <- function(dataOverlapSetting = "none",
     }
     else {
       targetRasterXYZ2 <- NULL
-      targetRaster2 <- NULL
     }
   }
   else {
@@ -1556,6 +1514,7 @@ rasterToProb <- function(originSites = NULL, targetSites = NULL,
   whichTarget <- which(inds & !capTarget)
   whichOrigin <- which(inds & !capOrigin)
   if (length(whichTarget>0) && !is.null(targetSites)) {
+    targetSites <- sf::st_transform(targetSites, terra::crs(targetRaster))
     targetSum <- terra::extract(targetRaster,
                                 terra::vect(targetSites), fun = sum,
                                 na.rm = TRUE, ID = FALSE)
@@ -1571,13 +1530,11 @@ rasterToProb <- function(originSites = NULL, targetSites = NULL,
     isProb[whichTarget] <- TRUE
   }
   if (length(whichOrigin>0) && !is.null(originSites)) {
-#    print(originRaster)
+    originSites <- sf::st_transform(originSites, terra::crs(originRaster))
     originSum <- terra::extract(originRaster,
                                 terra::vect(originSites), fun = sum,
                                 na.rm = TRUE, ID = FALSE)
- #   print(originSum)
     originSum <- t(originSum[, whichOrigin, drop = FALSE])
-  #  print(originSum)
     originSum <- sweep(originSum, 1, rowSums(originSum), "/")
     if (is.null(originAssignment)){
       originAssignment <- array(0, c(nInds, nOriginSites))

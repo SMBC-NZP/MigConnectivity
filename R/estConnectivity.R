@@ -667,21 +667,22 @@ estTransitionBoot <- function(originSites = NULL,
                          targetSites = targetSites, originSites = originSites)
     originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
     originAssignment <- temp$originAssignment
-    #print(head(originAssignment, 10))
-    # cat("**************************************\n")
     targetAssignment <- temp$targetAssignment
     isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
     isRaster <- temp$isRaster; isProb <- temp$isProb
     originRasterXYZ <- temp$originRasterXYZ
-    if (!is.null(temp$originRasterXYZ)){
+    if (!is.null(originRasterXYZ)){
+      colnames(originRasterXYZ) <- c("x", "y", paste0("lyr.", 1:length(isRaster)))
       originRaster <- terra::rast(originRasterXYZ, crs = originRasterXYZcrs,
                                   extent = terra::ext(originRaster), type = "xyz")
-      print(originRasterXYZ)
-      print(originRaster)
     }
     originSingleCell <- temp$originSingleCell
-    targetRaster <- temp$targetRaster
     targetRasterXYZ <- temp$targetRasterXYZ
+    if (!is.null(targetRasterXYZ)){
+      colnames(targetRasterXYZ) <- c("x", "y", paste0("lyr.", 1:length(isRaster)))
+      targetRaster <- terra::rast(targetRasterXYZ, crs = targetRasterXYZcrs,
+                                  extent = terra::ext(targetRaster), type = "xyz")
+    }
     targetSingleCell <- temp$targetSingleCell
   }
   if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
@@ -707,7 +708,6 @@ estTransitionBoot <- function(originSites = NULL,
                   length(captured))
   nAnimalsTotal <- nAnimals + sum(banded) #+ sum(reencountered)#
   isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
-  # print(nAnimals); print(nAnimalsTotal)
   if (length(isGL)==1){
     isGL <- c(rep(isGL, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
   }
@@ -860,8 +860,6 @@ estTransitionBoot <- function(originSites = NULL,
                                 rep(1:nOriginSites, banded)))
     }
   }
-  # print(originAssignment)
-  # print(which(is.na(originAssignment), arr.ind = TRUE))
 
   if (is.null(targetAssignment)){
     if (verbose > 0)
@@ -1081,8 +1079,6 @@ estTransitionBoot <- function(originSites = NULL,
     originCon <- sapply(originPointSample2, FUN = function(z){
       suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
                                            sparse = TRUE))))})
-    #print(dim(originCon))
-    #print(summary(originCon))
     if (!any(is.na(originCon)))
       originPointsInSites <- TRUE
     else if (verbose > 0){
@@ -1139,7 +1135,6 @@ estTransitionBoot <- function(originSites = NULL,
       abundBase <- targetRelAbund
       targetRelAbund <- matrix(targetRelAbund, nBoot, nTargetSites, TRUE)
     }
-    #print(targetAssignment); print(captured)
     weights <- array(0, c(nBoot, nAnimalsTotal))
     if (length(dim(targetAssignment))==2) {
       ta <- apply(targetAssignment, 1, which.max)
@@ -1150,12 +1145,9 @@ estTransitionBoot <- function(originSites = NULL,
     }
     else
       ta <- targetAssignment
-    # print(length(ta)); print(length(captured))
     nOriginAnimals <- sum(captured != "target")
     nTargetAnimals <- rep(NA, nTargetSites)
     for (i in 1:nTargetSites) {
-      # print(nTargetAnimals)
-      # print(i); print(sum(captured=="target" & ta==i))
       nTargetAnimals[i] <- sum(captured=="target" & ta==i)
       if (nTargetAnimals[i] > 0)
         weights[ , captured=="target" & ta==i] <- targetRelAbund[ , i] /
@@ -1166,7 +1158,6 @@ estTransitionBoot <- function(originSites = NULL,
         weights[ , captured!="target"] <- 1/nAnimalsTotal
       else {
         t0 <- which(nTargetAnimals>0)
-        #print(nTargetAnimals)
         weights[ , captured!="target"] <- 1/nAnimalsTotal +
           rowSums(targetRelAbund[ , t0]) *
           sum(nTargetAnimals) / nAnimalsTotal / nOriginAnimals
@@ -1174,10 +1165,6 @@ estTransitionBoot <- function(originSites = NULL,
         #   sum(captured!="target" & ta %in% t0)
         if (sum(captured!="target" & ta %in% t0) == 0)
           warning("Not all target sites have likely data. Estimates will be biased.")
-        # if (verbose > 0){
-        #   print(colMeans(weights))
-        #   print(rowSums(weights))
-        # }
       }
     }
     else if (any(nTargetAnimals==0)) {
@@ -1194,9 +1181,6 @@ estTransitionBoot <- function(originSites = NULL,
               "abundance.")
   }
 
-   # print(nOriginSites); print(nTargetSites)
-   # print(originNames); print(targetNames)
-  # print(unique(originAssignment)); print(unique(targetAssignment))
   sites.array <- psi.array <- array(0, c(nBoot, nOriginSites, nTargetSites),
                                     dimnames = list(1:nBoot, originNames,
                                                     targetNames))
@@ -1218,7 +1202,6 @@ estTransitionBoot <- function(originSites = NULL,
   }
   countFailed <- 0
   failed <- FALSE
-  #print(nAnimals)
   if (length(dim(originAssignment))==2){
     pointOriginAssignment <- apply(originAssignment, 1, which.max)
   }
@@ -1274,8 +1257,6 @@ estTransitionBoot <- function(originSites = NULL,
           assignment <- originAssignment[animal.sample, , drop = FALSE]
         else
           assignment <- originAssignment[animal.sample, drop = FALSE]
-        # print(assignment)
-        # print(assignment[isTelemetry[animal.sample] | captured[animal.sample]=='origin', ])
         oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
                            isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                            isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),
@@ -1330,7 +1311,6 @@ estTransitionBoot <- function(originSites = NULL,
         assignment <- targetAssignment[animal.sample, , drop = FALSE]
       else
         assignment <- targetAssignment[animal.sample, drop = FALSE]
-      # print(isGL[animal.sample]); print(isGL); print(animal.sample)
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
@@ -1380,8 +1360,6 @@ estTransitionBoot <- function(originSites = NULL,
         target.sample <- targetAssignment[animal.sample]
     }
     # Now that we have breeding and non-breeding site for point, add to transition count matrix
-    # print(class(origin.sample))
-    # print(class(target.sample))
     sites <- table(origin.sample,
                    target.sample,
                    useNA = "no")
@@ -1416,19 +1394,10 @@ estTransitionBoot <- function(originSites = NULL,
                                     factor(target.sample[isCMR[animal.sample]],
                                            levels = 1:nTargetSites),
                                     useNA = "no")
-      # print(reencountered.sample)
-      # print(rowSums(reencountered.sample))
       banded.sample <- table(factor(origin.sample[isCMR[animal.sample]],
                                     levels = 1:nOriginSites))
-      # print(banded.sample)
-        #rowSums(reencountered.sample) + banded -
-        #rowSums(reencountered)
     }
     # Use new function that allows for CMR data
-    # print(reencountered.sample)
-    # print(banded.sample)
-    # print(origin.sample[!isCMR[animal.sample]])
-    # print(target.sample[!isCMR[animal.sample]])
     psi_r <- calcTransition(banded.sample, reencountered.sample,
                             originAssignment = origin.sample[!isCMR[animal.sample]],
                             targetAssignment = target.sample[!isCMR[animal.sample]],
@@ -1436,12 +1405,6 @@ estTransitionBoot <- function(originSites = NULL,
                             targetNames = targetNames,
                             method = "BFGS")
     if (any(is.na(psi_r$psi)) || any(psi_r$psi < 0) || any(psi_r$psi > 1)) {
-      # print(banded.sample)
-      # print(reencountered.sample)
-      # print(origin.sample[!isCMR[animal.sample]])
-      # print(target.sample[!isCMR[animal.sample]])
-      # print(psi_r$psi)
-      # print(psi_r$r)
       if (verbose > 2)
         cat(' Bootstrap estimate producing nonsense psi; drawing again\n')
       next
@@ -1449,7 +1412,6 @@ estTransitionBoot <- function(originSites = NULL,
     psi.array[boot, , ] <- psi_r$psi
     if (!is.null(banded))
       r.array[boot, ] <- psi_r$r
-    #prop.table(sites.array[boot, , ], 1)
     boot <- boot + 1
   }
   if (countFailed > 0)
@@ -1458,12 +1420,6 @@ estTransitionBoot <- function(originSites = NULL,
             nBoot, " successful. If this ratio is high, you should examine ",
             "fixedZero and the data to make sure those transition ",
             "probabilities really are zero\n")
-  # if (any(is.na(psi.array))) {
-  #   bads <- which(is.na(psi.array), arr.ind = T)
-  #   print(bads)
-  #   for (i in 1:nrow(bads))
-  #     print(psi.array[bads[i,1], bads[i, 2], ])
-  # }
   if (method=="bootstrap") {
     meanPsi <- apply(psi.array, 2:3, mean)
     medianPsi <- apply(psi.array, 2:3, median)
@@ -1474,8 +1430,6 @@ estTransitionBoot <- function(originSites = NULL,
                         list(NULL, paste(rep(originNames, nTargetSites),
                                          rep(targetNames, each = nOriginSites),
                                          sep = "#")))
-    # print(summary(psi.array))
-    # print(summary(psi.matrix))
     psi.mcmc <- coda::as.mcmc(psi.matrix)
     hpdCI <- coda::HPDinterval(psi.mcmc, 1-alpha)
     hpdCI <- array(hpdCI, c(nOriginSites, nTargetSites, 2),
@@ -2308,9 +2262,6 @@ estMCisotope <- function(targetDist=NULL,
   }
   else
     targCon <- NULL
-  # print(originAssignment)
-  # print(targetSites)
-  # print(targetDist)
   nOriginSites <- length(unique(originAssignment))
   nTargetSites <- ifelse(is.null(targetSites), nrow(targetDist), nrow(targetSites))
   # cat("nSites figured\n")
@@ -3430,7 +3381,6 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                                           crs = resampleProjection)
       if (verbose > 2){
         cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
-        #print(target.point.sample)
       }
     }
     else {
