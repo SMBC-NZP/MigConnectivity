@@ -3116,10 +3116,10 @@ estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
   }
 
   weights <- array(0, c(nBoot, nAnimals))
-  if (is.null(originRelAbund) && any(captured!="target") ||
-      is.null(targetRelAbund) && any(captured!="origin")) {
-    warning("rM can be biased if you don't weight by abundance")
-  }
+  # if (is.null(originRelAbund) && any(captured!="target") ||
+  #     is.null(targetRelAbund) && any(captured!="origin")) {
+  #   warning("rM can be biased if you don't weight by abundance")
+  # }
   if (is.null(originSites) && !is.null(originRelAbund)) {
     stop("If you want to set origin relative abundances, you need to define the origin sites")
   }
