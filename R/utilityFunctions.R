@@ -331,13 +331,12 @@ locSample <- function(isGL,
                                         sum(toSampleBool & isRaster)))
         #point.sample2 <- matvals[which(multidraw == 1, arr.ind = TRUE)[, 1], 1:2]
         point.sample2 <- apply(multidraw, c(2:3), function(x) which(x==1))
-        point.sample2 <- array(matvals[point.sample2, 1:2],
+        point.sample2 <- array(as.matrix(matvals[c(point.sample2), 1:2]),
                                c(nSim * sum(toSampleBool & isRaster), 2),
                                list(NULL, c("x","y")))
         #dimnames(point.sample2)[[2]] <- c("x","y")
 
-        # Convert those to SpatialPoints
-        #cat("------ I MADE IT TO POINTSAMPLE 2 --------\n")
+        # Convert those to sf
         point.sample2 <- sf::st_as_sf(as.data.frame(point.sample2),
                                       coords = c("x","y"),
                                       #crs = 4326)
