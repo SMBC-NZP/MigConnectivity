@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2023-09-04" />
+<meta name="date" content="2023-12-04" />
 
 <title>Estimate migratory connectivity strength with the ‘MigConnectivity’ package</title>
 
@@ -363,7 +363,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Estimate migratory connectivity strength
 with the ‘MigConnectivity’ package</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2023-09-04</h4>
+<h4 class="date">2023-12-04</h4>
 
 
 
@@ -412,17 +412,9 @@ simulated data</p>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#distances between centroids of four breeding regions</span></span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>breedDist <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(originPos, <span class="at">surface =</span> <span class="st">&quot;ellipsoid&quot;</span>)</span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt; The legacy packages maptools, rgdal, and rgeos, underpinning the sp package,</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt; which was just loaded, will retire in October 2023.</span></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; Please refer to R-spatial evolution reports for details, especially</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; https://r-spatial.org/r/2023/05/15/evolution4.html.</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="co">#&gt; It may be desirable to make the sf package available;</span></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co">#&gt; package maintainers should consider adding sf to Suggests:.</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co">#&gt; The sp package is now running under evolution status 2</span></span>
-<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt;      (status 2 uses the sf package in place of rgdal)</span></span>
-<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a></span>
-<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#distances between centroids of four nonbreeding regions</span></span>
-<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>nonBreedDist <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(targetPos, <span class="at">surface =</span> <span class="st">&quot;ellipsoid&quot;</span>)</span></code></pre></div>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#distances between centroids of four nonbreeding regions</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>nonBreedDist <span class="ot">&lt;-</span> <span class="fu">distFromPos</span>(targetPos, <span class="at">surface =</span> <span class="st">&quot;ellipsoid&quot;</span>)</span></code></pre></div>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
 <p>Define the transition probabilities between the breeding and
 nonbreeding regions and load previously estimated transition

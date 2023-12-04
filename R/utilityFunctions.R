@@ -1002,7 +1002,6 @@ reassignInds <- function(dataOverlapSetting = "none",
     if (!is.null(originRasterXYZ)) {
       if (all(isRaster & captured != "origin")) {
         originRasterXYZ2 <- originRasterXYZ
-        originRaster2 <- originRaster
       }
       else {
         originRasterXYZ2 <- originRasterXYZ[, 1:2]

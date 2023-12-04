@@ -148,7 +148,7 @@ isoAssign <- function(isovalues,
 
   # 1. if sppShapefile == NULL - use extent option
   if(is.null(sppShapefile)){
-    isomap <- terra::crop(isomap,terra::extent(assignExtent))
+    isomap <- terra::crop(isomap,terra::ext(assignExtent))
   } else {
   # Series of checks for a species range map inputs
   # 2. if sppShapefile provided check that it has a projection defined
@@ -862,7 +862,7 @@ a <- Sys.time()
 
   # 1. if sppShapefile == NULL - use extent option
   if(is.null(sppShapefile)){
-    isomap <- terra::crop(isomap,terra::extent(assignExtent))
+    isomap <- terra::crop(isomap,terra::ext(assignExtent))
   }
 
   # Series of checks for a species range map inputs
@@ -899,7 +899,7 @@ a <- Sys.time()
   # stack the assignment probabilities into a single raster stack
   assignments <- terra::rast(assignments)
   # Transform the assignments into a true probability surface #
-  assign2prob <- propSpatRaster(assignments)
+  assignIsoprob <- propSpatRaster(assignments)
   # function to make an odds ratio (likely vs unlikely) assignment
   oddsFun <- function(x,odds = odds){
     predict(smooth.spline(x = cumsum(sort(x)),

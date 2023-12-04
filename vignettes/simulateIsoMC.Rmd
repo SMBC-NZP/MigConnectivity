@@ -129,7 +129,7 @@ targetRanges <- lapply(targetRanges, FUN = function(x){y <- sf::st_as_sf(x)
 for(i in 1:5){
   targetRanges[[i]]$Target <- 1:nrow(targetRanges[[i]])
 }
-
+targetRanges <- lapply(targetRanges, sf::st_make_valid)
 sf_use_s2(TRUE)
 ```
 
@@ -191,37 +191,27 @@ targetDistMC <- distFromPos(sf::st_coordinates(sf::st_centroid(targetRanges[[3]]
 ```{r, eval = FALSE}
 originRelAbund <- rep(1/3, 3)
 nTargetSetups <- 5
-nSims <- 1            #SET LOW FOR EXAMPLE
+nSims <- 2            #SET LOW FOR EXAMPLE
 # nSims <- 200        
 nOriginSites = 3
 
 targetPoints0 <- matrix(NA, 300, 2, dimnames = list(NULL, c("x", "y")))
 
-sim.output <- data.frame(targetSetup = rep(NA,nSims),
-                         sim = rep(NA,nSims),
-                         MC.generated = rep(NA,nSims),
-                         MC.realized = rep(NA,nSims),
-                         MC.est = rep(NA,nSims),
-                         MC.low = rep(NA,nSims),
-                         MC.high = rep(NA,nSims),
-                         rM.realized = rep(NA,nSims),
-                         rM.est = rep(NA,nSims),
-                         rM.low = rep(NA,nSims),
-                         rM.high = rep(NA,nSims))
 
-
-library(doSNOW);library(foreach)
-cl <- parallel::makeCluster(5)
-doSNOW::registerDoSNOW(cl)
-
-
-Sys.time()
 a <- Sys.time()
-output.sims <- foreach(target=1:nTargetSetups,
-                       .combine = rbind,
-                       .export = ls(.GlobalEnv),
-                       .packages = c("terra","sf","MigConnectivity")) %dopar% {
-#for(target in 1:nTargetSetups){
+output.sims <- vector("list", nTargetSetups)
+for(target in 1:nTargetSetups){
+  sim.output <- data.frame(targetSetup = rep(NA,nSims),
+                           sim = rep(NA,nSims),
+                           MC.generated = rep(NA,nSims),
+                           MC.realized = rep(NA,nSims),
+                           MC.est = rep(NA,nSims),
+                           MC.low = rep(NA,nSims),
+                           MC.high = rep(NA,nSims),
+                           rM.realized = rep(NA,nSims),
+                           rM.est = rep(NA,nSims),
+                           rM.low = rep(NA,nSims),
+                           rM.high = rep(NA,nSims))
   set.seed(9001)
   targetSites <- targetRanges[[target]]
   sf_use_s2(FALSE)
@@ -341,22 +331,24 @@ output.sims <- foreach(target=1:nTargetSetups,
                            element = "Hydrogen",
                            surface = FALSE,
                            period = "GrowingSeason")
-  
-    simEst <- estMC(originRelAbund = originRelAbund,
-                    targetDist = targetDist,
-                    targetIntrinsic = simAssign,
+    psi <- estTransition(targetRaster = simAssign,
+                        targetSites = targetSites,
+                        originPoints = originPoints,
+                        originSites = originSites, isRaster = TRUE,
+                        nSamples = 100, nSim = 5, verbose = 0)
+    rM <- estMantel(targetRaster = simAssign,
                     targetSites = targetSites,
-                    originPoints = originPoints,
-                    originSites = originSites,
-                    originDist = originDist,
-                    nSamples = 100,
-                    verbose = 3,
-                    calcCorr = TRUE,
-                    alpha = 0.05,
-                    approxSigTest = FALSE,
-                    sigConst = 0,
-                    isIntrinsic = TRUE,
-                    nSim = 5)
+                    originPoints = originPoints, 
+                    isGL = FALSE, isTelemetry = FALSE,
+                    originSites = originSites, isRaster = TRUE,
+                    nBoot = 100, nSim = 5, verbose = 0, captured = "origin")
+    simEst <- estStrength(originRelAbund = originRelAbund,
+                          targetDist = targetDist,
+                          psi = psi,
+                          originDist = originDist,
+                          nSamples = 100,
+                          verbose = 0,
+                          alpha = 0.05)
   
     sim.output$targetSetup[sim] <- target
     sim.output$sim[sim]<-sim
@@ -365,20 +357,19 @@ output.sims <- foreach(target=1:nTargetSetups,
     sim.output$MC.est[sim] <- simEst$MC$mean
     sim.output$MC.low[sim] <- simEst$MC$bcCI[1]
     sim.output$MC.high[sim] <- simEst$MC$bcCI[2]
-    sim.output$rM.realized[sim] <- ncf::mantel.test(originPointDists, 
-                                                    targetPointDists,
-                                                    resamp=0, 
-                                                    quiet = TRUE)$correlation
-    sim.output$rM.est[sim] <- simEst$corr$mean
-    sim.output$rM.low[sim] <- simEst$corr$bcCI[1]
-    sim.output$rM.high[sim] <- simEst$corr$bcCI[2]
+    sim.output$rM.realized[sim] <- calcMantel(originDist = originPointDists, 
+                                              targetDist = targetPointDists)$pointCorr
+    sim.output$rM.est[sim] <- rM$corr$mean
+    sim.output$rM.low[sim] <- rM$corr$bcCI[1]
+    sim.output$rM.high[sim] <- rM$corr$bcCI[2]
   
   }
-  return(sim.output)
+  output.sims[[target]] <- sim.output
 }
 Sys.time()-a
 
-stopCluster(cl)
+output.sims <- do.call("rbind", output.sims)
+#
 ```
 Summarize the output 
 

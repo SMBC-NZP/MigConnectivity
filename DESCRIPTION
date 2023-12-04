@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.2.9006
-Date: 2023-10-27
+Version: 0.4.3
+Date: 2023-12-04
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
            role = c("cre", "aut")),
@@ -22,8 +22,8 @@ Description: Allows the user to estimate transition probabilities for migratory
     divided into regional populations. The package includes functions to 
     estimate MC and the more traditional metric of migratory connectivity 
     strength (Mantel correlation; rM) incorporating uncertainty from multiple 
-    sources of sampling error. Description of the MC metric can be found in Cohen 
-    et al. (2018).
+    sources of sampling error. Description of the MC metric can be found in 
+    Cohen et al. (2018).
 License: GPL (>=3)
 LazyData: true
 LazyDataCompression: xz
@@ -34,6 +34,7 @@ Imports:
     geodist,
     gplots,
     MASS,
+    methods,
     ncf,
     R2jags,
     RMark (>= 2.1.14),
