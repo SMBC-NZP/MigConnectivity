@@ -86,12 +86,6 @@
 #'               destfile = "deltaDvalues.csv")
 #' OVENvals <- read.csv("deltaDvalues.csv")
 #'
-#' OVENdist <- sf::st_as_sf("data-raw/Spatial_Layers/OVENdist.shp")
-#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' sf::st_crs(OVENdist) <- sf::st_crs(4326)
-#' # "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-#'
-#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
 #'a <- Sys.time()
 #'b <- isoAssign(isovalues = OVENvals[,2],
@@ -789,26 +783,36 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' @examples
 #' \dontrun{
-#' OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+#' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+#' for (ext in extensions) {
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/Spatial_Layers/OVENdist.",
+#'                      ext),
+#'               destfile = paste0("OVENdist.", ext))
+#' }
+#' OVENdist <- sf::st_read("OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
-#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/deltaDvalues.csv"),
+#'               destfile = "deltaDvalues.csv")
+#' OVENvals <- read.csv("deltaDvalues.csv")
 #'
 #' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
 #' knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
 #'
 #' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
 #' utils::unzip("oven.zip")
-#' oven_dist <- raster::shapefile("ra06740.shp")
+#' oven_dist <- sf::st_read("ra06740.shp")
 #'
 #' # Empty raster with the same dimensions as isoscape and Ovenbird distribution
-#' r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
-#'                     xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
-#'                     crs = MigConnectivity::projections$WGS84)
+#' r <- terra::rast(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
+#'                  xmin = -125.0001, xmax = -52.66679, ymin = 33.33321, ymax = 60.99985,
+#'                  crs = MigConnectivity::projections$WGS84)
 #'
-#' relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
-#' relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
+#' relativeAbund <- terra::rasterize(terra::vect(sf::st_transform(oven_dist, sf::st_crs(r))),r)
+#' relativeAbund <- relativeAbund /as.numeric(terra::global(relativeAbund, fun = "sum", na.rm = TRUE))
 #'
 #' BE <- weightAssign(knownLocs = knownLocs,
 #'                  isovalues = HBEFbirds[,2],
@@ -827,8 +831,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658-669.
 #'
 #' Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
 #' Linking hydrogen isotopes in feathers and precipitation: sources of
@@ -887,6 +892,7 @@ a <- Sys.time()
 
   # generate a 'feather'/animal isoscape
   animap <- terra::global(isomap, fun = function(x){y <- slope*x+intercept})
+
 
   # spatially explicit assignment
   assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
