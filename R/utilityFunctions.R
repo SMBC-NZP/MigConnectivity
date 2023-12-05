@@ -1608,8 +1608,10 @@ propSpatRaster <- function(assignments) {
                                          xmax = terra::xmax(assignments),
                                          ymin = terra::ymin(assignments),
                                          ymax = terra::ymax(assignments),
-                                         vals = x))
+                                         vals = x,
+                                         crs = terra::crs(assignments)))
   test <- terra::rast(test)
+  terra::crs(test) <- terra::crs(assignments)
   assign2prob <- assignments / test
   return(assign2prob)
 }

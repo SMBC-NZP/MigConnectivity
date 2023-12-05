@@ -792,6 +792,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' }
 #' OVENdist <- sf::st_read("OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+#' # set the crs to WGS84
 #' sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
 #' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
@@ -800,33 +801,51 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' OVENvals <- read.csv("deltaDvalues.csv")
 #'
 #' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
-#' knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
 #'
+#' # Create a spatial object of known capture sites
+#' knownLocs <- sf::st_as_sf(data.frame(Long = rep(-73,nrow(HBEFbirds)),
+#'                                     Lat = rep(43,nrow(HBEFbirds))),
+#'                          coords = c("Long","Lat"),
+#'                          crs = 4326)
+#'
+#' #Get OVEN abundance from BSS estimates and read into R #
 #' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
 #' utils::unzip("oven.zip")
 #' oven_dist <- sf::st_read("ra06740.shp")
 #'
 #' # Empty raster with the same dimensions as isoscape and Ovenbird distribution
-#' r <- terra::rast(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
-#'                  xmin = -125.0001, xmax = -52.66679, ymin = 33.33321, ymax = 60.99985,
-#'                  crs = MigConnectivity::projections$WGS84)
 #'
-#' relativeAbund <- terra::rasterize(terra::vect(sf::st_transform(oven_dist, sf::st_crs(r))),r)
-#' relativeAbund <- relativeAbund /as.numeric(terra::global(relativeAbund, fun = "sum", na.rm = TRUE))
+#' # We do this manually here but the weightedAssign function has been updated
+#' # to ensure the isoscape and abundance rasts have the same extent using
+#' # resampling to match  relAbund to the isoscape.
+#' r <- terra::rast(nrow = 331, ncol = 870,
+#'                  res = c(0.0833333, 0.0833333),
+#'                  xmin = -125.1667, xmax = -52.66672,
+#'                  ymin = 33.49995, ymax = 61.08327,
+#'                  crs = sf::st_crs(4326)$wkt)
+#'
+#' # rasterize the polygons from BBS - this is not needed if working with a
+#' # rasterized surface
+#' relativeAbun<- terra::rasterize(terra::vect(sf::st_transform(oven_dist, 4326)),
+#'                                 r,
+#'                                 field = "RASTAT")
+#'
+#' relativeAbund <- relativeAbun/terra::global(relativeAbun, sum, na.rm = TRUE)$sum
+#'
 #'
 #' BE <- weightAssign(knownLocs = knownLocs,
-#'                  isovalues = HBEFbirds[,2],
-#'                  isoSTD = 12,
-#'                  intercept = -10,
-#'                  slope = 0.8,
-#'                  odds = 0.67,
-#'                  relAbund = relativeAbund,
-#'                  weightRange = c(-1,1),
-#'                  sppShapefile = OVENdist,
-#'                  assignExtent = c(-179,-60,15,89),
-#'                  element = "Hydrogen",
-#'                  surface = FALSE,
-#'                  period = "Annual")
+#'                    isovalues = HBEFbirds[,2],
+#'                    isoSTD = 12,
+#'                    intercept = -10,
+#'                    slope = 0.8,
+#'                    odds = 0.67,
+#'                    relAbund = relativeAbund,
+#'                    weightRange = c(-1,1),
+#'                    sppShapefile = OVENdist,
+#'                    assignExtent = c(-179,-60,15,89),
+#'                    element = "Hydrogen",
+#'                    surface = FALSE,
+#'                    period = "Annual")
 #'}
 #'
 #' @references
@@ -842,6 +861,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' Rushing, C. S., P. P. Marra, and C. E. Studds. 2017. Incorporating breeding
 #' abundance into spatial assignments on continuous surfaces. Ecology and
 #' Evolution 7: 3847-3855.
+
 weightAssign <- function(knownLocs,
                          isovalues,
                          isoSTD,
@@ -891,7 +911,7 @@ a <- Sys.time()
   }
 
   # generate a 'feather'/animal isoscape
-  animap <- terra::global(isomap, fun = function(x){y <- slope*x+intercept})
+  animap <- slope*isomap+intercept
 
 
   # spatially explicit assignment
@@ -900,10 +920,11 @@ a <- Sys.time()
   # apply the assignment function to all input values
   cat("\n Generating probabilistic assignments \n")
 
-  assignments <- lapply(isovalues, FUN = function(x){assign(x, y = animap)})
+  assignments <- do.call(c,lapply(isovalues, FUN = function(x){assign(x, y = animap)}))
 
   # stack the assignment probabilities into a single raster stack
-  assignments <- terra::rast(assignments)
+  # assignments <- terra::rast(assignments)
+
   # Transform the assignments into a true probability surface #
   assignIsoprob <- propSpatRaster(assignments)
   # function to make an odds ratio (likely vs unlikely) assignment
@@ -923,49 +944,63 @@ a <- Sys.time()
   names(weights) <-c("iso_weight", "abun_weight")
 
 sum_weights <- vector('list',nrow(weights))
+
+# good pratice to check that the extents match -
+# if not resample the relaAbun fed from the user
+
+if(!terra::compareGeom(assignIsoprob,relAbund, stopOnError = FALSE)){
+  relAbund <- terra::resample(relAbund, assignIsoprob)
+}
+
 cat("\n Interating through possible weighted assignments \n")
 pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)
+
     tempAssign <- (assignIsoprob^weights$iso_weight[i])*
                   (relAbund^weights$abun_weight[i])
 
     tempAssign <- propSpatRaster(tempAssign)
 
-    matvalsWeight <- terra::as.points(tempAssign)
+    matvalsWeight <- terra::as.data.frame(tempAssign)
 
-    cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
+    cuts <- apply(matvalsWeight, 2, FUN = oddsFun,odds = odds)
 
     step1 <- c(terra::classify(tempAssign,rcl=cbind(0,cuts,0)))
     step2 <- c(terra::classify(step1,rcl=cbind(cuts,1,1)))
 
-    correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs), ID = FALSE))
+    correctAssign <- diag(as.matrix(terra::extract(step2,terra::vect(knownLocs), ID = FALSE)))
+
     errorRate <- 1-mean(correctAssign)
-    areaAssign <- terra::global(terra::area(step2)*step2,fun = "sum")
+    areaAssign <- terra::global(terra::cellSize(step2[[1]])*step2,fun = "sum",na.rm = TRUE)
 
 sum_weights[[i]] <- data.frame(isoWeight=log(weights$iso_weight[i],base = 10),
                               abundWeight=log(weights$abun_weight[i],base = 10),
                               error = errorRate,
-                              area = mean(areaAssign))
+                              area = mean(areaAssign$sum))
 }
 close(pb)
 bind_weights <- do.call('rbind',sum_weights)
 
-matvalsWeight <- terra::as.points(assignIsoprob)
+# replacing here because kept getting [readstart] warning for some reason
+# I think its because the rast was in memory and accessed in the function above
+# and it doesn't like accessing it again in a different environment.
+# I'm not exactly sure
+matvalsWeight2 <- terra::as.data.frame(propSpatRaster(assignments))
 
-cuts <- apply(matvalsWeight[,3:ncol(matvalsWeight)],2,FUN = oddsFun,odds = odds)
+cuts <- apply(matvalsWeight2,2,FUN = oddsFun,odds = odds)
 
 step1 <- c(terra::classify(assignIsoprob,rcl=cbind(0,cuts,0)))
 step2 <- c(terra::classify(step1,rcl=cbind(cuts,1,1)))
 
-correctAssign <- diag(terra::extract(step2,terra::vect(knownLocs),ID = FALSE))
+correctAssign <- diag(as.matrix(terra::extract(step2,terra::vect(knownLocs),ID = FALSE)))
 errorRate <- 1-mean(correctAssign)
-areaAssign <- terra::global(terra::area(step2)*step2,fun = "sum")
+areaAssign <- terra::global(terra::cellSize(step2[[1]])*step2,fun = "sum",na.rm = TRUE)
 
 sum_weight <- data.frame(isoWeight=1,
                          abundWeight=NA,
                          error = errorRate,
-                         area = mean(areaAssign))
+                         area = mean(areaAssign$sum,na.rm = TRUE))
 
 iso_performance <- rbind(sum_weight,bind_weights)
 iso_performance$area_percent <- iso_performance$area/max(iso_performance$area)
