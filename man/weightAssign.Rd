@@ -88,40 +88,69 @@ See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. 
 }
 \examples{
 \dontrun{
-OVENdist <- raster::shapefile("data-raw/Spatial_Layers/OVENdist.shp")
+extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+for (ext in extensions) {
+download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+                     "/master/data-raw/Spatial_Layers/OVENdist.",
+                     ext),
+              destfile = paste0("OVENdist.", ext))
+}
+OVENdist <- sf::st_read("OVENdist.shp")
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-raster::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+# set the crs to WGS84
+sf::st_crs(OVENdist) <- sf::st_crs(4326)
 
-OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+                     "/master/data-raw/deltaDvalues.csv"),
+              destfile = "deltaDvalues.csv")
+OVENvals <- read.csv("deltaDvalues.csv")
 
 HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
-knownLocs <- cbind(rep(-73,nrow(HBEFbirds)),rep(43,nrow(HBEFbirds)))
 
+# Create a spatial object of known capture sites
+knownLocs <- sf::st_as_sf(data.frame(Long = rep(-73,nrow(HBEFbirds)),
+                                    Lat = rep(43,nrow(HBEFbirds))),
+                         coords = c("Long","Lat"),
+                         crs = 4326)
+
+#Get OVEN abundance from BSS estimates and read into R #
 utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
 utils::unzip("oven.zip")
-oven_dist <- raster::shapefile("ra06740.shp")
+oven_dist <- sf::st_read("ra06740.shp")
 
 # Empty raster with the same dimensions as isoscape and Ovenbird distribution
-r <- raster::raster(nrow = 83, ncol = 217, res = c(0.333333, 0.333333),
-                    xmn = -125.0001, xmx = -52.66679, ymn = 33.33321, ymx = 60.99985,
-                    crs = MigConnectivity::projections$WGS84)
 
-relativeAbund <- raster::rasterize(sp::spTransform(oven_dist, sp::CRS(r@crs@projargs)),r)
-relativeAbund <- relativeAbund /raster::cellStats(relativeAbund ,sum)
+# We do this manually here but the weightedAssign function has been updated
+# to ensure the isoscape and abundance rasts have the same extent using
+# resampling to match  relAbund to the isoscape.
+r <- terra::rast(nrow = 331, ncol = 870,
+                 res = c(0.0833333, 0.0833333),
+                 xmin = -125.1667, xmax = -52.66672,
+                 ymin = 33.49995, ymax = 61.08327,
+                 crs = sf::st_crs(4326)$wkt)
+
+# rasterize the polygons from BBS - this is not needed if working with a
+# rasterized surface
+relativeAbun<- terra::rasterize(terra::vect(sf::st_transform(oven_dist, 4326)),
+                                r,
+                                field = "RASTAT")
+
+relativeAbund <- relativeAbun/terra::global(relativeAbun, sum, na.rm = TRUE)$sum
+
 
 BE <- weightAssign(knownLocs = knownLocs,
-                 isovalues = HBEFbirds[,2],
-                 isoSTD = 12,
-                 intercept = -10,
-                 slope = 0.8,
-                 odds = 0.67,
-                 relAbund = relativeAbund,
-                 weightRange = c(-1,1),
-                 sppShapefile = OVENdist,
-                 assignExtent = c(-179,-60,15,89),
-                 element = "Hydrogen",
-                 surface = FALSE,
-                 period = "Annual")
+                   isovalues = HBEFbirds[,2],
+                   isoSTD = 12,
+                   intercept = -10,
+                   slope = 0.8,
+                   odds = 0.67,
+                   relAbund = relativeAbund,
+                   weightRange = c(-1,1),
+                   sppShapefile = OVENdist,
+                   assignExtent = c(-179,-60,15,89),
+                   element = "Hydrogen",
+                   surface = FALSE,
+                   period = "Annual")
 }
 
 }
@@ -136,8 +165,9 @@ abundance into spatial assignments on continuous surfaces. Ecology and
 Evolution 3: 3847-3855.
 
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+migratory connectivity for birds en route to breeding through the Gulf of
+Mexico. Ecography 42: 658-669.
 
 Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
 Linking hydrogen isotopes in feathers and precipitation: sources of

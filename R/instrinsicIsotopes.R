@@ -952,7 +952,7 @@ if(!terra::compareGeom(assignIsoprob,relAbund, stopOnError = FALSE)){
   relAbund <- terra::resample(relAbund, assignIsoprob)
 }
 
-cat("\n Interating through possible weighted assignments \n")
+cat("\n Iterating through possible weighted assignments \n")
 pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)
