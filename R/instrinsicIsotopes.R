@@ -957,7 +957,7 @@ pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)
 
-    tempAssign <- (assignIsoprob^weights$iso_weight[i])*
+  tempAssign <- (assignIsoprob^weights$iso_weight[i])*
                   (relAbund^weights$abun_weight[i])
 
     tempAssign <- propSpatRaster(tempAssign)
