@@ -130,12 +130,6 @@ download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity
               destfile = "deltaDvalues.csv")
 OVENvals <- read.csv("deltaDvalues.csv")
 
-OVENdist <- sf::st_as_sf("data-raw/Spatial_Layers/OVENdist.shp")
-OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-sf::st_crs(OVENdist) <- sf::st_crs(4326)
-# "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-
-OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 
 a <- Sys.time()
 b <- isoAssign(isovalues = OVENvals[,2],

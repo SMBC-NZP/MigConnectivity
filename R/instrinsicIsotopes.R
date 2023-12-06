@@ -86,12 +86,6 @@
 #'               destfile = "deltaDvalues.csv")
 #' OVENvals <- read.csv("deltaDvalues.csv")
 #'
-#' OVENdist <- sf::st_as_sf("data-raw/Spatial_Layers/OVENdist.shp")
-#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' sf::st_crs(OVENdist) <- sf::st_crs(4326)
-#' # "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-#'
-#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
 #'a <- Sys.time()
 #'b <- isoAssign(isovalues = OVENvals[,2],
@@ -789,14 +783,22 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' @examples
 #' \dontrun{
-#'
-#' OVENdist <- sf::st_read("data-raw/Spatial_Layers/OVENdist.shp")
+#' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+#' for (ext in extensions) {
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/Spatial_Layers/OVENdist.",
+#'                      ext),
+#'               destfile = paste0("OVENdist.", ext))
+#' }
+#' OVENdist <- sf::st_read("OVENdist.shp")
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#'
 #' # set the crs to WGS84
 #' sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
-#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/deltaDvalues.csv"),
+#'               destfile = "deltaDvalues.csv")
+#' OVENvals <- read.csv("deltaDvalues.csv")
 #'
 #' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
 #'
@@ -848,8 +850,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' @references
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. In revision. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658-669.
 #'
 #' Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
 #' Linking hydrogen isotopes in feathers and precipitation: sources of
@@ -910,6 +913,7 @@ a <- Sys.time()
   # generate a 'feather'/animal isoscape
   animap <- slope*isomap+intercept
 
+
   # spatially explicit assignment
   assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
 
@@ -948,7 +952,7 @@ if(!terra::compareGeom(assignIsoprob,relAbund, stopOnError = FALSE)){
   relAbund <- terra::resample(relAbund, assignIsoprob)
 }
 
-cat("\n Interating through possible weighted assignments \n")
+cat("\n Iterating through possible weighted assignments \n")
 pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)

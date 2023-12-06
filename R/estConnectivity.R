@@ -2921,7 +2921,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  originPoints = OVENdata$originPoints, # Capture Locations
 #'                  targetPoints = OVENdata$targetPoints, # Target locations
 #'                  verbose = 1,   # output options
-#'                  nBoot = 100, # This is set low for example
+#'                  nBoot = 10, # This is set low for example
 #'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
 #' rM1
 #' str(rM1, max.level = 2)
