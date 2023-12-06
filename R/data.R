@@ -106,9 +106,9 @@
 #'
 #' A dataset containing mcmc relative abundance estimates from simulated
 #' BBS-type data from Cohen et al. (2018). Each estimate can
-#' be used in \code{estMC} function to estimate MC with uncertainty.
+#' be used in \code{estStrength} function to estimate MC with uncertainty.
 #'
-#' @format A list with 100 mcmc (coda) estimates in it.
+#' @format A list with 10 mcmc (coda) estimates in it.
 "abundExamples"
 
 #' Ovenbird light-level geolocator and GPS neccesary data

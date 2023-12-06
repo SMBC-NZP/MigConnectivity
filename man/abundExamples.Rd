@@ -5,7 +5,7 @@
 \alias{abundExamples}
 \title{Example relative abundance estimates from simulated data}
 \format{
-A list with 100 mcmc (coda) estimates in it.
+A list with 10 mcmc (coda) estimates in it.
 }
 \usage{
 abundExamples
@@ -13,6 +13,6 @@ abundExamples
 \description{
 A dataset containing mcmc relative abundance estimates from simulated
 BBS-type data from Cohen et al. (2018). Each estimate can
-be used in \code{estMC} function to estimate MC with uncertainty.
+be used in \code{estStrength} function to estimate MC with uncertainty.
 }
 \keyword{datasets}

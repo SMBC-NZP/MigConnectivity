@@ -62,10 +62,9 @@ rmseCMR
 # Simulation of BBS data to quantify uncertainty in relative abundance
 \dontrun{
 nSamplesAbund <- 700 #1700 are stored
-nSimulationsAbund <- 10 #length(abundExamples) is 100
+nSimulationsAbund <- 10
 #\dontrun{
 #  nSamplesAbund <- 1700
-#  nSimulationsAbund <- length(abundExamples)
 #}
 # Storage matrix for samples
 abundMCSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)

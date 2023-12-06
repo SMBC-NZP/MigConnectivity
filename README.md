@@ -18,13 +18,13 @@ devtools::install_github("SMBC-NZP/MigConnectivity")
 
 to install the vignette on your machine along with the package use the following code.   
 *Note* it takes a bit longer to download the package if `build_vignettes = TRUE`
-We also provide html copies of the vignettes, so they should be available even if you don't do this. 
 
 ```r
 devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
 ```
 
 ### Links to previous versions
+[[v0.4.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.2) released Sep. 4, 2023
 [[v0.4.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.1) released Nov. 10, 2021
 [[v0.4.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.0) released May 30, 2021
 [[v0.3.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.3.1) released Apr. 30, 2020    
