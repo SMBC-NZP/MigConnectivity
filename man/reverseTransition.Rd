@@ -171,6 +171,14 @@ for (i in 1:length(samplePsis)) {
 
 ## Example 2: Common tern banding example (uncertainty in psi, not relative
 ## abundance)
+# Number of MCMC iterations
+ni. <- 1000 # reduced from 70000 for example speed
+# Number of iterations to thin from posterior
+nt. <- 1
+# Number of iterations to discard as burn-in
+nb. <- 500 # reduced from 20000 for example speed
+# Number of MCMC chains
+nc. <- 1 # reduced from 3 for example speed
 COTE_banded <- c(10360, 1787, 2495, 336)
 COTE_reencountered <- matrix(c(12, 0, 38, 15,
                                111, 7, 6, 2,
@@ -183,7 +191,8 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = 70000, nBurnin = 20000,
+                          nSamples = (ni. / nt. - nb.) * nc., nBurnin = nb.,
+                          nThin = nt., nChains = nc.,
                           method = "MCMC")
 COTE_psi
 COTE_rev <- reversePsiRelAbund(COTE_psi, sampleOriginRelN[[1]],
@@ -219,13 +228,13 @@ sdRoute. <- 0.6
 # standard deviation of normal distribution assumed for year random effects
 sdYear. <- 0.18
 # Number of MCMC iterations
-ni. <- 1000 # reduced for example speed
+ni. <- 1000 # reduced from 70000 for example speed
 # Number of iterations to thin from posterior
 nt. <- 1
 # Number of iterations to discard as burn-in
-nb. <- 500 # reduced for example speed
+nb. <- 500 # reduced from 20000 for example speed
 # Number of MCMC chains
-nc. <- 1 # reduced for example speed
+nc. <- 1 # reduced from 3 for example speed
 
 sim_data <- simCountData(nStrata = nOriginSites, routesPerStrata = routePerPop.,
                          nYears = nYears., alphaStrat = alphaPop.,

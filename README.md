@@ -4,12 +4,15 @@ The MigConnectivity package quantifies the pattern and strength of migratory con
 The pattern of migratory connectivity can be expressed as migratory transition probabilities between sites or regions in any two phases of the annual cycle.
 
 MC is a standardized metric to quantify migratory connectivity strength between two phases 
-of the annual cycle. MC is independent of data type and accounts for the relative abundance of 
-populations distributed across a seasonal range. 
+of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. 
 
-See the [vignettes](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes)  for details and examples.
+See the [vignettes](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes) for details and examples.
 
 ## Installation
+
+If you will (or might) use Markov chain Monte Carlo (MCMC) estimation in 
+MigConnectivity, you should first install the program JAGS on your computer, 
+available at https://mcmc-jags.sourceforge.net.
 
 ```r
 install.packages("devtools")
@@ -24,9 +27,9 @@ devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
 ```
 
 ### Links to previous versions
-[[v0.4.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.2) released Sep. 4, 2023
-[[v0.4.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.1) released Nov. 10, 2021
-[[v0.4.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.0) released May 30, 2021
+[[v0.4.2]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.2) released Sep. 4, 2023    
+[[v0.4.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.1) released Nov. 10, 2021    
+[[v0.4.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.4.0) released May 30, 2021    
 [[v0.3.1]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.3.1) released Apr. 30, 2020    
 [[v0.3.0]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.3.0) released Jul. 5, 2018    
 [[v0.2.5]](https://github.com/SMBC-NZP/MigConnectivity/releases/tag/v0.2.5) released Jan. 30, 2018    

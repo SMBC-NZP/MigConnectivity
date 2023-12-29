@@ -94,17 +94,17 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
   }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estPi"))
-    cat("For more info, try ?reverseTransition or str(obj_name, max.levels = 2).\n")
+    cat("For more info, try ?reverseTransition or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "estPsi"))
-    cat("For more info, try ?estTransition or str(obj_name, max.levels = 2).\n")
+    cat("For more info, try ?estTransition or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "estMC"))
-    cat("For more info, try ?estStrength or ?estMC or str(obj_name, max.levels = 2).\n")
+    cat("For more info, try ?estStrength or ?estMC or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "estGamma"))
-    cat("For more info, try ?reverseTransition or str(obj_name, max.levels = 2).\n")
+    cat("For more info, try ?reverseTransition or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "estMantel"))
-    cat("For more info, try ?estMantel or str(obj_name, max.levels = 2).\n")
+    cat("For more info, try ?estMantel or str(obj_name, max.level = 2).\n")
   else # In case we left something out...
-    cat("For more info, try str(obj_name, max.levels = 2).\n")
+    cat("For more info, try str(obj_name, max.level = 2).\n")
 }
 
 #' @export

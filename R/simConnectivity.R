@@ -68,7 +68,7 @@
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513-524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
                     nYears = 10, nMonths = 3, winMoveRate = 0,
                     sumMoveRate = 0, winDispRate = 0, sumDispRate = 0,
@@ -235,10 +235,11 @@ simMove <- function(breedingAbund, breedingDist, winteringDist, psi,
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513-524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Link, W. A., J. R. Sauer, and D. K. Niven. 2020. Model selection for the
 #' North American Breeding Bird Survey. Ecological Applications 30: e02137.
+#' \doi{10.1002/eap.2137}{doi:10.1002/eap.2137}
 
 simCountData <- function (nStrata, routesPerStrata, nYears, alphaStrat, beta = 0,
                           eta = 0, sdRoute = 0, sdYear = 0, sdObs = 0, sdCount = 0,
@@ -367,10 +368,12 @@ simCountData <- function (nStrata, routesPerStrata, nYears, alphaStrat, beta = 0
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513-524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
 #' change with application to Cerulean Warblers. Ecology 83: 2832-2840.
+#' \doi{10.1890/0012-9658(2002)083[2832:AHAOPC]2.0.CO;2}{doi:10.1890/0012-9658(2002)083[2832:AHAOPC]2.0.CO;2}
+#'
 
 modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 3) {
   nPops <- length(unique(count_data$strat))

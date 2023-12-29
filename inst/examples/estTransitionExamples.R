@@ -162,6 +162,8 @@ if (interactive()) {
 
   nNonBreeding <- nrow(OVENdata$targetSites)
 
+  require(RColorBrewer)
+
   plot(psi3, legend = "top",
        main = paste("OVENlike w/", sum(isGL & !isProb), "GL,",
                     sum(!isGL & isProb), "probs,",

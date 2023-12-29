@@ -81,10 +81,10 @@ a probability surface of origin assignment from a vector of stable-isotope value
 captured at a known location. Probabilistic assignments are constructed by first converting observed
 stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
 a user-provided intercept, slope and standard deviation. See
-\href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+\href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \details{
-See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
+See \doi{10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 }
 \examples{
 if (interactive())  {

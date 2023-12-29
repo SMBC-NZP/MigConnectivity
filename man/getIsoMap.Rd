@@ -25,7 +25,7 @@ returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
 }
 \description{
 The \code{getIsoMap} function downloads predicted isoscape maps from
- \url{http://wateriso.utah.edu/waterisotopes/}. The function first checks
+ \url{https://wateriso.utah.edu/waterisotopes/}. The function first checks
 whether the isoscapes are located within the current working directory
 \code{getwd()}. If a local copy of the isoscape is found, it's read into
 the environment. If not, the isoscape is downloaded and imported

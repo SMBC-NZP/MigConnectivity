@@ -28,7 +28,7 @@
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 calcMC <- function(originDist, targetDist, originRelAbund, psi, sampleSize=NULL) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
@@ -161,7 +161,7 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' @references
 #' Ambrosini, R., A. P. Moller, and N. Saino. 2009. A quantitative measure of
 #' migratory connectivity. Journal of Theoretical Biology 257:203-211.
-#' \href{https://doi.org/10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
+#' \doi{10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
 
 calcMantel <- function(targetPoints = NULL, originPoints = NULL,
                        targetDist = NULL, originDist = NULL) {

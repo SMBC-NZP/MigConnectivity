@@ -90,9 +90,10 @@ if (interactive()) {
 psi <- mlogitMat(slope, breedDist)
 
 # Baseline strength of migratory connectivity
-MC <- calcMC(breedDist, nonbreedDist, breedingRelN, psi, sum(breedingN))
-round(MC, 4)
-
+if (interactive()) {
+  MC <- calcMC(breedDist, nonbreedDist, breedingRelN, psi, sum(breedingN))
+  round(MC, 4)
+}
 # Other basic simulation parameters
 
 ## Dispersal simulations---

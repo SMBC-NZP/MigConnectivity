@@ -2703,13 +2703,13 @@ estMCisotope <- function(targetDist=NULL,
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 #'
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 #' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of
 #' Mexico. Ecography 42: 658–669.
-#' \href{https://doi.org/10.1111/ecog.03974}{doi:10.1111/ecog.03974}
+#' \doi{10.1111/ecog.03974}{doi:10.1111/ecog.03974}
 
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -2913,11 +2913,12 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' @export
 #'
 #' @examples
+#' if (interactive()) {
 #' data('OVENdata')
 #' rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
 #'                  geoBias = OVENdata$geo.bias, # Geolocator location bias
 #'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-#'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
+#'                  targetSites = OVENdata$targetSites,#Nonbreeding/target sites
 #'                  originPoints = OVENdata$originPoints, # Capture Locations
 #'                  targetPoints = OVENdata$targetPoints, # Target locations
 #'                  verbose = 1,   # output options
@@ -2925,13 +2926,14 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
 #' rM1
 #' str(rM1, max.level = 2)
+#' }
 #' @seealso \code{\link{estMC}}
 #'
 #' @references
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 
 estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                       geoBias = NULL, geoVCov = NULL, targetSites = NULL,

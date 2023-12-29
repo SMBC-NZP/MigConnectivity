@@ -7,7 +7,7 @@
 #' converting observed stable-isotope ratios (isoscape) in either precipitation
 #' or surface waters into a 'tissuescape' using a user-provided intercept, slope
 #' and standard deviation. See
-#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+#' \href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
 #'
 #' @param isovalues vector of tissue isotope values
@@ -465,7 +465,7 @@ return(isoAssignReturn)
 #' getIsoMap
 #'
 #' The \code{getIsoMap} function downloads predicted isoscape maps from
-#'  \url{http://wateriso.utah.edu/waterisotopes/}. The function first checks
+#'  \url{https://wateriso.utah.edu/waterisotopes/}. The function first checks
 #' whether the isoscapes are located within the current working directory
 #' \code{getwd()}. If a local copy of the isoscape is found, it's read into
 #' the environment. If not, the isoscape is downloaded and imported
@@ -736,9 +736,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' captured at a known location. Probabilistic assignments are constructed by first converting observed
 #' stable-isotope ratios (isoscape) in either precipitation or surface waters into a 'tissuescape' using
 #' a user-provided intercept, slope and standard deviation. See
-#' \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+#' \href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
-#'  See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
+#'  See \doi{10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 #'
 #' @param knownLocs matrix of capture locations of the same length as
 #'        \code{isovalues}

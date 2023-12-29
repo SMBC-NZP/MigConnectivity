@@ -171,8 +171,9 @@ summary(rel_abund1)
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513-524.
-\href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 
 Link, W. A., J. R. Sauer, and D. K. Niven. 2020. Model selection for the
 North American Breeding Bird Survey. Ecological Applications 30: e02137.
+\doi{10.1002/eap.2137}{doi:10.1002/eap.2137}
 }

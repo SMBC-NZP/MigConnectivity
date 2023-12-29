@@ -184,9 +184,10 @@ if (interactive()) {
 psi <- mlogitMat(slope, breedDist)
 
 # Baseline strength of migratory connectivity
-MC <- calcMC(breedDist, nonbreedDist, breedingRelN, psi, sum(breedingN))
-round(MC, 4)
-
+if (interactive()) {
+  MC <- calcMC(breedDist, nonbreedDist, breedingRelN, psi, sum(breedingN))
+  round(MC, 4)
+}
 # Other basic simulation parameters
 
 ## Dispersal simulations---
@@ -252,5 +253,5 @@ if (interactive()) {
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513-524.
-\href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 }

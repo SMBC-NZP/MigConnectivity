@@ -218,11 +218,12 @@ by Mantel correlation (rM), from geolocators, GPS, and/or raster (e.g.,
 genoscape or isotope) data.
 }
 \examples{
+if (interactive()) {
 data('OVENdata')
 rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  geoBias = OVENdata$geo.bias, # Geolocator location bias
                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-                 targetSites = OVENdata$targetSites, # Non-breeding target sites
+                 targetSites = OVENdata$targetSites,#Nonbreeding/target sites
                  originPoints = OVENdata$originPoints, # Capture Locations
                  targetPoints = OVENdata$targetPoints, # Target locations
                  verbose = 1,   # output options
@@ -231,11 +232,12 @@ rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
 rM1
 str(rM1, max.level = 2)
 }
+}
 \references{
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513 - 524.
-\href{http://doi.org/10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
 }
 \seealso{
 \code{\link{estMC}}

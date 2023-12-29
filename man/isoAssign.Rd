@@ -110,7 +110,7 @@ animal/sample of interest. Probabilistic assignments are constructed by first
 converting observed stable-isotope ratios (isoscape) in either precipitation
 or surface waters into a 'tissuescape' using a user-provided intercept, slope
 and standard deviation. See
-\href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
+\href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \examples{
 if (interactive())  {
