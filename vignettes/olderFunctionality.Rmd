@@ -882,7 +882,7 @@ t(round(MC.diff2, 4))
 
 ### Add the relative abundance breeding scenarios
 
-Calculate MC across abundance and transition probability scenarios for breeding linear / winter linear arrangment: 
+Calculate MC across abundance and transition probability scenarios for breeding linear / winter linear arrangement: 
 ```{r}
 nScenarios3 <- length(sampleOriginRelN)
 
@@ -1534,7 +1534,7 @@ rownames(compare16a) <- compare16$Scenario[1 + 1:nScenarios16]
 
 
 ###EXAMPLE 8
-`estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 5 above ("CentroidSampleBreeding4"; make sure you run example 5 code before running this section).  We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
+`estMC` Estimate strength of migratory connectivity incorporating uncertainty from limited sample size (no other sampling error).  Here we simulated data using the 13th scenario from example 5 above ("CentroidSampleBreeding4"; make sure you run example 5 code before running this section). We changed the total sample size from 1000 to 100 animals and the total abundance from 50000 to 2500 animals.  
 
 ```{r, eval = FALSE}
 # Load in projections
@@ -2132,27 +2132,6 @@ for (i in 1:length(Drates)) {
 
 summary(probFarDisp)
 
-#plot results
-\dontrun{
-require(ggplot2)
-require(ggthemes)
-
-line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
- geom_line()+
- scale_size_manual(values=line_set)+
- labs(size="Dispersal Rate")+
- scale_y_continuous("MC", limits=c(-.005, 0.26), 
-                    breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
- scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
- theme_bw()+
- theme(axis.title=element_text(size=16, face ="bold"),
-       axis.text=element_text(size=14),
-       panel.grid.major = element_line(color="grey90"),
-       panel.grid.major.x = element_blank(),
-       legend.title=element_text(size=14), 
-       legend.text=element_text(size=14))
-}
 ```
 
 

@@ -1,4 +1,4 @@
-calcPsiMC0 <- function(originDist, targetDist, originRelAbund, locations, 
+calcPsiMC0 <- function(originDist, targetDist, originRelAbund, locations,
                       years = 1, months = 1, verbose=F) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
@@ -24,7 +24,7 @@ calcPsiMC0 <- function(originDist, targetDist, originRelAbund, locations,
   return(list(psi=psiMat, MC=MC))
 }
 
-calcPsiMC <- function(originDist, targetDist, originRelAbund, locations, 
+calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
                       years = 1, months = 1, verbose=F) {
   nOrigin <- nrow(originDist)
   nTarget <- nrow(targetDist)
@@ -98,13 +98,13 @@ for (i in 1:nLevels16) {
                    origin.abund = breedingN16[[1]]/sum(breedingN16[[1]]),
                    sample.size = sum(breedingN16[[1]]),
                    interval=c(0,10), tol=.Machine$double.eps^0.5)
-  
+
   slope16a <- o16a$minimum
-  
+
   cat(" slope", slope16a, "\n")
-  
+
   psi16a <- mlogitMat(slope16a, breedDist16[[1]])
-  
+
   # Then use the rows of that psi matrix only for the one breeding quadrant
   rows <- 50*(i %/% 3) + rep(1:5, 5) + rep(seq(0, 40, 10), each=5) + ((i-1) %% 2) * 5
   psi16[rows, ] <- psi16a[rows, ]
@@ -160,24 +160,24 @@ compare16.array <- array(NA, c(nSims16, nScenarios16, 5),
 set.seed(80)
 for (sim in 1:nSims16) {
   cat("Simulation", sim, "of", nSims16, '\n')
-  
+
   sim16 <- lapply(sampleBreeding16, simMove, breedingDist = breedDist16[[1]],
                   winteringDist=nonbreedDist16[[1]], psi=psi16, nYears=nYears,
                   nMonths=nMonths)
-  
+
   for (i in c(2, 3, 5, 6)) {
     cat("\tScenario", i, "\n")
     animalLoc16[[i]] <- changeLocations(sim16[[scenarioToSampleMap16[i]]]$animalLoc,
                                         breedingSiteTrans16[[i]], 1:nWintering16[i])
-    
+
     results16[[i]] <- calcPsiMC0(originDist = breedDist16[[i]],
                                  targetDist = nonbreedDist16[[i]],
                                  locations = animalLoc16[[i]],
                                  originRelAbund = breedingRelN16[[i]],
                                  verbose = FALSE)
-    
+
     compare16.array[sim, i, 'MCR'] <- results16[[i]]$MC
-    
+
     compare16.array[sim, i, 'MC'] <- calcMC(originDist = breedDist16[[i]],
                                           targetDist = nonbreedDist16[[i]],
                                           psi = results16[[i]]$psi,
@@ -189,12 +189,12 @@ for (sim in 1:nSims16) {
                                           psi = results16[[i]]$psi,
                                           originRelAbund = breedingRelN16[[i]],
                                           sampleSize = sum(breedingN16[[i]]))
-    
+
     compare16.array[sim, i, 'MCss'] <- calcMC(originDist = breedDist16[[i]],
                                            targetDist = nonbreedDist16[[i]],
                                            psi = results16[[i]]$psi,
                                            originRelAbund = table(animalLoc16[[i]][,1,1,1])/dim(animalLoc16[[i]])[1],
-                                           sampleSize = dim(animalLoc16[[i]])[1]) 
+                                           sampleSize = dim(animalLoc16[[i]])[1])
     compare16.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist16[[1]],
                                                        nonbreedDist16[[1]],
                                                        sim16[[scenarioToSampleMap16[i]]]$animalLoc,
@@ -213,7 +213,7 @@ compare16 <- transform(compare16, MC.diff=MC - MC[1], MCA.diff=MCA - MCA[1],
                        Mantel.diff=Mantel - Mantel[1])
 
 
-write.csv(compare16, '../compare16.ss.csv', row.names = F)
+
 
 
 set.seed(75)
@@ -223,7 +223,7 @@ set.seed(75)
 
 breedingSiteTrans15 <- list(1:100,
                             c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
-                            c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)), 
+                            c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
                             1:100,
                             c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)),
                             c(rep(1:2, 5, each=5), rep(3:4, 5, each=5)))
@@ -233,11 +233,11 @@ nScenarios15 <- length(breedingSiteTrans15)
 nSims15 <- 100
 
 # Basing positions of researcher defined breeding populations on above
-breedingPos15 <- list(breedingPos, 
+breedingPos15 <- list(breedingPos,
                       breedingPos14[[5]],
-                      breedingPos14[[5]], 
+                      breedingPos14[[5]],
                       breedingPos,
-                      breedingPos14[[5]], 
+                      breedingPos14[[5]],
                       breedingPos14[[5]])
 
 winteringPos15 <- rep(list(winteringPos), nScenarios15)
@@ -261,7 +261,7 @@ for (i in 1:10) #row
 sum(breedingN15base)
 
 # For researcher defined populations
-breedingN15 <- lapply(breedingSiteTrans15, rowsum, x=breedingN15base) 
+breedingN15 <- lapply(breedingSiteTrans15, rowsum, x=breedingN15base)
 
 breedingRelN15 <- lapply(breedingN15, "/", sum(breedingN15base))
 
@@ -294,7 +294,7 @@ slope15 <- o15$minimum
 psi15 <- mlogitMat(slope15, breedDist15[[1]])
 
 # Baseline strength of migratory connectivity
-MC15 <- calcMC(originDist = breedDist15[[1]], 
+MC15 <- calcMC(originDist = breedDist15[[1]],
                targetDist = nonbreedDist15[[1]],
                psi = psi15,
                originRelAbund = breedingN15[[1]]/sum(breedingN15[[1]]),
@@ -307,15 +307,15 @@ animalLoc15 <- vector("list", nScenarios15)
 
 results15 <- vector("list", nScenarios15)
 
-compare15 <- data.frame(Scenario = c("True", 
-                                     "Base", 
+compare15 <- data.frame(Scenario = c("True",
+                                     "Base",
                                      "Breeding4",
                                      "CentroidSampleBreeding4",
-                                     "BiasedSample", 
+                                     "BiasedSample",
                                      "BiasedSampleBreeding4",
                                      "BiasedCentroidSampleBreeding4"))
 
-compare15.array <- array(NA, c(nSims15, nScenarios15, 5), 
+compare15.array <- array(NA, c(nSims15, nScenarios15, 5),
                          dimnames = list(1:nSims15,
                                          c("Base", "Breeding4", "CentroidSampleBreeding4",
                                            "BiasedSample", "BiasedSampleBreeding4",
@@ -325,41 +325,41 @@ compare15.array <- array(NA, c(nSims15, nScenarios15, 5),
 
 for (sim in 1:nSims15) {
   cat("Simulation", sim, "of", nSims15, '\n')
-  
+
   sim15 <- lapply(sampleBreeding15, simMove, breedingDist = breedDist15[[1]],
                   winteringDist=nonbreedDist15[[1]], psi=psi15, nYears=nYears,
                   nMonths=nMonths)
-  
+
   for (i in c(2, 3, 5, 6)) {
-    
+
     cat("\tScenario", i, "\n")
     animalLoc15[[i]] <- changeLocations(animalLoc = sim15[[scenarioToSampleMap15[i]]]$animalLoc,
                                         breedingSiteTrans = breedingSiteTrans15[[i]],
                                         winteringSiteTrans = 1:nWintering15[i])
-    
-    results15[[i]] <- calcPsiMC(originDist = breedDist15[[i]], 
+
+    results15[[i]] <- calcPsiMC(originDist = breedDist15[[i]],
                                 targetDist = nonbreedDist15[[i]],
                                 originRelAbund = breedingRelN15[[i]],
-                                locations = animalLoc15[[i]], 
+                                locations = animalLoc15[[i]],
                                 verbose = F)
-    
+
     compare15.array[sim, i, 'MC'] <- results15[[i]]$MC
     compare15.array[sim, i, 'MCR'] <- calcMC(originDist = breedDist15[[i]],
                                              targetDist = nonbreedDist15[[i]],
                                              psi = results15[[i]]$psi,
                                              originRelAbund = breedingRelN15[[i]])
-    
+
     compare15.array[sim, i, 'MCA'] <- calcMC(originDist = breedDist15[[i]],
                                              targetDist = nonbreedDist15[[i]],
                                              psi = results15[[i]]$psi,
                                              originRelAbund = breedingRelN15[[i]],
                                              sampleSize = sum(breedingN15[[i]]))
-    
+
     compare15.array[sim, i, 'MCss'] <- calcMC(originDist = breedDist15[[i]],
                                               targetDist = nonbreedDist15[[i]],
                                               psi = results15[[i]]$psi,
                                               originRelAbund = table(animalLoc15[[i]][,1,1,1])/dim(animalLoc15[[i]])[1],
-                                              sampleSize = dim(animalLoc15[[i]])[1]) 
+                                              sampleSize = dim(animalLoc15[[i]])[1])
     compare15.array[sim, i, 'Mantel'] <- calcStrengthInd(breedDist15[[1]],
                                                          nonbreedDist15[[1]],
                                                          sim15[[scenarioToSampleMap15[i]]]$animalLoc,
@@ -377,5 +377,5 @@ compare15 <- transform(compare15, MC.diff=MC - MC[1], MCA.diff=MCA - MCA[1],
                        MCR.diff = MCR - MCR[1],
                        Mantel.diff=Mantel - Mantel[1])
 
-write.csv(compare15, '../compare15.ss.csv', row.names = F)
+
 

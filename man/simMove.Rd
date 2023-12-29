@@ -168,18 +168,12 @@ breedDist <- distFromPos(breedingPos, 'ellipsoid')
 nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 
 # Breeding Abundance
-breedingN <- rep(50, nBreeding) # Lower for example speed
+breedingN <- rep(50, nBreeding) # Reduced from 5000 for example speed
 breedingRelN <- breedingN/sum(breedingN)
-
-\dontrun{
-  # Breeding Abundance
-  breedingN <- rep(5000, nBreeding)
-  breedingRelN <- breedingN/sum(breedingN)
-}
 
 # Set up psi matrix
 slope <- 1.923904
-\dontrun{
+if (interactive()) {
   o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
                 target.dist = nonbreedDist, origin.abund = breedingRelN,
                 sample.size = sum(breedingN),
@@ -197,64 +191,61 @@ round(MC, 4)
 
 ## Dispersal simulations---
 set.seed(1516)
-nYears <- 4 # Lower for example speed
-nMonths <- 2 # Each season, lower for example speed
-Drates <- c(0.04, 0.16)    #rates of dispersal, fewer for example speed
-\dontrun{
-  nYears <- 15
-  nMonths <- 4 # Each season
-  Drates <- c(0.02, 0.04, 0.08, 0.16, 0.32, 0.64)    #rates of dispersal
+nYears <- 4 # Reduced from 15 for example speed
+nMonths <- 2 # Each season, reduced from 4 for example speed
+Drates <- c(0.04, 0.16) # Rates of dispersal, fewer for example speed
+if (interactive()) {
 
-birdLocDisp <- vector('list', length(Drates))
-Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
-                       Rate=rep(Drates, each = nYears), MC = NA)
-for(i in 1:length(Drates)){
-  cat('Dispersal Rate', Drates[i], '\n')
-  birdLocDisp[[i]] <- simMove(breedingN, breedDist, nonbreedDist, psi, nYears, nMonths,
-                              sumDispRate = Drates[i])
-  for(j in 1:nYears){
-    cat('\tYear', j, '\n')
-    temp.results <- calcPsiMC(breedDist, nonbreedDist, breedingRelN,
-                                 birdLocDisp[[i]]$animalLoc, years = j)
-    Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC
+  birdLocDisp <- vector('list', length(Drates))
+  Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
+                         Rate=rep(Drates, each = nYears), MC = NA)
+  for(i in 1:length(Drates)){
+    cat('Dispersal Rate', Drates[i], '\n')
+    birdLocDisp[[i]] <- simMove(breedingN, breedDist, nonbreedDist, psi, nYears,
+                                nMonths, sumDispRate = Drates[i])
+    for(j in 1:nYears){
+      cat('\tYear', j, '\n')
+      temp.results <- calcPsiMC(breedDist, nonbreedDist, breedingRelN,
+                                   birdLocDisp[[i]]$animalLoc, years = j)
+      Disp.df$MC[j + (i - 1) * nYears] <- temp.results$MC
+    }
+  } # end i loop
+
+  Disp.df$Year <- Disp.df$Year - 1 #just run once!
+  data.frame(Disp.df, roundMC = round(Disp.df$MC, 2),
+             nearZero = Disp.df$MC < 0.01)
+
+  # Convert dispersal rates to probabilities of dispersing at least certain
+  # distance
+  threshold <- 1000
+  probFarDisp <- matrix(NA, nBreeding, length(Drates),
+                        dimnames = list(NULL, Drates))
+  for (i in 1:length(Drates)) {
+    for (k in 1:nBreeding) {
+      probFarDisp[k, i] <- sum(
+        birdLocDisp[[i]]$natalDispMat[k, which(breedDist[k, ]>= threshold)])
+    }
   }
-} # end i loop
+  summary(probFarDisp)
 
-Disp.df$Year <- Disp.df$Year - 1 #just run once!
-data.frame(Disp.df, roundMC = round(Disp.df$MC, 2), nearZero = Disp.df$MC < 0.01)
-
-  write.csv(Disp.df, "../Disp.df.csv")
-
-# Convert dispersal rates to probabilities of dispersing at least certain distance
-threshold <- 1000
-probFarDisp <- matrix(NA, nBreeding, length(Drates), dimnames = list(NULL, Drates))
-for (i in 1:length(Drates)) {
-  for (k in 1:nBreeding) {
-    probFarDisp[k, i] <- sum(birdLocDisp[[i]]$natalDispMat[k, which(breedDist[k, ]>= threshold)])
-  }
-}
-summary(probFarDisp)
-}
-
-
-#plot results
-\dontrun{
+  #plot results
   require(ggplot2)
   require(ggthemes)
 
   line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-  png('../dispersal.plot.png', width = 6, height = 6, res = 600, units = 'in')
   ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
     geom_line()+
     scale_size_manual(values=line_set)+
     labs(size="Dispersal Rate")+
-    scale_y_continuous("MC", limits=c(-.005, 0.26), breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
+    scale_y_continuous("MC", limits=c(-.005, 0.26),
+                       breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
     scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
     theme_bw()+
-    theme(axis.title=element_text(size=16, face ="bold"),axis.text=element_text(size=14),
-          panel.grid.major = element_line(color="grey90"),panel.grid.major.x = element_blank(),
+    theme(axis.title=element_text(size=16, face ="bold"),
+          axis.text=element_text(size=14),
+          panel.grid.major = element_line(color="grey90"),
+          panel.grid.major.x = element_blank(),
           legend.title=element_text(size=14), legend.text=element_text(size=14))
-  dev.off()
 }
 }
 \references{

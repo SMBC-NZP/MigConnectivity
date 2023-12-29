@@ -55,7 +55,7 @@
 #'   \item{\code{popassign}}{a SpatRast for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
 #'   If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
 #'   \item{\code{probDF}}{data.frame of individual probability surfaces}
-#'   \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
+#'   \item{\code{oddsDF}}{data.frame of likely vs unlikely surfaces}
 #'   \item{\code{popDF}}{data.frame of population level assignment}
 #'   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for
 #'   single cell assignment}
@@ -69,22 +69,25 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' if (interactive())  {
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 #' for (ext in extensions) {
-#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#' tmp <- tempdir()
+#' download.file(paste0(
+#'               "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
 #'                      "/master/data-raw/Spatial_Layers/OVENdist.",
 #'                      ext),
-#'               destfile = paste0("OVENdist.", ext))
+#'               destfile = paste0(tmp, "/OVENdist.", ext))
 #' }
-#' OVENdist <- sf::st_read("OVENdist.shp")
+#' OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
 #' sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
-#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#' download.file(paste0(
+#'   "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
 #'                      "/master/data-raw/deltaDvalues.csv"),
-#'               destfile = "deltaDvalues.csv")
-#' OVENvals <- read.csv("deltaDvalues.csv")
+#'               destfile = paste0(tmp, "/deltaDvalues.csv"))
+#' OVENvals <- read.csv(paste0(tmp, "/deltaDvalues.csv"))
 #'
 #'
 #'a <- Sys.time()
@@ -478,12 +481,13 @@ return(isoAssignReturn)
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
 #'
-#' @return returns a global \code{RasterLayer} (resolution = 0.333'x0.3333') object for the \code{element} and \code{period} of interest
+#' @return returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
+#'     object for the \code{element} and \code{period} of interest
 #'
 #' @export
 #' @examples
-#' \dontrun{
-#' map <- getIsoMap(element = "Hydrogen", period = "Annual")
+#' if (interactive()) {
+#'   map <- getIsoMap(element = "Hydrogen", period = "Annual")
 #' }
 
 getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
@@ -782,7 +786,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' if (interactive())  {
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 #' for (ext in extensions) {
 #' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
@@ -809,7 +813,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'                          crs = 4326)
 #'
 #' #Get OVEN abundance from BSS estimates and read into R #
-#' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+#' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip",
+#'                      destfile = "oven.zip")
 #' utils::unzip("oven.zip")
 #' oven_dist <- sf::st_read("ra06740.shp")
 #'
@@ -826,11 +831,12 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'
 #' # rasterize the polygons from BBS - this is not needed if working with a
 #' # rasterized surface
-#' relativeAbun<- terra::rasterize(terra::vect(sf::st_transform(oven_dist, 4326)),
-#'                                 r,
-#'                                 field = "RASTAT")
+#' relativeAbun<-terra::rasterize(terra::vect(sf::st_transform(oven_dist,4326)),
+#'                                r,
+#'                                field = "RASTAT")
 #'
-#' relativeAbund <- relativeAbun/terra::global(relativeAbun, sum, na.rm = TRUE)$sum
+#' relativeAbund <- relativeAbun/terra::global(relativeAbun, sum,
+#'                                             na.rm = TRUE)$sum
 #'
 #'
 #' BE <- weightAssign(knownLocs = knownLocs,
@@ -840,7 +846,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 #'                    slope = 0.8,
 #'                    odds = 0.67,
 #'                    relAbund = relativeAbund,
-#'                    weightRange = c(-1,1),
+#'                    weightRange = c(-1, 1),
 #'                    sppShapefile = OVENdist,
 #'                    assignExtent = c(-179,-60,15,89),
 #'                    element = "Hydrogen",

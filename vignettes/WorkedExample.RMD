@@ -171,7 +171,7 @@ names(genetic_samples) <- gsub(names(genetic_samples), pattern = "X[0-9]..", rep
 str(genetic_samples,1)
 ```
 
-The genetic data have the probabilty that each individual is assigned to 
+The genetic data have the probability that each individual is assigned to 
 a specific genetic population. These data are used during the resampling
 process to estimate transition probabilities and the strength of MC. Below, 
 we format the data so we can easily use it in our analysis. 

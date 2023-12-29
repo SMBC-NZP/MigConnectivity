@@ -20,7 +20,8 @@ raster of mean annual values in precipitation for the \code{element}. If
  \code{element} of interest.}
 }
 \value{
-returns a global \code{RasterLayer} (resolution = 0.333'x0.3333') object for the \code{element} and \code{period} of interest
+returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
+    object for the \code{element} and \code{period} of interest
 }
 \description{
 The \code{getIsoMap} function downloads predicted isoscape maps from
@@ -31,7 +32,7 @@ the environment. If not, the isoscape is downloaded and imported
 as a raster.
 }
 \examples{
-\dontrun{
-map <- getIsoMap(element = "Hydrogen", period = "Annual")
+if (interactive()) {
+  map <- getIsoMap(element = "Hydrogen", period = "Annual")
 }
 }

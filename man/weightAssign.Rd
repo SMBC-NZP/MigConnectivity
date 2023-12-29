@@ -87,7 +87,7 @@ a user-provided intercept, slope and standard deviation. See
 See \href{https://onlinelibrary.wiley.com/doi/10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 }
 \examples{
-\dontrun{
+if (interactive())  {
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 for (ext in extensions) {
 download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
@@ -114,7 +114,8 @@ knownLocs <- sf::st_as_sf(data.frame(Long = rep(-73,nrow(HBEFbirds)),
                          crs = 4326)
 
 #Get OVEN abundance from BSS estimates and read into R #
-utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip", destfile = "oven.zip")
+utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip",
+                     destfile = "oven.zip")
 utils::unzip("oven.zip")
 oven_dist <- sf::st_read("ra06740.shp")
 
@@ -131,11 +132,12 @@ r <- terra::rast(nrow = 331, ncol = 870,
 
 # rasterize the polygons from BBS - this is not needed if working with a
 # rasterized surface
-relativeAbun<- terra::rasterize(terra::vect(sf::st_transform(oven_dist, 4326)),
-                                r,
-                                field = "RASTAT")
+relativeAbun<-terra::rasterize(terra::vect(sf::st_transform(oven_dist,4326)),
+                               r,
+                               field = "RASTAT")
 
-relativeAbund <- relativeAbun/terra::global(relativeAbun, sum, na.rm = TRUE)$sum
+relativeAbund <- relativeAbun/terra::global(relativeAbun, sum,
+                                            na.rm = TRUE)$sum
 
 
 BE <- weightAssign(knownLocs = knownLocs,
@@ -145,7 +147,7 @@ BE <- weightAssign(knownLocs = knownLocs,
                    slope = 0.8,
                    odds = 0.67,
                    relAbund = relativeAbund,
-                   weightRange = c(-1,1),
+                   weightRange = c(-1, 1),
                    sppShapefile = OVENdist,
                    assignExtent = c(-179,-60,15,89),
                    element = "Hydrogen",

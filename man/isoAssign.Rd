@@ -92,7 +92,7 @@ returns an \code{isoAssign} object containing the following:
   \item{\code{popassign}}{a SpatRast for population level assignment (sum of \code{oodsassign} if \code{population} = NULL).
   If \code{population} is a vector then returns a raster stack for each unique \code{population} provided}
   \item{\code{probDF}}{data.frame of individual probability surfaces}
-  \item{\code{oddsDF}}{data.frame of likely vs unlikley surfaces}
+  \item{\code{oddsDF}}{data.frame of likely vs unlikely surfaces}
   \item{\code{popDF}}{data.frame of population level assignment}
   \item{\code{SingeCell}}{array of coordinates (longitude,latitude) for
   single cell assignment}
@@ -113,22 +113,25 @@ and standard deviation. See
 \href{http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \examples{
-\dontrun{
+if (interactive())  {
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 for (ext in extensions) {
-download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+tmp <- tempdir()
+download.file(paste0(
+              "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
                      "/master/data-raw/Spatial_Layers/OVENdist.",
                      ext),
-              destfile = paste0("OVENdist.", ext))
+              destfile = paste0(tmp, "/OVENdist.", ext))
 }
-OVENdist <- sf::st_read("OVENdist.shp")
+OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
 sf::st_crs(OVENdist) <- sf::st_crs(4326)
 
-download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+download.file(paste0(
+  "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
                      "/master/data-raw/deltaDvalues.csv"),
-              destfile = "deltaDvalues.csv")
-OVENvals <- read.csv("deltaDvalues.csv")
+              destfile = paste0(tmp, "/deltaDvalues.csv"))
+OVENvals <- read.csv(paste0(tmp, "/deltaDvalues.csv"))
 
 
 a <- Sys.time()

@@ -111,11 +111,11 @@
 #' @format A list with 10 mcmc (coda) estimates in it.
 "abundExamples"
 
-#' Ovenbird light-level geolocator and GPS neccesary data
+#' Ovenbird light-level geolocator and GPS necessary data
 #'
 #' Ovenbird data from Cohen et al. (2018) and Hallworth and Marra (2015).
 #'
-#' @format A named list with the neccesary data to replicate the analyses
+#' @format A named list with the necessary data to replicate the analyses
 #' found in Cohen et al. (2018) with archival light-level geolocator and
 #' GPS data.
 #' The data contained in the list are:
@@ -124,10 +124,10 @@
 #'        Location bias estimates in light-level geolocator estimates calculated
 #'        using birds captured at known locations in Florida, Jamaica and Puerto Rico.
 #'         Location bias is reported in meters and is a vector of length two with bias
-#'         esimates in geolocator locations.
-#'         Format: A vector of length two with bias esimates in geolocator locations.
+#'         estimates in geolocator locations.
+#'         Format: A vector of length two with bias estimates in geolocator locations.
 #'   \item geo.vcov: Covariance estimates in light-level geolocator estimates calculated
-#'         using birds captured at known locations in Florida, Jamaica and Puerto Rico.
+#'         using birds captured at known locations in Florida, Jamaica, and Puerto Rico.
 #'         Covariance is reported in meters.
 #'         Format:  A 2x2 matrix of covariance estimates.
 #'   \item isGL: Archival light-level geolocator or PinPoint-10 GPS tag
@@ -155,12 +155,12 @@
 #'         There are three non-breeding target sites 1) Florida, United States, 2) Cuba, and 3) Hispaniola
 #'         (Dominican Republic and Haiti).
 #'         Format:  \code{SpatialPolygons}
-#'   \item originSites: Breeding distribution prigin sites used in Cohen et al. (in prep) to estimate
+#'   \item originSites: Breeding distribution origin sites used in Cohen et al. (in prep) to estimate
 #'         MC of Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags. There are two breeding
 #'         origin sites, one that encompasses NH and another that encompasses MD capture deployment locations.
 #'         Format: \code{SpatialPolygons}
 #'   \item originRelAbund: A dataset containing relative abundance estimates from BBS data reported in Cohen et al.
-#'        (in prep). These estimates can be used in \code{estMC} function as \code{originRelAbund} in conjuction
+#'        (in prep). These estimates can be used in \code{estMC} function as \code{originRelAbund} in conjunction
 #'        with archival light-level geolocator and GPS locations.
 #'        Format: A vector of length two with relative abundance estimates.
 #'   \item originDist: The pairwise Great Circle Distance between the center of the polygons contained within

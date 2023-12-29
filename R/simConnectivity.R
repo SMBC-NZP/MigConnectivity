@@ -344,7 +344,7 @@ simCountData <- function (nStrata, routesPerStrata, nYears, alphaStrat, beta = 0
 ###############################################################################
 #' Estimates population-level relative abundance from count data
 #'
-#' Uses a Bayesian heirarchical model to estimate relative abundance of regional
+#' Uses a Bayesian hierarchical model to estimate relative abundance of regional
 #' populations from count-based data (e.g., Breeding Bird Survey)
 #'
 #' @param count_data List containing the following elements:

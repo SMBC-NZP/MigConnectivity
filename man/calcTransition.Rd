@@ -102,7 +102,7 @@ psi_r_calc <- calcTransition(banded = banded1,
                              targetNames = targetNames,
                              method = "SANN")
 psi_r_calc
-\dontrun{
+if (interactive()) {
 psi_r_mcmc <- estTransition(banded = banded1, reencountered = reencountered1,
                             originNames = originNames,
                             targetNames = targetNames,

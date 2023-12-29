@@ -11,7 +11,7 @@ diffMantel(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
 diffCorr(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
 }
 \arguments{
-\item{estimates}{List of at leat two Mantel correlation estimates, provided
+\item{estimates}{List of at least two Mantel correlation estimates, provided
 by either the estMC or the estMantel functions. If this is a named list
 (recommended), the function will use these names in labeling the
 differences.}

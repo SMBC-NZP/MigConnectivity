@@ -1,8 +1,8 @@
 Package: MigConnectivity
 Type: Package
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.3
-Date: 2023-12-06
+Version: 0.4.3.9000
+Date: 2023-12-28
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
            role = c("cre", "aut")),
@@ -11,19 +11,14 @@ Authors@R: c(
     person("Emily B.", "Cohen", role = "ctb"))
 Description: Allows the user to estimate transition probabilities for migratory 
     animals between any two phases of the annual cycle, using a variety of 
-    different data types. Also calculates or estimates the strength of migratory
-    connectivity (MC), a standardized metric to quantify the extent to which 
-    populations co-occur between two phases of the annual cycle. MC is 
-    independent of data type and accounts for the relative abundance of 
-    populations distributed across a seasonal range.  MC is applicable between 
-    any two phases of the annual cycle that are temporally distinct, including 
-    migratory phases. MC can be defined for entire seasonal ranges or for 
-    subsets of those ranges, as long as those subsets of ranges can be further 
-    divided into regional populations. The package includes functions to 
+    different data types. Also quantifies the strength of migratory connectivity 
+    (MC), a standardized metric to quantify the extent to which populations 
+    co-occur between two phases of the annual cycle. Includes functions to 
     estimate MC and the more traditional metric of migratory connectivity 
     strength (Mantel correlation; rM) incorporating uncertainty from multiple 
-    sources of sampling error. Description of the MC metric can be found in 
-    Cohen et al. (2018).
+    sources of sampling error. For cross-species comparisons, methods are 
+    provided to estimate differences in migratory connectivity strength, 
+    incorporating uncertainty.
 License: GPL (>=3)
 LazyData: true
 LazyDataCompression: xz

@@ -10,7 +10,7 @@ diffMC(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
 diffStrength(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
 }
 \arguments{
-\item{estimates}{List of at leat two MC estimates, provided by the estMC
+\item{estimates}{List of at least two MC estimates, provided by the estMC
 function. If this is a named list (recommended), the function will use
 these names in labeling the differences.}
 
@@ -55,7 +55,7 @@ only apply this function to MC estimates where all data sources are
 independent (e.g., different species).
 }
 \examples{
-\dontrun{
+if (interactive()) {
 data('OVENdata')
 ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
                  isTelemetry = !OVENdata$isGL,

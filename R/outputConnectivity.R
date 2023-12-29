@@ -150,28 +150,29 @@ summary.intrinsicAssign<-function(object, ...){
 #' @return A basic plot of the isotope assignments. If \code{map = 'population'} returns a single map.
 #' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
 #' @examples
-#' \dontrun{
-#' OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
-#' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' terra::crs(OVENdist) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#' if (interactive()) {
+#'   OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
+#'   OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
+#'   terra::crs(OVENdist) <-
+#'     "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
 #'
-#' OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#'   OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
-#'b <- isoAssign(isovalues = OVENvals[,2],
-#'               isoSTD = 12,
-#'               intercept = -10,
-#'               slope = 0.8,
-#'               odds = NULL,
-#'               restrict2Likely = TRUE,
-#'               nSamples = 1000,
-#'               sppShapefile = OVENdist,
-#'               assignExtent = c(-179,-60,15,89),
-#'               element = "Hydrogen",
-#'               surface = FALSE,
-#'               period = "Annual")
+#'   b <- isoAssign(isovalues = OVENvals[,2],
+#'                  isoSTD = 12,
+#'                  intercept = -10,
+#'                  slope = 0.8,
+#'                  odds = NULL,
+#'                  restrict2Likely = TRUE,
+#'                  nSamples = 1000,
+#'                  sppShapefile = OVENdist,
+#'                  assignExtent = c(-179,-60,15,89),
+#'                  element = "Hydrogen",
+#'                  surface = FALSE,
+#'                  period = "Annual")
 #'
-#'plot(b, map = "population")
-#'}
+#'   plot(b, map = "population")
+#' }
 #'
 #' @export
 plot.intrinsicAssign <- function(x,map,...){

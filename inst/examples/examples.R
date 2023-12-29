@@ -94,7 +94,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 ###############################################################################
 # Parameters for simulations
 ###############################################################################
-\dontrun{
+if (interactive()) {
 nSeasons <- 2
 nYears <- 10
 nMonths <- 4 # Each season
@@ -220,7 +220,7 @@ for (i in 1:nScenarios14) {
 }
 compare14 <- transform(compare14, diff=MC - MC[1], prop=MC/MC[1])
 compare14
-write.csv(compare14, 'sampling_regions1.csv', row.names=FALSE)
+
 
 ###############################################################################
 # Sampling regime 2  of 3
@@ -347,7 +347,7 @@ compare15a <- as.matrix(compare15[2:7,c(2,4,3,5)])
 rownames(compare15a) <- compare15$Scenario[2:7]
 round(compare15a, 3)
 round(compare15a, 2)
-write.csv(compare15, 'sampling_regions2.csv', row.names=FALSE)
+
 
 ###############################################################################
 # Sampling regime 3 of 3
@@ -492,5 +492,4 @@ compare16a <- as.matrix(compare16[2:7,c(2,4,3,5)])
 rownames(compare16a) <- compare16$Scenario[2:7]
 round(compare16a, 3)
 round(compare16a, 2)
-write.csv(compare16, 'sampling_regions3.csv', row.names=FALSE)
 }

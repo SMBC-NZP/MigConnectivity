@@ -92,9 +92,9 @@ set.seed(150)
 # Number of populations
 nStrata. <- 4
 # Number of routes w/i each population (assumed to be balanced)
-routePerStrat. <- 30 # reduced for example speed
+routePerStrat. <- 30 # reduced from 90 for example speed
 # Number of years
-nYears. <- 5 # reduced for example speed
+nYears. <- 5 # reduced from 10 for example speed
 # log(Expected number of birds counted at each route)
 alphaStrat. <- 1.95
 # standard deviation of normal distribution assumed for route/observer random
@@ -105,33 +105,15 @@ sdYear. <- 0.18
 
 
 # Number of simulated datasets to create and model
-nsims <- 50 # reduced for example speed
+nsims <- 50 # reduced from 100 for example speed
 # Number of MCMC iterations
-ni. <- 1000 # reduced for example speed
-# Number of iterations to thin from posterior
+ni. <- 1000 # reduced from 15000 for example speed
+# Number of iterations to thin from posterior (reduced from 5)
 nt. <- 1
 # Number of iterations to discard as burn-in
-nb. <- 500 # reduced for example speed
+nb. <- 500 # reduced from 5000 for example speed
 # Number of MCMC chains
-nc. <- 1 # reduced for example speed
-
-\dontrun{
-  # Slower, more thorough version
-  # Number of routes w/i each population (assumed to be balanced)
-  routePerStrat. <- 90
-  # Number of years
-  nYears. <- 10
-  # Number of simulated datasets to create and model
-  nsims <- 100
-  # Number of MCMC iterations
-  ni. <- 15000
-  # Number of iterations to thin from posterior
-  nt. <- 5
-  # Number of iterations to discard as burn-in
-  nb. <- 5000
-  # Number of MCMC chains
-  nc. <- 3
-}
+nc. <- 1 # reduced from 3 for example speed
 
 ### Create empty matrix to store model output ---
 sim_in <- vector("list", nsims)
@@ -139,7 +121,7 @@ sim_out <- vector("list", nsims)
 
 
 # Simulation ---
-\dontrun{
+if (interactive()) {
 system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\n")
 
@@ -164,8 +146,6 @@ system.time(for(s in 1:nsims){
 ### Check that relative abundance is, on average, equal for each population
 prop.table(sapply(sim_in, function(x) return(rowsum(colSums(x$C), x$strat))), 2)
 
-#nSamples <- (ni. - nb.)/nt. * nc.
-#rel_abund0 <- array(NA, c(nsims, nSamples, nPops.))
 rel_names <- paste0('relN[', 1:nStrata., ']')
 rel_abund1 <- data.frame(sim=1:nsims,
                          ra1.mean=NA, ra2.mean=NA, ra3.mean=NA, ra4.mean=NA,
@@ -173,7 +153,6 @@ rel_abund1 <- data.frame(sim=1:nsims,
                          ra1.high=NA, ra2.high=NA, ra3.high=NA, ra4.high=NA,
                          ra1.cover=0, ra2.cover=0, ra3.cover=0, ra4.cover=0)
 for (s in 1:nsims) {
-#  rel_abund0[s,,] <- prop.table(as.matrix(sim_out[[s]][,1:nPops.]), 1)
   rel_abund1[s, 2:5] <- summary(sim_out[[s]])$statistics[rel_names, "Mean"]
   rel_abund1[s, 6:9] <- summary(sim_out[[s]])$quantiles[rel_names, 1]
   rel_abund1[s, 10:13] <- summary(sim_out[[s]])$quantiles[rel_names, 5]

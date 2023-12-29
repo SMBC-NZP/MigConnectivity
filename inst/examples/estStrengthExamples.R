@@ -1,14 +1,9 @@
-\dontrun{
+if (interactive()) {
   set.seed(101)
   # Uncertainty in detection (RMark estimates) with equal abundances
   # Number of resampling iterations for generating confidence intervals
-
   nSamplesCMR <- 100
   nSimulationsCMR <- 10
-  #\dontrun{
-  #  nSamplesCMR <- 10000
-  #  nSimulationsCMR <- 100
-  #}
   originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
                           rep(seq(49, 31, -2), 10)), 100, 2)
   targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
@@ -32,18 +27,17 @@
   cmrMCSample <- matrix(NA, nSamplesCMR, nSimulationsCMR)
   summaryCMR <- data.frame(Simulation = 1:nSimulationsCMR, True=trueMC,
                            mean=NA, se=NA, lcl=NA, ucl=NA)
-  # Get RMark psi estimates and estimate MC from each
+  # Get 'RMark' psi estimates and estimate MC from each
   for (r in 1:nSimulationsCMR) {
     cat("Simulation",r,"of",nSimulationsCMR,"\n")
-    # Note: getCMRexample requires a valid internet connection and that GitHub is
-    # accessible
+    # Note: getCMRexample() requires a valid internet connection and that GitHub
+    # is accessible
     fm <- getCMRexample(r)
     results <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
                      originDist = originDist, targetDist = targetDist,
                      originSites = 5:8, targetSites = c(3,2,1,4),
                      nSamples = nSamplesCMR, verbose = 0,
                      sampleSize = length(grep('[2-5]', fm$data$data$ch)))
-    #sampleSize argument not really needed (big sample sizes)
     cmrMCSample[ , r] <- results$MC$sample
     summaryCMR$mean[r] <- results$MC$mean
     summaryCMR$se[r] <- results$MC$se
@@ -102,25 +96,24 @@
   nSamplesGLGPS <- 100 # Number of bootstrap iterations, set low for example
 
   # Estimate transition probabilities
-  Combined.psi<-estTransition(isGL=OVENdata$isGL, #Logical vector:light-level GL(T)/GPS(F)
+  Combined.psi<-estTransition(isGL=OVENdata$isGL, #Light-level geolocator (T/F)
                               isTelemetry = !OVENdata$isGL,
                   geoBias = OVENdata$geo.bias, # Light-level GL location bias
                   geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-                  targetSites = OVENdata$targetSites, # Non-breeding target sites
-                  originSites = OVENdata$originSites, # Breeding origin sites
+                  targetSites = OVENdata$targetSites, # Nonbreeding/target sites
+                  originSites = OVENdata$originSites, # Breeding/origin sites
                   originPoints = OVENdata$originPoints, # Capture Locations
-                  targetPoints = OVENdata$targetPoints, # Device target locations
+                  targetPoints = OVENdata$targetPoints, #Device target locations
                   verbose = 3,   # output options
                   nSamples = nSamplesGLGPS, # This is set low for example
                   resampleProjection = sf::st_crs(OVENdata$targetPoints),
-                  #targetAssignment = targetAssignment[1:39,],
                   nSim = 1000)
 
   # Can estimate MC from previous psi estimate
-  Combo.MC1 <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
-                           originDist = OVENdata$originDist, # originSites distance matrix
-                           targetSites = OVENdata$targetSites, # Non-breeding target sites
-                           originSites = OVENdata$originSites, # Breeding origin sites
+  Combo.MC1 <- estStrength(targetDist = OVENdata$targetDist, # Distance matrix
+                           originDist = OVENdata$originDist, # Distance matrix
+                           targetSites = OVENdata$targetSites, # Target sites
+                           originSites = OVENdata$originSites, # Breeding sites
                            psi = Combined.psi,
                            originRelAbund = OVENdata$originRelAbund,
                            nSamples = nSamplesGLGPS,
@@ -128,11 +121,11 @@
   Combo.MC1
 
   # Doesn't have to be an estPsi object - can simply be array of psi samples
-  Combo.MC2 <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
-                           originDist = OVENdata$originDist, # originSites distance matrix
-                           targetSites = OVENdata$targetSites, # Non-breeding target sites
-                           originSites = OVENdata$originSites, # Breeding origin sites
-                           psi = Combined.psi$psi$sample,
+  Combo.MC2 <- estStrength(targetDist = OVENdata$targetDist,
+                           originDist = OVENdata$originDist,
+                           targetSites = OVENdata$targetSites,
+                           originSites = OVENdata$originSites,
+                           psi = Combined.psi$psi$sample, # Array of samples
                            originRelAbund = OVENdata$originRelAbund,
                            nSamples = nSamplesGLGPS,
                            sampleSize = nrow(OVENdata$targetPoints))

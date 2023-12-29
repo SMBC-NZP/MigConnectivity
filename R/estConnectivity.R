@@ -3496,7 +3496,7 @@ getCMRexample <- function(number = 1) {
 #' only apply this function to MC estimates where all data sources are
 #' independent (e.g., different species).
 #'
-#' @param estimates List of at leat two MC estimates, provided by the estMC
+#' @param estimates List of at least two MC estimates, provided by the estMC
 #'    function. If this is a named list (recommended), the function will use
 #'    these names in labeling the differences.
 #' @param nSamples A positive integer, number of samples (with replacement)
@@ -3540,7 +3540,7 @@ getCMRexample <- function(number = 1) {
 #' migratory connectivity for birds en route to breeding through the Gulf of Mexico.
 #'
 #' @examples
-#' \dontrun{
+#' if (interactive()) {
 #' data('OVENdata')
 #' ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
 #'                  isTelemetry = !OVENdata$isGL,
@@ -3582,7 +3582,7 @@ getCMRexample <- function(number = 1) {
 #' diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
 #'                 nSamples = 10000, returnSamples = TRUE)
 #'
-#'}
+#' }
 diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
                    returnSamples = FALSE) {
   nEst <- length(estimates)
@@ -3637,7 +3637,7 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
 #' uncertainty to be accurate, only apply this function to rM estimates where
 #' all data sources are independent (e.g., different species).
 #'
-#' @param estimates List of at leat two Mantel correlation estimates, provided
+#' @param estimates List of at least two Mantel correlation estimates, provided
 #'    by either the estMC or the estMantel functions. If this is a named list
 #'    (recommended), the function will use these names in labeling the
 #'    differences.
