@@ -48,6 +48,11 @@
 #' @param generateSingleCell if 'TRUE' generates a single origin location using
 #'        the posterior assignment distribution - this takes a while to run.
 #'        If 'FALSE' (default), no coordinates are generated.
+#' @param mapDirectory Directory to save/read isotope map from. Can use relative
+#'     or absolute addressing. The default value (NULL) downloads to a temporary
+#'     directory, so we strongly recommend changing this from the default unless
+#'     you're sure you're not going to need these data more than once.
+#'
 #' @return returns an \code{isoAssign} object containing the following:
 #'  \describe{
 #'   \item{\code{probassign}}{SpatRast stack of individual probabilistic assignments}
@@ -134,14 +139,16 @@ isoAssign <- function(isovalues,
                       period = "Annual",
                       seed = NULL,
                       verbose=1,
-                      generateSingleCell = FALSE) {
+                      generateSingleCell = FALSE,
+                      mapDirectory = NULL) {
   # force verbose to default when outside specified range.
   if(!(verbose %in% c(0,1,2))){
     verbose = 1
   }
 
   # download isoscape map
-  isomap <- getIsoMap(element = element, surface = surface, period = period)
+  isomap <- getIsoMap(element = element, surface = surface, period = period,
+                      mapDirectory = mapDirectory)
 
   # 1. if sppShapefile == NULL - use extent option
   if(is.null(sppShapefile)){
@@ -466,8 +473,8 @@ return(isoAssignReturn)
 #'
 #' The \code{getIsoMap} function downloads predicted isoscape maps from
 #'  \url{https://wateriso.utah.edu/waterisotopes/}. The function first checks
-#' whether the isoscapes are located within the current working directory
-#' \code{getwd()}. If a local copy of the isoscape is found, it's read into
+#' whether the isoscapes are located within the directory
+#' \code{mapDirectory}. If a local copy of the isoscape is found, it's read into
 #' the environment. If not, the isoscape is downloaded and imported
 #' as a raster.
 #'
@@ -480,6 +487,10 @@ return(isoAssignReturn)
 #'     raster of mean annual values in precipitation for the \code{element}. If
 #'     'GrowingSeason' returns growing season values in precipitation for
 #'      \code{element} of interest.
+#' @param mapDirectory Directory to save/read isotope map from. Can use relative
+#'     or absolute addressing. The default value (NULL) downloads to a temporary
+#'     directory, so we strongly recommend changing this from the default unless
+#'     you're sure you're not going to need these data more than once.
 #'
 #' @return returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
 #'     object for the \code{element} and \code{period} of interest
@@ -490,27 +501,41 @@ return(isoAssignReturn)
 #'   map <- getIsoMap(element = "Hydrogen", period = "Annual")
 #' }
 
-getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
+getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
+                    mapDirectory = NULL){
 
   # and read into R as raster - otherwise read MAD into R
-  if(!(element %in% c("Hydrogen","Oxygen")))
+  if(!(element %in% c("Hydrogen", "Oxygen")))
     stop("element must be either Hydrogen or Oxygen")
 
-  if(!(period %in% c("Annual","GrowingSeason")))
+  if(!(period %in% c("Annual", "GrowingSeason")))
     stop("period must be either Annual or GrowingSeason")
 
   # if "/AnnualD" isn't in working directory somewhere download MAD from website
   # Download Mean Annual Deuterium values from wateriso.utah.edu #
-  haveIsoMap <- list.dirs(path = getwd(), recursive = TRUE)
+  if (is.null(mapDirectory)) {
+    haveIsoMap <- ""
+    destDirectory <- tempdir()
+  }
+  else {
+    mapDirectory <- path.expand(mapDirectory)
+    haveIsoMap <- list.dirs(path = mapDirectory, recursive = TRUE)
+    destDirectory <- ifelse(surface || period == "GrowingSeason",
+                            paste0(mapDirectory, "/GlobalPrecipGS"),
+                            paste0(mapDirectory, "/GlobalPrecip"))
+  }
+
+  # Create temporary file location #
+  tf <- tempfile(pattern = "file", fileext = "")
+
   if(surface == TRUE){
     if(element == "Hydrogen"){
-      if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
+      if(!(destDirectory %in% haveIsoMap)){
 
-        # Create temporary file #
-        tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
         # Download the file #
-        utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
+        utils::download.file(
+          url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
@@ -521,29 +546,27 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 					 list = FALSE,
 					 overwrite = TRUE,
                      junkpaths = FALSE,
-					 exdir = paste0(getwd(),"/GlobalPrecipGS"),
+					 exdir = destDirectory,
 					 unzip = "internal",
                      setTimes = FALSE)
 
         # Delete zipped folder #
         file.remove(tf)
 
-        m_s_d <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
+        m_s_d <- terra::rast(paste0(destDirectory, "/d2h_GS.tif"))
       }else{
-        dir <- grep(haveIsoMap,pattern = "/GlobalPrecipGS$", value = TRUE)
+        dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
         m_s_d <- terra::rast(paste0(dir, "/d2h_GS.tif"))
       }
       names(m_s_d)<-"MeanSurfaceD"
       return(m_s_d)
     }
     if(element == "Oxygen"){
-      if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
-
-        # Create temporary file #
-        tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
+      if(!(destDirectory %in% haveIsoMap)){
 
         # Download the file #
-        utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
+        utils::download.file(
+          url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                       destfile = tf,
                       quiet = TRUE,
                       extra = getOption("download.file.extra"))
@@ -554,16 +577,16 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 					 list = FALSE,
 					 overwrite = TRUE,
                      junkpaths = FALSE,
-					 exdir = paste0(getwd(),"/GlobalPrecipGS"),
+					 exdir = destDirectory,
 					 unzip = "internal",
                      setTimes = FALSE)
 
         # Delete zipped folder #
         file.remove(tf)
 
-        m_s_o <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
+        m_s_o <- terra::rast(paste0(destDirectory, "/d18o_GS.tif"))
       }else{
-        dir <- grep(haveIsoMap,pattern = "/GlobalPrecipGS$", value = TRUE)
+        dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
         m_s_o <- terra::rast(paste0(dir, "/d18o_GS.tif"))
       }
       names(m_s_o)<-"MeanSurfaceO"
@@ -573,14 +596,12 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   }
   if(element == "Hydrogen" & period == "Annual"){
 
-    if(!(paste0(getwd(),"/GlobalPrecip") %in% haveIsoMap)){
+    if(!(destDirectory %in% haveIsoMap)){
 
-      cat("NOTE: The Global H2 precipitation file is large (>600 MB) and may take a while to download \n")
+      cat("NOTE: The Global H2 precipitation file is large (>600 MB) and may take a while to download\n")
       oldTO <- getOption("timeout")
       options(timeout = max(700, oldTO))
 
-      # Create temporary file #
-      tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
 
       # Download the file #
       utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecip.zip",
@@ -595,16 +616,16 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 				  list = FALSE,
 				  overwrite = TRUE,
                   junkpaths = FALSE,
-				  exdir = paste0(getwd(),"/GlobalPrecip"),
+				  exdir = destDirectory,
 				  unzip = "internal",
                   setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      m_a_d <- terra::rast(paste0(getwd(),"/GlobalPrecip/d2h_MA.tif"))
+      m_a_d <- terra::rast(paste0(destDirectory, "/d2h_MA.tif"))
     }else{
-      dir <- grep(haveIsoMap,pattern = "/GlobalPrecip$", value = TRUE)
+      dir <- grep(haveIsoMap, pattern = "/GlobalPrecip$", value = TRUE)
       m_a_d <- terra::rast(paste0(dir, "/d2h_MA.tif"))
     }
     names(m_a_d)<-"MeanAnnualD"
@@ -612,13 +633,11 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   }
 
   if(element == "Hydrogen" & period == "GrowingSeason"){
-    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
-
-      # Create temporary file #
-      tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
+    if(!(destDirectory %in% haveIsoMap)){
 
       # Download the file #
-      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
+      utils::download.file(
+        url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
@@ -629,14 +648,14 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 				   list = FALSE,
 				   overwrite = TRUE,
                    junkpaths = FALSE,
-				   exdir = paste0(getwd(),"/GlobalPrecipGS"),
+				   exdir = destDirectory,
 				   unzip = "internal",
 				   setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      g_s_d <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d2h_GS.tif"))
+      g_s_d <- terra::rast(paste0(destDirectory, "/d2h_GS.tif"))
     }else{
       dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
       g_s_d <- terra::rast(paste0(dir, "/d2h_GS.tif"))
@@ -646,17 +665,15 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
     return(g_s_d)
   }
   if(element == "Oxygen" & period == "Annual"){
-    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
+    if(!(destDirectory %in% haveIsoMap)){
 
       cat("NOTE: The Global precipitation file is large (>600 MB) and may take a while to download \n")
       oldTO <- getOption("timeout")
       options(timeout = max(700, oldTO))
 
-      # Create temporary file #
-      tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
-
       # Download the file #
-      utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecip.zip",
+      utils::download.file(
+        url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecip.zip",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
@@ -669,14 +686,14 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
 				   list = FALSE,
 				   overwrite = TRUE,
                    junkpaths = FALSE,
-				   exdir = paste0(getwd(),"/GlobalPrecip"),
+				   exdir = destDirectory,
 				   unzip = "internal",
                    setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      m_a_o <- terra::rast(paste0(getwd(),"/GlobalPrecip/d18o_MA.tif"))
+      m_a_o <- terra::rast(paste0(destDirectory, "/d18o_MA.tif"))
     }else{
       dir <- grep(haveIsoMap, pattern = "/GlobalPrecip$", value = TRUE)
       m_a_o <- terra::rast(paste0(dir, "/d18o_MA.tif"))
@@ -686,10 +703,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
   }
 
   if(element == "Oxygen" & period == "GrowingSeason"){
-    if(!(paste0(getwd(),"/GlobalPrecipGS") %in% haveIsoMap)){
-
-      # Create temporary file #
-      tf <- tempfile(pattern = "file", tmpdir = getwd(), fileext = "")
+    if(!(destDirectory %in% haveIsoMap)){
 
       # Download the file #
       utils::download.file(url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
@@ -703,14 +717,14 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual"){
  				   list = FALSE,
  				   overwrite = TRUE,
             junkpaths = FALSE,
-			exdir = paste0(getwd(),"/GlobalPrecipGS"),
+			exdir = destDirectory,
 			unzip = "internal",
             setTimes = FALSE)
 
       # Delete zipped folder #
       file.remove(tf)
 
-      g_s_o <- terra::rast(paste0(getwd(),"/GlobalPrecipGS/d18o_GS.tif"))
+      g_s_o <- terra::rast(paste0(destDirectory,"/d18o_GS.tif"))
     }else{
       dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
       g_s_o <- terra::rast(paste0(dir, "/d18o_GS.tif"))

@@ -23,7 +23,8 @@ isoAssign(
   period = "Annual",
   seed = NULL,
   verbose = 1,
-  generateSingleCell = FALSE
+  generateSingleCell = FALSE,
+  mapDirectory = NULL
 )
 }
 \arguments{
@@ -83,6 +84,11 @@ is. 2 prints the animal currently being sampled.}
 \item{generateSingleCell}{if 'TRUE' generates a single origin location using
 the posterior assignment distribution - this takes a while to run.
 If 'FALSE' (default), no coordinates are generated.}
+
+\item{mapDirectory}{Directory to save/read isotope map from. Can use relative
+or absolute addressing. The default value (NULL) downloads to a temporary
+directory, so we strongly recommend changing this from the default unless
+you're sure you're not going to need these data more than once.}
 }
 \value{
 returns an \code{isoAssign} object containing the following:

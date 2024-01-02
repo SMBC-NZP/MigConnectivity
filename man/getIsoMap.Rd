@@ -5,7 +5,12 @@
 \title{Get Isoscape map
 getIsoMap}
 \usage{
-getIsoMap(element = "Hydrogen", surface = FALSE, period = "Annual")
+getIsoMap(
+  element = "Hydrogen",
+  surface = FALSE,
+  period = "Annual",
+  mapDirectory = NULL
+)
 }
 \arguments{
 \item{element}{The elemental isotope of interest. Currently the only
@@ -18,6 +23,11 @@ which returns the isotopes ratio found in precipitation.}
 raster of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
  \code{element} of interest.}
+
+\item{mapDirectory}{Directory to save/read isotope map from. Can use relative
+or absolute addressing. The default value (NULL) downloads to a temporary
+directory, so we strongly recommend changing this from the default unless
+you're sure you're not going to need these data more than once.}
 }
 \value{
 returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
@@ -26,8 +36,8 @@ returns a global \code{RasterLayer} (resolution = 0.333'x0.3333')
 \description{
 The \code{getIsoMap} function downloads predicted isoscape maps from
  \url{https://wateriso.utah.edu/waterisotopes/}. The function first checks
-whether the isoscapes are located within the current working directory
-\code{getwd()}. If a local copy of the isoscape is found, it's read into
+whether the isoscapes are located within the directory
+\code{mapDirectory}. If a local copy of the isoscape is found, it's read into
 the environment. If not, the isoscape is downloaded and imported
 as a raster.
 }
