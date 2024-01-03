@@ -165,7 +165,7 @@ for (i in 1:length(samplePsis)) {
   cat("For psi:\n")
   print(samplePsis[[i]])
   cat("and origin relative abundance:", sampleOriginRelN[[j]], "\n")
-  print(reversePsiRelAbund(samplePsis[[i]], sampleOriginRelN[[j]]))
+  print(reverseTransition(samplePsis[[i]], sampleOriginRelN[[j]]))
  }
 }
 
@@ -191,11 +191,11 @@ COTE_psi <- estTransition(originNames = LETTERS[1:4],
                           banded = COTE_banded,
                           reencountered = COTE_reencountered,
                           verbose = 1,
-                          nSamples = (ni. / nt. - nb.) * nc., nBurnin = nb.,
+                          nSamples = (ni. - nb.) / nt. * nc., nBurnin = nb.,
                           nThin = nt., nChains = nc.,
                           method = "MCMC")
 COTE_psi
-COTE_rev <- reversePsiRelAbund(COTE_psi, sampleOriginRelN[[1]],
+COTE_rev <- reverseTransition(COTE_psi, sampleOriginRelN[[1]],
                                nSamples = 2000)
 COTE_rev
 
@@ -213,7 +213,7 @@ psiTrue[2,] <- c(0.41, 0.31, 0.17, 0.11)
 psiTrue[3,] <- c(0.10, 0.15, 0.42, 0.33)
 rowSums(psiTrue)
 
-rev <- reversePsiRelAbund(psiTrue, originRelAbund)
+rev <- reverseTransition(psiTrue, originRelAbund)
 
 # Simulate abundance data on origin sites
 # Number of routes w/i each population (assumed to be balanced)
@@ -242,53 +242,23 @@ sim_data <- simCountData(nStrata = nOriginSites, routesPerStrata = routePerPop.,
 # Estimate population-level abundance
 out_mcmc <- modelCountDataJAGS(count_data = sim_data, ni = ni., nt = nt.,
                                nb = nb., nc = nc.)
-# Estimate winter abundance (needed for movement data collected in winter,
-# genoscape probabilities in this case)
-sim_data2 <- simCountData(nStrata = nTargetSites, routesPerStrata = routePerPop.,
-                          nYears = nYears., alphaStrat = rev$targetRelAbund * 2,
-                          sdRoute = sdRoute., sdYear = sdYear.)
-out_mcmc2 <- modelCountDataJAGS(count_data = sim_data2, ni = ni., nt = nt.,
-                                nb = nb., nc = nc.)
 
 # Simulate movement data
-sampleSize <- list(rep(10, nOriginSites), rep(75, nTargetSites))
+sampleSize <- list(rep(20, nOriginSites), NULL)
 captured <- rep("origin", sum(sampleSize[[1]]))
-captured <- c(captured, rep("target", sum(sampleSize[[2]])))
 isTelemetry <- rep(TRUE:FALSE, c(sum(sampleSize[[1]]), sum(sampleSize[[2]])))
 isProb <- rep(FALSE:TRUE, c(sum(sampleSize[[1]]), sum(sampleSize[[2]])))
 
-# First, telemetry data (released origin)
+# Telemetry data (released origin)
 data1 <- simTelemetryData(psi = psiTrue,
                           sampleSize = sampleSize[[1]],
                           captured = "origin")
 tt <- data1$targetAssignment
 oa <- data1$originAssignment
-# Put telemetry origin assignments in format compatible with probability table
-# origin assignments
-ot2 <- matrix(0, length(oa), nOriginSites)
-for (i in 1:length(oa))
-  ot2[i, oa[i]] <- 1
-# Next, probability table (genoscape pop probabilities) data (released target)
-shapesO <- matrix(c(5.5, 0.25, 0.01,
-                    0.25, 5.5, 0.01,
-                    0.004, 0.006, 5.75),
-                  nOriginSites, nOriginSites, byrow = TRUE,
-                  dimnames = list(originNames, originNames))
-prop.table(shapesO, 1)
-data2 <- simProbData(psi = psiTrue,
-                    originRelAbund = originRelAbund,
-                    sampleSize = sampleSize[[2]],
-                    shapes = shapesO,
-                    captured = "target")
-ot <- data2$genProbs
-ta <- data2$targetAssignment
-# Join together data
-tt <- c(tt, ta)
-ot <- rbind(ot2, ot)
 
 # Estimate transition probabilities (psi)
 est1 <- estTransition(targetAssignment = tt,
-                      originAssignment = ot,
+                      originAssignment = oa,
                       originNames = originNames,
                       targetNames = targetNames,
                       nSamples = 500, isGL = FALSE,
@@ -299,7 +269,7 @@ est1 <- estTransition(targetAssignment = tt,
                       nSim = 10, verbose = 0,
                       targetRelAbund = out_mcmc2)
 # Reverse estimates
-rev1 <- reversePsiRelAbund(psi = est1, originRelAbund = out_mcmc)
+rev1 <- reverseTransition(psi = est1, originRelAbund = out_mcmc)
 # Compare estimates of gamma, target relative abundance, and pi with calculation
 # from true values
 rev

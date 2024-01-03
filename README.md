@@ -12,7 +12,7 @@ See the [vignettes](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vign
 
 If you will (or might) use Markov chain Monte Carlo (MCMC) estimation in 
 MigConnectivity, you should first install the program JAGS on your computer, 
-available at https://mcmc-jags.sourceforge.net.
+available at https://mcmc-jags.sourceforge.net. Then:
 
 ```r
 install.packages("devtools")

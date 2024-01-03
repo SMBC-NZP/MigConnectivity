@@ -2703,13 +2703,13 @@ estMCisotope <- function(targetDist=NULL,
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}
 #'
 #' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 #' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 #' migratory connectivity for birds en route to breeding through the Gulf of
 #' Mexico. Ecography 42: 658–669.
-#' \doi{10.1111/ecog.03974}{doi:10.1111/ecog.03974}
+#' \doi{10.1111/ecog.03974}
 
 estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
                   sampleSize = NULL,
@@ -2933,7 +2933,7 @@ estMC <- function(originDist, targetDist = NULL, originRelAbund, psi = NULL,
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}
 
 estMantel <- function(targetPoints = NULL, originPoints = NULL, isGL,
                       geoBias = NULL, geoVCov = NULL, targetSites = NULL,

@@ -116,9 +116,9 @@ summary(rel_abund1)
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513-524.
-\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}
 
 Link, W. A. and J. R. Sauer. 2002. A hierarchical analysis of population
 change with application to Cerulean Warblers. Ecology 83: 2832-2840.
-\doi{10.1890/0012-9658(2002)083[2832:AHAOPC]2.0.CO;2}{doi:10.1890/0012-9658(2002)083[2832:AHAOPC]2.0.CO;2}
+\doi{10.1890/0012-9658(2002)083[2832:AHAOPC]2.0.CO;2}
 }

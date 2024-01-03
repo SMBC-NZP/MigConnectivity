@@ -237,7 +237,7 @@ str(rM1, max.level = 2)
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513 - 524.
-\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}
 }
 \seealso{
 \code{\link{estMC}}

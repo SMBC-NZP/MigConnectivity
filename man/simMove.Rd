@@ -92,37 +92,8 @@ Incorporates migratory connectivity, movement within season, and dispersal
 between seasons. Does not incorporate births or deaths.
 }
 \examples{
-# Dispersal simulation ----
-## Functions
-
-###############################################################################
-# Utility functions for use in simulations
-###############################################################################
-# Calculates probability matrix based on exponential decline with distance
-mlogitMat <- function(slope, dist) {
-  preMat <- exp(-slope/mean(dist)*dist)
-  diag(preMat) <- 0
-  nr <- nrow(dist)
-  nc <- ncol(dist)
-  outMat <- matrix(0, nr, nc)
-  for (b in 1:nr) {
-    outMat[b,] <- preMat[b,]/(1+sum(preMat[b, ]))
-    outMat[b,b] <- 1 - sum(outMat[b, ])
-  }
-  return(outMat)
-}
-
-# Crude optimizable function for developing MC pattern based on MC strength
-mlogitMC <- function(slope, MC.in, origin.dist, target.dist, origin.abund, sample.size) {
-  nBreeding <- nrow(origin.dist)
-  nWintering <- nrow(target.dist)
-  psi <- mlogitMat(slope, origin.dist)
-  if (any(psi<0))
-    return(5*slope^2)
-  MC <- calcMC(origin.dist, target.dist, originRelAbund = origin.abund, psi,
-               sampleSize = sample.size)
-  return((MC.in - MC)^2)
-}
+### Dispersal simulation ----
+## Utility functions for use in simulations
 
 # Simple approach to estimate psi matrix and MC from simulated (or real) data
 # (doesn't include uncertainty).  Only uses one year for computation
@@ -152,17 +123,23 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
   return(list(psi=psiMat, MC=MC))
 }
 
-## Simulation ----
-nBreeding <- 100
-nWintering <- 100
-breedingPos <- matrix(c(rep(seq(-99, -81, 2), each=sqrt(nBreeding)),
-                        rep(seq(49, 31, -2), sqrt(nBreeding))), nBreeding, 2)
-winteringPos <- matrix(c(rep(seq(-79, -61, 2), each=sqrt(nWintering)),
-                         rep(seq(9, -9, -2), sqrt(nWintering))), nWintering, 2)
-head(breedingPos)
-tail(breedingPos)
-head(winteringPos)
-tail(winteringPos)
+## Simulation
+originNames <- c("A", "B", "C")
+nBreeding <- length(originNames) # Number of sites reduced for example speed
+targetNames <- as.character(1:4)
+nWintering <- length(targetNames)
+
+psi <- matrix(c(0.5, 0.25, 0.15, 0.1,
+                0.15, 0.4, 0.25, 0.2,
+                0.1, 0.15, 0.2, 0.55), nBreeding, nWintering,
+              TRUE, list(originNames, targetNames))
+psi
+breedingPos <- matrix(c(seq(-99, -93, 3),
+                        rep(40, nBreeding)), nBreeding, 2)
+winteringPos <- matrix(c(seq(-88, -82, 2),
+                         rep(0, nWintering)), nWintering, 2)
+breedingPos
+winteringPos
 
 breedDist <- distFromPos(breedingPos, 'ellipsoid')
 nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
@@ -171,17 +148,6 @@ nonbreedDist <- distFromPos(winteringPos, 'ellipsoid')
 breedingN <- rep(50, nBreeding) # Reduced from 5000 for example speed
 breedingRelN <- breedingN/sum(breedingN)
 
-# Set up psi matrix
-slope <- 1.923904
-if (interactive()) {
-  o <- optimize(mlogitMC, MC.in = 0.25, origin.dist = breedDist,
-                target.dist = nonbreedDist, origin.abund = breedingRelN,
-                sample.size = sum(breedingN),
-                interval = c(0, 10), tol = .Machine$double.eps^0.5)
-  o
-  slope <- o$minimum
-}
-psi <- mlogitMat(slope, breedDist)
 
 # Baseline strength of migratory connectivity
 if (interactive()) {
@@ -230,17 +196,15 @@ if (interactive()) {
   summary(probFarDisp)
 
   #plot results
-  require(ggplot2)
-  require(ggthemes)
+  library(ggplot2)
+  library(ggthemes)
 
-  line_set=c(0.5, 0.75, 1, 1.25, 1.75, 2.25)
-  ggplot(Disp.df, aes(x=Year, y=MC, size=as.factor(Rate)))+
+  line_set=c(0.5, 2)
+  ggplot(Disp.df, aes(x=Year, y=MC, linewidth=as.factor(Rate)))+
     geom_line()+
-    scale_size_manual(values=line_set)+
-    labs(size="Dispersal Rate")+
-    scale_y_continuous("MC", limits=c(-.005, 0.26),
-                       breaks=c(0, 0.05, 0.1, 0.15, 0.2, 0.25))+
-    scale_x_continuous(breaks=c(0, 3, 6, 9, 12, 15))+
+    scale_linewidth_manual(values=line_set)+
+    labs(linewidth="Dispersal Rate")+
+    ylim(c(0, NA)) +
     theme_bw()+
     theme(axis.title=element_text(size=16, face ="bold"),
           axis.text=element_text(size=14),
@@ -253,5 +217,5 @@ if (interactive()) {
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 Methods in Ecology and Evolution 9: 513-524.
-\doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+\doi{10.1111/2041-210X.12916}
 }

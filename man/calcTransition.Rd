@@ -94,7 +94,7 @@ psiTrue <- array(c(0.1, 0.2, 0.3, 0.4,
                  dimnames = list(originNames, targetNames))
 rowSums(psiTrue)
 rTrue <- c(0.5, 0.05, 0.3, 0.6)
-banded1 <- c(1000, 2000, 3000, 5000)
+banded1 <- c(500, 1000, 2000, 3000)
 reencountered1 <- simCMRData(psiTrue, banded1, rTrue)$reencountered
 psi_r_calc <- calcTransition(banded = banded1,
                              reencountered = reencountered1,
@@ -107,15 +107,15 @@ psi_r_mcmc <- estTransition(banded = banded1, reencountered = reencountered1,
                             originNames = originNames,
                             targetNames = targetNames,
                             method = "MCMC",
-                            nThin = 1, nSamples = 60000, nBurnin = 20000,
-                            verbose = 1)
-psi_r_mcmc
+                            nSamples = 45000, nBurnin = 5000, #reduced for example speed
+                            nThin = 1, verbose = 0)
+print(psi_r_mcmc)
 psi_r_boot <- estTransition(banded = banded1, reencountered = reencountered1,
                             originNames = originNames,
                             targetNames = targetNames,
                             method = "bootstrap",
-                            nSamples = 1000, verbose = 2)
-psi_r_boot
+                            nSamples = 200) #reduced for example speed
+print(psi_r_boot)
 }
 }
 \seealso{

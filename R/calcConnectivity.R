@@ -28,7 +28,7 @@
 #' Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S. Sillett,
 #' and P. P. Marra. 2018. Quantifying the strength of migratory connectivity.
 #' Methods in Ecology and Evolution 9: 513 - 524.
-#' \doi{10.1111/2041-210X.12916}{doi:10.1111/2041-210X.12916}
+#' \doi{10.1111/2041-210X.12916}
 calcMC <- function(originDist, targetDist, originRelAbund, psi, sampleSize=NULL) {
   nOrigin <- nrow(psi)
   nTarget <- ncol(psi)
@@ -161,7 +161,7 @@ calcMCSmall <- function(originDist, targetDist, originAbund, psi) {
 #' @references
 #' Ambrosini, R., A. P. Moller, and N. Saino. 2009. A quantitative measure of
 #' migratory connectivity. Journal of Theoretical Biology 257:203-211.
-#' \doi{10.1016/j.jtbi.2008.11.019}{doi:10.1016/j.jtbi.2008.11.019}
+#' \doi{10.1016/j.jtbi.2008.11.019}
 
 calcMantel <- function(targetPoints = NULL, originPoints = NULL,
                        targetDist = NULL, originDist = NULL) {
@@ -530,7 +530,7 @@ divCoefGrad <- function(psi_r, banded, reencountered, counts) {
 #'                  dimnames = list(originNames, targetNames))
 #' rowSums(psiTrue)
 #' rTrue <- c(0.5, 0.05, 0.3, 0.6)
-#' banded1 <- c(1000, 2000, 3000, 5000)
+#' banded1 <- c(500, 1000, 2000, 3000)
 #' reencountered1 <- simCMRData(psiTrue, banded1, rTrue)$reencountered
 #' psi_r_calc <- calcTransition(banded = banded1,
 #'                              reencountered = reencountered1,
@@ -543,15 +543,15 @@ divCoefGrad <- function(psi_r, banded, reencountered, counts) {
 #'                             originNames = originNames,
 #'                             targetNames = targetNames,
 #'                             method = "MCMC",
-#'                             nThin = 1, nSamples = 60000, nBurnin = 20000,
-#'                             verbose = 1)
-#' psi_r_mcmc
+#'                             nSamples = 45000, nBurnin = 5000, #reduced for example speed
+#'                             nThin = 1, verbose = 0)
+#' print(psi_r_mcmc)
 #' psi_r_boot <- estTransition(banded = banded1, reencountered = reencountered1,
 #'                             originNames = originNames,
 #'                             targetNames = targetNames,
 #'                             method = "bootstrap",
-#'                             nSamples = 1000, verbose = 2)
-#' psi_r_boot
+#'                             nSamples = 200) #reduced for example speed
+#' print(psi_r_boot)
 #' }
 #' @seealso \code{\link{estTransition}}, \code{\link{optim}}
 calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
