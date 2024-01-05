@@ -218,7 +218,7 @@ by Mantel correlation (rM), from geolocators, GPS, and/or raster (e.g.,
 genoscape or isotope) data.
 }
 \examples{
-if (interactive()) {
+\donttest{
 data('OVENdata')
 rM1 <- estMantel(isGL=OVENdata$isGL,#Logical vector: light-level GL(T)/GPS(F)
                  geoBias = OVENdata$geo.bias, # Geolocator location bias

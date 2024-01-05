@@ -390,7 +390,7 @@ geolocators (GL), telemetry/GPS, intrinsic markers such as isotopes and
 genetics, and band/ring reencounter data.
 }
 \examples{
-if (interactive()) {
+\donttest{
   ##############################################################################
   # Examples 1 (banding data: first example is based on common tern banding
   #   data; the second is made up data to demonstrate data with two ages)
@@ -554,13 +554,10 @@ if (interactive()) {
 
   nNonBreeding <- nrow(OVENdata$targetSites)
 
-  require(RColorBrewer)
-
   plot(psi3, legend = "top",
        main = paste("OVENlike w/", sum(isGL & !isProb), "GL,",
                     sum(!isGL & isProb), "probs,",
-                    sum(isGL & isProb), "both, and", sum(isTelemetry), "GPS"),
-       col = RColorBrewer::brewer.pal(nNonBreeding, "Dark2"))
+                    sum(isGL & isProb), "both, and", sum(isTelemetry), "GPS"))
 
   ##############################################################################
   # Example 4 (add probability animals released on other end)
@@ -641,8 +638,7 @@ if (interactive()) {
                     sum(isGL & isProb), "both,",
                     sum(isTelemetry), "GPS (all\ncaptured origin), and",
                     sum(isProb & captured == "target"),
-                    "prob. (captured target)"),
-       col = RColorBrewer::brewer.pal(nNonBreeding, "Dark2"))
+                    "prob. (captured target)"))
   MC4 <- estStrength(OVENdata$originDist, OVENdata$targetDist,
                                        OVENdata$originRelAbund, psi4,
                                        sampleSize = nAnimals)

@@ -29,7 +29,7 @@ site (including those never reencountered in a target site). Length B}
 Simulate capture-mark-reencounter (CMR) migratory movement data
 }
 \examples{
-if (interactive()) {
+\donttest{
 originNames <- c("A", "B", "C")
 nOriginSites <- length(originNames)
 targetNames <- as.character(1:4)

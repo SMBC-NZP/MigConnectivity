@@ -21,7 +21,7 @@ If \code{map = 'probability' or map = 'odds'} a map for each individual is retur
 Basic plot function for the different isoAssign outputs
 }
 \examples{
-if (interactive()) {
+\donttest{
   OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
   OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
   terra::crs(OVENdist) <-

@@ -1,4 +1,4 @@
-if (interactive()) {
+\donttest{
 originNames <- c("A", "B", "C")
 nOriginSites <- length(originNames)
 targetNames <- as.character(1:4)

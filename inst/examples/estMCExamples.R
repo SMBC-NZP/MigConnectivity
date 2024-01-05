@@ -1,4 +1,4 @@
-if (interactive()) {
+\donttest{
   set.seed(101)
   # Uncertainty in detection ('RMark' estimates) with equal abundances
   # Number of resampling iterations for generating confidence intervals
@@ -170,10 +170,7 @@ if (interactive()) {
   str(GPS_mc, max.level = 2)
   str(Combined, max.level = 2)
   str(GL_mc, max.level = 2)
-  if (length(find.package("RColorBrewer", quiet = TRUE))==0)
-    install.packages(c('RColorBrewer'))
-  plot(Combined, col = RColorBrewer::brewer.pal(3, "Dark2"), legend = "top",
-       main = "Ovenbird GL and GPS")
+  plot(Combined, legend = "top", main = "Ovenbird GL and GPS")
   text(1.1, 0.98, cex = 1,
        labels = paste("MC = ", round(Combined$MC$mean, 2), "+/-",
                       round(Combined$MC$se, 2)))
@@ -249,17 +246,22 @@ if (interactive()) {
                    seed = 12345,
                    verbose=1)
 
+  targetSites <- sf::st_as_sf(iso$targetSites)
+  targetSites <- sf::st_make_valid(targetSites)
+  targetSites <- sf::st_union(targetSites, by_feature = TRUE)
+
   ovenMC <- estMC(originRelAbund = originRelAbund,
                   targetIntrinsic = iso,
                   originPoints = originPoints,
                   originSites = originSites,
                   originDist = originDist,
-                  nSamples = 200,
+                  nSamples = 50, # set very low for example speed
                   verbose = 1,
                   calcCorr = TRUE,
                   alpha = 0.05,
                   approxSigTest = FALSE,
-                  isIntrinsic = TRUE)
+                  isIntrinsic = TRUE,
+                  targetSites = targetSites)
 
   ovenMC
 }

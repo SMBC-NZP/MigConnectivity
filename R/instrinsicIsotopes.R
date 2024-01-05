@@ -74,7 +74,7 @@
 #' @export
 #'
 #' @examples
-#' if (interactive())  {
+#' \donttest{
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 #' for (ext in extensions) {
 #' tmp <- tempdir()
@@ -497,7 +497,7 @@ return(isoAssignReturn)
 #'
 #' @export
 #' @examples
-#' if (interactive()) {
+#' \donttest{
 #'   map <- getIsoMap(element = "Hydrogen", period = "Annual")
 #' }
 
@@ -778,6 +778,10 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'        of mean annual values in precipitation for the \code{element}. If
 #'        'GrowingSeason' returns growing season values in precipitation for
 #'        \code{element} of interest.
+#' @param mapDirectory Directory to save/read isotope map from. Can use relative
+#'     or absolute addressing. The default value (NULL) downloads to a temporary
+#'     directory, so we strongly recommend changing this from the default unless
+#'     you're sure you're not going to need these data more than once.
 #'
 #' @return returns an \code{weightAssign} object containing the following:
 #'   \describe{
@@ -800,7 +804,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #' @export
 #'
 #' @examples
-#' if (interactive())  {
+#' \donttest{
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 #' for (ext in extensions) {
 #' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
@@ -894,7 +898,8 @@ weightAssign <- function(knownLocs,
                          assignExtent = c(-179,-60,15,89),
                          element = "Hydrogen",
                          surface = FALSE,
-                         period = "Annual"){
+                         period = "Annual",
+                         mapDirectory = NULL){
 a <- Sys.time()
   # Check to make sure knownLocs are added by user
   if(is.null(knownLocs)){
@@ -903,7 +908,8 @@ a <- Sys.time()
     stop("A known location (knownLocs) is needed for each isotope value (isovalues)")
   }
   # download isoscape map
-  isomap <- getIsoMap(element = element, surface = surface, period = period)
+  isomap <- getIsoMap(element = element, surface = surface, period = period,
+                      mapDirectory = mapDirectory)
 
   # 1. if sppShapefile == NULL - use extent option
   if(is.null(sppShapefile)){

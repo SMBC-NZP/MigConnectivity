@@ -1,55 +1,54 @@
-Package: MigConnectivity
 Type: Package
+Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.3.9002
-Date: 2024-1-2
+Version: 0.4.3.9003
+Date: 2024-1-5
 Authors@R: c(
-    person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
-           role = c("cre", "aut")),
+    person("Jeffrey A.", "Hostetler", , "jhostetler@usgs.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
-    person("Emily B.", "Cohen", role = "ctb"))
-Description: Allows the user to estimate transition probabilities for migratory 
-    animals between any two phases of the annual cycle, using a variety of 
-    different data types. Also quantifies the strength of migratory connectivity 
-    (MC), a standardized metric to quantify the extent to which populations 
-    co-occur between two phases of the annual cycle. Includes functions to 
-    estimate MC and the more traditional metric of migratory connectivity 
-    strength (Mantel correlation; rM) incorporating uncertainty from multiple 
-    sources of sampling error. For cross-species comparisons, methods are 
-    provided to estimate differences in migratory connectivity strength, 
-    incorporating uncertainty.
+    person("Emily B.", "Cohen", role = "ctb")
+  )
+Description: Allows the user to estimate transition probabilities for
+    migratory animals between any two phases of the annual cycle, using a
+    variety of different data types. Also quantifies the strength of
+    migratory connectivity (MC), a standardized metric to quantify the
+    extent to which populations co-occur between two phases of the annual
+    cycle. Includes functions to estimate MC and the more traditional
+    metric of migratory connectivity strength (Mantel correlation; rM)
+    incorporating uncertainty from multiple sources of sampling error. For
+    cross-species comparisons, methods are provided to estimate
+    differences in migratory connectivity strength, incorporating
+    uncertainty.
 License: GPL (>=3)
-LazyData: true
-LazyDataCompression: xz
 Depends:
     R (>= 3.5.0)
 Imports:
     coda,
     geodist,
     gplots,
+    graphics,
+    grDevices,
     MASS,
     methods,
     ncf,
     R2jags,
     RMark (>= 2.1.14),
     sf,
+    shape,
     stats,
     terra,
     utils,
     VGAM
 Suggests:
-    ggplot2,
-    ggthemes,
     knitr,
     maps,
-    rnaturalearth,
-    RColorBrewer,
-    Rcpp,
     rmarkdown,
-    shape,
     testthat
-SystemRequirements: JAGS (https://mcmc-jags.sourceforge.net)
-VignetteBuilder: knitr
-RoxygenNote: 7.2.3
+VignetteBuilder: 
+    knitr
 Encoding: UTF-8
+LazyData: true
+LazyDataCompression: xz
+RoxygenNote: 7.2.3
+SystemRequirements: JAGS (https://mcmc-jags.sourceforge.net)

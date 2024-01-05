@@ -538,7 +538,7 @@ divCoefGrad <- function(psi_r, banded, reencountered, counts) {
 #'                              targetNames = targetNames,
 #'                              method = "SANN")
 #' psi_r_calc
-#' if (interactive()) {
+#' \donttest{
 #' psi_r_mcmc <- estTransition(banded = banded1, reencountered = reencountered1,
 #'                             originNames = originNames,
 #'                             targetNames = targetNames,

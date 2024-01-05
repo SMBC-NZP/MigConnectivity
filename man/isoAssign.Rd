@@ -119,7 +119,7 @@ and standard deviation. See
 \href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
 \examples{
-if (interactive())  {
+\donttest{
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 for (ext in extensions) {
 tmp <- tempdir()

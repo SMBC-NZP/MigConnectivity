@@ -150,7 +150,7 @@ summary.intrinsicAssign<-function(object, ...){
 #' @return A basic plot of the isotope assignments. If \code{map = 'population'} returns a single map.
 #' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
 #' @examples
-#' if (interactive()) {
+#' \donttest{
 #'   OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
 #'   OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
 #'   terra::crs(OVENdist) <-

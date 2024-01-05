@@ -106,8 +106,7 @@ est1 <- estTransition(targetAssignment = tt,
                       isRaster = FALSE,
                       isProb = isProb,
                       captured = captured,
-                      nSim = 10, verbose = 0,
-                      targetRelAbund = out_mcmc2)
+                      nSim = 10, verbose = 0)
 # Reverse estimates
 rev1 <- reverseTransition(psi = est1, originRelAbund = out_mcmc)
 # Compare estimates of gamma, target relative abundance, and pi with calculation

@@ -94,7 +94,7 @@ calcPsiMC <- function(originDist, targetDist, originRelAbund, locations,
 ###############################################################################
 # Parameters for simulations
 ###############################################################################
-if (interactive()) {
+\donttest{
 nSeasons <- 2
 nYears <- 10
 nMonths <- 4 # Each season

@@ -18,7 +18,8 @@ weightAssign(
   assignExtent = c(-179, -60, 15, 89),
   element = "Hydrogen",
   surface = FALSE,
-  period = "Annual"
+  period = "Annual",
+  mapDirectory = NULL
 )
 }
 \arguments{
@@ -58,6 +59,11 @@ which returns the isotopes ratio found in precipitation.}
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
 \code{element} of interest.}
+
+\item{mapDirectory}{Directory to save/read isotope map from. Can use relative
+or absolute addressing. The default value (NULL) downloads to a temporary
+directory, so we strongly recommend changing this from the default unless
+you're sure you're not going to need these data more than once.}
 }
 \value{
 returns an \code{weightAssign} object containing the following:
@@ -87,7 +93,7 @@ a user-provided intercept, slope and standard deviation. See
 See \doi{10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
 }
 \examples{
-if (interactive())  {
+\donttest{
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
 for (ext in extensions) {
 download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",

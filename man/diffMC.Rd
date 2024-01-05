@@ -55,7 +55,7 @@ only apply this function to MC estimates where all data sources are
 independent (e.g., different species).
 }
 \examples{
-if (interactive()) {
+\donttest{
 data('OVENdata')
 ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
                  isTelemetry = !OVENdata$isGL,
@@ -65,8 +65,8 @@ ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
                  originSites = OVENdata$originSites, # Breeding origin sites
                  originPoints = OVENdata$originPoints, # Capture Locations
                  targetPoints = OVENdata$targetPoints, # Device target locations
-                 verbose = 1,   # output options
-                 nSamples = 1000, # This is set low for example
+                 verbose = 0,   # output options
+                 nSamples = 100, # This is set low for example
                  resampleProjection = sf::st_crs(OVENdata$targetSites))
 ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
                  originDist = OVENdata$originDist, # originSites distance matrix

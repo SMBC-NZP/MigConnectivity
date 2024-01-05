@@ -1,4 +1,4 @@
-if (interactive()) {
+\donttest{
   set.seed(101)
   # Uncertainty in detection (RMark estimates) with equal abundances
   # Number of resampling iterations for generating confidence intervals

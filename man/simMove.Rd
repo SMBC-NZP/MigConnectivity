@@ -150,7 +150,7 @@ breedingRelN <- breedingN/sum(breedingN)
 
 
 # Baseline strength of migratory connectivity
-if (interactive()) {
+\donttest{
   MC <- calcMC(breedDist, nonbreedDist, breedingRelN, psi, sum(breedingN))
   round(MC, 4)
 }
@@ -161,7 +161,7 @@ set.seed(1516)
 nYears <- 4 # Reduced from 15 for example speed
 nMonths <- 2 # Each season, reduced from 4 for example speed
 Drates <- c(0.04, 0.16) # Rates of dispersal, fewer for example speed
-if (interactive()) {
+\donttest{
 
   birdLocDisp <- vector('list', length(Drates))
   Disp.df  <- data.frame(Year=rep(1:nYears, length(Drates)),
@@ -196,21 +196,11 @@ if (interactive()) {
   summary(probFarDisp)
 
   #plot results
-  library(ggplot2)
-  library(ggthemes)
+  with(subset(Disp.df, Rate == 0.04), plot(Year, MC, "l", col = "blue",
+                                           ylim = c(0, NA)))
+  lines(Disp.df$Year, Disp.df$MC, col = "darkblue")
+  legend("topright", legend = Drates, col = c("blue", "darkblue"), lty = 1)
 
-  line_set=c(0.5, 2)
-  ggplot(Disp.df, aes(x=Year, y=MC, linewidth=as.factor(Rate)))+
-    geom_line()+
-    scale_linewidth_manual(values=line_set)+
-    labs(linewidth="Dispersal Rate")+
-    ylim(c(0, NA)) +
-    theme_bw()+
-    theme(axis.title=element_text(size=16, face ="bold"),
-          axis.text=element_text(size=14),
-          panel.grid.major = element_line(color="grey90"),
-          panel.grid.major.x = element_blank(),
-          legend.title=element_text(size=14), legend.text=element_text(size=14))
 }
 }
 \references{

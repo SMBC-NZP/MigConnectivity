@@ -42,7 +42,7 @@ the environment. If not, the isoscape is downloaded and imported
 as a raster.
 }
 \examples{
-if (interactive()) {
+\donttest{
   map <- getIsoMap(element = "Hydrogen", period = "Annual")
 }
 }

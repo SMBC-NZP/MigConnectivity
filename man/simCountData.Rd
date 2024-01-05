@@ -121,7 +121,7 @@ sim_out <- vector("list", nsims)
 
 
 # Simulation ---
-if (interactive()) {
+\donttest{
 system.time(for(s in 1:nsims){
   cat("Simulation",s,"of",nsims,"\n")
 
