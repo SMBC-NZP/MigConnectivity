@@ -52,8 +52,8 @@ follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.}
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
 
-\item{surface}{if "TRUE" returns surface water values. Defaults is 'FALSE'
-which returns the isotopes ratio found in precipitation.}
+\item{surface}{DEPRECATED function no longer returns surface water values.
+Default is 'FALSE' which returns the precipitation isotopes ratio.}
 
 \item{period}{The time period of interest. If 'Annual' returns a raster
 of mean annual values in precipitation for the \code{element}. If
@@ -157,7 +157,6 @@ BE <- weightAssign(knownLocs = knownLocs,
                    sppShapefile = OVENdist,
                    assignExtent = c(-179,-60,15,89),
                    element = "Hydrogen",
-                   surface = FALSE,
                    period = "Annual")
 }
 

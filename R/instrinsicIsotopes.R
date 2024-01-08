@@ -34,8 +34,8 @@
 #'        latitude
 #' @param element The elemental isotope of interest. Currently the only
 #'        elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
-#' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
-#'        which returns the isotopes ratio found in precipitation
+#' @param surface DEPRECATED function no longer returns surface water values.
+#'     Default is 'FALSE' which returns the precipitation isotopes ratio.
 #' @param period The time period of interest. If 'Annual' returns a raster
 #'        of mean annual values in precipitation for the \code{element}. If
 #'        'GrowingSeason' returns growing season values in precipitation for
@@ -76,13 +76,13 @@
 #' @examples
 #' \donttest{
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
-#' for (ext in extensions) {
 #' tmp <- tempdir()
+#' for (ext in extensions) {
 #' download.file(paste0(
 #'               "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
 #'                      "/master/data-raw/Spatial_Layers/OVENdist.",
 #'                      ext),
-#'               destfile = paste0(tmp, "/OVENdist.", ext))
+#'               destfile = paste0(tmp, "/OVENdist.", ext), mode = "wb")
 #' }
 #' OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
@@ -106,8 +106,7 @@
 #'               sppShapefile = OVENdist,
 #'               assignExtent = c(-179,-60,15,89),
 #'               element = "Hydrogen",
-#'               surface = FALSE,
-#'               period = "Annual")
+#'               period = "GrowingSeason") # this setting for demonstration only
 #'Sys.time()-a
 #'}
 #'
@@ -481,8 +480,8 @@ return(isoAssignReturn)
 #'
 #' @param element The elemental isotope of interest. Currently the only
 #'     elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
-#' @param surface if "TRUE" returns surface water values. Default is 'FALSE'
-#'     which returns the isotopes ratio found in precipitation.
+#' @param surface DEPRECATED function no longer returns surface water values.
+#'     Default is 'FALSE' which returns the precipitation isotopes ratio.
 #' @param period The time period of interest. If 'Annual' (default) returns a
 #'     raster of mean annual values in precipitation for the \code{element}. If
 #'     'GrowingSeason' returns growing season values in precipitation for
@@ -498,7 +497,7 @@ return(isoAssignReturn)
 #' @export
 #' @examples
 #' \donttest{
-#'   map <- getIsoMap(element = "Hydrogen", period = "Annual")
+#'   map <- getIsoMap(element = "Hydrogen", period = "GrowingSeason")
 #' }
 
 getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
@@ -528,71 +527,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
   # Create temporary file location #
   tf <- tempfile(pattern = "file", fileext = "")
 
-  if(surface == TRUE){
-    if(element == "Hydrogen"){
-      if(!(destDirectory %in% haveIsoMap)){
-
-
-        # Download the file #
-        utils::download.file(
-          url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
-                      destfile = tf,
-                      quiet = TRUE,
-                      extra = getOption("download.file.extra"))
-
-        # unzip the downloaded file #
-        utils::unzip(zipfile = tf,
-                     files = NULL,
-					 list = FALSE,
-					 overwrite = TRUE,
-                     junkpaths = FALSE,
-					 exdir = destDirectory,
-					 unzip = "internal",
-                     setTimes = FALSE)
-
-        # Delete zipped folder #
-        file.remove(tf)
-
-        m_s_d <- terra::rast(paste0(destDirectory, "/d2h_GS.tif"))
-      }else{
-        dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
-        m_s_d <- terra::rast(paste0(dir, "/d2h_GS.tif"))
-      }
-      names(m_s_d)<-"MeanSurfaceD"
-      return(m_s_d)
-    }
-    if(element == "Oxygen"){
-      if(!(destDirectory %in% haveIsoMap)){
-
-        # Download the file #
-        utils::download.file(
-          url = "https://wateriso.utah.edu/waterisotopes/media/ArcGrids/GlobalPrecipGS.zip",
-                      destfile = tf,
-                      quiet = TRUE,
-                      extra = getOption("download.file.extra"))
-
-        # unzip the downloaded file #
-        utils::unzip(zipfile = tf,
-                     files = NULL,
-					 list = FALSE,
-					 overwrite = TRUE,
-                     junkpaths = FALSE,
-					 exdir = destDirectory,
-					 unzip = "internal",
-                     setTimes = FALSE)
-
-        # Delete zipped folder #
-        file.remove(tf)
-
-        m_s_o <- terra::rast(paste0(destDirectory, "/d18o_GS.tif"))
-      }else{
-        dir <- grep(haveIsoMap, pattern = "/GlobalPrecipGS$", value = TRUE)
-        m_s_o <- terra::rast(paste0(dir, "/d18o_GS.tif"))
-      }
-      names(m_s_o)<-"MeanSurfaceO"
-      return(m_s_o)
-    }
-
+  if(surface){
+    cat(paste("This function is no longer set up to retrieve surface data;",
+              "providing rainfall isotope data\n"))
   }
   if(element == "Hydrogen" & period == "Annual"){
 
@@ -772,8 +709,8 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'        follow \code{c(xmin,xmax,ymin,ymax)} in degrees longitude and latitude.
 #' @param element The elemental isotope of interest. Currently the only
 #'        elements that are implemented are 'Hydrogen' (default) and 'Oxygen'
-#' @param surface if "TRUE" returns surface water values. Defaults is 'FALSE'
-#'        which returns the isotopes ratio found in precipitation.
+#' @param surface DEPRECATED function no longer returns surface water values.
+#'     Default is 'FALSE' which returns the precipitation isotopes ratio.
 #' @param period The time period of interest. If 'Annual' returns a raster
 #'        of mean annual values in precipitation for the \code{element}. If
 #'        'GrowingSeason' returns growing season values in precipitation for
@@ -868,7 +805,6 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'                    sppShapefile = OVENdist,
 #'                    assignExtent = c(-179,-60,15,89),
 #'                    element = "Hydrogen",
-#'                    surface = FALSE,
 #'                    period = "Annual")
 #'}
 #'

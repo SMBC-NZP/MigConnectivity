@@ -397,12 +397,56 @@ modelCountDataJAGS <- function (count_data, ni = 20000, nt = 5, nb = 5000, nc = 
                     routePerPop = routesPerStrata,
                     year = seq(from = 0, to = 1, length.out = nYears), nYears = nYears, pop = count_data$strat)
 
+  file <- tempfile(fileext = ".txt")
+  sink(file = file)
+  cat("
+    model{
 
+    # Priors
+      for(p in 1:nPops){
+        alpha[p] ~ dnorm(mu, tau.alpha)
+      }
+
+      mu ~ dnorm(0, 0.01)
+      tau.alpha ~ dgamma(0.001,0.001)
+      sd.alpha <- 1/pow(tau.alpha, 0.5)
+
+      for(r in 1:nRoutes){
+        route[r] ~ dnorm(0, tau.rte)
+      }
+      tau.rte ~ dgamma(0.001, 0.001)
+      sd.rte <- 1/pow(tau.rte, 0.5)
+
+      tau.noise  ~ dgamma(0.001, 0.001)
+      sd.noise  <-  1/pow(tau.noise,0.5)
+
+      beta1 ~ dnorm(0, 0.01)
+
+    # Likelihood
+     for(i in 1:nYears){
+      eps[i] ~ dnorm(0, tau.noise)
+      for(j in 1:nRoutes){
+        C[i,j] ~ dpois(lambda[i,j])
+        log(lambda[i,j]) <- alpha[pop[j]] + beta1*year[i] + route[j] + eps[i]
+      }
+     }
+
+    # Derived parameters
+      totalN <- sum(popN[1:nPops])
+
+      for(i in 1:nPops){
+        popN[i] <- exp(alpha[i] + beta1*nYears + eps[nYears])*routePerPop[i]
+        relN[i] <- popN[i]/totalN
+      }
+
+  }")
+  sink()
   out <- R2jags::jags(data = jags.data, inits = jags.inits, params,
-                      paste0(find.package('MigConnectivity'), "/JAGS/sim_Poisson2.txt"),
+                      file,
                       n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb,
                       progress.bar = 'none')
 
+  file.remove(file)
   return(coda::as.mcmc(out))
 }
 

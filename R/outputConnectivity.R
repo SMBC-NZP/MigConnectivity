@@ -151,10 +151,18 @@ summary.intrinsicAssign<-function(object, ...){
 #' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
 #' @examples
 #' \donttest{
-#'   OVENdist <- terra::vect("data-raw/Spatial_Layers/OVENdist.shp")
+#'   extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+#'   tmp <- tempdir()
+#'   for (ext in extensions) {
+#'   download.file(paste0(
+#'               "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/Spatial_Layers/OVENdist.",
+#'                      ext),
+#'               destfile = paste0(tmp, "/OVENdist.", ext), mode = "wb")
+#'   }
+#'   OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 #'   OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#'   terra::crs(OVENdist) <-
-#'     "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+#'   sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
 #'   OVENvals <- read.csv("data-raw/deltaDvalues.csv")
 #'
@@ -168,8 +176,7 @@ summary.intrinsicAssign<-function(object, ...){
 #'                  sppShapefile = OVENdist,
 #'                  assignExtent = c(-179,-60,15,89),
 #'                  element = "Hydrogen",
-#'                  surface = FALSE,
-#'                  period = "Annual")
+#'                  period = "GrowingSeason") # setting for demonstration only
 #'
 #'   plot(b, map = "population")
 #' }

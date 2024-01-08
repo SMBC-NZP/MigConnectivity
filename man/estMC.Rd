@@ -511,8 +511,7 @@ correlations (rM) with \code{\link{estMantel}}.
                    sppShapefile = OVENdist,
                    assignExtent = c(-179,-60,15,89),
                    element = "Hydrogen",
-                   surface = FALSE,
-                   period = "Annual",
+                   period = "GrowingSeason",#this setting for demonstration only
                    seed = 12345,
                    verbose=1)
 

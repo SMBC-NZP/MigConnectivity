@@ -18,6 +18,6 @@ WGS84 (the second). First item is Equidistant Conic, which preserves
 distances around latitude = 0 and longitude = 0. This is a good general
 purpose projection, but the ideal projection may depend on the locations of
 your points.  See names in list for suggestions. Other potential projections
-can be found at \url{https://www.spatialreference.org/ref/}
+can be found at \url{https://spatialreference.org/ref/}
 }
 \keyword{datasets}

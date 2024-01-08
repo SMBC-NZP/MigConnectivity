@@ -329,7 +329,6 @@ for(target in 1:nTargetSetups){
                            abundWeight = 0,
                            assignExtent = c(-179,-60,15,89),
                            element = "Hydrogen",
-                           surface = FALSE,
                            period = "GrowingSeason")
     psi <- estTransition(targetRaster = simAssign,
                         targetSites = targetSites,

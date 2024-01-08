@@ -6,8 +6,8 @@ attachment::att_amend_desc()
 
 # Run tests and examples
 devtools::test()
-devtools::run_examples("C:/Users/jhostetler/OneDrive - DOI/Documents/R/win-library/4.0/MigConnectivity")
-1# autotest::autotest_package(test = TRUE)
+devtools::run_examples()
+# autotest::autotest_package(test = TRUE)
 
 # Check package as CRAN
 rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))
@@ -15,7 +15,7 @@ rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))
 # Check content
 # install.packages('checkhelper', repos = 'https://thinkr-open.r-universe.dev')
 checkhelper::find_missing_tags()
-# _Check that you let the house clean after the check, examples and tests
+# _Check that you left the house clean after the check, examples and tests
 all_files_remaining <- checkhelper::check_clean_userspace()
 all_files_remaining
 

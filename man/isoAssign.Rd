@@ -66,8 +66,8 @@ latitude}
 \item{element}{The elemental isotope of interest. Currently the only
 elements that are implemented are 'Hydrogen' (default) and 'Oxygen'}
 
-\item{surface}{if "TRUE" returns surface water values. Defaults is 'FALSE'
-which returns the isotopes ratio found in precipitation}
+\item{surface}{DEPRECATED function no longer returns surface water values.
+Default is 'FALSE' which returns the precipitation isotopes ratio.}
 
 \item{period}{The time period of interest. If 'Annual' returns a raster
 of mean annual values in precipitation for the \code{element}. If
@@ -121,13 +121,13 @@ and standard deviation. See
 \examples{
 \donttest{
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
-for (ext in extensions) {
 tmp <- tempdir()
+for (ext in extensions) {
 download.file(paste0(
               "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
                      "/master/data-raw/Spatial_Layers/OVENdist.",
                      ext),
-              destfile = paste0(tmp, "/OVENdist.", ext))
+              destfile = paste0(tmp, "/OVENdist.", ext), mode = "wb")
 }
 OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
@@ -151,8 +151,7 @@ b <- isoAssign(isovalues = OVENvals[,2],
               sppShapefile = OVENdist,
               assignExtent = c(-179,-60,15,89),
               element = "Hydrogen",
-              surface = FALSE,
-              period = "Annual")
+              period = "GrowingSeason") # this setting for demonstration only
 Sys.time()-a
 }
 
