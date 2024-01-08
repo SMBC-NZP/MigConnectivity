@@ -194,7 +194,7 @@
     extension <- '.rds'
     filename <- paste0(speciesDist, extension)
     url1 <- paste0(
-      'https://github.com/SMBC-NZP/MigConnectivity/blob/noSpWeightMantel/data-raw/Spatial_Layers/',
+      'https://github.com/SMBC-NZP/MigConnectivity/blob/master/data-raw/Spatial_Layers/',
                    filename, '?raw=true')
     temp <- paste(tmp, filename, sep = '/')
     utils::download.file(url1, temp, mode = 'wb')

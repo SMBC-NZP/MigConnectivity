@@ -164,7 +164,11 @@ summary.intrinsicAssign<-function(object, ...){
 #'   OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
 #'   sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
-#'   OVENvals <- read.csv("data-raw/deltaDvalues.csv")
+#'   download.file(paste0(
+#'     "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#'                      "/master/data-raw/deltaDvalues.csv"),
+#'               destfile = paste0(tmp, "/deltaDvalues.csv"))
+#'   OVENvals <- read.csv(paste0(tmp, "/deltaDvalues.csv"))
 #'
 #'   b <- isoAssign(isovalues = OVENvals[,2],
 #'                  isoSTD = 12,

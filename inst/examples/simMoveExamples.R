@@ -102,9 +102,11 @@ Drates <- c(0.04, 0.16) # Rates of dispersal, fewer for example speed
   summary(probFarDisp)
 
   #plot results
-  with(subset(Disp.df, Rate == 0.04), plot(Year, MC, "l", col = "blue",
-                                           ylim = c(0, NA)))
-  lines(Disp.df$Year, Disp.df$MC, col = "darkblue")
-  legend("topright", legend = Drates, col = c("blue", "darkblue"), lty = 1)
+  with(subset(Disp.df, Rate == 0.04),
+       plot(Year, MC, "l", col = "blue", ylim = c(0, 0.3), lwd = 2))
+  lines(Disp.df$Year[Disp.df$Rate==0.16], Disp.df$MC[Disp.df$Rate==0.16],
+        col = "darkblue", lwd = 2)
+  legend("bottomleft", legend = Drates, col = c("blue", "darkblue"), lty = 1,
+         lwd = 2)
 
 }

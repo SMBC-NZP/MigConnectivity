@@ -743,21 +743,22 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #' @examples
 #' \donttest{
 #' extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
+#' tmp <- tempdir()
 #' for (ext in extensions) {
-#' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
+#' download.file(paste0(
+#'               "https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
 #'                      "/master/data-raw/Spatial_Layers/OVENdist.",
 #'                      ext),
-#'               destfile = paste0("OVENdist.", ext))
+#'               destfile = paste0(tmp, "/OVENdist.", ext), mode = "wb")
 #' }
-#' OVENdist <- sf::st_read("OVENdist.shp")
+#' OVENdist <- sf::st_read(paste0(tmp, "/OVENdist.shp"))
 #' OVENdist <- OVENdist[OVENdist$ORIGIN==2,] # only breeding
-#' # set the crs to WGS84
 #' sf::st_crs(OVENdist) <- sf::st_crs(4326)
 #'
 #' download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
 #'                      "/master/data-raw/deltaDvalues.csv"),
-#'               destfile = "deltaDvalues.csv")
-#' OVENvals <- read.csv("deltaDvalues.csv")
+#'               destfile = paste0(tmp, "/deltaDvalues.csv"))
+#' OVENvals <- read.csv(paste0(tmp, "/deltaDvalues.csv"))
 #'
 #' HBEFbirds <- OVENvals[grep("NH",OVENvals[,1]),]
 #'
@@ -767,11 +768,11 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'                          coords = c("Long","Lat"),
 #'                          crs = 4326)
 #'
-#' #Get OVEN abundance from BSS estimates and read into R #
+#' #Get OVEN abundance from BBS estimates and read into R #
 #' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip",
-#'                      destfile = "oven.zip")
-#' utils::unzip("oven.zip")
-#' oven_dist <- sf::st_read("ra06740.shp")
+#'                      destfile = paste0(tmp, "/oven.zip"))
+#' utils::unzip(paste0(tmp, "/oven.zip"))
+#' oven_dist <- sf::st_read(paste0(tmp, "/ra06740.shp"))
 #'
 #' # Empty raster with the same dimensions as isoscape and Ovenbird distribution
 #'
