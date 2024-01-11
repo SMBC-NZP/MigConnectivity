@@ -31,8 +31,8 @@ The following is a simulation that tests the how the spatial arrangement of targ
 Read in the Ovenbird distribution and create a species distribution map from the abundance data. 
 ```{r eval = FALSE}
 # read in raster layer
-download.file(paste0("https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity",
-                     "/master/data-raw/Spatial_Layers/bbsoven.txt"),
+download.file(
+"https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/Spatial_Layers/bbsoven.txt",
               destfile = "bbsoven.txt")
 
 OVENabund <- terra::rast("bbsoven.txt")

@@ -199,6 +199,7 @@ COTE_rev <- reverseTransition(COTE_psi, sampleOriginRelN[[1]],
                                nSamples = 2000)
 COTE_rev
 
+\donttest{
 ## Example 3: Uncertainty in both psi and relative abundance
 # Number of populations
 nOriginSites <- 3; originNames <- LETTERS[1:nOriginSites]
@@ -273,5 +274,5 @@ rev1 <- reverseTransition(psi = est1, originRelAbund = out_mcmc)
 # from true values
 rev
 rev1
-
+}
 }

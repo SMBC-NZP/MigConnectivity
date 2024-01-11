@@ -10,14 +10,15 @@ devtools::run_examples()
 # autotest::autotest_package(test = TRUE)
 
 # Check package as CRAN
-rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))
-
+results <- rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))
+results
 # Check content
 # install.packages('checkhelper', repos = 'https://thinkr-open.r-universe.dev')
 checkhelper::find_missing_tags()
 # _Check that you left the house clean after the check, examples and tests
 all_files_remaining <- checkhelper::check_clean_userspace()
-all_files_remaining
+print(all_files_remaining, n = nrow(all_files_remaining))
+write.csv(all_files_remaining, "data-raw/dev/files_remaining_log.csv")
 
 # Check spelling
 # usethis::use_spell_check()
@@ -25,12 +26,13 @@ spelling::spell_check_package()
 
 # Check URL are correct
 # install.packages('urlchecker', repos = 'https://r-lib.r-universe.dev')
-urlchecker::url_check()
+urlchecker::url_check(parallel = F, db = db)
 urlchecker::url_update()
 
 # check on other distributions
 # _rhub
-devtools::check_rhub()
+theres_the_rhub <- devtools::check_rhub()
+print(theres_the_rhub)
 rhub::check_on_windows(check_args = "--force-multiarch")
 rhub::check_on_solaris()
 # _win devel CRAN

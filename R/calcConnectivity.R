@@ -532,13 +532,19 @@ divCoefGrad <- function(psi_r, banded, reencountered, counts) {
 #' rTrue <- c(0.5, 0.05, 0.3, 0.6)
 #' banded1 <- c(500, 1000, 2000, 3000)
 #' reencountered1 <- simCMRData(psiTrue, banded1, rTrue)$reencountered
+#' psi_r_calc_sloppy <- calcTransition(banded = banded1,
+#'                              reencountered = reencountered1,
+#'                              originNames = originNames,
+#'                              targetNames = targetNames,
+#'                              method = "BFGS")
+#' psi_r_calc_sloppy
+#' \donttest{
 #' psi_r_calc <- calcTransition(banded = banded1,
 #'                              reencountered = reencountered1,
 #'                              originNames = originNames,
 #'                              targetNames = targetNames,
 #'                              method = "SANN")
 #' psi_r_calc
-#' \donttest{
 #' psi_r_mcmc <- estTransition(banded = banded1, reencountered = reencountered1,
 #'                             originNames = originNames,
 #'                             targetNames = targetNames,

@@ -689,8 +689,6 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #' a user-provided intercept, slope and standard deviation. See
 #' \href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 #'
-#'  See \doi{10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
-#'
 #' @param knownLocs matrix of capture locations of the same length as
 #'        \code{isovalues}
 #' @param isovalues vector of tissue isotope values from known locations
@@ -737,7 +735,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'
 #' Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
 #' abundance into spatial assignments on continuous surfaces. Ecology and
-#' Evolution 3: 3847-3855.
+#' Evolution 3: 3847-3855. \doi{10.1002/ece3.2605}
 #' @export
 #'
 #' @examples
@@ -771,7 +769,7 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #' #Get OVEN abundance from BBS estimates and read into R #
 #' utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip",
 #'                      destfile = paste0(tmp, "/oven.zip"))
-#' utils::unzip(paste0(tmp, "/oven.zip"))
+#' utils::unzip(paste0(tmp, "/oven.zip"), exdir = tmp)
 #' oven_dist <- sf::st_read(paste0(tmp, "/ra06740.shp"))
 #'
 #' # Empty raster with the same dimensions as isoscape and Ovenbird distribution

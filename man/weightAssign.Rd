@@ -89,9 +89,6 @@ stable-isotope ratios (isoscape) in either precipitation or surface waters into 
 a user-provided intercept, slope and standard deviation. See
 \href{https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0035137}{Hobson et. al. (2012)}.
 }
-\details{
-See \doi{10.1002/ece3.2605}{Rushing et al. (2017)} for more information.
-}
 \examples{
 \donttest{
 extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
@@ -123,7 +120,7 @@ knownLocs <- sf::st_as_sf(data.frame(Long = rep(-73,nrow(HBEFbirds)),
 #Get OVEN abundance from BBS estimates and read into R #
 utils::download.file("https://www.mbr-pwrc.usgs.gov/bbs/ra15/ra06740.zip",
                      destfile = paste0(tmp, "/oven.zip"))
-utils::unzip(paste0(tmp, "/oven.zip"))
+utils::unzip(paste0(tmp, "/oven.zip"), exdir = tmp)
 oven_dist <- sf::st_read(paste0(tmp, "/ra06740.shp"))
 
 # Empty raster with the same dimensions as isoscape and Ovenbird distribution
@@ -170,7 +167,7 @@ Ecography 42: 658-669.
 
 Rushing, C. S., P. P. Marra and C. E. Studds. 2017. Incorporating breeding
 abundance into spatial assignments on continuous surfaces. Ecology and
-Evolution 3: 3847-3855.
+Evolution 3: 3847-3855. \doi{10.1002/ece3.2605}
 
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of

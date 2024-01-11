@@ -462,9 +462,9 @@ CapLocsM<-sf::st_transform(CapLocs, 'ESRI:54027')
 # here we grab only the birds captured during the non-breeding season 
 # Using paste0 for vignette formatting purposes
 
-winterBirds <- dget(paste0("https://raw.githubusercontent.com/",
-                    "SMBC-NZP/MigConnectivity/master/",
-                    "data-raw/GL_NonBreedingFiles/winterBirds.txt"))
+winterBirds <- dget(
+"https://raw.githubusercontent.com/SMBC-NZP/MigConnectivity/master/data-raw/GL_NonBreedingFiles/winterBirds.txt"
+                    )
 
 # create empty list to store the location data #
 Non_breeding_files <- vector('list',length(winterBirds))
