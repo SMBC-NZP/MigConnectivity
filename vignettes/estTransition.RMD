@@ -14,6 +14,8 @@ csl: ecology.csl
 ---
 
 ```{r echo = FALSE, message = FALSE, warning = FALSE}
+oo <- getOption("rmarkdown.html_vignette.check_title")
+on.exit(options(rmarkdown.html_vignette.check_title = oo))
 options(rmarkdown.html_vignette.check_title = FALSE)
 
 library(MigConnectivity)
@@ -61,6 +63,8 @@ library(maps)
 originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
 targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
 # Create a simple plot of the origin and and target sites 
+op <- graphics::par(no.readonly = TRUE)
+on.exit(graphics::par(op))
 par(mar=c(0,0,0,0))
 plot(originSitesWGS84,
      xlim=c(terra::ext(targetSitesWGS84)[1],

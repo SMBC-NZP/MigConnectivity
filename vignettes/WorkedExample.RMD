@@ -13,6 +13,8 @@ bibliography: mc_library.bib
 csl: ecology.csl
 ---
 ```{r, echo = FALSE}
+oo <- getOption("rmarkdown.html_vignette.check_title")
+on.exit(options(rmarkdown.html_vignette.check_title = oo))
 options(rmarkdown.html_vignette.check_title = FALSE)
 ```
 
@@ -91,6 +93,8 @@ lims <- rbind(st_bbox(YEWA_target_sites),st_bbox(YEWA_origin_sites))
 mins <- apply(lims[,c(1,2)], 2, FUN = "min")
 maxs <- apply(lims[,c(3,4)], 2, FUN = "max")
 
+op <- graphics::par(no.readonly = TRUE)
+on.exit(graphics::par(op))
 par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
      ylim = c(mins[2],maxs[2]), 
@@ -126,7 +130,6 @@ nOriginSites <- 5
 ```
 
 ```{r, echo = FALSE, fig.width=7, fig.height=5, fig.cap="Yellow Warbler breeding regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions (washed out) were identified by ecoregions across the ranges"}
-
 par(mar = c(0,0,0,0))
 plot(YEWA_origin_sites$geometry, 
      ylim = c(mins[2],maxs[2]), 

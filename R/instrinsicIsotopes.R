@@ -528,15 +528,16 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
   tf <- tempfile(pattern = "file", fileext = "")
 
   if(surface){
-    cat(paste("This function is no longer set up to retrieve surface data;",
+    warning(paste("This function is no longer set up to retrieve surface data;",
               "providing rainfall isotope data\n"))
   }
   if(element == "Hydrogen" & period == "Annual"){
 
     if(!(destDirectory %in% haveIsoMap)){
 
-      cat("NOTE: The Global H2 precipitation file is large (>600 MB) and may take a while to download\n")
+      message("NOTE: The Global H2 precipitation file is large (>600 MB) and may take a while to download")
       oldTO <- getOption("timeout")
+      on.exit(options(timeout = oldTO))
       options(timeout = max(700, oldTO))
 
 
@@ -546,7 +547,6 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
 
-      options(timeout = oldTO)
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
                   files = NULL,
@@ -604,8 +604,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
   if(element == "Oxygen" & period == "Annual"){
     if(!(destDirectory %in% haveIsoMap)){
 
-      cat("NOTE: The Global precipitation file is large (>600 MB) and may take a while to download \n")
+      message("NOTE: The Global precipitation file is large (>600 MB) and may take a while to download")
       oldTO <- getOption("timeout")
+      on.exit(options(timeout = oldTO))
       options(timeout = max(700, oldTO))
 
       # Download the file #
@@ -614,8 +615,6 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
                     destfile = tf,
                     quiet = TRUE,
                     extra = getOption("download.file.extra"))
-
-      options(timeout = oldTO)
 
       # unzip the downloaded file #
       utils::unzip(zipfile = tf,
@@ -713,6 +712,9 @@ getIsoMap<-function(element = "Hydrogen", surface = FALSE, period = "Annual",
 #'        of mean annual values in precipitation for the \code{element}. If
 #'        'GrowingSeason' returns growing season values in precipitation for
 #'        \code{element} of interest.
+#' @param verbose takes values 0 or 1 (default). 0 prints no output during
+#'        run. 1 prints a message detailing where in the process the function
+#'        is.
 #' @param mapDirectory Directory to save/read isotope map from. Can use relative
 #'     or absolute addressing. The default value (NULL) downloads to a temporary
 #'     directory, so we strongly recommend changing this from the default unless
@@ -834,6 +836,7 @@ weightAssign <- function(knownLocs,
                          element = "Hydrogen",
                          surface = FALSE,
                          period = "Annual",
+                         verbose = 1,
                          mapDirectory = NULL){
 a <- Sys.time()
   # Check to make sure knownLocs are added by user
@@ -861,8 +864,8 @@ a <- Sys.time()
     if(sf::st_crs(sppShapefile)!= terra::crs(isomap)){
       sppShapefile <- sf::st_transform(sppShapefile, terra::crs(isomap))
     }
-
-    cat("\n Restricting possible assignments to species distribution \n")
+    if (verbose > 0)
+      cat("\n Restricting possible assignments to species distribution \n")
 
     sppShapefile$INOUT<-1
 
@@ -879,7 +882,8 @@ a <- Sys.time()
   assign <- function(x,y) {((1/(sqrt(2 * 3.14 * isoSTD))) * exp((-1/(2 * isoSTD^2)) * ((x) - y)^2))}
 
   # apply the assignment function to all input values
-  cat("\n Generating probabilistic assignments \n")
+  if (verbose > 0)
+    cat("\n Generating probabilistic assignments \n")
 
   assignments <- do.call(c,lapply(isovalues, FUN = function(x){assign(x, y = animap)}))
 
@@ -906,14 +910,15 @@ a <- Sys.time()
 
 sum_weights <- vector('list',nrow(weights))
 
-# good pratice to check that the extents match -
+# good practice to check that the extents match -
 # if not resample the relaAbun fed from the user
 
 if(!terra::compareGeom(assignIsoprob,relAbund, stopOnError = FALSE)){
   relAbund <- terra::resample(relAbund, assignIsoprob)
 }
 
-cat("\n Iterating through possible weighted assignments \n")
+if (verbose>0)
+  cat("\n Iterating through possible weighted assignments \n")
 pb <- utils::txtProgressBar(min = 0, max = nrow(weights), style = 3)
 for(i in 1:nrow(weights)){
   utils::setTxtProgressBar(pb, i)
@@ -979,13 +984,15 @@ top_assign <- function(front, df){
   return(top)
 }
 
-cat("\n finding optimal assignment weights \n")
+if (verbose>0)
+  cat("\n finding optimal assignment weights \n")
 frontier <-pareto(iso_performance)
 
 top <-top_assign(front = frontier, df = iso_performance)
 
 b <- Sys.time()-a
-cat("\n Done: calculation took", b,attributes(b)$units,"\n")
+if (verbose>0)
+  cat("\n Done: calculation took", b,attributes(b)$units,"\n")
 return(structure(list(top = top,
                       frontier = frontier,
                       performance = iso_performance), class = "weightAssign"))

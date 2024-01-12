@@ -1,33 +1,17 @@
----
-title: 'diffMC Function'
-author: "Jeffrey A. Hostetler, Michael T. Hallworth"
-date: '`r Sys.Date()`'
-output:
-  rmarkdown::html_vignette: default
-  rmarkdown::pdf_document: default
-vignette: |
-  %\VignetteIndexEntry{diffMC Function}
-  %\usepackage[utf8]{inputenc}
-  %\VignetteEngine{knitr::rmarkdown}
----
-
-```{r setup, include = FALSE}
+## ----setup, include = FALSE------------------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-```
-```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+## ----echo = FALSE, message = FALSE, warning = FALSE------------------------------------------
 oo <- getOption("rmarkdown.html_vignette.check_title")
 on.exit(options(rmarkdown.html_vignette.check_title = oo))
 options(rmarkdown.html_vignette.check_title = FALSE)
 
 library(MigConnectivity)
-```
 
-The MigConnectivity package, which quantifies the strength of migratory connectivity, was developed to facilitate quantitative comparisons of migratory connectivity across studies, data types, and taxa while accounting for uneven sampling and the bias inherent to different data types for studying migratory movement. Below, we use the new `diffMC` function to compare MC estimates for the Yellow Warbler and the Ovenbird. To streamline the vignette and to avoid redundancy we load the results from the [estStrength](estStrength.html) and the [Worked Example](WorkedExample.html) vignettes. 
-
-```{r message=FALSE, warning = FALSE, error=FALSE, echo = FALSE}
+## ----message=FALSE, warning = FALSE, error=FALSE, echo = FALSE-------------------------------
 set.seed(1234)
 data(OVENdata)
 
@@ -47,18 +31,15 @@ OVEN_mc <- estStrength(originDist = OVENdata$originDist,
                       nSamples = 5000,
                       verbose = 0)
 
-```
 
+## ----eval = FALSE----------------------------------------------------------------------------
+#  # Read in the estStrength results for OVEN
+#  OVEN_mc <- readRDS("OVENmc.rds")
+#  
+#  # Read in the estStrength results for YEWA
+#  YEWA_mc <- readRDS("YEWAmc.rds")
 
-```{r, eval = FALSE}
-# Read in the estStrength results for OVEN 
-OVEN_mc <- readRDS("OVENmc.rds")
-  
-# Read in the estStrength results for YEWA
-YEWA_mc <- readRDS("YEWAmc.rds")
-```
-
-```{r, echo = FALSE}
+## ----echo = FALSE----------------------------------------------------------------------------
 # Read in the estStrength results for YEWA
 newDir <- tempdir()
 baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
@@ -68,12 +49,9 @@ temp <- paste(newDir, file.name, sep = '/')
 utils::download.file(url1, temp, mode = 'wb')
 YEWA_mc <- readRDS(temp)
 unlink(temp)
-```
 
-### Compare MC between Ovenbirds and Yellow Warblers 
-
-```{r}
+## --------------------------------------------------------------------------------------------
 diffStrength(estimates = list(Ovenbird = OVEN_mc,
                               Yellow_Warbler = YEWA_mc))
 
-```
+

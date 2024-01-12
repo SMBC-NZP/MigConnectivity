@@ -474,10 +474,12 @@ model{
 
   if (nChains > 1) {
     maxRhat <- max(out$BUGSoutput$summary[, "Rhat"], na.rm = TRUE)
-    if (maxRhat < 1.1)
-      cat("Successful convergence based on Rhat values (all < 1.1).\n")
-    else
-      cat("**WARNING** Rhat values indicate convergence failure.\n")
+    if (verbose>0) {
+      if (maxRhat < 1.1)
+        cat("Successful convergence based on Rhat values (all < 1.1).\n")
+      else
+        cat("**WARNING** Rhat values indicate convergence failure.\n")
+    }
   }
   file.remove(file)
   psi <- out$BUGSoutput$sims.list$psi

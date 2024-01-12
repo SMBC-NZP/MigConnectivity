@@ -147,8 +147,14 @@ summary.intrinsicAssign<-function(object, ...){
 #' @param map which \code{isoAssign} output to plot either 'probability', 'population' or 'odds'
 #' @param ... additional arguments passed to plot function
 #' @seealso{\code{isoAssign}}
-#' @return A basic plot of the isotope assignments. If \code{map = 'population'} returns a single map.
-#' If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
+#' @return No return value, called to generate plot(s).
+#'
+#' Generates a basic plot of the isotope assignments. If
+#' \code{map = 'population'} generates a single map. If
+#' \code{map = 'probability' or map = 'odds'} generates a map for each
+#' individual is generated. User is asked for input before each individual is
+#' drawn.
+#'
 #' @examples
 #' \donttest{
 #'   extensions <- c("shp", "shx", "dbf", "sbn", "sbx")
@@ -187,10 +193,11 @@ summary.intrinsicAssign<-function(object, ...){
 #'
 #' @export
 plot.intrinsicAssign <- function(x,map,...){
+  op <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(op))
   if(inherits(x,"isoAssign")){
     if(!(map %in% c("probability","population","odds"))){
       stop("map must be either probability, population, or odds")}
-    op <- graphics::par(no.readonly = TRUE)
     if(map == "population"){
       terra::plot(x$popassign,horiz = TRUE,...)
       }
@@ -199,26 +206,22 @@ plot.intrinsicAssign <- function(x,map,...){
         terra::plot(x$probassign[[i]],horiz = TRUE,...)
         graphics::par(ask = TRUE)
       }
-    graphics::par(op)
     }
     if(map == "odds"){
       for(i in 1:terra::nlyr(x$probassign)){
         terra::plot(x$oddsassign[[i]],horiz = TRUE,...)
         graphics::par(ask = TRUE)
       }
-    graphics::par(op)
+    }
   }
-  on.exit(graphics::par(op))
-  }
- if(inherits(x,"weightAssign")){
-   graphics::par(bty = "L")
-   graphics::plot((x$performance$area/max(x$performance$area))~x$performance$error,
+  if(inherits(x,"weightAssign")){
+    graphics::par(bty = "L")
+    graphics::plot((x$performance$area/max(x$performance$area))~x$performance$error,
         las = 1, ylab = "Assignment Area",
         xlab = "Error",pch = 19, cex = 1.25, col = "gray")
-   graphics::points((x$frontier$area/max(x$performance$area))~x$frontier$error, col = "red", pch = 19, cex = 1.25)
-   graphics::points((x$top$area/max(x$performance$area))~x$top$error, col = "blue", pch = 19, cex = 1.25)
- }
-
+    graphics::points((x$frontier$area/max(x$performance$area))~x$frontier$error, col = "red", pch = 19, cex = 1.25)
+    graphics::points((x$top$area/max(x$performance$area))~x$top$error, col = "blue", pch = 19, cex = 1.25)
+  }
 }
 
 #plot <- function(x,...) UseMethod("plot")
@@ -264,6 +267,8 @@ plot.intrinsicAssign <- function(x,map,...){
 #' @param map placeholder for eventually allowing users to plot psi estimates
 #'   on a map
 #' @param ... Additional parameters passed to \code{\link{plotCI}}
+#'
+#' @return No return value, called to generate plot.
 #'
 #' @seealso \code{\link{estMC}}, \code{\link{estMantel}}
 #'
@@ -707,7 +712,9 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
     col <- 1:nTargetSites
   }
   # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
-  op <- graphics::par(mar=c(0,0,0,0))
+  op <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(op))
+  graphics::par(mar=c(0,0,0,0))
   extent <- sf::st_bbox(allSites)
   plot(allSites, xlim=c(extent[1],extent[3]),
        ylim=c(extent[2], extent[4]), lwd = 1.5)
@@ -858,5 +865,4 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
 #
 # box(which="plot")
 # #
-  graphics::par(op)
 }
