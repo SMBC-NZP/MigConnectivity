@@ -6,7 +6,7 @@ The pattern of migratory connectivity can be expressed as migratory transition p
 MC is a standardized metric to quantify migratory connectivity strength between two phases 
 of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. 
 
-See the [vignettes](https://github.com/SMBC-NZP/MigConnectivity/tree/master/vignettes) for details and examples.
+See the [vignettes](https://smbc-nzp.github.io/MigConnectivity/MigConnectivity.html) for details and examples.
 
 ## Installation
 

@@ -68,8 +68,8 @@ usethis::use_cran_comments(open = rlang::is_interactive())
 usethis::use_version(which = c("patch", "minor", "major", "dev")[1])
 
 tools::buildVignettes(dir = ".", tangle=TRUE)
-dir.create("inst/doc")
-file.copy(dir("vignettes", full.names=TRUE), "inst/doc", overwrite=TRUE)
+dir.create("docs")
+file.copy(dir("vignettes", full.names=TRUE), "docs", overwrite=TRUE)
 
 # Verify you're ready for release, and release
 devtools::release()
