@@ -1,0 +1,33 @@
+---
+title: 'MigConnectivity package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: mc_library.bib 
+csl: ecology.csl
+---
+
+Welcome to the MigConnectivity package! We hope you find it helpful. The MigConnectivity package allows the user to estimate or calculate transition probabilities for migratory animals between any two phases of the annual cycle, using a variety of different data types, with the function estTransition. The user can also estimate or calculate the strength of migratory connectivity (MC), a standardized metric to quantify the extent to which populations co-occur between two phases of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. The package includes functions to estimate MC (estStrength) and the more traditional metric of migratory connectivity strength (Mantel correlation; rM; estMantel) incorporating uncertainty from multiple sources of sampling error. We have several vignettes to help you navigate the package: 
+
+A growing number of tools are available for studying the seasonal distributions of migratory animals across the annual cycle including individual tracking, assignments quantifying range-wide migratory connectivity patterns. However, integrating data types requires methods that account for the differences in sampling and differences in the precision and bias inherent to each data type. The `MigConnectivity` package provides tools for estimating the pattern and strength of migratory connectivity between two or more phases of the annual cycle. We developed methods to integrate intrinsic marker, tracking, and band reencounter data collected from the same or different individuals. We added functionality to integrate analyses that account for differences among seasonal assignment from different data types (banding reencounter, light-level geolocator, stable isotopes in tissues, genetics, and GPS) in precision, bias, reencounter probability, and directionality (i.e., combining breeding to nonbreeding and nonbreeding to breeding). 
+
+1. [Worked examples](https://smbc-nzp.github.io/MigConnectivity/WorkedExample.html) of processing data
+1. The [estTransition](https://smbc-nzp.github.io/MigConnectivity/estTransition.html) function estimates migratory connectivity patterns (ψ, transition probabilities) from seasonal movement data [@hostetler_challenges_nodate]
+1. The [estStrength](https://smbc-nzp.github.io/MigConnectivity/estStrength.html) function estimates the strength of migratory connectivity (MC) from transition probabilities and relative abundances [@cohen_quantifying_2018; @roberts_migratory_2023]
+1. The [diffMC](https://smbc-nzp.github.io/MigConnectivity/diffMC.html) function compares MC for two or more taxa [@cohen_strength_2019]
+1. [Simulating and working with isotope data](https://smbc-nzp.github.io/MigConnectivity/simulateIsoMC.html) can be tough, so check out this vignette if you need to do one of those [@cohen_strength_2019]
+1. Finally, we have an older vignette that this master vignette replaces, which includes lots of examples, but doesn't include the more recent functions. See our [older functionality](https://smbc-nzp.github.io/MigConnectivity/olderFunctionality.html) vignette
+
+
+### Literature Cited
+
+<div id="refs"></div>
+
+
+

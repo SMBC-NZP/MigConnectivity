@@ -1,0 +1,808 @@
+---
+title: 'MigConnectivity package: worked example'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{MigConnectivity package: worked example}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: mc_library.bib 
+csl: ecology.csl
+---
+```{r, echo = FALSE}
+oo <- getOption("rmarkdown.html_vignette.check_title")
+on.exit(options(rmarkdown.html_vignette.check_title = oo))
+options(rmarkdown.html_vignette.check_title = FALSE)
+```
+
+This vignette is intended to help users structure their data for analysis using the 
+MigConnectivity package. There are many ways to derive the data needed for analysis and below, we provided examples and code as a reference for users. However, the most appropriate methods and approaches for particular questions and data types should be considered by 
+the users. 
+
+There are examples at the end of this vignette that illustrate ways to calculate 
+bias and variance metrics using light-level geolocator data derived from the
+[SGAT](#SGAT_bias) and [FLightR](#FLightR_bias) packages.
+
+
+## Using data integration to estimate the strength of migratory connectivity 
+
+This MigConnectivity package provides tools for estimating the pattern and strength
+of migratory connectivity. We've developed methods to integrate intrinsic markers,
+tracking, and band reencounter data collected from the same or
+different individuals. The package functionality includes integrated analyses
+that account for differences in precision, bias, reencounter probability, 
+and directionality among different data types (banding reencounter, 
+light-level geolocator, stable isotopes in tissues, genetics, and GPS). The package
+separates estimation of migratory connectivity into two functions: estTransition and estStrength. 
+The `estTransition` function estimates transition probabilities (ψ) from seasonal movement data (i.e. pattern of movement) 
+and the `estStrength` estimates the strength of migratory connectivity (MC) from transition probabilities.
+
+Below we provide a worked example using Yellow Warbler (<i>Setophaga petechia</i>) data to help users format their data to use the new 
+functionality in the MigConnectivity package. There are multiple published Yellow Warbler data sets that can be used to estimate migratory connectivity. Here, we illustrate how to integrate genetic data and light-level geolocators to estimate MC. Genetic sampling of 203 individuals occurred at 20 locations across the nonbreeding range, from Baja Mexico, south through central Mexico, Central America (Costa Rica and Nicaragua), and South America (Trinidad and Venezuela) [@bay_genetic_2021].
+
+### Define nonbreeding regions
+
+We identified 4 nonbreeding regions using ecoregions which include the Pacific and Central Mexico, Atlantic Lowland Mexico, Central America and South America. 
+
+```{r, message = FALSE, warning = FALSE}
+
+library(MigConnectivity)
+library(sf)
+library(terra)
+
+set.seed(1)
+
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "YEWA_target_sites.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
+unlink(temp)
+
+YEWA_target_sites <- YEWA_target_sites[,c("Region","targetSite","geometry")]
+
+# vector of target names #
+targetNames <- c("Pacific and Central Mexico", "Atlantic Lowland Mexico",
+                 "Central America", "South America")
+```
+
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width=7, fig.height=5, fig.cap="Yellow Warbler nonbreeding regions. The breeding regions (washed out) are defined by genoscape-defined populations and the nonbreeding regions were identified by ecoregions across the ranges"}
+# Define the origin sites
+file.names <- paste0("originSitesYEWA.", c("shp", "dbf", "prj", "shx"))
+urls <- paste0(baseURL, file.names, '?raw=true')
+temp <- paste(newDir, file.names, sep = '/')
+for (i in 1:length(file.names))
+  utils::download.file(urls[i], temp[i], mode = 'wb')
+YEWA_origin_sites <- sf::st_read(temp[1], quiet = TRUE)
+# vector of origin names 
+originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
+
+# object with the number of originSites 
+nOriginSites <- 5
+
+#Plot function
+lims <- rbind(st_bbox(YEWA_target_sites),st_bbox(YEWA_origin_sites))
+
+mins <- apply(lims[,c(1,2)], 2, FUN = "min")
+maxs <- apply(lims[,c(3,4)], 2, FUN = "max")
+
+op <- graphics::par(no.readonly = TRUE)
+on.exit(graphics::par(op))
+par(mar = c(0,0,0,0))
+plot(YEWA_origin_sites$geometry, 
+     ylim = c(mins[2],maxs[2]), 
+     xlim = c(mins[1],maxs[1]), 
+     col = c("#78a18d40", "#dece6640", "#a8a80040", "#56995940", "#c4d09740"), 
+     border = "white", 
+     lwd = 0.25)
+plot(YEWA_target_sites$geometry, lwd = 0.25, add = TRUE, 
+     col = c("#E9D097", "#67B8D6", "#1C77A3", "#DEA785"), border = "white")
+legend("topright", legend = targetNames, 
+       fill = c("#E9D097", "#67B8D6", "#1C77A3", "#DEA785"), border = "white")
+```
+
+### Define breeding regions
+
+The Yellow Warbler genoscape identifies 5 genetically distinct breeding populations (Arctic, Pacific Northwest, Southwest, Central, and East) from 419 sampled individuals at 50 breeding locations [@bay_genetic_2021].  
+
+Below we create a vector of the origin names. These names correspond with the genoscape. 
+```{r, eval = FALSE}
+# Load shapefile of origin sites derived from genoscape data
+# Define the origin sites
+file.names <- paste0("originSitesYEWA.", c("shp", "dbf", "prj", "shx"))
+urls <- paste0(baseURL, file.names, '?raw=true')
+temp <- paste(newDir, file.names, sep = '/')
+for (i in 1:length(file.names))
+  utils::download.file(urls[i], temp[i], mode = 'wb')
+YEWA_origin_sites <- sf::st_read(temp[1], quiet = TRUE)
+# vector of origin names 
+originNames <- c("Arctic", "Pacific Northwest", "Southwest", "Central", "East")
+
+# object with the number of originSites 
+nOriginSites <- 5
+```
+
+```{r, echo = FALSE, fig.width=7, fig.height=5, fig.cap="Yellow Warbler breeding regions. The breeding regions are defined by genoscape-defined populations and the nonbreeding regions (washed out) were identified by ecoregions across the ranges"}
+par(mar = c(0,0,0,0))
+plot(YEWA_origin_sites$geometry, 
+     ylim = c(mins[2],maxs[2]), 
+     xlim = c(mins[1],maxs[1]), 
+     col = c("#78a18dff", "#dece66ff", "#a8a800ff", "#569959ff", "#c4d097ff"), 
+     border = "white", 
+     lwd = 0.25)
+plot(YEWA_target_sites$geometry, 
+     col = c("#E9D09740", "#67B8D640", "#1C77A340", "#DEA78540"),
+     border = "white", lwd = 0.25, add = TRUE)
+legend("topright", legend = originNames, 
+       fill = c("#78a18dff", "#dece66ff", "#a8a800ff", "#569959ff", "#c4d097ff"), 
+       border = "white")
+
+```
+
+### Sample data 
+
+For information about sampling and assignment methods see Bay et al. (2021) for genetics and Witynski and Bonter (2018) for geolocators.
+
+### Load the genetic sample data
+
+```{r, eval = FALSE}
+
+#read in the data 
+genetic_samples <- read.delim("YEWA_nonbreeding_genetic_samples.txt",
+                              stringsAsFactors = TRUE)
+
+str(genetic_samples, 1)
+```
+
+```{r, echo = FALSE}
+file.name <- "YEWA.rep_indiv_est.Wintering.w_meta.txt"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+genetic_samples <- read.delim(temp, stringsAsFactors = TRUE)
+unlink(temp)
+
+names(genetic_samples) <- gsub(names(genetic_samples), pattern = "X[0-9]..", replacement = "")
+
+str(genetic_samples,1)
+```
+
+The genetic data have the probability that each individual is assigned to 
+a specific genetic population. These data are used during the resampling
+process to estimate transition probabilities and the strength of MC. Below, 
+we format the data so we can easily use it in our analysis. 
+
+```{r}
+# Note that we re-order the probabilities to match the order of originNames #
+YEWA_genetics <- as.matrix(genetic_samples[,c("Alaska","WesternBoreal",
+                                              "Southwest","Central",
+                                              "East")])
+
+# give names to the object
+dimnames(YEWA_genetics) <- list(as.character(genetic_samples$indiv), 
+                                originNames)
+
+# Double-check that all rows sum to 1
+summary(rowSums(YEWA_genetics))
+```
+
+Convert the data into a spatial object 
+```{r}
+# Convert the data into spatial object 
+targetPoints_genetic <- st_as_sf(genetic_samples[,c("longitude","latitude")],
+                                  coords = c("longitude","latitude"),
+                                  crs = 4326) # WGS84
+
+# Assign the data type to the spatial layer 
+
+targetPoints_genetic$Type <- "Genetics Capture"
+```
+
+
+### Load the light-level geolocator data 
+
+We obtained location estimates from seven individuals tracked using light-level geolocators deployed and recovered in Maine (n = 4) and Wisconsin (n = 3; Witynski & Bonter, 2018). We used the daily location estimates while individuals remained on the breeding grounds to derive location bias and uncertainty estimates. The geolocator data were processed and reported by @witynski_crosswise_2018.
+
+```{r}
+# Capture locations #
+# See dates and summary data from Table 1. page 44.
+# Maine #129
+# Maine #132
+# Maine #136
+# Maine #137
+# Wisconsin #139
+# Wisconsin #144
+# Wisconsin #146
+
+caplocs <- cbind(c(rep(-70.6142,4),rep(-87.8123,3)),
+                 c(rep(42.9891,4),rep(42.5000,3)))
+
+# Departures #
+departs <- as.POSIXct(c("2015-09-04",
+                        "2015-08-22",
+                        "2015-09-04",
+                        "2015-08-28",
+                        "2015-08-24",
+                        "2015-08-24",
+                        "2015-08-30"))
+```
+
+```{r, echo = FALSE}
+# read in the daily location data #
+file.name <- "Yellow_Warbler_Witynski.csv"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+EstLocs <- read.csv(temp)
+unlink(temp)
+
+# make it spatial 
+YEWA_gl_locs <- sf::st_as_sf(EstLocs,
+                             coords = c("location.long",
+                                        "location.lat"),
+                             crs = 4326)
+```
+
+```{r, eval = FALSE}
+# read in the daily location data #
+EstLocs <- read.csv("Yellow Warbler_Witynski.csv")
+
+# make it spatial 
+YEWA_gl_locs <- sf::st_as_sf(EstLocs,
+                             coords = c("location.long",
+                                        "location.lat"),
+                             crs = 4326)
+```
+
+
+```{r}
+# Summarized nonbreeding locations reported in Witynski and Bonter
+
+YEWA_GL_nb <- sf::st_as_sf(data.frame(bird = factor(c(129,132,136,137,139,144,146)),
+                                      long = c(-75.09,-74.81,-74.30,-74.21,-68.72,-67.08,-65.39),
+                                      lat = c(10.03,8.52,10.51,3.14,0.96,5.73,6.67)),
+                               coords = c("long","lat"),
+                               crs = 4326)
+
+# assign type to GL spatial object
+YEWA_GL_nb$Type <- "GL Estimated Target"
+
+# Convert the capture locations to a spatial object
+YEWA_GL_breed <- st_as_sf(data.frame(bird = c(129,132,136,137,139,144,146),
+                                  longitude = caplocs[,1],
+                                  latitude = caplocs[,2]),
+                       coords = c("longitude","latitude"),
+                       crs = 4326)
+
+# assign type to GL spatial object
+YEWA_GL_breed$Type <- "GL Capture"
+
+```
+
+Calculate location bias and covariance which are used to estimate transition 
+probabilities (`estTransition`). 
+
+```{r}
+# project from WGS84 into meters #
+YEWAmeters <- sf::st_transform(YEWA_gl_locs,'ESRI:102010')
+CapMeters <- sf::st_transform(YEWA_GL_breed, 'ESRI:102010')
+
+# split birds into their own data #
+YEWAests <- split(YEWAmeters,
+                  f = YEWAmeters$'individual.local.identifier')
+
+# Empirical estimates of bias and vcov, but on mean locations by bird
+ests2 <- mapply(x = YEWAests,
+                lats = st_coordinates(CapMeters)[,2],
+                lng = st_coordinates(CapMeters)[,1],
+                z = departs,
+                FUN = function(x,lats,lng,z){
+              # keep only data from deployment until departure from breeding #
+                  newdata <- x[x$timestamp<z,]
+
+              # calculate the difference in meters from estimated location
+              # to actual capture location
+                  long <- mean(st_coordinates(newdata)[,1]) - lng
+                  lat <- mean(st_coordinates(newdata)[,2]) - lats
+
+                  return(c(difflong = long,
+                                    difflat = lat))},
+
+               SIMPLIFY = TRUE)
+
+(geoBiasYEWA <- apply(ests2, 1, mean)) #Bias
+
+(geoVCovYEWA <- cov(t(ests2))) #Variance-covariance matrix
+
+```
+
+### Set up input to run estTransition 
+
+The following code creates objects that are needed and/or helpful when using 
+the `estStrength` or `estTransition` functions. 
+
+```{r}
+## Set up input for running in estTransition
+
+# Number of geolocator birds 
+nGL <- nrow(YEWA_GL_breed)
+
+# We have 0 birds with telemetry data
+nTelemetry <- 0
+
+# How many birds have raster data (isotopes; for this example, none)
+nRaster <- 0
+
+# How many birds have probability data (genetics)
+nProb <- nrow(YEWA_genetics)
+
+# Total number of animals 
+nAnimals <- nGL + nTelemetry + nRaster + nProb
+
+# Set up a vector of TRUE/FALSE indicating if the individual 
+# has geolocator data 
+isGLYEWA <- rep(c(TRUE, FALSE), c(nGL, nTelemetry + nRaster + nProb))
+
+# Vector indicating whether an individual has telemetry data 
+isTelemetryYEWA <- rep(FALSE, nAnimals)
+
+# Vector indicating whether an individual has raster assignment data 
+isRasterYEWA <- rep(FALSE, nAnimals)
+
+# Vector indicating whether an individual has probability data 
+isProbYEWA <- rep(c(FALSE, TRUE), c(nGL + nTelemetry + nRaster, nProb))
+```
+
+Now that we have objects that tell the function which type of data are associated
+with each individual we can set up the spatial data. 
+
+```{r}
+# combine all the target locations into a single object 
+# NOTE - we reorder the columns to match between the data sets
+targetPointsYEWA <- rbind(YEWA_GL_nb[,c("Type","geometry")],
+                          targetPoints_genetic[,c("Type","geometry")])
+
+# Transform (re-project the data) into Equidistant conic projection
+targetPointsYEWA <- st_transform(targetPointsYEWA, "ESRI:102010")
+
+# A vector indicating where the birds were captured 
+capturedYEWA <- rep(c("origin", "target"), c(nGL, nTelemetry + nRaster + nProb))
+```
+
+Here we do some spatial analyses to determine target sites from the data we've 
+gathered so far. These data are needed for the analysis. 
+
+```{r}
+# Where birds were captured in the origin sites (i.e., geolocators)
+originPointsYEWA <- CapMeters
+
+# Transform (re-project) data into Equidistant conic projection 
+targetSitesYEWA <- st_transform(YEWA_target_sites, "ESRI:102010")
+
+# Create a vector of the target assignments of the input data
+targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPointsYEWA,
+                                                               y = targetSitesYEWA,
+                                                               sparse = TRUE)))
+
+# Set any target assignment that results in 0 to NA
+targetAssignment[lengths(targetAssignment)==0] <- NA
+
+# convert from a list to an array #
+targetAssignment <- array(unlist(targetAssignment))
+
+# If the assignment is NA - assign to the nearest targetSite
+targetAssignment[is.na(targetAssignment)] <- sf::st_nearest_feature(x = targetPointsYEWA[is.na(targetAssignment),],
+                                                                    y = targetSitesYEWA)
+```
+
+### Abundance estimates 
+
+Accounting for relative abundance is an important component when estimating 
+migratory connectivity strength or estimating transition probabilities between 
+two or more phases of the annual cycle. 
+
+Below, we use eBird.org products to estimate abundance. Note - users may need 
+to create an account and get permission to access eBird data. See information 
+to [Download eBird data products](https://science.ebird.org/en/use-ebird-data/download-ebird-data-products).
+
+```{r, eval = FALSE}
+# Read in data from eBird 
+library(ebirdst)
+library(tidyverse)
+
+sp_path <- ebirdst_download(species = "yelwar", path = "./")
+
+run_review <- subset(ebirdst_runs, species_code == "yelwar")
+
+yelwar_dates <- run_review %>%
+  # just keep the seasonal definition columns
+  select(setdiff(matches("(start)|(end)"), matches("year_round"))) %>%
+  # transpose
+  gather("label", "date") %>%
+  # spread data so start and end dates are in separate columns
+  separate(label, c("season", "start_end"), "_(?=s|e)") %>%
+  spread(start_end, date) %>%
+  select(season, start_dt = start, end_dt = end) %>%
+  filter(season != "resident")
+
+# did the season pass review
+quality_rating <- run_review[paste0(yelwar_dates$season, "_quality")]
+yelwar_dates$pass <- as.integer(quality_rating) > 1
+yelwar_dates
+rastAbundMed <- load_raster(path = sp_path, 
+                            product = "abundance",
+                            period = "weekly", 
+                            resolution = "mr")
+# dates for each abundance layer
+weeks <- parse_raster_dates(rastAbundMed)
+# assign to seasons
+weeks_season <- rep(NA_character_, length(weeks))
+for (i in seq_len(nrow(yelwar_dates))) {
+  s <- yelwar_dates[i, ]
+  # skip seasonal assignment if season failed
+  if (!s$pass) {
+    next()
+  }
+  # handle seasons cross jan 1 separately
+  if (s$start_dt <= s$end_dt) {
+    in_season <- weeks >= s$start_dt & weeks <= s$end_dt
+  } else {
+    in_season <- weeks >= s$start_dt | weeks <= s$end_dt
+  }
+  weeks_season[in_season] <- s$season
+}
+table(weeks_season)
+b <- which(weeks_season == 'breeding')
+w <- which(weeks_season == 'nonbreeding')
+
+```
+
+```{r, eval=FALSE}
+eBirdRelAbund <- function(wks, abund, regions, names=regions[,1], fun = max,
+                          regionFirst = FALSE, seasonalAlready = FALSE) {
+  regionSum <- array(NA, nrow(regions),
+                     list(names))
+  thing <- abund[[wks]]
+  for (j in 1:nrow(regions)){
+    region <- regions[j, ]
+    rastvals <- terra::extract(thing, terra::vect(region))[,1 + 1:length(wks)]
+    if (seasonalAlready) {
+      regionSum[j] <- sum(rastvals, na.rm = TRUE)
+    }
+    else if (regionFirst) {
+      sumByWeek <- apply(rastvals, 2, sum, na.rm = TRUE)
+      regionSum[j] <- do.call(fun, list(x = sumByWeek, na.rm = TRUE))
+    }
+    else
+    {
+      valid <- apply(rastvals, 1, function(x) any(!is.na(x)))
+      maxed <- apply(rastvals[valid, ], 1, fun, na.rm = TRUE)
+      regionSum[j] <- sum(maxed, na.rm = TRUE)
+    }
+  }
+  testII <- prop.table(regionSum)
+  return(testII)
+}
+
+targetSitesProj <- sf::st_transform(targetSitesYEWA, terra::crs(rastAbundMed))
+originSitesProj <- sf::st_transform(YEWA_origin_sites, terra::crs(rastAbundMed))
+
+relAbundYEWAWint <- eBirdRelAbund(w, rastAbundMed, targetSitesProj,
+                                  targetNames, mean)
+relAbundYEWABreed <- eBirdRelAbund(b, rastAbundMed, originSitesProj,
+                                   originNames, mean)
+
+```
+```{r, echo = FALSE}
+relAbundYEWABreed <- c(Arctic = 0.1711898, 'Pacific Northwest' = 0.1180323,  
+                       Southwest = 0.2857159, Central = 0.2415061,
+                       East = 0.1835559)
+relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.08557703,    
+                      'Atlantic Lowland Mexico' = 0.16889791,
+                      'Central America' = 0.46434053, 
+                      'South America' = 0.28118453)
+```
+```{r}
+relAbundYEWAWint
+relAbundYEWABreed
+```
+There are a few other things we would need for eventually running `estStrength`:
+the distances between breeding regions, and the distances between nonbreeding 
+regions.
+
+```{r}
+# calculate distance between originSites
+originCentersYEWA <- st_centroid(YEWA_origin_sites)
+originCentersYEWA <- st_transform(originCentersYEWA, 4326)
+originDistYEWA <- distFromPos(st_coordinates(originCentersYEWA$geometry))
+
+# calculate distance between targetSites 
+targetCentersYEWA <- st_centroid(YEWA_target_sites)
+targetCentersYEWA <- st_transform(targetCentersYEWA, 4326)
+targetDistYEWA <- distFromPos(st_coordinates(targetCentersYEWA$geometry))
+```
+
+
+
+We now have all the data in order to run `estTransition` and then `estStrength`. 
+
+Note - there was no overlap of data sources for individuals, i.e., we only had 
+one type of data for each bird - so we set the overlap setting to “none”. If 
+there are multiple types for an individual animal or only one type of data overall,
+it's best to leave `dataOverlapSetting` at its default ("dummy").
+
+```{r}
+## Run analysis for psi
+system.time((psiYEWA <- estTransition(originSites = YEWA_origin_sites,
+                                     targetSites = YEWA_target_sites,
+                                     originPoints = originPointsYEWA,
+                                     targetPoints = targetPointsYEWA,
+                                     originAssignment = YEWA_genetics,
+                                     originNames = originNames,
+                                     targetNames = targetNames,
+                                     nSamples = 10, # Set low for demonstration speed
+                                     isGL = isGLYEWA,
+                                     isTelemetry = isTelemetryYEWA,
+                                     isRaster = isRasterYEWA,
+                                     isProb = isProbYEWA,
+                                     captured = capturedYEWA,
+                                     geoBias = geoBiasYEWA,
+                                     geoVCov = geoVCovYEWA,
+                                     verbose = 2, 
+                                     maxTries = 400,
+                                     resampleProjection = st_crs(YEWA_origin_sites),
+                                     nSim = 40,
+                                     dataOverlapSetting = "none",
+                                     targetRelAbund = relAbundYEWAWint)))
+
+# Take a look at the results # 
+psiYEWA
+```
+
+```{r echo = FALSE}
+
+yewa_data <- list(originSites = YEWA_origin_sites,
+                  targetSites = YEWA_target_sites,
+                  originPoints = originPointsYEWA,
+                  targetPoints = targetPointsYEWA,
+                  originAssignment = YEWA_genetics,
+                  originNames = originNames,
+                  targetNames = targetNames,
+                  nSamples = 10,
+                  isGL = isGLYEWA,
+                  isTelemetry = isTelemetryYEWA,
+                  isRaster = isRasterYEWA,
+                  isProb = isProbYEWA,
+                  captured = capturedYEWA,
+                  geoBias = geoBiasYEWA,
+                  geoVCov = geoVCovYEWA,
+                  verbose = 2, 
+                  maxTries = 400,
+                  resampleProjection = st_crs(YEWA_origin_sites),
+                  nSim = 40,
+                  dataOverlapSetting = "none",
+                  targetRelAbund = relAbundYEWAWint,
+                  originRelAbund = relAbundYEWABreed)
+
+#saveRDS(yewa_data,"../data-raw/yewa_estTrans_data.rds")
+```
+
+Plot the results using the built-in plotting function
+```{r, fig.width=7, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
+par(mar = c(2,3,0,0))
+plot(psiYEWA, legend = "top", cex = 0.4)
+```
+
+
+## Calculating location bias and covariance structure to resample light-level geolocator data 
+
+#### SGAT {#SGAT_bias}
+
+The code below is a repeatable example for how to calculate location bias and location error using coordinates derived from light-level geolocators (see @cohen_quantifying_2018) analyzed using the
+SGAT package [@wotherspoon_sgat_2017; @lisovski_light-level_2020]. 
+    
+```{r, eval = FALSE}
+# Load in projections
+data("projections")
+
+# Define deployment locations (winter) # 
+captureLocations<-matrix(c(-77.93,18.04,   # Jamaica
+                           -80.94,25.13,   # Florida
+                           -66.86,17.97),  # Puerto Rico
+                            nrow=3, ncol=2, byrow = TRUE)
+
+colnames(captureLocations) <- c("Longitude","Latitude")
+
+# Convert capture locations into SpatialPoints #
+
+CapLocs <- sf::st_as_sf(data.frame(captureLocations),
+                      coords = c("Longitude","Latitude"),
+                      crs = 4326)
+
+# Project Capture locations # 
+
+CapLocsM<-sf::st_transform(CapLocs, 'ESRI:54027')
+
+# Retrieve raw non-breeding locations from github 
+# First grab the identity of the bird so we can loop through the files 
+# For this example we are only interested in the error 
+# around non-breeding locations 
+# here we grab only the birds captured during the non-breeding season 
+# Using paste0 for vignette formatting purposes
+
+winterBirds <- dget(paste0("https://raw.githubusercontent.com/",
+                    "SMBC-NZP/MigConnectivity/master/",
+                    "data-raw/GL_NonBreedingFiles/winterBirds.txt"))
+
+# create empty list to store the location data #
+Non_breeding_files <- vector('list',length(winterBirds))
+
+# Get raw location data from Github #
+for(i in 1:length(winterBirds)){
+Non_breeding_files[[i]] <- dget(paste0("https://raw.githubusercontent.com/",
+                                        "SMBC-NZP/MigConnectivity/master/data-raw/",
+                                        "GL_NonBreedingFiles/NonBreeding_",
+                                        winterBirds[i],".txt"))
+}
+
+# Remove locations around spring Equinox and potential migration points
+# same NB time frame as Hallworth et al. 2015 
+
+# two steps because subset on shapefile doesn't like it in a single step
+
+Non_breeding_files <- lapply(Non_breeding_files,
+                      FUN = function(x){
+                      month <- as.numeric(format(x$Date,format = "%m"))
+                               x[which(month != 3 & month != 4),]})
+
+   
+Jam <- c(1:9)   # locations w/in list of winterBirds captured in Jamaica
+Fla <- c(10:12) # locations w/in list of winterBirds in Florida
+PR <- c(13:16)  # locations w/in list of winterBirds in Puerto Rico
+
+# Turn the locations into shapefiles #
+
+NB_GL <- lapply(Non_breeding_files, 
+                FUN = function(x){
+                  sf::st_as_sf(data.frame(x),
+                               coords = c("Longitude",
+                                          "Latitude"),
+                               crs = 4326)})
+
+# Project into UTM projection #
+
+NB_GLmeters <- lapply(NB_GL,
+                      FUN = function(x){sf::st_transform(x,'ESRI:54027')})
+
+# Process to determine geolocator bias and variance-covariance in meters #
+
+# generate empty vector to store data #
+LongError<-rep(NA,length(winterBirds)) 
+LatError<-rep(NA,length(winterBirds))  
+
+# Calculate the error in longitude derived 
+# from geolocators from the true capture location 
+
+LongError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[1,1])}))
+
+LongError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
+                         FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                  sf::st_coordinates(CapLocsM)[2,1])}))
+
+LongError[PR] <- unlist(lapply(NB_GLmeters[PR],
+                        FUN = function(x){mean(sf::st_coordinates(x)[,1]-
+                                                 sf::st_coordinates(CapLocsM)[3,1])}))
+
+# Calculate the error in latitude derived from
+# geolocators from the true capture location 
+
+LatError[Jam] <- unlist(lapply(NB_GLmeters[Jam],
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[1,2])}))
+
+LatError[Fla] <- unlist(lapply(NB_GLmeters[Fla],
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                 sf::st_coordinates(CapLocsM)[2,2])}))
+
+LatError[PR] <- unlist(lapply(NB_GLmeters[PR],
+                        FUN = function(x){mean(sf::st_coordinates(x)[,2]-
+                                                  sf::st_coordinates(CapLocsM)[3,2])}))
+
+# Get co-variance matrix for error of 
+# known non-breeding deployment sites 
+
+# lm does multivariate normal models if you give it a matrix dependent variable!
+
+geo.error.model <- lm(cbind(LongError,LatError) ~ 1) 
+
+geo.bias <- coef(geo.error.model)
+geo.vcov <- vcov(geo.error.model)
+``` 
+  
+#### FLightR {#FLightR_bias}
+
+The code below is a repeatable example for how to calculate location bias and location error using location estimates derived from light-level geolocators analyzed in FLightR [@rakhimberdiev_flightr_2017; @lisovski_light-level_2020]. The geolocator data were processed and reported by @witynski_crosswise_2018.
+
+```{r, eval = FALSE}
+# Capture locations #
+# See dates and summary data from Table 1. page 44.
+# Maine #129
+# Maine #132
+# Maine #136
+# Maine #137
+# Wisconsin #139
+# Wisconsin #144
+# Wisconsin #146
+
+caplocs <- cbind(c(rep(-70.6142,4),rep(-87.8123,3)),
+                 c(rep(42.9891,4),rep(42.5000,3)))
+
+# Departures #
+departs <- as.POSIXct(c("2015-09-04","2015-08-22","2015-09-04","2015-08-28","2015-08-24","2015-08-24","2015-08-30"))
+
+# read in the daily location data #
+EstLocs <- read.csv("Yellow Warbler_Witynski (1).csv")
+
+YEWAsf <- st_as_sf(EstLocs, coords = c("location.long","location.lat"), crs = 4326)
+
+caplocs_sf <- st_as_sf(data.frame(bird = c(129,132,136,137,139,144,146),
+                                  longitude = caplocs[,1],
+                                  latitude = caplocs[,2]),
+                       coords = c("longitude","latitude"),
+                       crs = 4326)
+
+# project into meters #
+YEWAmeters <- sf::st_transform(YEWAsf,'ESRI:102010')
+CapMeters <- sf::st_transform(caplocs_sf, 'ESRI:102010')
+
+# split birds into their own data #
+
+YEWAests <- split(YEWAmeters, f=YEWAmeters$'individual.local.identifier')
+
+# Empirical estimates of bias and vcov, but on mean locations by bird
+ests2 <- mapply(x = YEWAests,
+                lats = st_coordinates(CapMeters)[,2],
+                lng = st_coordinates(CapMeters)[,1],
+                z = departs,
+                FUN = function(x,lats,lng,z){
+                  # keep only data from deployment until departure from breeding #
+                  newdata <- x[x$timestamp<z,]
+
+                  # calculate the difference in meters from estimated location
+                  # to actual capture location
+                  long <- mean(st_coordinates(newdata)[,1]) - lng
+                  lat <- mean(st_coordinates(newdata)[,2]) - lats
+
+                  return(c(difflong = long,
+                                    difflat = lat))},
+
+               SIMPLIFY = TRUE)
+
+(geoBiasYEWA <- apply(ests2, 1, mean)) #Bias
+#  difflong   difflat
+# -6512.898 50964.969
+
+apply(ests2, 1, var) #Variances
+apply(ests2, 1, sd)
+
+(geoVCovYEWA <- cov(t(ests2))) #Variance-covariance matrix
+
+#            difflong    difflat
+# difflong  259401516 -894387951
+# difflat  -894387951 4708578511
+
+```
+
+
+### Literature Cited
+
+<div id="refs"></div>

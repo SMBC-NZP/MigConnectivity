@@ -1,0 +1,211 @@
+---
+title: 'Estimate transition probabilities with the ''MigConnectivity'' package'
+author: "Jeffrey A. Hostetler, Michael T. Hallworth"
+date: '`r Sys.Date()`'
+output:
+  rmarkdown::html_vignette: default
+  rmarkdown::pdf_document: default
+vignette: |
+  %\VignetteIndexEntry{Estimate transition probabilities with the ''MigConnectivity'' package}
+  %\usepackage[utf8]{inputenc}
+  %\VignetteEngine{knitr::rmarkdown}
+bibliography: mc_library.bib 
+csl: ecology.csl
+---
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+oo <- getOption("rmarkdown.html_vignette.check_title")
+on.exit(options(rmarkdown.html_vignette.check_title = oo))
+options(rmarkdown.html_vignette.check_title = FALSE)
+
+library(MigConnectivity)
+```
+
+The `estTransition` estimates migratory connectivity pattern (ψ, transition probabilities) from seasonal movement data.
+
+The `estStrength` function estimates the strength of migratory connectivity from transition probabilities (MC). See the [estStrength](estStrength.html) vignette for more details. 
+
+
+## `estTransition` - Estimate transition probabilities while incorporating location and other sampling uncertainty
+
+### Example 1: Combining two types of tracking technologies (light-level geolocator & GPS)
+
+To estimate transition probabilities (<code>psi</code>(ψ)) and include location uncertainty the following data are needed:  
+
+1. A logical vector indicating whether each individual's location estimate was derived from a light-level geolocator (<code>isGL = TRUE</code>) or another data source (<code>isGL = FALSE</code>)    
+1. A logical vector indicating whether the device for each animals is a telemetry type device with high precision or not (<code>isTelemetry = TRUE/FALSE</code>) 
+1. Location bias - a vector that has error estimates for both longitude and latitude    
+1. Location error - a variance, covariance matrix of longitude and latitude    
+1. A spatial layer of both breeding and non-breeding regions    
+1. The deployment locations and the 'unknown' locations derived from the tracking devices   
+
+We estimate transition probabilities using bootstrapped data of birds tracked from breeding to non-breeding regions using light-level and GPS geolocation when: 1) GPS location uncertainty was applied to all individuals, 2) GPS and light-level location uncertainty were applied to individuals with those devices and 3) light-level location uncertainty was applied to all individuals [@cohen_quantifying_2018].
+
+Load location data that accompanies the `MigConnectivity` package. The location data are data from breeding Ovenbirds that were fit with Light-level geolocators or PinPoint-10 GPS tags. 
+
+```{r}
+# Ovenbird data included with the package
+data(OVENdata, package = "MigConnectivity") 
+
+names(OVENdata)
+```
+
+The figure below shows the two breeding regions (squares), and the three non-breeding regions (gray scale) used in Cohen et al. (2018) to estimate MC for Ovenbirds tracked with light-level geolocators and PinPoint-10 GPS tags.  
+
+
+```{r, message = FALSE, warning = FALSE, error=FALSE, fig.cap="Figure 1. Origin and Target sites used to estimate Ovenbird migratory connectivity using light-level geolocator and GPS tags deployed in the eastern portion of their distribution"}
+# Load packages used below
+library(sf)
+library(terra)
+library(maps)
+
+# Set the crs to WGS84
+originSitesWGS84 <- st_transform(OVENdata$originSites, 4326)
+targetSitesWGS84 <- st_transform(OVENdata$targetSites, 4326)
+# Create a simple plot of the origin and and target sites 
+op <- graphics::par(no.readonly = TRUE)
+on.exit(graphics::par(op))
+par(mar=c(0,0,0,0))
+plot(originSitesWGS84,
+     xlim=c(terra::ext(targetSitesWGS84)[1],
+            terra::ext(targetSitesWGS84)[2]),
+
+     ylim=c(terra::ext(targetSitesWGS84)[3],
+            terra::ext(originSitesWGS84)[4]))
+
+plot(targetSitesWGS84,
+     add = TRUE,
+     col=c("gray70","gray35","gray10"))
+
+map("world", add=TRUE)
+```
+
+The following code demonstrates how to estimate transition probabilities using location data from light-level geolocators and PinPoint-10 GPS tags. <b>Note:</b> When using a combination of light-level geolocators and other more precise tracking technology such as GPS tags, be sure to include both `isGL` and `isTelemetry` vectors. Below, we create the `isTelemetry` vector as the inverse of the `isGL` vector. 
+
+```{r message=FALSE, warning = FALSE, error=FALSE}
+(OVENpsi <- estTransition(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
+                    isTelemetry = !OVENdata$isGL, # Location vector: light-level geolocator(F)/GPS(T)
+                 geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
+                 geoVCov = OVENdata$geo.vcov, #Light-level geolocator covariance matrix
+                 targetSites = OVENdata$targetSites, # Non-breeding / target sites
+                 originSites = OVENdata$originSites, # Breeding / origin sites 
+                 targetNames = OVENdata$targetNames, # Names of nonbreeding/target sites
+                 originNames = OVENdata$originNames, # Names of breeding/origin sites
+                 originPoints = OVENdata$originPoints, # Capture locations 
+                 targetPoints = OVENdata$targetPoints, # Target locations from devices
+                 resampleProjection = sf::st_crs(OVENdata$targetPoints), 
+                 maxTries = 300,
+                 verbose = 0,   # output options - see help(estTransition)
+                 nSamples = 10)) # This is set low for example 
+
+```
+
+```{r, echo = FALSE}
+#saveRDS(OVENpsi,"OVENpsi.rds")
+```
+
+Take a closer look at what is included in the output
+
+```{r, eval = FALSE}
+# not run 
+str(OVENpsi, max.level = 2)
+```
+
+New plotting functions allow users to quickly plot transition probabilities including
+confidence intervals. Users can customize plots to suit their needs as additional arguments (`...`) are supported.
+
+```{r, fig.width=5, fig.height=5,fig.cap="Figure 2. Transition probablities of Ovenbirds from breeding origin sites to non-breeding target sites"}
+# THE FIGS ARE TOO SMALL IN VINGETTE HTML SO NEED TO ADD ADDITIONAL PARAMETERS TO MAKE IT LOOK HALFWAY DECENT
+
+plot(OVENpsi, legend = "top", cex = 0.5, las = 2)
+```
+
+
+### Example 2: Combining tracking technology and genoscape assignments
+
+Below we estimate transition probabilities for Yellow Warblers (<i>Setophaga petechia</i>) by integrating several different data sources such as tracking data (light-level geolocators) and genoscape assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
+
+1. Four logical vectors indicating the type of information the location/assignment estimates were derived from <br>(light-level geolocators, telemetry, isotopes, and/or genoscapes)    
+1. Location Bias - a vector that has error estimates for both longitude and latitude    
+1. Location error - a variance, covariance matrix of longitude and latitude    
+1. Distance matrices between breeding and non-breeding regions    
+1. A spatial layer of both breeding and non-breeding regions    
+1. Capture locations and the 'unknown' locations/assignments derived from the tracking devices or intrinsic markers   
+1. The relative (or absolute) abundance within each region where the birds originate from (deployment regions)     
+
+
+```{r}
+# Read in the processed Yellow Warbler data 
+# see the Worked Examples Vignette for details on how data structured/created
+set.seed(1)
+newDir <- tempdir()
+baseURL <- 'https://github.com/SMBC-NZP/MigConnectivity/blob/devpsi2/data-raw/YEWA/'
+file.name <- "yewa_estTrans_data.rds"
+url1 <- paste0(baseURL, file.name, '?raw=true')
+temp <- paste(newDir, file.name, sep = '/')
+utils::download.file(url1, temp, mode = 'wb')
+YEWA_target_sites <- readRDS(temp)
+YEWAdata <- readRDS(temp)
+unlink(temp)
+
+# take a quick look at the data # 
+str(YEWAdata, 1)
+```
+
+Below we estimate (psi) or transition probabilities using the `estTransition` function.
+
+Note - in the Yellow Warbler data there are no overlap of data sources for individuals, i.e., we only had 
+one type of data for each bird - so we set the overlap setting to “none”. 
+However, when there's only one type of data in the whole dataset, the function
+runs faster if you leave `dataOverlapSetting` at "dummy"
+
+```{r}
+## Run analysis for psi
+psiYEWA <- estTransition(originSites = YEWAdata$originSites,
+                         targetSites = YEWAdata$targetSites,
+                         originPoints = YEWAdata$originPoints,
+                         targetPoints = YEWAdata$targetPoints,
+                         originAssignment = YEWAdata$originAssignment,
+                         originNames = YEWAdata$originNames,
+                         targetNames = YEWAdata$targetNames,
+                         nSamples = 10,
+                         isGL = YEWAdata$isGL,
+                         isTelemetry = YEWAdata$isTelemetry,
+                         isRaster = YEWAdata$isRaster,
+                         isProb = YEWAdata$isProb,
+                         captured = YEWAdata$captured,
+                         geoBias = YEWAdata$geoBias,
+                         geoVCov = YEWAdata$geoVCov,
+                         originRaster = YEWAdata$originRaster,
+                         verbose = 2, 
+                         maxTries = 400,
+                         resampleProjection = YEWAdata$resampleProjection,
+                         nSim = 10,
+                         dataOverlapSetting = "none",
+                         targetRelAbund = YEWAdata$targetRelAbund,
+                         returnAllInput = FALSE)
+
+
+
+
+
+# Take a look at the results # 
+psiYEWA
+```
+
+```{r, echo = FALSE}
+#saveRDS(psiYEWA,"psiYEWA.rds")
+```
+
+Plot the results using the built-in plotting function
+```{r, fig.width=7, fig.height=5, fig.cap="Estimated transition probabilities of the Yellow Warbler between breeding and nonbreeding periods"}
+par(mar = c(2,3,0,0))
+plot(psiYEWA, legend = "top", cex = 0.4)
+```
+
+### Literature Cited
+
+<div id="refs"></div>
+
+
+
