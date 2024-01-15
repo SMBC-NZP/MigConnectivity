@@ -26,7 +26,7 @@ spelling::spell_check_package()
 
 # Check URL are correct
 # install.packages('urlchecker', repos = 'https://r-lib.r-universe.dev')
-urlchecker::url_check(parallel = F, db = db)
+urlchecker::url_check(parallel = F)
 urlchecker::url_update()
 
 # check on other distributions

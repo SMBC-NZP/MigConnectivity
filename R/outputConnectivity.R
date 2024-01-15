@@ -143,17 +143,18 @@ summary.intrinsicAssign<-function(object, ...){
 }
 
 #' Basic plot function for the different isoAssign outputs
-#' @param x an isoAssign object
-#' @param map which \code{isoAssign} output to plot either 'probability', 'population' or 'odds'
-#' @param ... additional arguments passed to plot function
-#' @seealso{\code{isoAssign}}
-#' @return No return value, called to generate plot(s).
 #'
 #' Generates a basic plot of the isotope assignments. If
 #' \code{map = 'population'} generates a single map. If
 #' \code{map = 'probability' or map = 'odds'} generates a map for each
 #' individual is generated. User is asked for input before each individual is
 #' drawn.
+#'
+#' @param x an isoAssign object
+#' @param map which \code{isoAssign} output to plot either 'probability', 'population' or 'odds'
+#' @param ... additional arguments passed to plot function
+#' @seealso{\code{isoAssign}}
+#' @return No return value, called to generate plot(s).
 #'
 #' @examples
 #' \donttest{

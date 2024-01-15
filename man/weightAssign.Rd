@@ -19,6 +19,7 @@ weightAssign(
   element = "Hydrogen",
   surface = FALSE,
   period = "Annual",
+  verbose = 1,
   mapDirectory = NULL
 )
 }
@@ -59,6 +60,10 @@ Default is 'FALSE' which returns the precipitation isotopes ratio.}
 of mean annual values in precipitation for the \code{element}. If
 'GrowingSeason' returns growing season values in precipitation for
 \code{element} of interest.}
+
+\item{verbose}{takes values 0 or 1 (default). 0 prints no output during
+run. 1 prints a message detailing where in the process the function
+is.}
 
 \item{mapDirectory}{Directory to save/read isotope map from. Can use relative
 or absolute addressing. The default value (NULL) downloads to a temporary

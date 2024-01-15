@@ -14,11 +14,14 @@
 \item{...}{additional arguments passed to plot function}
 }
 \value{
-A basic plot of the isotope assignments. If \code{map = 'population'} returns a single map.
-If \code{map = 'probability' or map = 'odds'} a map for each individual is returned. User is asked for input before each individual is drawn.
+No return value, called to generate plot(s).
 }
 \description{
-Basic plot function for the different isoAssign outputs
+Generates a basic plot of the isotope assignments. If
+\code{map = 'population'} generates a single map. If
+\code{map = 'probability' or map = 'odds'} generates a map for each
+individual is generated. User is asked for input before each individual is
+drawn.
 }
 \examples{
 \donttest{

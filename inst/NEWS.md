@@ -1,3 +1,12 @@
+# MigConnectivity 0.4.5
+
+* Responding to CRAN comments
+* Switched relative https links to absolute (on web)
+* Added references (with DOI links) to DESCRIPTION
+* Added/changed return value for plot functions
+* Removed messages to console (unless verbose is on) for estTransition(). Switched cat() calls to message() in getIsoMap(). Added verbose argument to weightAssign().
+* Made sure par, options, and working directory revert to user settings on function exits.
+
 # MigConnectivity 0.4.4
 
 * Changes for submitting to CRAN

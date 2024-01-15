@@ -3,5 +3,6 @@
 ^data-raw$
 ^\.travis\.yml$
 ^doc$
+^docs$
 ^Meta$
 ^cran-comments\.md$

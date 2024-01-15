@@ -83,6 +83,9 @@ on a map}
 
 \item{...}{Additional parameters passed to \code{\link{plotCI}}}
 }
+\value{
+No return value, called to generate plot.
+}
 \description{
 Basic plot function for estMigConnectivity objects
 }
