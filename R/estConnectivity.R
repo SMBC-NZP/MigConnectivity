@@ -397,8 +397,13 @@ estTransitionJAGS <- function (banded, reencountered,
     psiFixed <- matrix(NA, nOriginSites, nTargetSites)
     for (i in 1:nrow(fixedZero)) {
       psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
+
+      for (j in 1:nChains)
+        jags.inits[[j]][["m0"]][fixedZero[i, 1], fixedZero[i, 2]] <- NA
     }
     jags.data$m0 <- psiFixed
+
+
   }
   file <- tempfile(fileext = ".txt")
   sink(file = file)
