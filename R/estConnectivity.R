@@ -383,6 +383,17 @@ estTransitionJAGS <- function (banded, reencountered,
   if (is.null(psiPrior)) {
     psiPrior <- matrix(1, nOriginSites, nTargetSites)
   }
+  # else {
+  #   z <- which(psiPrior==0)
+  #   if (length(z)>0) {
+  #     psiFixed <- matrix(NA, nOriginSites, nTargetSites)
+  #     psiFixed[z] <- 0
+  #     jags.data$m0 <- psiFixed
+  #     for (i in 1:nChains){
+  #       jags.inits[[i]]$m0[z] <- NA
+  #     }
+  #   }
+  # }
   jags.data$psiPrior <- psiPrior
   if (!is.null(originAssignment)) {
     telmat <- table(factor(originAssignment, levels = 1:nOriginSites),
@@ -397,6 +408,8 @@ estTransitionJAGS <- function (banded, reencountered,
     psiFixed <- matrix(NA, nOriginSites, nTargetSites)
     for (i in 1:nrow(fixedZero)) {
       psiFixed[fixedZero[i, 1], fixedZero[i, 2]] <- 0
+      for (j in 1:nChains)
+        jags.inits[[j]]$m0[fixedZero[i, 1], fixedZero[i, 2]] <- NA
     }
     jags.data$m0 <- psiFixed
   }

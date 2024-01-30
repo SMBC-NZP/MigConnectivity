@@ -1,14 +1,15 @@
 Type: Package
 Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.5
-Date: 2024-1-15
+Version: 0.4.5.9000
+Date: 2024-1-30
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
            role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
-    person("Emily B.", "Cohen", role = "ctb")
+    person("Emily B.", "Cohen", role = "ctb"),
+    person("Valentine", "Herrman", role = "ctb")
   )
 Description: Allows the user to estimate transition probabilities for
     migratory animals between any two phases of the annual cycle, using a

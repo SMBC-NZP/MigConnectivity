@@ -1,3 +1,7 @@
+# MigConnectivity 0.4.5.9000
+
+* Fixed fixing zero in estTransition (MCMC mode)
+
 # MigConnectivity 0.4.5
 
 * Responding to CRAN comments

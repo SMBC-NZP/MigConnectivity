@@ -3,8 +3,7 @@ The MigConnectivity package quantifies the pattern and strength of migratory con
 
 The pattern of migratory connectivity can be expressed as migratory transition probabilities between sites or regions in any two phases of the annual cycle.
 
-MC is a standardized metric to quantify migratory connectivity strength between two phases 
-of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. 
+MC is a standardized metric to quantify migratory connectivity strength between two phases of the annual cycle. MC is independent of data type and accounts for the relative abundance of populations distributed across a seasonal range. 
 
 See the [vignettes](https://smbc-nzp.github.io/MigConnectivity/MigConnectivity.html) for details and examples.
 
@@ -12,18 +11,11 @@ See the [vignettes](https://smbc-nzp.github.io/MigConnectivity/MigConnectivity.h
 
 If you will (or might) use Markov chain Monte Carlo (MCMC) estimation in 
 MigConnectivity, you should first install the program JAGS on your computer, 
-available at https://mcmc-jags.sourceforge.net. Then:
+available at https://mcmc-jags.sourceforge.net. Then, now that MigConnectivity 
+is on CRAN:
 
 ```r
-install.packages("devtools")
-devtools::install_github("SMBC-NZP/MigConnectivity")
-```
-
-to install the vignette on your machine along with the package use the following code.   
-*Note* it takes a bit longer to download the package if `build_vignettes = TRUE`
-
-```r
-devtools::install_github("SMBC-NZP/MigConnectivity", build_vignettes = TRUE)
+install.packages("MigConnectivity")
 ```
 
 ### Issues

@@ -73,3 +73,4 @@ file.copy(dir("vignettes", full.names=TRUE), "docs", overwrite=TRUE)
 
 # Verify you're ready for release, and release
 devtools::release()
+devtools::submit_cran()
