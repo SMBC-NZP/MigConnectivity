@@ -1363,7 +1363,7 @@ estTransitionBoot <- function(originSites = NULL,
     else {
       # Get target population for each animal sampled
       if (length(dim(targetAssignment))==2){
-        target.sample <- apply(targetAssignment[animal.sample], 1, which.max)
+        target.sample <- apply(targetAssignment[animal.sample, ], 1, which.max)
         if (is.list(target.sample)) {
           target.sample[lengths(target.sample)==0] <- NA
           target.sample <- unlist(target.sample)
