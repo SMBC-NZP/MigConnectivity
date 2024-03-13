@@ -310,11 +310,47 @@ estTransitionJAGS <- function (banded, reencountered,
                                originNames = NULL, targetNames = NULL,
                                nThin = 1, nBurnin = 5000, nChains = 3,
                                fixedZero = NULL, psiPrior = NULL,
-                               returnAllInput = TRUE) {
+                               returnAllInput = TRUE,
+                               originPoints = NULL, targetPoints = NULL,
+                               originSites = NULL, targetSites = NULL) {
+  if (is.null(originAssignment) && !is.null(originPoints) &&
+      !is.null(originSites)) {
+    if (inherits(originSites,"SpatialPolygonsDataFrame")){
+      originSites <- sf::st_as_sf(originSites)
+    }
+    if (!inherits(originPoints, "sf")){
+      originPoints <- sf::st_as_sf(originPoints)
+    }
+    originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
+                                                                   y = originSites,
+                                                                   sparse = TRUE)))
+  }
+  if (is.null(targetAssignment) && !is.null(targetPoints) &&
+      !is.null(targetSites)) {
+    if (inherits(targetSites,"SpatialPolygonsDataFrame")){
+      targetSites <- sf::st_as_sf(targetSites)
+    }
+    if (!inherits(targetPoints, "sf")){
+      targetPoints <- sf::st_as_sf(targetPoints)
+    }
+    targetAssignment <- suppressMessages(unclass(sf::st_intersects(x = targetPoints,
+                                                                   y = targetSites,
+                                                                   sparse = TRUE)))
+  }
+  if (is.array(originAssignment) && length(dim(originAssignment))>1) {
+    if (length(dim(originAssignment))>2 || !all(originAssignment %in% 0:1))
+      stop("originAssigment should either be a vector of assignments or a matrix of 0s and 1s")
+    originAssignment <- apply(originAssignment, 1, which.max)
+  }
+  if (is.array(targetAssignment) && length(dim(targetAssignment))>1) {
+    if (length(dim(targetAssignment))>2 || !all(targetAssignment %in% 0:1))
+      stop("targetAssigment should either be a vector of assignments or a matrix of 0s and 1s")
+    targetAssignment <- apply(targetAssignment, 1, which.max)
+  }
   jags.inits <- vector("list", nChains)
   if (is.null(banded)) {
     if (is.null(originAssignment) || is.null(targetAssignment)) {
-      stop("If running estTransition without bootstrap, need to provide banding and/or telemetry (through originAssignment and targetAssignment) data")
+      stop("If running estTransition with MCMC, need to provide banding and/or telemetry data")
     }
     nDim <- 0
     nTargetSites <- max(length(unique(targetAssignment)),
@@ -1874,7 +1910,11 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              nBurnin = nBurnin, nThin = nThin,
                              nChains = nChains, fixedZero = fixedZero,
                              psiPrior = psiPrior,
-                             returnAllInput = returnAllInput)
+                             returnAllInput = returnAllInput,
+                             originPoints = originPoints,
+                             targetPoints = targetPoints,
+                             originSites = originSites,
+                             targetSites = targetSites)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)

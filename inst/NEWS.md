@@ -1,6 +1,8 @@
-# MigConnectivity 0.4.5.9000
+# MigConnectivity 0.4.5.9002
 
 * Fixed fixing zero in estTransition (MCMC mode)
+* Corrected documentation for simTelemetryData
+* estTransition allows more options for entering telemetry data when method is MCMC
 
 # MigConnectivity 0.4.5
 
