@@ -65,7 +65,7 @@ migrating to it, or if it can, keep simulating until representation is
 met. This helps estTransition not throw an error. Default FALSE.}
 }
 \value{
-\code{simGLData} returns a list with the elements:
+\code{simTelemetryData} returns a list with the elements:
 \describe{
   \item{\code{originAssignment}}{Vector with true origin site of each animal}
   \item{\code{targetAssignment}}{Vector with true target site of each animal}
@@ -75,10 +75,10 @@ met. This helps estTransition not throw an error. Default FALSE.}
    same projection as targetSites}
   \item{\code{originPointsObs}}{Observed origin location of each animal that
    survived and was recaptured, type sf, same projection as originSites. Same
-   as originPointsTrue for animals captured at origin sites when S and p==1}
+   as originPointsTrue when S and p==1}
   \item{\code{targetPointsObs}}{Observed target location of each animal that
    survived and was recaptured, type sf, same projection as targetSites. Same
-   as targetPointsTrue for animals captured at target sites when S and p==1}
+   as targetPointsTrue when S and p==1}
   \item{\code{lived}}{0/1 vector for each animal, indicating which survived}
   \item{\code{recaptured}}{0/1 vector for each animal, indicating which were
    recaptured}
