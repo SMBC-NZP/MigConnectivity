@@ -1,11 +1,10 @@
 Type: Package
 Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.5.9002
-Date: 2024-3-13
+Version: 0.4.6
+Date: 2024-3-15
 Authors@R: c(
-    person("Jeffrey A.", "Hostetler", email = "jhostetler@usgs.gov", 
-           role = c("cre", "aut")),
+    person("Jeffrey A.", "Hostetler", , "jhostetler@usgs.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"),
@@ -21,10 +20,11 @@ Description: Allows the user to estimate transition probabilities for
     incorporating uncertainty from multiple sources of sampling error. For
     cross-species comparisons, methods are provided to estimate
     differences in migratory connectivity strength, incorporating
-    uncertainty. See Cohen et al. (2018) <doi:10.1111/2041-210X.12916>, Cohen et
-    al. (2019) <doi:10.1111/ecog.03974>, and Roberts et al. (2023) 
-    <doi:10.1002/eap.2788> for details on some of these methods.
+    uncertainty. See Cohen et al. (2018) <doi:10.1111/2041-210X.12916>,
+    Cohen et al. (2019) <doi:10.1111/ecog.03974>, and Roberts et al.
+    (2023) <doi:10.1002/eap.2788> for details on some of these methods.
 License: GPL (>=3)
+URL: https://github.com/SMBC-NZP/MigConnectivity
 Depends:
     R (>= 3.5.0)
 Imports:
@@ -56,4 +56,3 @@ LazyData: true
 LazyDataCompression: xz
 RoxygenNote: 7.2.3
 SystemRequirements: JAGS (https://mcmc-jags.sourceforge.net)
-URL: https://github.com/SMBC-NZP/MigConnectivity
