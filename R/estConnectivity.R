@@ -456,7 +456,7 @@ model{
   # psi prior
   for(i in 1:npop){
     for(k in 1:ndest){
-      m0[i, k] ~ dbeta(psiPrior[i, k], 1)
+      m0[i, k] ~ dgamma(psiPrior[i, k], 1)
       psi[i, k] <- m0[i, k] / sum(m0[i, 1:ndest])
     } #k
   }#i")

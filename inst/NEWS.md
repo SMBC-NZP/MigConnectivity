@@ -1,3 +1,7 @@
+# MigConnectivity 0.4.6.9000
+
+* Fixed error in how Dirichlet priors were set in estTransition (most affects informed priors, but it looks like it could affect all MCMC analyses a bit)
+
 # MigConnectivity 0.4.6
 
 * Fixed fixing zero in estTransition (MCMC mode)
