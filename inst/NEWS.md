@@ -1,4 +1,4 @@
-# MigConnectivity 0.4.6.9000
+# MigConnectivity 0.4.7
 
 * Fixed error in how Dirichlet priors were set in estTransition (most affects informed priors, but it looks like it could affect all MCMC analyses a bit)
 
