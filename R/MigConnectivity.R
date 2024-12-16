@@ -22,7 +22,7 @@
 #'
 #' \code{\link{estStrength}}: Estimate MC, migratory connectivity strength
 #'
-#' @docType package
+#' _PACKAGE
 #' @name MigConnectivity
 #' @import stats
 NULL

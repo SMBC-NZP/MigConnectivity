@@ -3786,6 +3786,258 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
                    class = c('diffMantel', 'diffMigConnectivity')))
 }
 
+###############################################################################
+#' Estimate NMC_XY, another type of migratory connectivity strength
+#'
+#' Resampling of uncertainty for NMC_XY (network migratory connectivity
+#' strength between seasons X and Y) and network migratory connectivity
+#' diversity (X node-specific version of NMC_XY) from estimates of psi
+#' (transition probabilities). Psi estimates can come from an estMigConnectivity
+#' object, anRMark psi matrix, MCMC samples, or other samples expressed in array
+#' form.
+#'
+#'
+#' @param psi Transition probabilities between B origin and W target sites.
+#'  Either an array with dimensions x, B, and W (with x samples of the
+#'  transition probability matrix from another model), an 'estPsi' object
+#'  (result of calling estTransition), or a MARK object with estimates of
+#'  transition probabilities
+#' @param originNames Optional. Vector of names for the origin sites. Mostly for
+#'  internal use
+#' @param targetNames Optional. Vector of names for the target sites. Mostly for
+#'  internal use
+#' @param originSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are origin
+#' @param targetSites If \code{psi} is a MARK object, this must be a numeric
+#'  vector indicating which sites are target
+#' @param nSamples Number of times to resample \code{psi}. The purpose is to
+#'  estimate sampling uncertainty; higher values here will do so with more
+#'  precision
+#' @param verbose 0 (default) to 2. 0 prints no output during run. 1 prints
+#'  a progress update and summary every 100 samples. 2 prints a
+#'  progress update and summary every sample
+#' @param alpha Level for confidence/credible intervals provided. Default (0.05)
+#'  gives 95 percent CI
+#' @param returnAllInput if TRUE (the default) the output includes all of the
+#'  inputs. If FALSE, only the inputs currently used by another MigConnectivity
+#'  function are included in the output to save memory.
+#'
+#' @return \code{estNMC} returns a list with the elements:
+#' \describe{
+#'   \item{\code{NMC}}{List containing estimates of network migratory
+#'    connectivity strength:
+#'    \itemize{
+#'      \item{\code{sample}} \code{nSamples} sampled values for
+#'       NMC_XY. Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Mean of \code{NMC$sample}. Main estimate of NMC_XY,
+#'       incorporating parametric uncertainty.
+#'      \item{\code{se}} Standard error of NMC, estimated from SD of
+#'       \code{NMC$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       NMC_XY, estimated as \code{alpha/2} and \code{1 - alpha/2} quantiles of
+#'       \code{NMC$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence interval
+#'       for NMC_XY. May be preferable to \code{NMC$simpleCI} when
+#'       \code{NMC$mean} is the best estimate of NMC_XY. \code{NMC$simpleCI} is
+#'       preferred when \code{NMC$median} is a better estimator. When
+#'       \code{NMC$mean==NMC$median}, these should be identical.  Estimated as
+#'       the \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of
+#'       \code{NMC$sample}, where z0 is the proportion of
+#'       \code{NMC$sample < NMC$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible interval for NMC,
+#'       estimated using the highest posterior density (HPD) method.
+#'      \item{\code{median}} Median of NMC_XY, alternate point estimate also
+#'       including parametric uncertainty.
+#'      \item{\code{point}} Simple point estimate of NMC_XY, using the point
+#'       estimate of \code{psi} (usually the mean values), not accounting for
+#'       sampling error.
+#'    }
+#'   }
+#'   \item{\code{NMCpop}}{List containing estimates of network migratory
+#'    connectivity diversity (X node-specific NMC_XY):
+#'    \itemize{
+#'      \item{\code{sample}} Matrix of sampled values for network migratory
+#'       connectivity diversity. \code{nSamples} x [number of origin sites].
+#'       Provided to allow the user to compute own summary statistics.
+#'      \item{\code{mean}} Column means of \code{NMCpop$sample}. Main estimate
+#'       of network migratory connectivity diversity, incorporating parametric
+#'       uncertainty.
+#'      \item{\code{se}} Standard errors of network migratory
+#'       connectivity diversity, estimated from column
+#'       standard deviations of \code{NMCpop$sample}.
+#'      \item{\code{simpleCI}} Default\code{1 - alpha} confidence interval for
+#'       network migratory connectivity diversity, estimated as \code{alpha/2}
+#'       and \code{1 - alpha/2} quantiles of each column of \code{NMCpop$sample}.
+#'      \item{\code{bcCI}} Bias-corrected \code{1 - alpha} confidence intervals
+#'       for network migratory connectivity diversity. May be preferable to
+#'       \code{NMCpop$simpleCI} when \code{NMCpop$mean} are the best estimate of
+#'       network migratory connectivity diversity. \code{NMCpop$simpleCI} is
+#'       preferred when \code{NMCpop$median} is a better estimator. When
+#'       \code{NMCpop$mean==NMCpop$median}, these should be identical.
+#'       Estimated as the \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'       \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of
+#'       \code{NMCpop$sample}, where z0 is the proportion of
+#'       \code{NMCpop$sample < NMCpop$mean}.
+#'      \item{\code{hpdCI}} \code{1 - alpha} credible intervals for network
+#'       migratory connectivity diversity, estimated using the highest posterior
+#'       density (HPD) method.
+#'      \item{\code{median}} Medians of network migratory connectivity diversity,
+#'       alternate point estimate also including parametric uncertainty.
+#'      \item{\code{point}} Simple point estimates of network migratory
+#'       connectivity diversity, using the point estimate of \code{psi} (usually
+#'       the mean values), not accounting for sampling error.
+#'    }
+#'   }
+#'   \item{\code{input}}{List containing the inputs to \code{estNMC}.}
+#' }
+#'
+#' @export
+#'
+#' @seealso \code{\link{calcNMC}}, \code{\link{estTransition}},
+#'   \code{\link{estStrength}}, \code{\link{estMantel}},
+#'   \code{\link{plot.estMigConnectivity}}
+#' @example inst/examples/estNMCExamples.R
+estNMC <- function(psi, originNames = NULL, targetNames = NULL,
+                   originSites=NULL, targetSites=NULL,
+                   nSamples = 1000, verbose=0, alpha = 0.05,
+                   returnAllInput = TRUE) {
+  if (is.matrix(psi)) {
+    psiFixed <- TRUE
+    psiVCV <- NULL
+    nOriginSites <- nrow(psi)
+    nTargetSites <- ncol(psi)
+    psiBase <- psi
+    psiIn <- psi
+  }
+  else if (inherits(psi, "mark")) {
+    psiFixed <- FALSE
+    if (!is.numeric(originSites) || !is.numeric(targetSites))
+      stop('Must specify which RMark Psi parameters represent origin and target sites')
+    psiVCV <- psi$results$beta.vcv
+    psiBase <- RMark::TransitionMatrix(RMark::get.real(psi, "Psi",
+                                                       se=TRUE))[originSites,
+                                                                 targetSites]
+    if (any(diag(psi$results$beta.vcv) < 0))
+      stop("Can't sample model, negative beta variances")
+    psiIn <- psi
+    nOriginSites <- length(originSites)
+    nTargetSites <- length(targetSites)
+  }
+  else if (is.array(psi)) {
+    if (length(dim(psi))!=3)
+      stop('Psi should either be 2-(for fixed transition probabilities) or 3-dimensional array')
+    psiFixed <- FALSE
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- round(seq(from = 1, to = dim(psi)[1],
+                              length.out = nSamples))
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    psiIn <- psi
+  }
+  else if (inherits(psi, "estPsi") || inherits(psi, "estMC")) {
+    psiFixed <- FALSE
+    psiIn <- psi
+    psi <- psi$psi$sample
+    nOriginSites <- dim(psi)[2]
+    nTargetSites <- dim(psi)[3]
+    psiBase <- apply(psi, 2:3, mean)
+    psiVCV <- NULL
+    if (dim(psi)[1]>=nSamples)
+      psiSamples <- 1:nSamples
+    else
+      psiSamples <- sample.int(dim(psi)[1], nSamples, replace = TRUE)
+    if (is.null(originNames))
+      originNames <- psiIn$input$originNames
+    if (is.null(targetNames))
+      targetNames <- psiIn$input$targetNames
+  }
+  pointNMC <- calcNMC(psi = psiBase)
+  sampleNMC <- rep(NA, nSamples)
+  sampleNmc <- array(NA, c(nSamples, nOriginSites),
+                     dimnames = list(NULL, originNames))
+  psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites),
+                     dimnames = list(NULL, originNames, targetNames))
+  for (i in 1:nSamples) {
+    if (verbose > 1 || verbose == 1 && i %% 100 == 0)
+      cat("\tSample", i, "of", nSamples, "at", date(), "\n")
+    # Generate random transition probability matrices
+    if (psiFixed)
+      psiNew <- psiBase
+    else if (is.null(psiVCV))
+      psiNew <- psi[psiSamples[i],,]
+    else
+      psiNew <- makePsiRand(psi, originSites, targetSites)
+    psi.array[i, , ] <- psiNew
+    # Calculate NMC for new psis
+    newNMC <- calcNMC(psi = psiNew)
+    sampleNMC[i] <- newNMC$NMC
+    sampleNmc[i,] <- newNMC$NMCpop
+    if (verbose > 1 || verbose == 1 && i %% 100 == 0)
+      cat(" NMC mean:", mean(sampleNMC, na.rm=TRUE),
+          "SD:", sd(sampleNMC, na.rm=TRUE),
+          "low quantile:", quantile(sampleNMC, alpha/2, na.rm=TRUE),
+          "high quantile:", quantile(sampleNMC, 1-alpha/2, na.rm=TRUE), "\n")
+  }
+  meanNMC <- mean(sampleNMC, na.rm=TRUE)
+  medianNMC <- median(sampleNMC, na.rm=TRUE)
+  seNMC <- sd(sampleNMC, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCI <- quantile(sampleNMC, c(alpha/2, 1-alpha/2), na.rm=TRUE, type = 8,
+                       names = FALSE)
+  z0 <- qnorm(sum((sampleNMC)<meanNMC)/nSamples)
+  bcCI <- quantile(sampleNMC, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+                   na.rm=TRUE, names = FALSE)
+  NMC.mcmc <- coda::as.mcmc(sampleNMC)
+  hpdCI <- as.vector(coda::HPDinterval(NMC.mcmc, 1-alpha))
+  Nmc.mcmc <- coda::as.mcmc(sampleNmc)
+  NmchpdCI <- coda::HPDinterval(Nmc.mcmc, 1-alpha)
+  NmchpdCI <- array(NmchpdCI, c(nOriginSites, 2),
+                 list(originNames, c("lower", "upper")))
+  NmchpdCI <- aperm(NmchpdCI, c(2, 1))
+  NmcbcCI <- array(NA, dim = c(2, nOriginSites),
+                   dimnames = list(NULL, originNames))
+  for (i in 1:nOriginSites) {
+    Nmc.z0 <- qnorm(sum(sampleNmc[, i] < pointNMC$Nmc[i], na.rm = TRUE) /
+                      length(which(!is.na(sampleNmc[, i]))))
+    NmcbcCI[ , i] <- quantile(sampleNmc[, i],
+                                 pnorm(2 * Nmc.z0 + qnorm(c(alpha/2, 1-alpha/2))),
+                                 na.rm=TRUE, names = FALSE)
+  }
+  if (returnAllInput) {
+    input <- list(psi = psiIn,
+                  originNames = originNames,
+                  targetNames = targetNames,
+                  nSamples = nSamples,
+                  verbose = verbose, alpha = alpha,
+                  returnAllInput = TRUE)
+  }
+  else {
+    input <- list(originNames = originNames, targetNames = targetNames,
+                  alpha = alpha, returnAllInput = FALSE)
+  }
+  nmc <- list(NMC = list(sample = sampleNMC, mean = meanNMC, se = seNMC,
+                         simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI,
+                         median = medianNMC, point = pointNMC$NMC),
+              NMCpop = list(sample = sampleNmc,
+                            mean = apply(sampleNmc, 2, mean, na.rm = TRUE),
+                            se = apply(sampleNmc, 2, sd, na.rm = TRUE),
+                            simpleCI = apply(sampleNmc, 2, quantile, na.rm = TRUE,
+                                             probs = c(alpha/2, 1-alpha/2),
+                                             type = 8, names = FALSE),
+                            bcCI = NmcbcCI, hpdCI = NmchpdCI,
+                            median = apply(sampleNmc, 2, median, na.rm = TRUE),
+                            point = pointNMC$NMCpop),
+              input = input)
+  class(nmc) <- c("estNMC", "estMigConnectivity")
+  return(nmc)
+}
+
+
 #' @rdname estTransition
 #' @export
 estPsi <- estTransition

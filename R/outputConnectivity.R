@@ -92,6 +92,26 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
                 dimnames = list(x$input$originNames, x$input$targetNames)),
           quote = FALSE)
   }
+  if (inherits(x, "estNMC")) {
+    cat("\nNetwork migratory connectivity strength (NMC_XY) estimate (mean):",
+        format(x$NMC$mean, digits = digits), "+/- (SE)",
+        format(x$NMC$se, digits = digits), '\n')
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence interval (simple quantile): ",
+        paste(format(x$NMC$simpleCI, digits = digits, trim = TRUE),
+              collapse = ' - '), '\n', sep = "")
+    cat("\nNode-specific NMC_XY estimates (mean):\n")
+    print(x$NMCpop$mean, digits = digits)
+    cat("+/- SE:\n")
+    print(x$NMCpop$se, digits = digits)
+    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+        "% confidence intervals (simple quantile):\n", sep = "")
+    print(array(paste(format(x$NMCpop$simpleCI[1,],digits = digits, trim = TRUE),
+                      format(x$NMCpop$simpleCI[2,],digits = digits, trim = TRUE),
+                      sep = ' - '), dim = list(ncol(x$NMCpop$simpleCI), 1),
+                dimnames = list(x$input$originNames, "")),
+          quote = FALSE)
+  }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estPi"))
     cat("For more info, try ?reverseTransition or str(obj_name, max.level = 2).\n")
@@ -103,6 +123,8 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
     cat("For more info, try ?reverseTransition or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "estMantel"))
     cat("For more info, try ?estMantel or str(obj_name, max.level = 2).\n")
+  else if (inherits(x, "estNMC"))
+    cat("For more info, try ?estNMC or str(obj_name, max.level = 2).\n")
   else # In case we left something out...
     cat("For more info, try str(obj_name, max.level = 2).\n")
 }
@@ -281,7 +303,9 @@ plot.estMigConnectivity <- function(x,
                                                                "MC",
                                                                ifelse(inherits(x, "estGamma"),
                                                                       "gamma",
-                                                                      "rM"))),
+                                                                      ifelse(inherits(x, "estMantel"),
+                                                                             "rM",
+                                                                             "NMCpop")))),
                                     point = c("mean", "median", "point"),
                                     range = c("simpleCI", "bcCI", "se"),
                                     xlab = NULL, ylab = plot.which,
@@ -300,8 +324,8 @@ plot.estMigConnectivity <- function(x,
   if ((plot.which %in% c("abund", "abundance", "relAbund")))
     plot.which <- "targetRelAbund"
   if (!(plot.which %in% c("psi", "MC", "rM", "r", "gamma", "pi",
-                          "targetRelAbund")))
-    stop("Set plot.which to psi, MC, rM, gamma, pi, targetRelAbund, or r")
+                          "targetRelAbund", "NMC", "NMCpop")))
+    stop("Set plot.which to psi, MC, rM, gamma, pi, targetRelAbund, r, NMC, or NMCpop")
   point <- match.arg(point)
   range <- match.arg(range)
   if (inherits(x, "estMC")) {
@@ -674,28 +698,35 @@ plot.estMigConnectivity <- function(x,
                    ylab = ylab, xaxt = "n", xlab = xlab, las = las, ...)
   }
 }
-map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
-                       yOffset = NULL, col = NULL, maxWidth = 100000,
-                       alpha.range = 0.2, alpha.point = 0,
+
+map.estPsi <- function(x, originSites, targetSites,
+                       originAlign = c("edge", "center", "offset"),
+                       targetAlign = c("edge", "center", "offset"),
+                       originOffset = NULL, targetOffset = NULL,
+                       col.origin = "blue", col.target = "brown", col.arrows = NULL,
+                       maxWidth = 100000, alphaMult = 1/max(x$psi$se + 0.02),
+                       alphaRange = 0.2, alphaPoint = 0,
                        subsetOrigin = NULL, subsetTarget = NULL,
-                       doubled = FALSE) {
+                       doubled = FALSE, labelOrigin = TRUE, labelTarget = TRUE){
 # #
 # # data(OVENdata) # Ovenbird
 # #
-# M<-estMC(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
+# M<-estTransition(isGL=OVENdata$isGL, # Logical vector: light-level geolocator(T)/GPS(F)
 #          geoBias = OVENdata$geo.bias, # Light-level geolocator location bias
 #          geoVCov = OVENdata$geo.vcov, #Light-level geolocator covariance matrix
-#          targetDist = OVENdata$targetDist, # Target location distance matrix
-#          originDist = OVENdata$originDist, # Origin location distance matrix
+#          #targetDist = OVENdata$targetDist, # Target location distance matrix
+#          #originDist = OVENdata$originDist, # Origin location distance matrix
 #          targetSites = OVENdata$targetSites, # Non-breeding / target sites
 #          originSites = OVENdata$originSites, # Breeding / origin sites
 #          originPoints = OVENdata$originPoints, # Capture Locations
 #          targetPoints = OVENdata$targetPoints, # Target locations from devices
-#          originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
+#         # originRelAbund = OVENdata$originRelAbund, # Origin relative abundances
 #          resampleProjection = terra::crs(OVENdata$targetPoints),
-#          verbose = 0,   # output options - see help ??estMC
-#          nSamples = 10000) # This is set low for example
+#          verbose = 1,   # output options - see help ??estMC
+#          nSamples = 200) # This is set low for example
 #
+  originAlign <- match.arg(originAlign)
+  targetAlign <- match.arg(targetAlign)
   nTargetSites <- ncol(x$psi$mean)
   nOriginSites <- nrow(x$psi$mean)
   if (is.null(subsetOrigin))
@@ -704,129 +735,221 @@ map.estPsi <- function(x, originSites, targetSites, xOffset = NULL,
     subsetTarget <- 1:nTargetSites
   originNames <- x$input$originNames
   targetNames <- x$input$targetNames
-  if (is.null(xOffset))
-    xOffset <- matrix(0, nOriginSites, nTargetSites)
-  if (is.null(yOffset))
-    yOffset <- matrix(0, nOriginSites, nTargetSites)
-  allSites <- rbind(originSites[, "geometry"], targetSites[, "geometry"])
-  if (is.null(col)) {
-    col <- 1:nTargetSites
+  originCenters <- suppressWarnings(sf::st_coordinates(sf::st_centroid(originSites)))
+  targetCenters <- suppressWarnings(sf::st_coordinates(sf::st_centroid(targetSites)))
+  if (is.null(originOffset))
+    originOffset <- matrix(0, nOriginSites, 2)
+  if (is.null(targetOffset))
+    targetOffset <- matrix(0, nTargetSites, 2)
+  allSites <- c(sf::st_geometry(originSites), sf::st_geometry(targetSites))
+  if (is.null(col.arrows)) {
+    col.arrows <- matrix(grDevices::rgb(rep(1:nOriginSites, nTargetSites)/nOriginSites,
+                                        rep(1:nTargetSites, each = nOriginSites)/nTargetSites,
+                                 1 - (rep(1:nOriginSites, nTargetSites) +
+                                        rep(1:nTargetSites, each = nOriginSites)) /
+                                   (nOriginSites + nTargetSites),
+                                 alpha=1), nOriginSites, nTargetSites)
   }
-  # png('psi_plot1.png', width = 6, height = 6, units = 'in', res = 1200)
+  else if (length(col.arrows)==1) {
+    col.arrows <- matrix(col.arrows, nOriginSites, nTargetSites)
+  }
+  rgbArrows <- vector("list", nOriginSites)
+  for (i in 1:nOriginSites)
+    rgbArrows[[i]] <- grDevices::col2rgb(col.arrows[i,])
+  if (is.null(col.origin)) {
+    col.origin <- 1:nOriginSites
+  }
+  else if (length(col.origin)==1) {
+    col.origin <- rep(col.origin, nOriginSites)
+  }
+  if (is.null(col.target)) {
+    col.target <- 1:nTargetSites + nOriginSites
+  }
+  else if (length(col.target)==1) {
+    col.target <- rep(col.target, nTargetSites)
+  }
   op <- graphics::par(no.readonly = TRUE)
   on.exit(graphics::par(op))
   graphics::par(mar=c(0,0,0,0))
   extent <- sf::st_bbox(allSites)
-  plot(allSites, xlim=c(extent[1],extent[3]),
-       ylim=c(extent[2], extent[4]), lwd = 1.5)
+  plot(sf::st_geometry(originSites), xlim=c(extent[1],extent[3]),
+       ylim=c(extent[2], extent[4]), lwd = 1.5, reset = FALSE, border = col.origin)
+  plot(sf::st_geometry(targetSites), add = TRUE, lwd = 1.5, reset = FALSE,
+       border = col.target)
+  if (labelOrigin)
+    graphics::text(originCenters[,1], originCenters[,2], originNames, adj = 0.5)
+  if (labelTarget)
+    graphics::text(x = targetCenters[,1], y = targetCenters[,2], labels = targetNames,
+                   adj = 0.5)
+  #"#FFFF00FF"
   # plot(OVENdata$originSites[1],add=TRUE,lwd=1.75)
   # plot(OVENdata$originSites[2],add=TRUE,lwd=1.75)
   # plot(OVENdata$targetSites,add=TRUE,lwd=1.5,col=c("gray70","gray35","gray10"))
 
   # legend("topleft",legend=paste("MC =",round(M$meanMC,2), "\u00b1", round(M$seMC,2)),bty="n",cex=1.8,bg="white",xjust=0)
+  # boundO <- sf::st_boundary(originSites)
+  # boundT <- sf::st_boundary(targetSites)
   for (i in subsetOrigin) {
-    xO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,1]
-    yO <- sf::st_coordinates(sf::st_centroid(originSites[i,]))[,2]
+    xO <- originCenters[i, 1]
+    yO <- originCenters[i, 2]
     for (j in subsetTarget) {
-      if (x$psi$simpleCI[2,i,j] > 0) {
-        xT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,1] + xOffset[i, j]
-        yT <- sf::st_coordinates(sf::st_centroid(targetSites[j,]))[,2] + yOffset[i, j]
-        angle <- atan((yT - yO)/(xT - xO))
+      if (x$psi$simpleCI[2, i, j] > 0) {
+        xT <- targetCenters[j, 1]
+        yT <- targetCenters[j, 2]
+        path <- sf::st_sfc(geometry = sf::st_linestring(matrix(c(xO, xT, yO,
+                                                                 yT), 2, 2)),
+                             crs = sf::st_crs(targetSites))
+        if (originAlign == "edge") {
+          path <- sf::st_difference(path, originSites[i, ])
+          pathCoord <- sf::st_coordinates(path)
+          xO2 <- pathCoord[nrow(pathCoord) - 1, 1]
+          yO2 <- pathCoord[nrow(pathCoord) - 1, 2]
+          path <- sf::st_sfc(geometry = sf::st_linestring(matrix(c(xO2, xT,
+                                                                   yO2, yT),
+                                                                 2, 2)),
+                             crs = sf::st_crs(targetSites))
+        }
+        else if (originAlign=="offset") {
+          xO2 <- sf::st_coordinates(path)[1, 1] + originOffset[i, 1]
+          yO2 <- sf::st_coordinates(path)[1, 2] + originOffset[i, 2]
+        }
+        else {
+          xO2 <- sf::st_coordinates(path)[1, 1]
+          yO2 <- sf::st_coordinates(path)[1, 2]
+        }
+        if (targetAlign == "edge") {
+          path <- sf::st_difference(path, targetSites[j, ])
+        }
+        # else {
+        #   xO2 <- sf::st_coordinates(path)[1, 1]
+        #   yO2 <- sf::st_coordinates(path)[1, 2]
+        # }
+        # path <- sf::st_difference(sf::st_difference(path, originSites[i, ]),
+        #                           targetSites[j, ])
+        # O2 <- sf::st_intersection(boundO[i,], path)
+        # plot(O2, col = "purple", add = TRUE, reset = FALSE)
+        # print(O2); print(class(O2))
+        # T2 <- sf::st_intersection(boundT[j,])
+        # xO2 <- sf::st_coordinates(path)[1, 1]
+        # yO2 <- sf::st_coordinates(path)[1, 2]
+        xT2 <- sf::st_coordinates(path)[2, 1]
+        yT2 <- sf::st_coordinates(path)[2, 2]
+        if (targetAlign == "offset") {
+          xT2 <- xT2 + targetOffset[j, 1]
+          yT2 <- yT2 + targetOffset[j, 2]
+        }
+        angle <- atan((yT2 - yO2)/(xT2 - xO2))
         if (is.nan(angle))
           angle <- 0
-        if (xT < xO)
+        if (xT2 < xO2)
           angle <- angle + pi
         cosa <- cos(angle)
         sina <- sin(angle)
         if (doubled) {
-          graphics::polygon(c(xO + x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                    xT + x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                    xT + x$psi$simpleCI[1,i,j] * sina * maxWidth,
-                    xO + x$psi$simpleCI[1,i,j] * sina * maxWidth),
-                  c(yO - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                    yT - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                    yT - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
-                    yO - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                            1 - (i + j) / (nOriginSites + nTargetSites),
-                            alpha=alpha.range), border = NA)
-          graphics::polygon(c(xO - x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                    xT - x$psi$simpleCI[2,i,j] * sina * maxWidth,
-                    xT - x$psi$simpleCI[1,i,j] * sina * maxWidth,
-                    xO - x$psi$simpleCI[1,i,j] * sina * maxWidth),
-                  c(yO + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                    yT + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
-                    yT + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
-                    yO + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
-                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                            1 - (i + j) / (nOriginSites + nTargetSites),
-                            alpha=alpha.range), border = NA)
-          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth,
-                    xT - x$psi$mean[i,j] * sina * maxWidth,
-                    xT + x$psi$mean[i,j] * sina * maxWidth,
-                    xO + x$psi$mean[i,j] * sina * maxWidth),
-                  c(yO + x$psi$mean[i,j] * cosa * maxWidth,
-                    yT + x$psi$mean[i,j] * cosa * maxWidth,
-                    yT - x$psi$mean[i,j] * cosa * maxWidth,
-                    yO - x$psi$mean[i,j] * cosa * maxWidth),
-                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                            1 - (i + j) / (nOriginSites + nTargetSites),
-                            alpha=alpha.point),
-                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                               1 - (i + j) / (nOriginSites + nTargetSites),
-                               alpha=1))
+          graphics::polygon(c(xO2 + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT2 + x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT2 + x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO2 + x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO2 - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT2 - x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT2 - x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO2 - x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(rgbArrows[[i]][1, j],
+                                       rgbArrows[[i]][2, j],
+                                       rgbArrows[[i]][3, j],
+                                       maxColorValue = 255,
+                                       alpha=alphaRange * 255), border = NA)
+          graphics::polygon(c(xO2 - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT2 - x$psi$simpleCI[2,i,j] * sina * maxWidth,
+                    xT2 - x$psi$simpleCI[1,i,j] * sina * maxWidth,
+                    xO2 - x$psi$simpleCI[1,i,j] * sina * maxWidth),
+                  c(yO2 + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT2 + x$psi$simpleCI[2,i,j] * cosa * maxWidth,
+                    yT2 + x$psi$simpleCI[1,i,j] * cosa * maxWidth,
+                    yO2 + x$psi$simpleCI[1,i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(rgbArrows[[i]][1, j],
+                                       rgbArrows[[i]][2, j],
+                                       rgbArrows[[i]][3, j],
+                                       maxColorValue = 255,
+                                       alpha=alphaRange * 255), border = NA)
+          graphics::polygon(c(xO2 - x$psi$mean[i,j] * sina * maxWidth,
+                    xT2 - x$psi$mean[i,j] * sina * maxWidth,
+                    xT2 + x$psi$mean[i,j] * sina * maxWidth,
+                    xO2 + x$psi$mean[i,j] * sina * maxWidth),
+                  c(yO2 + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT2 + x$psi$mean[i,j] * cosa * maxWidth,
+                    yT2 - x$psi$mean[i,j] * cosa * maxWidth,
+                    yO2 - x$psi$mean[i,j] * cosa * maxWidth),
+                  col = grDevices::rgb(rgbArrows[[i]][1, j],
+                                       rgbArrows[[i]][2, j],
+                                       rgbArrows[[i]][3, j],
+                                       maxColorValue = 255,
+                                       alpha=alphaPoint*255),
+                  border = grDevices::rgb(rgbArrows[[i]][1, j],
+                                          rgbArrows[[i]][2, j],
+                                          rgbArrows[[i]][3, j],
+                                          maxColorValue = 255,
+                                          alpha=255))
         }
         else {
-          graphics::polygon(c(xO - x$psi$mean[i,j] * sina * maxWidth / 2,
-                    xT - x$psi$mean[i,j] * sina * maxWidth / 2,
-                    xT + x$psi$mean[i,j] * sina * maxWidth / 2,
-                    xO + x$psi$mean[i,j] * sina * maxWidth / 2),
-                  c(yO + x$psi$mean[i,j] * cosa * maxWidth / 2,
-                    yT + x$psi$mean[i,j] * cosa * maxWidth / 2,
-                    yT - x$psi$mean[i,j] * cosa * maxWidth / 2,
-                    yO - x$psi$mean[i,j] * cosa * maxWidth / 2),
-                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                            1 - (i + j) / (nOriginSites + nTargetSites),
-                            alpha=alpha.point),
-                  border = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                               1 - (i + j) / (nOriginSites + nTargetSites),
-                               alpha=1))
-          graphics::polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
-                                              x$psi$mean[i,j] / 2),
-                    xT - (x$psi$simpleCI[2,i,j] - x$psi$mean[i,j] / 2) *
-                      sina * maxWidth,
-                    xT - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
-                      sina * maxWidth,
-                    xO - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
-                      sina * maxWidth),
-                  c(yO+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
-                    yT+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
-                    yT+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
-                    yO+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth),
-                  col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                            1 - (i + j) / (nOriginSites + nTargetSites),
-                            alpha=alpha.range), border = NA)
+          #cat(i, (j-1)*nTargetSites + 1, "\n")
+          graphics::polygon(c(xO2 - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT2 - x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xT2 + x$psi$mean[i,j] * sina * maxWidth / 2,
+                    xO2 + x$psi$mean[i,j] * sina * maxWidth / 2),
+                  c(yO2 + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT2 + x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yT2 - x$psi$mean[i,j] * cosa * maxWidth / 2,
+                    yO2 - x$psi$mean[i,j] * cosa * maxWidth / 2),
+                  col = grDevices::rgb(rgbArrows[[i]][1, j],
+                                       rgbArrows[[i]][2, j],
+                                       rgbArrows[[i]][3, j],
+                                       maxColorValue = 255,
+                                       alpha= 255 - 255 * alphaMult * x$psi$se[i,j]),
+                  border = NA)
+          # graphics::polygon(c(xO - sina * maxWidth * (x$psi$simpleCI[2,i,j] -
+          #                                     x$psi$mean[i,j] / 2),
+          #           xT - (x$psi$simpleCI[2,i,j] - x$psi$mean[i,j] / 2) *
+          #             sina * maxWidth,
+          #           xT - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+          #             sina * maxWidth,
+          #           xO - (x$psi$simpleCI[1,i,j] - x$psi$mean[i,j] / 2) *
+          #             sina * maxWidth),
+          #         c(yO+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+          #           yT+(x$psi$simpleCI[2,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+          #           yT+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth,
+          #           yO+(x$psi$simpleCI[1,i,j]-x$psi$mean[i,j]/2)*cosa*maxWidth),
+          #         col = grDevices::rgb(i/nOriginSites, j/nTargetSites,
+          #                   1 - (i + j) / (nOriginSites + nTargetSites),
+          #                   alpha=alpha.range), border = NA)
 
         }
-        shape::Arrowhead(xT, yT, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
+        # print(grDevices::rgb(rgbArrows[[i]][1, j],
+        #                      rgbArrows[[i]][2, j],
+        #                      rgbArrows[[i]][3, j],
+        #                      maxColorValue = 255,
+        #                      alpha=255))
+        shape::Arrowhead(xT2, yT2, angle / pi * 180, arr.width = x$psi$mean[i,j], arr.length = 1/8,
                          arr.type = 'curved', npoint = 15,
-                         lcol = grDevices::rgb(i/nOriginSites, j/nTargetSites,
-                                    1 - (i + j) / (nOriginSites + nTargetSites),
-                                    alpha=1), arr.adj = 0)
+                         lcol = grDevices::rgb(rgbArrows[[i]][1, j],
+                                               rgbArrows[[i]][2, j],
+                                               rgbArrows[[i]][3, j],
+                         maxColorValue = 255,
+                                    alpha=255), arr.adj = 0)
       }
     }
   }
 # dev.off()
-# shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],
-#               gCentroid(OVENdata$originSites[1])@coords[,2],
-#               gCentroid(OVENdata$targetSites[2])@coords[,1]+80000,
-#               extent(OVENdata$targetSites[2])[4]+150000,
+# shape::Arrows(sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,1],
+#               sf::st_coordinates(sf::st_centroid(OVENdata$originSites[1,]))[,2],
+#               sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[2,]))[,1],
+#               sf::st_coordinates(sf::st_centroid(OVENdata$targetSites[2,]))[,2],
 #               arr.length = 0.3,
 #               arr.adj = 0.5,
 #               arr.lwd = 1,
 #               arr.width = 0.4,
 #               arr.type = "triangle",
-#               lwd=(apply(M$samplePsi[,1,],2,mean)[2]*10),
+#               lwd=M$psi$mean[1,2]*10,
 #               lty=1)
 #
 # shape::Arrows(gCentroid(OVENdata$originSites[1])@coords[,1],

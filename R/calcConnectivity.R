@@ -636,6 +636,45 @@ calcPi <- function(banded = NULL, reencountered = NULL, counts = NULL,
 
 }
 
+calcNMCpop <- function(subPsi) {
+  nTargetSites <- length(subPsi)
+  perOriginNMC <- 1 + sum(ifelse(subPsi==0, -5, log(subPsi)) * subPsi) /
+    log(nTargetSites)
+}
+
+#' Calculate NMC_XY, another type of migratory connectivity strength
+#'
+#' Provides simple calculation of NMC_XY (network migratory connectivity
+#' strength between seasons X and Y) and network migratory connectivity
+#' diversity (X node-specific version of NMC_XY) from point estimate of psi
+#' (transition probabilities). Does not include measures of uncertainty.
+#'
+#' @param psi Matrix of transition probabilities
+#'
+#' @return \code{calcNMC} returns a list with elements:
+#' \describe{
+#'   \item{\code{NMC}}{scalar real value between 0 and 1, indicating the
+#'    strength of network migratory connectivity}
+#'   \item{\code{NMCpop}}{Vector of network migratory connectivity diversity
+#'    values, also between 0 and 1, the X-node-specific version of NMC_XY}
+#' }
+#' @export
+#'
+#' @examples
+#' nScenarios <- length(samplePsis)
+#' NMC1 <- vector("list", nScenarios)
+#' for (i in 1:nScenarios) {
+#'   NMC1[[i]] <- calcNMC(samplePsis[[i]])
+#' }
+#' names(NMC1) <- names(samplePsis)
+#' str(NMC1)
+#' @seealso \code{\link{estNMC}}, \code{\link{calcMC}}, \code{\link{estMC}}
+calcNMC <- function(psi) {
+  NMCpop <- apply(psi, 1, calcNMCpop)
+  NMC <- mean(NMCpop)
+  names(NMCpop) <- rownames(psi)
+  return(list(NMC = NMC, NMCpop = NMCpop))
+}
 
 #' @rdname reverseTransition
 #' @export
