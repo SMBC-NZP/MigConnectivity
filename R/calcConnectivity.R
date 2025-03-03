@@ -670,6 +670,8 @@ calcNMCpop <- function(subPsi) {
 #' str(NMC1)
 #' @seealso \code{\link{estNMC}}, \code{\link{calcMC}}, \code{\link{estMC}}
 calcNMC <- function(psi) {
+  if (!inherits(psi, "matrix"))
+    stop("The calcNMC input psi must be a matrix")
   NMCpop <- apply(psi, 1, calcNMCpop)
   NMC <- mean(NMCpop)
   names(NMCpop) <- rownames(psi)

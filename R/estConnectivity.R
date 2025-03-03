@@ -1845,6 +1845,13 @@ estTransitionBoot <- function(originSites = NULL,
 #'   \code{\link{estMC}}, \code{\link{estMantel}}
 #'
 #' @example inst/examples/estTransitionExamples.R
+#'
+#' @references
+#' Hostetler, J. A., E. B. Cohen, C. M. Bossu, A. L. Scarpignato, K. Ruegg,
+#' A. Contina, C. S. Rushing, and M. T. Hallworth. 2025. Challenges and
+#' opportunities for data integration to improve estimation of migratory
+#' connectivity. Methods in Ecology and Evolution 16: 362-376.
+#' \doi{10.1111/2041-210X.14467}
 estTransition <- function(originSites = NULL, targetSites = NULL,
                           originPoints = NULL, targetPoints = NULL,
                           originAssignment = NULL, targetAssignment = NULL,

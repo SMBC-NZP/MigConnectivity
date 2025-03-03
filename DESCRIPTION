@@ -1,8 +1,8 @@
 Type: Package
 Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.7.9000
-Date: 2024-11-26
+Version: 0.4.7.9001
+Date: 2025-03-03
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", , "jhostetler@usgs.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
@@ -21,8 +21,9 @@ Description: Allows the user to estimate transition probabilities for
     cross-species comparisons, methods are provided to estimate
     differences in migratory connectivity strength, incorporating
     uncertainty. See Cohen et al. (2018) <doi:10.1111/2041-210X.12916>,
-    Cohen et al. (2019) <doi:10.1111/ecog.03974>, and Roberts et al.
-    (2023) <doi:10.1002/eap.2788> for details on some of these methods.
+    Cohen et al. (2019) <doi:10.1111/ecog.03974>, Roberts et al. (2023) 
+    <doi:10.1002/eap.2788>, and Hostetler et al. (2025) 
+    <doi:10.1111/2041-210X.14467> for details on some of these methods.
 License: GPL (>=3)
 URL: https://github.com/SMBC-NZP/MigConnectivity
 Depends:
