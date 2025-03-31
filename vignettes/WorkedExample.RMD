@@ -40,7 +40,7 @@ separates estimation of migratory connectivity into two functions: estTransition
 The `estTransition` function estimates transition probabilities (ψ) from seasonal movement data (i.e. pattern of movement) 
 and the `estStrength` estimates the strength of migratory connectivity (MC) from transition probabilities.
 
-Below we provide a worked example using Yellow Warbler (<i>Setophaga petechia</i>) data to help users format their data to use the new 
+Below we provide a worked example using Yellow Warbler (<i>Setophaga petechia</i>) data [@hostetler_challenges_2025] to help users format their data to use the new 
 functionality in the MigConnectivity package. There are multiple published Yellow Warbler data sets that can be used to estimate migratory connectivity. Here, we illustrate how to integrate genetic data and light-level geolocators to estimate MC. Genetic sampling of 203 individuals occurred at 20 locations across the nonbreeding range, from Baja Mexico, south through central Mexico, Central America (Costa Rica and Nicaragua), and South America (Trinidad and Venezuela) [@bay_genetic_2021].
 
 ### Define nonbreeding regions
@@ -431,27 +431,30 @@ ebird <- load_raster("yelwar", path = "./data/",
 b <- ebird[['breeding']]
 w <- ebird[['nonbreeding']]
 
-targetSitesProj <- sf::st_transform(targetSitesYEWA, terra::crs(rastAbundMed))
-originSitesProj <- sf::st_transform(YEWA_origin_sites, terra::crs(rastAbundMed))
+targetSitesProj <- sf::st_transform(targetSitesYEWA, terra::crs(w))
+originSitesProj <- sf::st_transform(YEWA_origin_sites, terra::crs(b))
 
 relAbundYEWAWint <- terra::extract(w, targetSitesProj, fun = 'sum', na.rm = T)
-relAbundYEWAWint$ID <- targetSitesProj$region
-relAbundYEWAWint$rel <- relAbundYEWAWint$nonbreeding/sum(relAbundYEWAWint$nonbreeding)
+relAbundYEWAWint$rel <- relAbundYEWAWint$nonbreeding / 
+  sum(relAbundYEWAWint$nonbreeding)
+relAbundYEWAWint <- relAbundYEWAWint$rel
+names(relAbundYEWAWint) <- targetNames
 
 relAbundYEWABreed <- terra::extract(b, originSitesProj, fun = 'sum', na.rm = T)
-relAbundYEWABreed$ID <- originSitesProj$region
-relAbundYEWABreed$rel <- relAbundYEWABreed$breeding/sum(relAbundYEWABreed$breeding)
-
+relAbundYEWABreed$rel <- relAbundYEWABreed$breeding / 
+  sum(relAbundYEWABreed$breeding)
+relAbundYEWABreed <- relAbundYEWABreed$rel
+names(relAbundYEWABreed) <- originNames
 
 ```
 ```{r, echo = FALSE}
-relAbundYEWABreed <- c(Arctic = 0.1711898, 'Pacific Northwest' = 0.1180323,  
-                       Southwest = 0.2857159, Central = 0.2415061,
-                       East = 0.1835559)
-relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.08557703,    
-                      'Atlantic Lowland Mexico' = 0.16889791,
-                      'Central America' = 0.46434053, 
-                      'South America' = 0.28118453)
+relAbundYEWABreed <- c(Arctic = 0.1644263, 'Pacific Northwest' = 0.1167522,  
+                       Southwest = 0.2902441, Central = 0.2394759,
+                       East = 0.1891015)
+relAbundYEWAWint <- c('Pacific and Central Mexico' = 0.09903443,    
+                      'Atlantic Lowland Mexico' = 0.18604479,
+                      'Central America' = 0.43239219, 
+                      'South America' = 0.28252859)
 ```
 ```{r}
 relAbundYEWAWint
