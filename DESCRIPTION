@@ -8,7 +8,8 @@ Authors@R: c(
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"),
-    person("Valentine", "Herrmann", role = "ctb")
+    person("Valentine", "Herrmann", role = "ctb"),
+    person("Henry", "Stevens", role = "ctb"))
   )
 Description: Allows the user to estimate transition probabilities for
     migratory animals between any two phases of the annual cycle, using a
