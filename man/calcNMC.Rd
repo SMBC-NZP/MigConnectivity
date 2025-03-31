@@ -4,10 +4,13 @@
 \alias{calcNMC}
 \title{Calculate NMC_XY, another type of migratory connectivity strength}
 \usage{
-calcNMC(psi)
+calcNMC(psi, originRelAbund = NULL)
 }
 \arguments{
 \item{psi}{Matrix of transition probabilities}
+
+\item{originRelAbund}{(optional) Vector of relative (proportional) abundance
+at the origin sites. If entered, should sum to 1.}
 }
 \value{
 \code{calcNMC} returns a list with elements:
@@ -16,13 +19,19 @@ calcNMC(psi)
    strength of network migratory connectivity}
   \item{\code{NMCpop}}{Vector of network migratory connectivity diversity
    values, also between 0 and 1, the X-node-specific version of NMC_XY}
+  \item{\code{NMCa}}{If \code{originRelAbund} was entered, the results will
+   include this, an abundance weighted measure of the strength of network
+   migratory connectivity (also between 0 and 1). If \code{originRelAbund}
+   was not entered, this will be left out}
 }
 }
 \description{
 Provides simple calculation of NMC_XY (network migratory connectivity
-strength between seasons X and Y) and network migratory connectivity
+strength between seasons X and Y), NMCa_XY (abundance-weighted network
+migratory connectivity strength), and network migratory connectivity
 diversity (X node-specific version of NMC_XY) from point estimate of psi
-(transition probabilities). Does not include measures of uncertainty.
+(transition probabilities) and \code{originRelAbund} (optional). Does not
+include measures of uncertainty.
 }
 \examples{
 nScenarios <- length(samplePsis)
@@ -32,6 +41,9 @@ for (i in 1:nScenarios) {
 }
 names(NMC1) <- names(samplePsis)
 str(NMC1)
+
+calcNMC(samplePsis[[7]], sampleOriginRelN[[2]])
+
 }
 \seealso{
 \code{\link{estNMC}}, \code{\link{calcMC}}, \code{\link{estMC}}

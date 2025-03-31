@@ -7,7 +7,8 @@
 
   # the second intermediate psi scenario, the "low" level
   psiTrue <- samplePsis[["Low"]]
-  trueNMC <- calcNMC(psiTrue)
+  originRelAbundTrue <- rep(0.25, 4)
+  trueNMC <- calcNMC(psiTrue, originRelAbund = originRelAbundTrue)
   trueNMC
 
   # Storage matrix for samples
@@ -40,6 +41,39 @@
   rmseCMR <- sqrt(mseCMR)
   rmseCMR
 
+  # Simulation of BBS data to quantify uncertainty in relative abundance
+  nSamplesAbund <- 700 #1700 are stored
+  nSimulationsAbund <- 10
+  #\dontrun{
+  #  nSamplesAbund <- 1700
+  #}
+  # Storage matrix for samples
+  abundNMCaSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
+  summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund,
+                             True = trueNMC$NMCa,
+                             mean = NA, se = NA, lcl = NA, ucl = NA)
+  for (r in 1:nSimulationsAbund) {
+    cat("Simulation",r,"of",nSimulationsAbund,"\n")
+    row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
+    results <- estNMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
+                           row0 = row0, nSamples = nSamplesAbund, verbose = 2)
+    abundNMCaSample[ , r] <- results$NMCa$sample
+    summaryAbund$mean[r] <- results$NMCa$mean
+    summaryAbund$se[r] <- results$NMCa$se
+    # Calculate confidence intervals using quantiles of sampled MC
+    summaryAbund[r, c('lcl', 'ucl')] <- results$NMCa$simpleCI
+  }
+
+  summaryAbund <- transform(summaryAbund, coverage = (True >= lcl & True <= ucl))
+  summaryAbund
+  summary(summaryAbund)
+  biasAbund <- mean(summaryAbund$mean) - trueNMC$NMCa
+  biasAbund
+  mseAbund <- mean((summaryAbund$mean - trueNMC$NMCa)^2)
+  mseAbund
+  rmseAbund <- sqrt(mseAbund)
+  rmseAbund
+
   # Ovenbird example with GL and GPS data
   data(OVENdata) # Ovenbird
 
@@ -69,4 +103,10 @@
                       originNames = Combined.psi$input$originNames,
                       nSamples = nSamplesGLGPS)
   Combo.MC2
+
+  # Can estimate NMC from previous psi estimate and abundance estimate
+  Combo.NMC3 <- estNMC(psi = Combined.psi,
+                       originRelAbund = OVENdata$originRelAbund,
+                       nSamples = nSamplesGLGPS)
+  Combo.NMC3
 }

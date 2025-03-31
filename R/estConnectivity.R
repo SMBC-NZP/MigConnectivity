@@ -3797,18 +3797,24 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #' Estimate NMC_XY, another type of migratory connectivity strength
 #'
 #' Resampling of uncertainty for NMC_XY (network migratory connectivity
-#' strength between seasons X and Y) and network migratory connectivity
-#' diversity (X node-specific version of NMC_XY) from estimates of psi
-#' (transition probabilities). Psi estimates can come from an estMigConnectivity
-#' object, anRMark psi matrix, MCMC samples, or other samples expressed in array
-#' form.
+#' strength between seasons X and Y), network migratory connectivity
+#' diversity (X node-specific version of NMC_XY), and NMCa_XY
+#' (abundance-weighted network migratory connectivity strength) from estimates
+#' of psi (transition probabilities). Psi estimates can come from an
+#' estMigConnectivity object, an RMark psi matrix, MCMC samples, or other
+#' samples expressed in array form.
 #'
 #'
-#' @param psi Transition probabilities between B origin and W target sites.
-#'  Either an array with dimensions x, B, and W (with x samples of the
-#'  transition probability matrix from another model), an 'estPsi' object
+#' @param psi Transition probabilities between X origin and Y target
+#'  sites/nodes. Either an array with dimensions n, X, and Y (with n samples of
+#'  the transition probability matrix from another model), an 'estPsi' object
 #'  (result of calling estTransition), or a MARK object with estimates of
 #'  transition probabilities
+#' @param originRelAbund Optional. Relative abundance estimates at X origin
+#'  sites (nodes). Either a numeric vector of length X that sums to 1, or an
+#'  mcmc object (such as is produced by \code{\link{modelCountDataJAGS}}) or
+#'  matrix with at least \code{nSamples} rows. If there are more than X columns,
+#'  the relevant columns should be labeled "relN[1]" through "relN[X]"
 #' @param originNames Optional. Vector of names for the origin sites. Mostly for
 #'  internal use
 #' @param targetNames Optional. Vector of names for the target sites. Mostly for
@@ -3823,6 +3829,9 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #' @param verbose 0 (default) to 2. 0 prints no output during run. 1 prints
 #'  a progress update and summary every 100 samples. 2 prints a
 #'  progress update and summary every sample
+#' @param row0 If \code{originRelAbund} is an mcmc object or array, this can be
+#'  set to 0 (default) or any greater integer to specify where to stop ignoring
+#'  samples ("burn-in")
 #' @param alpha Level for confidence/credible intervals provided. Default (0.05)
 #'  gives 95 percent CI
 #' @param returnAllInput if TRUE (the default) the output includes all of the
@@ -3896,6 +3905,10 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #'       the mean values), not accounting for sampling error.
 #'    }
 #'   }
+#'   \item{\code{NMCa}}{If parameter \code{originRelAbund} is entered, a list
+#'    containing estimates of abundance-weighted network migratory
+#'    connectivity strength. This list has the same items as NMC, but possibly
+#'    different values.}
 #'   \item{\code{input}}{List containing the inputs to \code{estNMC}.}
 #' }
 #'
@@ -3905,9 +3918,10 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #'   \code{\link{estStrength}}, \code{\link{estMantel}},
 #'   \code{\link{plot.estMigConnectivity}}
 #' @example inst/examples/estNMCExamples.R
-estNMC <- function(psi, originNames = NULL, targetNames = NULL,
+estNMC <- function(psi, originRelAbund = NULL,
+                   originNames = NULL, targetNames = NULL,
                    originSites=NULL, targetSites=NULL,
-                   nSamples = 1000, verbose=0, alpha = 0.05,
+                   nSamples = 1000, row0 = 0, verbose=0, alpha = 0.05,
                    returnAllInput = TRUE) {
   if (is.matrix(psi)) {
     psiFixed <- TRUE
@@ -3963,8 +3977,40 @@ estNMC <- function(psi, originNames = NULL, targetNames = NULL,
     if (is.null(targetNames))
       targetNames <- psiIn$input$targetNames
   }
-  pointNMC <- calcNMC(psi = psiBase)
+  if (!is.null(originRelAbund)) {
+    if (coda::is.mcmc(originRelAbund) || coda::is.mcmc.list(originRelAbund)) {
+      originRelAbund <- as.matrix(originRelAbund)
+    }
+    if (is.matrix(originRelAbund) && all(dim(originRelAbund)>1)) {
+      abundFixed <- FALSE
+      if (dim(originRelAbund)[2]>nOriginSites)
+        abundParams <- paste('relN[', 1:nOriginSites, ']', sep='')
+      else if (dim(originRelAbund)[2]==nOriginSites)
+        abundParams <- 1:nOriginSites
+      else
+        stop('Number of origin sites must be constant between distance matrix and abundance')
+      if (dim(originRelAbund)[1] >= nSamples)
+        abundRows <- round(seq(from = row0 + 1, to = dim(originRelAbund)[1],
+                               length.out = nSamples))
+      else
+        stop("You need at least nSamples rows to originRelAbund")
+      originRelAbund <- as.matrix(originRelAbund[abundRows, abundParams])
+      abundBase <- colMeans(originRelAbund)
+    }
+    else {
+      abundFixed <- TRUE
+      if (length(originRelAbund)!=nOriginSites)
+        stop('Number of origin sites must be constant between distance matrix and abundance')
+      abundBase <- originRelAbund
+    }
+  }
+  else {
+    abundFixed <- TRUE
+    abundBase <- NULL
+  }
+  pointNMC <- calcNMC(psi = psiBase, abundBase)
   sampleNMC <- rep(NA, nSamples)
+  sampleNMCa <- rep(NA, nSamples)
   sampleNmc <- array(NA, c(nSamples, nOriginSites),
                      dimnames = list(NULL, originNames))
   psi.array <- array(NA, c(nSamples, nOriginSites, nTargetSites),
@@ -3980,9 +4026,15 @@ estNMC <- function(psi, originNames = NULL, targetNames = NULL,
     else
       psiNew <- makePsiRand(psi, originSites, targetSites)
     psi.array[i, , ] <- psiNew
+    if (abundFixed)
+      abundNew <- abundBase
+    else
+      abundNew <- originRelAbund[i, abundParams]
     # Calculate NMC for new psis
-    newNMC <- calcNMC(psi = psiNew)
+    newNMC <- calcNMC(psi = psiNew, originRelAbund = abundNew)
     sampleNMC[i] <- newNMC$NMC
+    if (!is.null(abundNew))
+      sampleNMCa[i] <- newNMC$NMCa
     sampleNmc[i,] <- newNMC$NMCpop
     if (verbose > 1 || verbose == 1 && i %% 100 == 0)
       cat(" NMC mean:", mean(sampleNMC, na.rm=TRUE),
@@ -4001,6 +4053,25 @@ estNMC <- function(psi, originNames = NULL, targetNames = NULL,
                    na.rm=TRUE, names = FALSE)
   NMC.mcmc <- coda::as.mcmc(sampleNMC)
   hpdCI <- as.vector(coda::HPDinterval(NMC.mcmc, 1-alpha))
+  if (!is.null(originRelAbund)){
+    meanNMCa <- mean(sampleNMCa, na.rm = TRUE)
+    z0a <- qnorm(sum((sampleNMCa)<meanNMCa)/nSamples)
+    bcCIa <- quantile(sampleNMCa, pnorm(2*z0a+qnorm(c(alpha/2, 1-alpha/2))),
+                     na.rm=TRUE, names = FALSE)
+    NMCa.mcmc <- coda::as.mcmc(sampleNMCa)
+    hpdCIa <- as.vector(coda::HPDinterval(NMCa.mcmc, 1-alpha))
+    nmca <- list(sample = sampleNMCa, mean = meanNMCa,
+                 se = sd(sampleNMCa, na.rm = TRUE),
+                 simpleCI = quantile(sampleNMCa, na.rm = TRUE,
+                                     probs = c(alpha/2, 1-alpha/2),
+                                     type = 8, names = FALSE),
+                 bcCI = bcCIa, hpdCI = hpdCIa,
+                 median = median(sampleNMCa, na.rm = TRUE),
+                 point = pointNMC$NMCa)
+  }
+  else {
+    nmca <- NULL
+  }
   Nmc.mcmc <- coda::as.mcmc(sampleNmc)
   NmchpdCI <- coda::HPDinterval(Nmc.mcmc, 1-alpha)
   NmchpdCI <- array(NmchpdCI, c(nOriginSites, 2),
@@ -4017,6 +4088,7 @@ estNMC <- function(psi, originNames = NULL, targetNames = NULL,
   }
   if (returnAllInput) {
     input <- list(psi = psiIn,
+                  originRelAbund = originRelAbund,
                   originNames = originNames,
                   targetNames = targetNames,
                   nSamples = nSamples,
@@ -4039,7 +4111,7 @@ estNMC <- function(psi, originNames = NULL, targetNames = NULL,
                             bcCI = NmcbcCI, hpdCI = NmchpdCI,
                             median = apply(sampleNmc, 2, median, na.rm = TRUE),
                             point = pointNMC$NMCpop),
-              input = input)
+              NMCa = nmca, input = input)
   class(nmc) <- c("estNMC", "estMigConnectivity")
   return(nmc)
 }

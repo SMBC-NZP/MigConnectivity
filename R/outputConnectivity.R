@@ -111,6 +111,15 @@ print.estMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3
                       sep = ' - '), dim = list(ncol(x$NMCpop$simpleCI), 1),
                 dimnames = list(x$input$originNames, "")),
           quote = FALSE)
+    if (!is.null(x$NMCa)) {
+      cat("\nAbundance-weighted NMC (NMCa_XY) estimate (mean):",
+          format(x$NMCa$mean, digits = digits), "+/- (SE)",
+          format(x$NMCa$se, digits = digits), '\n')
+      cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+          "% confidence interval (simple quantile): ",
+          paste(format(x$NMCa$simpleCI, digits = digits, trim = TRUE),
+                collapse = ' - '), '\n', sep = "")
+    }
   }
   cat("\nThis is a subset of what's available inside this estMigConnectivity output.\n")
   if (inherits(x, "estPi"))

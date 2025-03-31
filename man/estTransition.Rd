@@ -743,6 +743,13 @@ genetics, and band/ring reencounter data.
   psi5
 }
 }
+\references{
+Hostetler, J. A., E. B. Cohen, C. M. Bossu, A. L. Scarpignato, K. Ruegg,
+A. Contina, C. S. Rushing, and M. T. Hallworth. 2025. Challenges and
+opportunities for data integration to improve estimation of migratory
+connectivity. Methods in Ecology and Evolution 16: 362-376.
+\doi{10.1111/2041-210X.14467}
+}
 \seealso{
 \code{\link{estStrength}}, \code{\link{plot.estMigConnectivity}},
   \code{\link{estMC}}, \code{\link{estMantel}}

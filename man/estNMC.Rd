@@ -6,22 +6,30 @@
 \usage{
 estNMC(
   psi,
+  originRelAbund = NULL,
   originNames = NULL,
   targetNames = NULL,
   originSites = NULL,
   targetSites = NULL,
   nSamples = 1000,
+  row0 = 0,
   verbose = 0,
   alpha = 0.05,
   returnAllInput = TRUE
 )
 }
 \arguments{
-\item{psi}{Transition probabilities between B origin and W target sites.
-Either an array with dimensions x, B, and W (with x samples of the
-transition probability matrix from another model), an 'estPsi' object
+\item{psi}{Transition probabilities between X origin and Y target
+sites/nodes. Either an array with dimensions n, X, and Y (with n samples of
+the transition probability matrix from another model), an 'estPsi' object
 (result of calling estTransition), or a MARK object with estimates of
 transition probabilities}
+
+\item{originRelAbund}{Optional. Relative abundance estimates at X origin
+sites (nodes). Either a numeric vector of length X that sums to 1, or an
+mcmc object (such as is produced by \code{\link{modelCountDataJAGS}}) or
+matrix with at least \code{nSamples} rows. If there are more than X columns,
+the relevant columns should be labeled "relN[1]" through "relN[X]"}
 
 \item{originNames}{Optional. Vector of names for the origin sites. Mostly for
 internal use}
@@ -38,6 +46,10 @@ vector indicating which sites are target}
 \item{nSamples}{Number of times to resample \code{psi}. The purpose is to
 estimate sampling uncertainty; higher values here will do so with more
 precision}
+
+\item{row0}{If \code{originRelAbund} is an mcmc object or array, this can be
+set to 0 (default) or any greater integer to specify where to stop ignoring
+samples ("burn-in")}
 
 \item{verbose}{0 (default) to 2. 0 prints no output during run. 1 prints
 a progress update and summary every 100 samples. 2 prints a
@@ -118,16 +130,21 @@ function are included in the output to save memory.}
       the mean values), not accounting for sampling error.
    }
   }
+  \item{\code{NMCa}}{If parameter \code{originRelAbund} is entered, a list
+   containing estimates of abundance-weighted network migratory
+   connectivity strength. This list has the same items as NMC, but possibly
+   different values.}
   \item{\code{input}}{List containing the inputs to \code{estNMC}.}
 }
 }
 \description{
 Resampling of uncertainty for NMC_XY (network migratory connectivity
-strength between seasons X and Y) and network migratory connectivity
-diversity (X node-specific version of NMC_XY) from estimates of psi
-(transition probabilities). Psi estimates can come from an estMigConnectivity
-object, anRMark psi matrix, MCMC samples, or other samples expressed in array
-form.
+strength between seasons X and Y), network migratory connectivity
+diversity (X node-specific version of NMC_XY), and NMCa_XY
+(abundance-weighted network migratory connectivity strength) from estimates
+of psi (transition probabilities). Psi estimates can come from an
+estMigConnectivity object, an RMark psi matrix, MCMC samples, or other
+samples expressed in array form.
 }
 \examples{
 \donttest{
@@ -139,7 +156,8 @@ form.
 
   # the second intermediate psi scenario, the "low" level
   psiTrue <- samplePsis[["Low"]]
-  trueNMC <- calcNMC(psiTrue)
+  originRelAbundTrue <- rep(0.25, 4)
+  trueNMC <- calcNMC(psiTrue, originRelAbund = originRelAbundTrue)
   trueNMC
 
   # Storage matrix for samples
@@ -172,6 +190,39 @@ form.
   rmseCMR <- sqrt(mseCMR)
   rmseCMR
 
+  # Simulation of BBS data to quantify uncertainty in relative abundance
+  nSamplesAbund <- 700 #1700 are stored
+  nSimulationsAbund <- 10
+  #\dontrun{
+  #  nSamplesAbund <- 1700
+  #}
+  # Storage matrix for samples
+  abundNMCaSample <- matrix(NA, nSamplesAbund, nSimulationsAbund)
+  summaryAbund <- data.frame(Simulation = 1:nSimulationsAbund,
+                             True = trueNMC$NMCa,
+                             mean = NA, se = NA, lcl = NA, ucl = NA)
+  for (r in 1:nSimulationsAbund) {
+    cat("Simulation",r,"of",nSimulationsAbund,"\n")
+    row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
+    results <- estNMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
+                           row0 = row0, nSamples = nSamplesAbund, verbose = 1)
+    abundNMCaSample[ , r] <- results$NMCa$sample
+    summaryAbund$mean[r] <- results$NMCa$mean
+    summaryAbund$se[r] <- results$NMCa$se
+    # Calculate confidence intervals using quantiles of sampled MC
+    summaryAbund[r, c('lcl', 'ucl')] <- results$NMCa$simpleCI
+  }
+
+  summaryAbund <- transform(summaryAbund, coverage = (True >= lcl & True <= ucl))
+  summaryAbund
+  summary(summaryAbund)
+  biasAbund <- mean(summaryAbund$mean) - trueNMC$NMCa
+  biasAbund
+  mseAbund <- mean((summaryAbund$mean - trueNMC$NMCa)^2)
+  mseAbund
+  rmseAbund <- sqrt(mseAbund)
+  rmseAbund
+
   # Ovenbird example with GL and GPS data
   data(OVENdata) # Ovenbird
 
@@ -201,6 +252,12 @@ form.
                       originNames = Combined.psi$input$originNames,
                       nSamples = nSamplesGLGPS)
   Combo.MC2
+
+  # Can estimate NMC from previous psi estimate and abundance estimate
+  Combo.NMC3 <- estNMC(psi = Combined.psi,
+                       originRelAbund = OVENdata$originRelAbund,
+                       nSamples = nSamplesGLGPS)
+  Combo.NMC3
 }
 }
 \seealso{
