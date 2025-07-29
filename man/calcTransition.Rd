@@ -125,5 +125,5 @@ print(psi_r_boot)
 }
 }
 \seealso{
-\code{\link{estTransition}}, \code{\link{optim}}
+\code{\link{estTransition}}, \code{\link[stats]{optim}}
 }

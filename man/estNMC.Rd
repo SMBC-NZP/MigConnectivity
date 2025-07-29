@@ -205,7 +205,7 @@ samples expressed in array form.
     cat("Simulation",r,"of",nSimulationsAbund,"\n")
     row0 <- nrow(abundExamples[[r]]) - nSamplesAbund
     results <- estNMC(originRelAbund = abundExamples[[r]], psi = psiTrue,
-                           row0 = row0, nSamples = nSamplesAbund, verbose = 1)
+                           row0 = row0, nSamples = nSamplesAbund, verbose = 2)
     abundNMCaSample[ , r] <- results$NMCa$sample
     summaryAbund$mean[r] <- results$NMCa$mean
     summaryAbund$se[r] <- results$NMCa$se

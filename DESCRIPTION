@@ -1,15 +1,15 @@
 Type: Package
 Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.4.7.9002
-Date: 2025-03-31
+Version: 0.4.7.9003
+Date: 2025-07-31
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", , "jhostetler@usgs.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
     person("Clark S.", "Rushing", role = "ctb"),
     person("Emily B.", "Cohen", role = "ctb"),
     person("Valentine", "Herrmann", role = "ctb"),
-    person("Henry", "Stevens", role = "ctb"))
+    person("Henry", "Stevens", role = "ctb")
   )
 Description: Allows the user to estimate transition probabilities for
     migratory animals between any two phases of the annual cycle, using a
@@ -56,5 +56,5 @@ VignetteBuilder:
 Encoding: UTF-8
 LazyData: true
 LazyDataCompression: xz
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 SystemRequirements: JAGS (https://mcmc-jags.sourceforge.net)

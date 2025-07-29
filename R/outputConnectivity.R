@@ -298,11 +298,11 @@ plot.intrinsicAssign <- function(x,map,...){
 #'   "center")
 #' @param map placeholder for eventually allowing users to plot psi estimates
 #'   on a map
-#' @param ... Additional parameters passed to \code{\link{plotCI}}
+#' @param ... Additional parameters passed to \code{\link[gplots]{plotCI}}
 #'
 #' @return No return value, called to generate plot.
 #'
-#' @seealso \code{\link{estMC}}, \code{\link{estMantel}}
+#' @seealso \code{\link{estTransition}}, \code{\link{estStrength}}, \code{\link{estMantel}}
 #'
 #' @export
 plot.estMigConnectivity <- function(x,

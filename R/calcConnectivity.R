@@ -559,7 +559,7 @@ divCoefGrad <- function(psi_r, banded, reencountered, counts) {
 #'                             nSamples = 200) #reduced for example speed
 #' print(psi_r_boot)
 #' }
-#' @seealso \code{\link{estTransition}}, \code{\link{optim}}
+#' @seealso \code{\link{estTransition}}, \code{\link[stats]{optim}}
 calcTransition <- function(banded = NULL, reencountered = NULL, counts = NULL,
                            originAssignment = NULL, targetAssignment = NULL,
                            originNames = NULL, targetNames = NULL,
