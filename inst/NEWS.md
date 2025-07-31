@@ -1,3 +1,11 @@
+# MigConnectivity 0.5.0
+
+* Added functions calcNMC and estNMC to quantify NMC_XY (network migratory connectivity strength) as well as network migratory diversity and abundance-weighted NMC
+* Edited print and plot functions to be able to present NMC estimates
+* Added citations to new migratory connectivity paper
+* Updated worked example vignette to work with current version of ebirdst package (thanks, Henry Stevens!)
+* Anchored links to functions from external packages in help files
+
 # MigConnectivity 0.4.7
 
 * Fixed error in how Dirichlet priors were set in estTransition (most affects informed priors, but it looks like it could affect all MCMC analyses a bit)
@@ -14,8 +22,8 @@
 * Switched relative https links to absolute (on web)
 * Added references (with DOI links) to DESCRIPTION
 * Added/changed return value for plot functions
-* Removed messages to console (unless verbose is on) for estTransition(). Switched cat() calls to message() in getIsoMap(). Added verbose argument to weightAssign().
-* Made sure par, options, and working directory revert to user settings on function exits.
+* Removed messages to console (unless verbose is on) for estTransition(). Switched cat() calls to message() in getIsoMap(). Added verbose argument to weightAssign()
+* Made sure par, options, and working directory revert to user settings on function exits
 
 # MigConnectivity 0.4.4
 

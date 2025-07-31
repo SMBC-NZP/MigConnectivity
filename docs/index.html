@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jeffrey A. Hostetler, Michael T. Hallworth" />
 
-<meta name="date" content="2024-01-12" />
+<meta name="date" content="2025-07-31" />
 
 <title>MigConnectivity package</title>
 
@@ -49,6 +49,7 @@ ul.task-list{list-style: none;}
 div.csl-bib-body { }
 div.csl-entry {
 clear: both;
+margin-bottom: 0em;
 }
 .hanging div.csl-entry {
 margin-left:2em;
@@ -261,25 +262,12 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">MigConnectivity package</h1>
 <h4 class="author">Jeffrey A. Hostetler, Michael T. Hallworth</h4>
-<h4 class="date">2024-01-12</h4>
+<h4 class="date">2025-07-31</h4>
 
 
 
 <p>Welcome to the MigConnectivity package! We hope you find it helpful.
-The MigConnectivity package allows the user to estimate or calculate
-transition probabilities for migratory animals between any two phases of
-the annual cycle, using a variety of different data types, with the
-function estTransition. The user can also estimate or calculate the
-strength of migratory connectivity (MC), a standardized metric to
-quantify the extent to which populations co-occur between two phases of
-the annual cycle. MC is independent of data type and accounts for the
-relative abundance of populations distributed across a seasonal range.
-The package includes functions to estimate MC (estStrength) and the more
-traditional metric of migratory connectivity strength (Mantel
-correlation; rM; estMantel) incorporating uncertainty from multiple
-sources of sampling error. We have several vignettes to help you
-navigate the package:</p>
-<p>A growing number of tools are available for studying the seasonal
+A growing number of tools are available for studying the seasonal
 distributions of migratory animals across the annual cycle including
 individual tracking, assignments quantifying range-wide migratory
 connectivity patterns. However, integrating data types requires methods
@@ -295,12 +283,25 @@ types (banding reencounter, light-level geolocator, stable isotopes in
 tissues, genetics, and GPS) in precision, bias, reencounter probability,
 and directionality (i.e., combining breeding to nonbreeding and
 nonbreeding to breeding).</p>
+<p>The MigConnectivity package allows the user to estimate or calculate
+transition probabilities for migratory animals between any two phases of
+the annual cycle, using a variety of different data types, with the
+function estTransition. The user can also estimate or calculate the
+strength of migratory connectivity (MC), a standardized metric to
+quantify the extent to which populations co-occur between two phases of
+the annual cycle. MC is independent of data type and accounts for the
+relative abundance of populations distributed across a seasonal range.
+The package includes functions to estimate MC (estStrength) and the more
+traditional metric of migratory connectivity strength (Mantel
+correlation; rM; estMantel) incorporating uncertainty from multiple
+sources of sampling error. We have several vignettes to help you
+navigate the package:</p>
 <ol style="list-style-type: decimal">
 <li><a href="https://smbc-nzp.github.io/MigConnectivity/WorkedExample.html">Worked
 examples</a> of processing data</li>
 <li>The <a href="https://smbc-nzp.github.io/MigConnectivity/estTransition.html">estTransition</a>
 function estimates migratory connectivity patterns (ψ, transition
-probabilities) from seasonal movement data <span class="citation">(Hostetler et al. n.d.)</span></li>
+probabilities) from seasonal movement data <span class="citation">(Hostetler et al. 2025)</span></li>
 <li>The <a href="https://smbc-nzp.github.io/MigConnectivity/estStrength.html">estStrength</a>
 function estimates the strength of migratory connectivity (MC) from
 transition probabilities and relative abundances <span class="citation">(Cohen et al. 2018, Roberts et al. 2023)</span></li>
@@ -318,11 +319,12 @@ functionality</a> vignette</li>
 </ol>
 <div id="literature-cited" class="section level3">
 <h3>Literature Cited</h3>
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 <div id="ref-cohen_quantifying_2018" class="csl-entry">
 Cohen, E. B., J. A. Hostetler, M. T. Hallworth, C. S. Rushing, T. S.
-Sillett, and P. P. Marra. 2018. Quantifying the strength of migratory
-connectivity. Methods in Ecology and Evolution 9:513–524.
+Sillett, and P. P. Marra. 2018. <a href="https://doi.org/10.1111/2041-210X.12916">Quantifying the strength
+of migratory connectivity</a>. Methods in Ecology and Evolution
+9:513–524.
 </div>
 <div id="ref-cohen_strength_2019" class="csl-entry">
 Cohen, E. B., C. R. Rushing, F. R. Moore, M. T. Hallworth, J. A.
@@ -331,17 +333,17 @@ Hostetler, M. G. Ramirez, and P. P. Marra. 2019. <a href="https://doi.org/10.111
 through the <span>Gulf</span> of <span>Mexico</span></a>. Ecography
 42:658–669.
 </div>
-<div id="ref-hostetler_challenges_nodate" class="csl-entry">
-Hostetler, J. A., E. B. Cohen, C. M. Bossu, A. L. Scarpignato, K. C.
-Ruegg, A. J. Contina, C. S. Rushing, and M. T. Hallworth. (n.d.).
-Challenges and opportunities for data integration to improve estimation
-of migratory connectivity.
+<div id="ref-hostetler_challenges_2025" class="csl-entry">
+Hostetler, J. A., E. B. Cohen, C. M. Bossu, A. L. Scarpignato, K. Ruegg,
+A. Contina, C. S. Rushing, and M. T. Hallworth. 2025. <a href="https://doi.org/10.1111/2041-210X.14467">Challenges and
+opportunities for data integration to improve estimation of migratory
+connectivity</a>. Methods in Ecology and Evolution 16:362–376.
 </div>
 <div id="ref-roberts_migratory_2023" class="csl-entry">
 Roberts, A., A. L. Scarpignato, A. Huysman, J. A. Hostetler, and E. B.
-Cohen. 2023. Migratory connectivity of <span>North</span>
-<span>American</span> waterfowl across administrative flyways.
-Ecological Applications 33:e2788.
+Cohen. 2023. <a href="https://doi.org/10.1002/jwmg.22405">Migratory
+connectivity of <span>North</span> <span>American</span> waterfowl
+across administrative flyways</a>. Ecological Applications 33:e2788.
 </div>
 </div>
 </div>

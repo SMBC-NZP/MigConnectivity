@@ -123,7 +123,7 @@ plot(OVENpsi, legend = "top", cex = 0.5, las = 2)
 
 ### Example 2: Combining tracking technology and genoscape assignments
 
-Below we estimate transition probabilities for Yellow Warblers (<i>Setophaga petechia</i>) by integrating several different data sources such as tracking data (light-level geolocators) and genoscape assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
+Below we estimate transition probabilities for Yellow Warblers (<i>Setophaga petechia</i>) by integrating several different data sources such as tracking data (light-level geolocators) and genoscape assignments. Furthermore, the data sources were derived from both breeding and non-breeding individuals. The following parameters are needed to estimate transition probabilities with integrating different data types [@hostetler_challenges_2025]. Below, we provide a streamlined example once the data are formatted for the analysis. See [Worked Examples](WorkedExample.html) for how to derive and structure the data for analysis. 
 
 1. Four logical vectors indicating the type of information the location/assignment estimates were derived from <br>(light-level geolocators, telemetry, isotopes, and/or genoscapes)    
 1. Location Bias - a vector that has error estimates for both longitude and latitude    
