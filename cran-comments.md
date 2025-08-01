@@ -1,8 +1,8 @@
 ## R CMD check results
 
-── R CMD check results ──────────────────────────────────────── MigConnectivity 0.4.7 ────
-Duration: 3h 1m 10.4s
+-- R CMD check results ---------------------------------------------------------------------------------------------- MigConnectivity 0.5.0 ----
+Duration: 2h 58m 2s
 
-0 errors ✔ | 0 warnings ✔ | 0 notes ✔
+0 errors v | 0 warnings v | 0 notes v
 
-Comment from maintainer: apologies for the rapid turnaround since we last updated the package. We found a serious error and wanted to get the fix out there ASAP.
+Comments from maintainer: I anchored links to functions from external packages, as required.

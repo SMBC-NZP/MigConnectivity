@@ -160,7 +160,7 @@ Sys.time()-a
 Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
 M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
 migratory connectivity for birds en route to breeding through the Gulf of
-Mexico. Ecography 42: 658-669.
+Mexico. Ecography 42: 658 - 669.
 
 Hobson, K. A., S. L. Van Wilgenburg, L. I. Wassenaar, and K. Larson. 2012.
 Linking hydrogen isotopes in feathers and precipitation: sources of

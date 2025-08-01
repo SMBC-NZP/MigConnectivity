@@ -17,14 +17,20 @@ into vignettes folder.
 7. [With maintainer approval only] Pull latest develop version, update version
 number and date in DESCRIPTION, and run Check one last time. Edit links and
 info in README.md. Push to develop branch on origin one last time.
-8. [With maintainer approval only] Merge branches locally: Git | More |
+8. Run all the checks in dev_history.R and fix any issues. Some of these will
+repeat checks already done in Step 5 and/or take a while.
+9. Print the variable "results" from step 8 and copy the results to
+cran-comments.md.
+10. [With maintainer approval only] Merge branches locally: Git | More |
 Shell... then type "git checkout master", then "git merge --no-ff develop".
-9. [With maintainer approval only] Then push from master to origin (also
+11. [With maintainer approval only] Then push from master to origin (also
 master).
-10. [With maintainer approval only] Once a new version of MigConnectivity is on
+12. [With maintainer approval only] Once a new version of MigConnectivity is on
 GitHub, go to website and create new release.  On SMBC-NZP / MigConnectivity
 choose releases then Draft a new release.  Fill in version number and relevant
 updates since last version.
+13. [With maintainer approval only] Run the last or second to last line of
+dev_history.R to submit to CRAN.
 
 Extensions
 1. Create variable(s) with projection strings, so users don't have to type them

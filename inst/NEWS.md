@@ -2,7 +2,7 @@
 
 * Added functions calcNMC and estNMC to quantify NMC_XY (network migratory connectivity strength) as well as network migratory diversity and abundance-weighted NMC
 * Edited print and plot functions to be able to present NMC estimates
-* Added citations to new migratory connectivity paper
+* Added/updated citations to our new migratory connectivity paper
 * Updated worked example vignette to work with current version of ebirdst package (thanks, Henry Stevens!)
 * Anchored links to functions from external packages in help files
 
