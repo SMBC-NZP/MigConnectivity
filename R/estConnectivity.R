@@ -649,7 +649,7 @@ estTransitionBoot <- function(originSites = NULL,
                               originRaster = NULL,
                               verbose = 0,
                               alpha = 0.05,
-                              resampleProjection = 'ESRI:102010',#MigConnectivity::projections$EquidistConic,
+                              resampleProjection = 'ESRI:102010',
                               nSim = ifelse(any(isRaster), 10, 1000),
                               maxTries = 300,
                               dataOverlapSetting = "dummy",
@@ -659,30 +659,9 @@ estTransitionBoot <- function(originSites = NULL,
                               reencountered = NULL,
                               method = "bootstrap",
                               m = NULL,
+                              nAnimals = length(isGL),
+                              nAnimalsTotal = nAnimals + sum(banded),
                               returnAllInput = TRUE) {
-  # Input checking and assignment
-  if (any(captured != "origin" & captured != "target" & captured != "neither")){
-    stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
-  if (!(verbose %in% 0:3)){
-    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
-  if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither"))){
-    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
-  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = FALSE)) &&
-      any(isGL & (captured == "origin" | captured == "neither"))){
-    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
-  if ((is.null(originPoints) && is.null(originRaster) && is.null(originSites)) &&
-      is.null(originAssignment) && is.null(banded)){
-    stop("Need to define either originAssignment, originSites, originRaster, originPoints, or banded")}
-  if ((is.null(targetPoints) && is.null(targetRaster) &&
-       is.null(targetSites)) && is.null(targetAssignment) && is.null(reencountered)){
-    stop("Need to define either targetAssignment, targetSites, targetRaster, targetPoints, or reencountered")}
-  if ((is.null(banded) && !is.null(reencountered) ||
-       !is.null(banded)) && is.null(reencountered)){
-    stop("Need to define both banded and reencountered")}
-  if(inherits(originSites,"SpatialPolygonsDataFrame")){
-    originSites <- sf::st_as_sf(originSites)}
-  if(inherits(targetSites,"SpatialPolygonsDataFrame")){
-    targetSites <- sf::st_as_sf(targetSites)}
 
   targetStats <- assignRasterStats(targetRaster)
   targetPointsAssigned <- targetStats$PointsAssigned
@@ -1881,21 +1860,36 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                           returnAllInput = TRUE) {
   dataOverlapSetting <- match.arg(dataOverlapSetting)
   method <- match.arg(method)
-  if (method != "MCMC") {
-    psi <- estTransitionBoot(isGL=isGL, isTelemetry = isTelemetry,
-                             isRaster = isRaster, isProb = isProb,
-                             geoBias=geoBias, geoVCov=geoVCov,
-                             geoBiasOrigin = geoBiasOrigin,
-                             geoVCovOrigin=geoVCovOrigin,
-                             targetPoints=targetPoints, targetSites=targetSites,
-                             targetAssignment=targetAssignment,
-                             originPoints=originPoints, originSites=originSites,
-                             originAssignment=originAssignment,
-                             originNames=originNames, targetNames=targetNames,
-                             targetRaster = targetRaster,
+  check <- checkMovementData(originAssignment = originAssignment,
+                             targetAssignment = targetAssignment,
                              originRaster = originRaster,
-                             captured = captured,
-                             nBoot = nSamples, verbose=verbose,
+                             targetRaster = targetRaster,
+                             originSites = originSites,
+                             targetSites = targetSites, method = method,
+                             banded = banded, reencountered = reencountered,
+                             isGL = isGL, isTelemetry = isTelemetry,
+                             isRaster = isRaster, isProb = isProb,
+                             captured = captured, verbose = verbose,
+                             geoBias = geoBias, geoVCov = geoVCov,
+                             geoBiasOrigin = geoBiasOrigin,
+                             geoVCovOrigin = geoVCovOrigin)
+  if (method != "MCMC") {
+    psi <- estTransitionBoot(isGL = check$isGL, isTelemetry = check$isTelemetry,
+                             isRaster = check$isRaster, isProb = check$isProb,
+                             geoBias = check$geoBias, geoVCov = check$geoVCov,
+                             geoBiasOrigin = check$geoBiasOrigin,
+                             geoVCovOrigin = check$geoVCovOrigin,
+                             targetPoints = check$targetPoints,
+                             targetSites = check$targetSites,
+                             targetAssignment = check$targetAssignment,
+                             originPoints = check$originPoints,
+                             originSites = check$originSites,
+                             originAssignment = check$originAssignment,
+                             originNames=originNames, targetNames=targetNames,
+                             targetRaster = check$targetRaster,
+                             originRaster = check$originRaster,
+                             captured = check$captured,
+                             nBoot = nSamples, verbose = verbose,
                              nSim = nSim, alpha = alpha,
                              resampleProjection = resampleProjection,
                              maxTries = maxTries,
@@ -1903,13 +1897,15 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              fixedZero = fixedZero,
                              targetRelAbund = targetRelAbund,
                              method = method, m = m,
-                             banded = banded, reencountered = reencountered,
+                             banded = check$banded,
+                             reencountered = check$reencountered,
                              returnAllInput = returnAllInput)
   }
   else {
-    psi <- estTransitionJAGS(banded = banded, reencountered = reencountered,
-                             originAssignment = originAssignment,
-                             targetAssignment = targetAssignment,
+    psi <- estTransitionJAGS(banded = check$banded,
+                             reencountered = check$reencountered,
+                             originAssignment = check$originAssignment,
+                             targetAssignment = check$targetAssignment,
                              alpha = alpha,
                              nSamples = nSamples, verbose = verbose,
                              originNames = originNames,
@@ -1918,10 +1914,10 @@ estTransition <- function(originSites = NULL, targetSites = NULL,
                              nChains = nChains, fixedZero = fixedZero,
                              psiPrior = psiPrior,
                              returnAllInput = returnAllInput,
-                             originPoints = originPoints,
-                             targetPoints = targetPoints,
-                             originSites = originSites,
-                             targetSites = targetSites)
+                             originPoints = check$originPoints,
+                             targetPoints = check$targetPoints,
+                             originSites = check$originSites,
+                             targetSites = check$targetSites)
   }
   class(psi) <- c("estPsi", "estMigConnectivity")
   return(psi)
@@ -4120,6 +4116,264 @@ estNMC <- function(psi, originRelAbund = NULL,
   return(nmc)
 }
 
+identifySitesBoot <- function(originGrid = NULL, targetGrid = NULL,
+                              originBlocks = NULL, targetBlocks = NULL,
+                              originRange = NULL, targetRange = NULL,
+                              originPoints = NULL, targetPoints = NULL,
+                              nSamples = 1000, isGL = FALSE,
+                              isTelemetry = FALSE, isRaster = FALSE,
+                              captured = "origin",
+                              geoBias = NULL, geoVCov = NULL,
+                              geoBiasOrigin = geoBias, geoVCovOrigin = geoVCov,
+                              targetRaster = NULL, originRaster = NULL,
+                              verbose = 0, alpha = 0.05,
+                              resampleProjection = 'ESRI:102010',
+                              nSim = ifelse(any(isRaster & isGL), 5000,
+                                            ifelse(any(isGL), 1000,
+                                                   ifelse(any(isRaster), 10, 1))),
+                              maxTries = 300,
+                              nBurnin = 5000, nChains = 3, nThin = 1,
+                              dataOverlapSetting = c("dummy", "none", "named"),
+                              targetRelAbund = NULL,
+                              algorithm = c("maxMC", "cluster"),
+                              method = c("bootstrap", "MCMC"),
+                              originSites = NULL, targetSites = NULL,
+                              originNames = NULL, targetNames = NULL,
+                              returnAllInput = TRUE) {
+  m <- nSamples
+  originFixed <- !is.null(originSites)
+  targetFixed <- !is.null(targetSites)
+  nOriginSitesMax <- nrow(originBlocks)
+  nTargetSitesMax <- nrow(targetBlocks)
+  o.sites.list <- t.sites.list <- psi.list <- MC.list <- vector("list", nSamples)
+  boot <- 1
+  if (verbose > 0)
+    cat("Starting bootstrap\n")
+  while (boot <= nSamples) {
+    if (verbose > 1 || verbose == 1 && boot %% 100 == 0)
+      cat("Bootstrap Run", boot, "of", nSamples, "at", date(), "\n")
+    # Make sure have animals from every origin site
+    origin.sample <- c() # Start with zero origin sites
+    while (length(unique(origin.sample)) < nOriginSitesMax) { #2
+      # Sample individual animals with replacement
+      animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
+      if (any(captured[animal.sample]!='origin')) {
+        if (length(dim(originAssignment))==2)
+          assignment <- originAssignment[animal.sample, , drop = FALSE]
+        else
+          assignment <- originAssignment[animal.sample, drop = FALSE]
+        oSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample]!='origin'),
+                           isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
+                           isProb = (isProb[animal.sample] & captured[animal.sample]!='origin'),
+                           isTelemetry = (isTelemetry[animal.sample] |
+                                            isCMR[animal.sample] |
+                                            captured[animal.sample]=='origin'),
+                           geoBias = geoBiasOrigin,
+                           geoVCov = geoVCovOrigin,
+                           points = originPoints[animal.sample, ],
+                           matvals = originRasterXYZ[, c(1:2, animal.sample + 2)],
+                           matvals_crs = originRasterXYZcrs,
+                           singleCell = originSingleCell[,,animal.sample],
+                           overlap1 = originCon[,animal.sample],
+                           pointsInSites = originPointsInSites,
+                           assignment = assignment,
+                           sites = originBlocks,
+                           resampleProjection = resampleProjection,
+                           nSim = nSim,
+                           maxTries = maxTries)
+        if (!is.null(oSamp$notfind)) {
+          oSamp$notfind$Animal <- animal.sample[oSamp$notfind$Animal]
+          notfind <- unique(oSamp$notfind)
+          stop('maxTries (',maxTries,') reached during origin location sampling, exiting. ',
+               'Animal(s) where location sampling failed to fall in sites:\n',
+               paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+               '\nExamine originSites',
+               ifelse(any(notfind$isGL),
+                      ', geoBiasOrigin, geoVcovOrigin, originPoints', ''),
+               ifelse(any(notfind$isRaster), ', originRaster', ''),
+               ifelse(any(notfind$isTelemetry), ', originPoints/captured', ''),
+               ', and resampleProjection to determine why sampled points fell outside sites.')
+        }
+        origin.sample <- oSamp$site.sample
+        if (verbose > 2)
+          cat(' ', oSamp$draws, 'origin draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
+      }
+      else {
+        # Get origin population for each animal sampled
+        if (length(dim(originAssignment))==2){
+          origin.sample <- apply(originAssignment[animal.sample, ], 1, which.max)
+          if (is.list(origin.sample)) {
+            origin.sample[lengths(origin.sample)==0] <- NA
+            origin.sample <- unlist(origin.sample)
+          }
+        }
+        else
+          origin.sample <- originAssignment[animal.sample]
+      }
+    }
+    if (any(captured[animal.sample]!="target")) {
+      if (length(dim(targetAssignment))==2)
+        assignment <- targetAssignment[animal.sample, , drop = FALSE]
+      else
+        assignment <- targetAssignment[animal.sample, drop = FALSE]
+      tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
+                         isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
+                         isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
+                         isTelemetry = (isTelemetry[animal.sample] |
+                                          isCMR[animal.sample] |
+                                          captured[animal.sample] == "target"),
+                         geoBias = geoBias, geoVCov = geoVCov,
+                         points = targetPoints[animal.sample, ],
+                         matvals = targetRasterXYZ[, c(1:2, animal.sample + 2)],
+                         matvals_crs = targetRasterXYZcrs,
+                         singleCell = targetSingleCell[,,animal.sample],
+                         pointsInSites = targetPointsInSites,
+                         overlap1 = targetCon[, animal.sample],
+                         sites = targetBlocks,
+                         assignment = assignment,
+                         resampleProjection = resampleProjection, nSim = nSim,
+                         maxTries = maxTries)
+      if (!is.null(tSamp$notfind)) {
+        tSamp$notfind$Animal <- animal.sample[tSamp$notfind$Animal]
+        notfind <- unique(tSamp$notfind)
+        stop('maxTries (',maxTries,') reached during target location sampling, exiting. ',
+             'Animal(s) where location sampling failed to fall in sites:\n',
+             paste(utils::capture.output(print(notfind, row.names = FALSE)), collapse = "\n"),
+             '\nExamine targetSites',
+             ifelse(any(notfind$isGL),
+                    ', geoBiasOrigin, geoVcovOrigin, targetPoints', ''),
+             ifelse(any(notfind$isRaster), ', targetRaster', ''),
+             ifelse(any(notfind$isTelemetry), ', targetPoints/captured', ''),
+             ', and resampleProjection to determine why sampled points fell outside sites.')
+      }
+      target.sample <- tSamp$site.sample
+      target.sample[target.sample==0] <- NA
+      target.point.sample <- tSamp$point.sample
+      if (verbose > 2)
+        cat(' ', tSamp$draws, 'target draw(s) (of length', nSim, 'and of', maxTries, 'possible).\n')
+    }
+    else {
+      # Get target population for each animal sampled
+      if (length(dim(targetAssignment))==2){
+        target.sample <- apply(targetAssignment[animal.sample, ], 1, which.max)
+        if (is.list(target.sample)) {
+          target.sample[lengths(target.sample)==0] <- NA
+          target.sample <- unlist(target.sample)
+        }
+      }
+      else
+        target.sample <- targetAssignment[animal.sample]
+    }
+    # Now that we have breeding and non-breeding blocks for point...
+    sites <- optimSites(originSample = origin.sample,
+                        targetSample = target.sample, algorithm = algorithm,
+                        originBlocks = originBlocks, targetBlocks = targetBlocks,
+                        originFixed = originFixed, targetFixed = targetFixed)
+    o.sites.list[[boot]] <- sites$originSites
+    t.sites.list[[boot]] <- sites$targetSites
+
+    psi.list[[boot]] <- sites$psi
+    MC.list[[boot]] <- sites$MC
+    boot <- boot + 1
+  }
+
+}
+
+identifySites <- function(originGrid = NULL, targetGrid = NULL,
+                          originBlocks = NULL, targetBlocks = NULL,
+                          originRange = NULL, targetRange = NULL,
+                          originPoints = NULL, targetPoints = NULL,
+                          nSamples = 1000, isGL = FALSE, isTelemetry = FALSE,
+                          isRaster = FALSE,
+                          captured = "origin", geoBias = NULL, geoVCov = NULL,
+                          geoBiasOrigin = geoBias, geoVCovOrigin = geoVCov,
+                          targetRaster = NULL, originRaster = NULL,
+                          verbose = 0, alpha = 0.05,
+                          resampleProjection = 'ESRI:102010',
+                          nSim = ifelse(any(isRaster & isGL), 5000,
+                                        ifelse(any(isGL), 1000,
+                                               ifelse(any(isRaster), 10, 1))),
+                          maxTries = 300,
+                          nBurnin = 5000, nChains = 3, nThin = 1,
+                          dataOverlapSetting = c("dummy", "none", "named"),
+                          targetRelAbund = NULL,
+                          algorithm = c("maxMC", "cluster"),
+                          method = c("bootstrap", "MCMC"),
+                          originSites = NULL, targetSites = NULL,
+                          originNames = NULL, targetNames = NULL,
+                          returnAllInput = TRUE) {
+  dataOverlapSetting <- match.arg(dataOverlapSetting)
+  method <- match.arg(method)
+  algorithm <- match.arg(algorithm)
+  check <- checkMovementData()
+  # Check geographic grid/range/sites info
+  if (is.null(originSites)) {
+    originFixed <- FALSE
+    if (is.null(originBlocks)) {
+      if (is.null(originGrid)) {
+        if (is.null(originRange)) {
+          stop("Need to provide geographic information on the origin grid or blocks (or at least range) to proceed")
+        }
+        originGrid <- sf::st_sf(sf::st_make_grid(originRange, n = c(50, 50)))
+        originGrid <- sf::st_intersection(originGrid, originRange)
+      }
+      originBlocks <- generateBlocks(originGrid, originPoints, originRaster)
+    }
+  }
+  else {
+    originFixed <- TRUE
+    originBlocks <- originSites
+  }
+  if (is.null(targetSites)) {
+    originFixed <- FALSE
+    if (is.null(targetBlocks)) {
+      if (is.null(targetGrid)) {
+        if (is.null(targetRange)) {
+          stop("Need to provide geographic information on the target grid or blocks (or at least range) to proceed")
+        }
+        targetGrid <- sf::st_sf(sf::st_make_grid(targetRange, n = c(50, 50)))
+        targetGrid <- sf::st_intersection(targetGrid, targetRange)
+      }
+      targetBlocks <- generateBlocks(targetGrid, targetPoints, targetRaster)
+    }
+  }
+  else {
+    targetFixed <- TRUE
+    targetBlocks <- targetSites
+  }
+  if (originFixed && targetFixed) {
+    stop("Setting either originSites or targetSites defines the sites for one side. Setting both means there's no point in running this function")
+  }
+
+  if (method != "MCMC") {
+    sites <- identifySitesBoot(originGrid = originGrid, targetGrid = targetGrid,
+                               originBlocks = originBlocks,
+                               targetBlocks = targetBlocks,
+                               originRange = originRange,
+                               targetRange = targetRange,
+                               isGL=isGL, isTelemetry = isTelemetry,
+                             isRaster = isRaster,
+                             geoBias=geoBias, geoVCov=geoVCov,
+                             geoBiasOrigin = geoBiasOrigin,
+                             geoVCovOrigin=geoVCovOrigin,
+                             targetPoints=targetPoints, targetSites=targetSites,
+                             originPoints=originPoints, originSites=originSites,
+                             originNames=originNames, targetNames=targetNames,
+                             targetRaster = targetRaster,
+                             originRaster = originRaster,
+                             captured = captured,
+                             nBoot = nSamples, verbose=verbose,
+                             nSim = nSim, alpha = alpha,
+                             resampleProjection = resampleProjection,
+                             maxTries = maxTries,
+                             dataOverlapSetting = dataOverlapSetting,
+                             fixedZero = fixedZero,
+                             targetRelAbund = targetRelAbund,
+                             method = method,
+                             returnAllInput = returnAllInput)
+
+  }
+}
 
 #' @rdname estTransition
 #' @export

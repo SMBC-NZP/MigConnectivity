@@ -69,7 +69,7 @@ usethis::use_version(which = c("patch", "minor", "major", "dev")[1])
 
 tools::buildVignettes(dir = ".", tangle=TRUE)
 dir.create("docs")
-file.copy(dir("vignettes", full.names=TRUE), "docs", overwrite=TRUE)
+file.copy(dir("vignettes", full.names=TRUE), "docs", overwrite=TRUE) #pattern = "html",
 
 # Verify you're ready for release, and release
 devtools::release() #OR#

@@ -697,6 +697,87 @@ calcNMC <- function(psi, originRelAbund = NULL) {
   }
 }
 
+setsUnion <- function(sets, geom) {
+  x <- max(sets)
+  out <- c()
+  for (i in 1:x) {
+    out <- c(out, sf::st_union(geom[sets==i, ]))
+  }
+  return(sf::st_sf(out))
+}
+
+optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
+                       algorithm = "maxMC", originRelAbund = NULL,
+                       originFixed = FALSE, targetFixed = FALSE,
+                       originTies = NULL, targetTies = NULL) {
+  if (algorithm == "maxMC" && is.null(originRelAbund))
+    stop("To use algorithm 'maxMC' you need to provide originRelAbund")
+  if (!originFixed) {
+    originCombos <- partitions::setparts(nrow(originBlocks))[ , -1]
+    if (!is.null(originTies)){
+
+    }
+    originCombos2 <- apply(originCombos, 2, setsUnion, geom = originBlocks,
+                           simplify = FALSE)
+    if (!is.null(originRelAbund)) {
+      originRelAbunds <- apply(originCombos, 2, rowsum, x = originRelAbund,
+                               simplify = FALSE)
+    }
+  }
+  else {
+    originCombos <- matrix(1:nrow(originBlocks), nrow(originBlocks), 1)
+    originCombos2 <- list(originBlocks)
+    originRelAbunds <- list(originRelAbund)
+  }
+  if (!targetFixed) {
+    targetCombos <- partitions::setparts(nrow(targetBlocks))[ , -1]
+    if (!is.null(targetTies)){
+
+    }
+    targetCombos2 <- apply(targetCombos, 2, setsUnion, geom = targetBlocks,
+                           simplify = FALSE)
+  }
+  else {
+    targetCombos2 <- list(targetBlocks)
+  }
+  k <- length(originCombos2) * length(targetCombos2)
+  originAssignments <- apply(originCombos, 2, function(x, y) x[y],
+                             y = originSamples, simplify = FALSE)
+  originAssignments <- rep(originAssignments, times = length(targetCombos2))
+  targetAssignments <- apply(targetCombos, 2, function(x, y) x[y],
+                             y = targetSamples, simplify = FALSE)
+  targetAssignments <- rep(targetAssignments, each = length(originCombos2))
+  if (algorithm == "maxMC") {
+    originCenters <- lapply(originCombos2, function(x)
+      suppressWarnings(sf::st_centroid(x)))
+    originCenters <- lapply(originCenters, sf::st_transform, crs = 4326)
+    originDists <- lapply(originCenters, function (x)
+      distFromPos(sf::st_coordinates(x$geometry)))
+    originDists <- rep(originDists, times = length(targetCombo2))
+    targetCenters <- lapply(targetCombos2, function(x)
+      suppressWarnings(sf::st_centroid(x)))
+    targetCenters <- lapply(targetCenters, sf::st_transform, crs = 4326)
+    targetDists <- lapply(targetCenters, function (x)
+      distFromPos(sf::st_coordinates(x$geometry)))
+    targetDists <- rep(targetDists, each = length(originCombos2))
+    originRelAbunds <- rep(originRelAbunds, times = length(targetCombos2))
+    psis <- mapply(calcTransition, originAssignment = originAssignments,
+                   targetAssignment = targetAssignments)
+    MCs <- mapply(calcMC, originDist = originDists, targetDist = targetDists,
+                  originRelAbund = originRelAbunds, psi = psis,
+                  MoreArgs = list(sampleSize = length(originSamples)))
+    whichCombos <- which.max(MCs)
+    whichTargetCombo <- ceiling(whichCombos / length(originCombos2))
+    whichOriginCombo <- whichCombos %% length(originCombos2)
+    if (whichOriginCombo==0)
+      whichOriginCombo <- length(originCombos2)
+  }
+  return(list(originSites = originCombos2[[whichOriginCombo]],
+              targetSites = targetCombos2[[whichTargetCombo]],
+              psi = psis[[whichCombos]], MC = MCs[[whichCombos]]))
+}
+
+
 #' @rdname reverseTransition
 #' @export
 reversePsiRelAbund <- reverseTransition

@@ -999,3 +999,133 @@ map.estPsi <- function(x, originSites, targetSites,
 # box(which="plot")
 # #
 }
+
+mapPsi <- function(x, originSites, targetSites,
+                   originNames = originSites$name, targetNames = targetSites$name,
+                   originAlign = c("edge", "center", "offset"),
+                   targetAlign = c("edge", "center", "offset"),
+                   originOffset = NULL, targetOffset = NULL,
+                   col.origin = "blue", col.target = "brown", col.arrows = NULL,
+                   maxWidth = 100000,
+                   subsetOrigin = NULL, subsetTarget = NULL,
+                   doubled = FALSE, labelOrigin = TRUE, labelTarget = TRUE,
+                   addAbund = FALSE, originAbund = NULL, targetAbund = NULL){
+  originAlign <- match.arg(originAlign)
+  targetAlign <- match.arg(targetAlign)
+  nTargetSites <- ncol(x)
+  nOriginSites <- nrow(x)
+  if (is.null(subsetOrigin))
+    subsetOrigin <- 1:nOriginSites
+  if (is.null(subsetTarget))
+    subsetTarget <- 1:nTargetSites
+  originCenters <- suppressWarnings(sf::st_coordinates(sf::st_centroid(originSites)))
+  targetCenters <- suppressWarnings(sf::st_coordinates(sf::st_centroid(targetSites)))
+  if (is.null(originOffset))
+    originOffset <- matrix(0, nOriginSites, 2)
+  if (is.null(targetOffset))
+    targetOffset <- matrix(0, nTargetSites, 2)
+  allSites <- c(sf::st_geometry(originSites), sf::st_geometry(targetSites))
+  if (is.null(col.arrows)) {
+    col.arrows <- matrix(grDevices::rgb(rep(1:nOriginSites, nTargetSites)/nOriginSites,
+                                        rep(1:nTargetSites, each = nOriginSites)/nTargetSites,
+                                        1 - (rep(1:nOriginSites, nTargetSites) +
+                                               rep(1:nTargetSites, each = nOriginSites)) /
+                                          (nOriginSites + nTargetSites),
+                                        alpha=1), nOriginSites, nTargetSites)
+  }
+  else if (length(col.arrows)==1) {
+    col.arrows <- matrix(col.arrows, nOriginSites, nTargetSites)
+  }
+  rgbArrows <- vector("list", nOriginSites)
+  for (i in 1:nOriginSites)
+    rgbArrows[[i]] <- grDevices::col2rgb(col.arrows[i,])
+  if (is.null(col.origin)) {
+    col.origin <- 1:nOriginSites
+  }
+  else if (length(col.origin)==1) {
+    col.origin <- rep(col.origin, nOriginSites)
+  }
+  if (is.null(col.target)) {
+    col.target <- 1:nTargetSites + nOriginSites
+  }
+  else if (length(col.target)==1) {
+    col.target <- rep(col.target, nTargetSites)
+  }
+  if (addAbund) {
+    originNames <- paste0(originNames, "\nN = ", originAbund)
+    targetNames <- paste0(targetNames, "\nN = ", targetAbund)
+  }
+  op <- graphics::par(no.readonly = TRUE)
+  on.exit(graphics::par(op))
+  graphics::par(mar=c(0,0,0,0))
+  extent <- sf::st_bbox(allSites)
+  plot(sf::st_geometry(originSites), xlim=c(extent[1],extent[3]),
+       ylim=c(extent[2], extent[4]), lwd = 1.5, reset = FALSE, border = col.origin)
+  plot(sf::st_geometry(targetSites), add = TRUE, lwd = 1.5, reset = FALSE,
+       border = col.target)
+  if (labelOrigin)
+    graphics::text(originCenters[,1], originCenters[,2], originNames, adj = 0.5)
+  if (labelTarget)
+    graphics::text(x = targetCenters[,1], y = targetCenters[,2], labels = targetNames,
+                   adj = 0.5)
+  for (i in subsetOrigin) {
+    xO <- originCenters[i, 1]
+    yO <- originCenters[i, 2]
+    for (j in subsetTarget) {
+      if (x[i, j] > 0) {
+        xT <- targetCenters[j, 1]
+        yT <- targetCenters[j, 2]
+        path <- sf::st_sfc(geometry = sf::st_linestring(matrix(c(xO, xT, yO,
+                                                                 yT), 2, 2)),
+                           crs = sf::st_crs(targetSites))
+        if (originAlign == "edge") {
+          path <- sf::st_difference(path, originSites[i, ])
+          pathCoord <- sf::st_coordinates(path)
+          xO2 <- pathCoord[nrow(pathCoord) - 1, 1]
+          yO2 <- pathCoord[nrow(pathCoord) - 1, 2]
+          path <- sf::st_sfc(geometry = sf::st_linestring(matrix(c(xO2, xT,
+                                                                   yO2, yT),
+                                                                 2, 2)),
+                             crs = sf::st_crs(targetSites))
+        }
+        else if (originAlign=="offset") {
+          xO2 <- sf::st_coordinates(path)[1, 1] + originOffset[i, 1]
+          yO2 <- sf::st_coordinates(path)[1, 2] + originOffset[i, 2]
+        }
+        else {
+          xO2 <- sf::st_coordinates(path)[1, 1]
+          yO2 <- sf::st_coordinates(path)[1, 2]
+        }
+        if (targetAlign == "edge") {
+          path <- sf::st_difference(path, targetSites[j, ])
+        }
+        xT2 <- sf::st_coordinates(path)[2, 1]
+        yT2 <- sf::st_coordinates(path)[2, 2]
+        if (targetAlign == "offset") {
+          xT2 <- xT2 + targetOffset[j, 1]
+          yT2 <- yT2 + targetOffset[j, 2]
+        }
+        angle <- atan((yT2 - yO2)/(xT2 - xO2))
+        if (is.nan(angle))
+          angle <- 0
+        if (xT2 < xO2)
+          angle <- angle + pi
+        cosa <- cos(angle)
+        sina <- sin(angle)
+        graphics::polygon(c(xO2 - x[i,j] * sina * maxWidth / 2,
+                            xT2 - x[i,j] * sina * maxWidth / 2,
+                            xT2 + x[i,j] * sina * maxWidth / 2,
+                            xO2 + x[i,j] * sina * maxWidth / 2),
+                          c(yO2 + x[i,j] * cosa * maxWidth / 2,
+                            yT2 + x[i,j] * cosa * maxWidth / 2,
+                            yT2 - x[i,j] * cosa * maxWidth / 2,
+                            yO2 - x[i,j] * cosa * maxWidth / 2),
+                          col = col.arrows[i,j],
+                          border = NA)
+        shape::Arrowhead(xT2, yT2, angle / pi * 180, arr.width = x[i,j]*1.5, arr.length = 1/8,
+                         arr.type = 'curved', npoint = 15,
+                         lcol = col.arrows[i,j], arr.adj = 0)
+      }
+    }
+  }
+}

@@ -789,6 +789,11 @@ distFromPos <- function(pos, surface = 'ellipsoid',
   return(dist)
 }
 
+abundWeightedDist <- function(sites,
+                              abund) {
+
+}
+
 reassignInds <- function(dataOverlapSetting = "none",
                          originPoints = NULL, targetPoints = NULL,
                          originAssignment = NULL, targetAssignment = NULL,
@@ -1615,4 +1620,168 @@ propSpatRaster <- function(assignments) {
   assign2prob <- assignments / test
   terra::crs(assign2prob) <- sf::st_crs(4326)$wkt
   return(assign2prob)
+}
+
+# For use in estTransition and identifySites
+checkMovementData <- function(originSites = NULL,
+                              targetSites = NULL,
+                              originPoints = NULL,
+                              targetPoints = NULL,
+                              originAssignment = NULL,
+                              targetAssignment = NULL,
+                              method = "bootstrap",
+                              isGL = FALSE,
+                              isTelemetry = FALSE,
+                              isRaster = FALSE,
+                              isProb = FALSE,
+                              captured = "origin",
+                              verbose = 0,
+                              geoBias = NULL,
+                              geoVCov = NULL,
+                              geoBiasOrigin = geoBias,
+                              geoVCovOrigin = geoVCov,
+                              targetRaster = NULL,
+                              originRaster = NULL) {
+  # Input checking and assignment
+  if (any(captured != "origin" & captured != "target" & captured != "neither")){
+    stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
+  if (!(verbose %in% 0:3)){
+    stop("verbose should be integer 0-3 for level of output during bootstrap: 0 = none, 1 = every 10, 2 = every run, 3 = number of draws")}
+  if (length(geoBias)!=2 && any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoBias should be vector of length 2 (expected bias in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if (!isTRUE(all.equal(dim(geoVCov), c(2, 2), check.attributes = FALSE)) &&
+      any(isGL & (captured == "origin" | captured == "neither"))){
+    stop("geoVCov should be 2x2 matrix (expected variance/covariance in longitude and latitude of targetPoints, in resampleProjection units, default meters)")}
+  if ((is.null(originPoints) && is.null(originRaster) && is.null(originSites)) &&
+      is.null(originAssignment) && is.null(banded)){
+    stop("Need to define either originAssignment, originSites, originRaster, originPoints, or banded")}
+  if ((is.null(targetPoints) && is.null(targetRaster) &&
+       is.null(targetSites)) && is.null(targetAssignment) && is.null(reencountered)){
+    stop("Need to define either targetAssignment, targetSites, targetRaster, targetPoints, or reencountered")}
+  if ((is.null(banded) && !is.null(reencountered) ||
+       !is.null(banded)) && is.null(reencountered)){
+    stop("Need to define both banded and reencountered")}
+  if(inherits(originSites,"SpatialPolygonsDataFrame")){
+    originSites <- sf::st_as_sf(originSites)}
+  if(inherits(targetSites,"SpatialPolygonsDataFrame")){
+    targetSites <- sf::st_as_sf(targetSites)}
+
+  targetStats <- assignRasterStats(targetRaster)
+  targetPointsAssigned <- targetStats$PointsAssigned
+  targetSingleCell <- targetStats$SingleCell
+  targetRasterXYZ <- targetStats$RasterXYZ
+  targetRasterXYZcrs <- targetStats$RasterXYZcrs
+  targetRaster <- targetStats$Raster
+
+  originStats <- assignRasterStats(originRaster)
+  originPointsAssigned <- originStats$PointsAssigned
+  originSingleCell <- originStats$SingleCell
+  originRasterXYZ <- originStats$RasterXYZ
+  originRasterXYZcrs <- originStats$RasterXYZcrs
+  originRaster <- originStats$Raster
+
+  if (dataOverlapSetting != "dummy") {
+    if (verbose > 0)
+      cat("Configuring data overlap settings\n")
+    temp <- reassignInds(dataOverlapSetting = dataOverlapSetting,
+                         originPoints = originPoints,
+                         targetPoints = targetPoints,
+                         originAssignment = originAssignment,
+                         targetAssignment = targetAssignment,
+                         isGL = isGL, isTelemetry = isTelemetry,
+                         isRaster = isRaster, isProb = isProb,
+                         captured = captured,
+                         originRasterXYZ = originRasterXYZ,
+                         originSingleCell = originSingleCell,
+                         targetRasterXYZ = targetRasterXYZ,
+                         targetSingleCell = targetSingleCell,
+                         targetSites = targetSites, originSites = originSites)
+    originPoints <- temp$originPoints; targetPoints <- temp$targetPoints
+    originAssignment <- temp$originAssignment
+    targetAssignment <- temp$targetAssignment
+    isGL <- temp$isGL; isTelemetry <- temp$isTelemetry
+    isRaster <- temp$isRaster; isProb <- temp$isProb
+    originRasterXYZ <- temp$originRasterXYZ
+    if (!is.null(originRasterXYZ)){
+      colnames(originRasterXYZ) <- c("x", "y", paste0("lyr.", 1:length(isRaster)))
+      originRaster <- terra::rast(originRasterXYZ, crs = originRasterXYZcrs,
+                                  extent = terra::ext(originRaster), type = "xyz")
+    }
+    originSingleCell <- temp$originSingleCell
+    targetRasterXYZ <- temp$targetRasterXYZ
+    if (!is.null(targetRasterXYZ)){
+      colnames(targetRasterXYZ) <- c("x", "y", paste0("lyr.", 1:length(isRaster)))
+      targetRaster <- terra::rast(targetRasterXYZ, crs = targetRasterXYZcrs,
+                                  extent = terra::ext(targetRaster), type = "xyz")
+    }
+    targetSingleCell <- temp$targetSingleCell
+  }
+  if (any(isProb & (captured != "target")) && (is.null(targetAssignment) || length(dim(targetAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at origin, targetAssignment must be a [number of animals] by [number of target sites] matrix")}
+  if (any(isProb & captured != "origin") && (is.null(originAssignment) || length(dim(originAssignment))!=2)){
+    stop("With probability assignment (isProb==TRUE) animals captured at target, originAssignment must be a [number of animals] by [number of origin sites] matrix")}
+
+  if (is.null(targetPoints) && is.null(originPoints) &&
+      is.null(targetAssignment) && is.null(originAssignment) &&
+      is.null(targetRaster) && is.null(originRaster))
+    nAnimals <- 0
+  else
+    nAnimals <- max(nrow(targetPoints), nrow(originPoints), length(isGL),
+                    length(isTelemetry), length(isRaster), length(isProb),
+                    min(length(targetAssignment), dim(targetAssignment)[1]),
+                    min(length(originAssignment), dim(originAssignment)[1]),
+                    ifelse(is.null(targetRaster), 0,
+                           ifelse(targetPointsAssigned, dim(targetSingleCell)[3],
+                                  dim(targetRasterXYZ)[2] - 2)),
+                    ifelse(is.null(originRaster), 0,
+                           ifelse(originPointsAssigned, dim(originSingleCell)[3],
+                                  dim(originRasterXYZ)[2] - 2)),
+                    length(captured))
+  nAnimalsTotal <- nAnimals + sum(banded) #+ sum(reencountered)#
+  isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
+  if (length(isGL)==1){
+    isGL <- c(rep(isGL, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  else
+    isGL <- c(isGL, rep(FALSE, nAnimalsTotal - nAnimals))
+  if (length(isTelemetry)==1){
+    isTelemetry <- c(rep(isTelemetry, nAnimals),
+                     rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  else
+    isTelemetry <- c(isTelemetry, rep(FALSE, nAnimalsTotal - nAnimals))
+  if (length(isRaster)==1){
+    isRaster <- c(rep(isRaster, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  else
+    isRaster <- c(isRaster, rep(FALSE, nAnimalsTotal - nAnimals))
+  if (length(isProb)==1){
+    isProb <- c(rep(isProb, nAnimals), rep(FALSE, nAnimalsTotal - nAnimals))
+  }
+  else
+    isProb <- c(isProb, rep(FALSE, nAnimalsTotal - nAnimals))
+  if (length(captured)==1){captured <- rep(captured, nAnimals)}
+
+  isCMR <- c(rep(FALSE, nAnimals), rep(TRUE, nAnimalsTotal - nAnimals))
+  if (!is.null(banded)) {
+    captured <- c(captured, rep("origin", nAnimalsTotal - nAnimals)) #sum(banded)
+  }
+  if (nAnimals > 0)
+    if (any(!isGL[1:nAnimals] & !isTelemetry[1:nAnimals] & !isRaster[1:nAnimals] &
+            !isProb[1:nAnimals]))
+      stop("For each individual animal (not in banded) one of the following must be set to TRUE:
+           isGL, isTelemetry, isRaster, or isProb")
+  return(list(originPoints = originPoints, targetPoints = targetPoints,
+              originAssignment = originAssignment,
+              targetAssignment = targetAssignment,
+              isGL = isGL, isTelemetry = isTelemetry, isRaster = isRaster,
+              isProb = isProb, captured = captured,
+              originRaster = originRaster,
+              originRasterXYZ = originRasterXYZ,
+              originSingleCell = originSingleCell,
+              targetRaster = targetRaster,
+              targetRasterXYZ = targetRasterXYZ,
+              targetSingleCell = targetSingleCell,
+              nAnimals = nAnimals, nAnimalsTotal = nAnimalsTotal))
+
 }
