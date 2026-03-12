@@ -1786,9 +1786,16 @@ checkMovementData <- function(originSites = NULL,
 
 }
 
-generateBlocks <- function(grid, points = NULL, raster = NULL, bias = NULL,
-                           isGL = FALSE) {
-  if (any(isGL) && !is.null(bias)) {
-
+generateBlocks <- function(grid, points = NULL, raster = NULL, geoBias = NULL,
+                           isGL = FALSE, resampleProjection = 'ESRI:53027') {
+  if (any(isGL) && !is.null(geoBias)) {
+    geoBias2 <- array(rep(geoBias, sum(isGL)), c(2, sum(isGL)))
+    point.sample0 <- sf::st_coordinates(points)[isGL, , drop = FALSE] - geoBias2
+    dimnames(point.sample0)[[2]] <- c("x","y")
+    # Convert those to sf
+    point.sample0 <- sf::st_as_sf(point.sample0, coords = c("x","y"),
+                                  crs = resampleProjection)
+    points[isGL, ] <- point.sample0
   }
+
 }

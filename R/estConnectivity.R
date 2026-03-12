@@ -4474,7 +4474,9 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
         originGrid <- sf::st_intersection(originGrid, originRange)
       }
       originBlocks <- generateBlocks(originGrid, originPoints, originRaster,
-                                     geoBiasOrigin)
+                                     geoBiasOrigin,
+                                     isGL = (isGL & captured != "origin"),
+                                     resampleProjection)
     }
   }
   else {
@@ -4492,7 +4494,9 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
         targetGrid <- sf::st_intersection(targetGrid, targetRange)
       }
       targetBlocks <- generateBlocks(targetGrid, targetPoints, targetRaster,
-                                     geoBias)
+                                     geoBias,
+                                     isGL = (isGL & captured != "target"),
+                                     resampleProjection)
     }
   }
   else {
