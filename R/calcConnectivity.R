@@ -706,6 +706,23 @@ setsUnion <- function(sets, geom) {
   return(sf::st_sf(out))
 }
 
+#' Optimal site arrangement on origin and/or target side
+#'
+#' @param originSamples
+#' @param targetSamples
+#' @param originBlocks
+#' @param targetBlocks
+#' @param algorithm
+#' @param originRelAbund
+#' @param originFixed
+#' @param targetFixed
+#' @param originTies
+#' @param targetTies
+#'
+#' @returns list
+#' @export
+#'
+# @examples
 optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
                        algorithm = "maxMC", originRelAbund = NULL,
                        originFixed = FALSE, targetFixed = FALSE,

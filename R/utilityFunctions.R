@@ -89,7 +89,7 @@ targetSample <- function(isGL,
       draws <- draws + 1
       geoBias2 <- array(rep(geoBias, length(toSample), each = nSim), c(nSim, 2, length(toSample)))
 
-      # generate sample and substract the bias
+      # generate sample and subtract the bias
       point.sample <- array(apply(sf::st_coordinates(targetPoints)[animal.sample[toSample], , drop = FALSE],
                                   MARGIN = 1,
                                   MASS::mvrnorm, n=nSim, Sigma=geoVCov),
@@ -1622,7 +1622,7 @@ propSpatRaster <- function(assignments) {
   return(assign2prob)
 }
 
-# For use in estTransition and identifySites
+# For use in estTransition and idSites
 checkMovementData <- function(originSites = NULL,
                               targetSites = NULL,
                               originPoints = NULL,
@@ -1784,4 +1784,11 @@ checkMovementData <- function(originSites = NULL,
               targetSingleCell = targetSingleCell,
               nAnimals = nAnimals, nAnimalsTotal = nAnimalsTotal))
 
+}
+
+generateBlocks <- function(grid, points = NULL, raster = NULL, bias = NULL,
+                           isGL = FALSE) {
+  if (any(isGL) && !is.null(bias)) {
+
+  }
 }
