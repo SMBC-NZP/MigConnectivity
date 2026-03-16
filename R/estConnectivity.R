@@ -4112,14 +4112,13 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                                      isTelemetry = (isTelemetry |
                                                       captured=='target'),
                                      isRaster = (isRaster & captured!='target'),
-                                     capturedThisSide = captured=='target',
+                                     capturedThisSide = (captured=='target'),
                                      nAnimals = nAnimals,
                                      points = targetPoints,
                                      sites = targetFunctSites,
                                      rasterXYZ = targetRasterXYZ,
                                      rasterXYZcrs = targetRasterXYZcrs)
   targetPointsInSites <- FALSE
-
   if (targetPointsAssigned && !is.null(targetSites) && any(isRaster)) {
     if (verbose > 0){
       cat('Checking if single cell target points in targetSites, may take a moment\n')}
@@ -4242,7 +4241,7 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
         assignment <- targetAssignment[animal.sample, drop = FALSE]
       tSamp <- locSample(isGL = (isGL[animal.sample] & captured[animal.sample] != "target"),
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
-                         isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
+                         isProb = rep(FALSE, m),
                          isTelemetry = (isTelemetry[animal.sample] |
                                           captured[animal.sample] == "target"),
                          geoBias = geoBias, geoVCov = geoVCov,
@@ -4352,7 +4351,6 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                   resampleProjection = resampleProjection,
                   nSim = nSim, maxTries = maxTries,
                   dataOverlapSetting = dataOverlapSetting,
-                  fixedZero = fixedZero,
                   originRelAbund = originRelAbund,
                   targetRelAbund = targetRelAbund,
                   algorithm = algorithm, method = method,
@@ -4513,7 +4511,6 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
       originBlocks <- blocksList$blocks
       if (verbose > 0){
         cat(nrow(originBlocks), "origin blocks generated\n")
-        print(originBlocks)
       }
       if (!is.null(originRelAbund)){
         originRelAbund <- rowsum(originRelAbund, blocksList$closest)

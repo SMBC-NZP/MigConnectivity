@@ -724,20 +724,20 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
     stop("To use algorithm 'maxMC' you need to provide originRelAbund")
   if (!originFixed) {
     originCombos <- partitions::setparts(nrow(originBlocks))[ , -1]
-    if (verbose>0)
-      print(originCombos)
+    # if (verbose>0)
+    #   print(originCombos)
     if (!is.null(originTies)){
 
     }
     originCombos2 <- apply(originCombos, 2, setsUnion, geom = originBlocks,
                            simplify = FALSE)
-    if (verbose>0)
-      print(originCombos2)
+    # if (verbose>0)
+    #   print(originCombos2)
     if (!is.null(originRelAbund)) {
       originRelAbunds <- apply(originCombos, 2, rowsum, x = originRelAbund,
                                simplify = FALSE)
-      if (verbose>0)
-        print(originRelAbunds)
+      # if (verbose>0)
+      #   print(originRelAbunds)
     }
   }
   else {
@@ -747,17 +747,18 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
   }
   if (!targetFixed) {
     targetCombos <- partitions::setparts(nrow(targetBlocks))[ , -1]
-    if (verbose>0)
-      print(targetCombos)
+    # if (verbose>0)
+    #   print(targetCombos)
     if (!is.null(targetTies)){
 
     }
     targetCombos2 <- apply(targetCombos, 2, setsUnion, geom = targetBlocks,
                            simplify = FALSE)
-    if (verbose>0)
-      print(targetCombos2)
+    # if (verbose>0)
+    #   print(targetCombos2)
   }
   else {
+    targetCombos <- matrix(1:nrow(targetBlocks), nrow(targetBlocks), 1)
     targetCombos2 <- list(targetBlocks)
   }
   k <- length(originCombos2) * length(targetCombos2)
@@ -778,22 +779,34 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
     originCenters <- lapply(originCombos2, function(x)
       suppressWarnings(sf::st_centroid(x)))
     originCenters <- lapply(originCenters, sf::st_transform, crs = 4326)
+    originCenters <- lapply(originCenters, sf::st_set_geometry, value = "geom")
     originDists <- lapply(originCenters, function (x)
-      distFromPos(sf::st_coordinates(x$geometry)))
-    originDists <- rep(originDists, times = length(targetCombo2))
+      distFromPos(sf::st_coordinates(x$geom)))
+    originDists <- rep(originDists, times = length(targetCombos2))
     targetCenters <- lapply(targetCombos2, function(x)
       suppressWarnings(sf::st_centroid(x)))
     targetCenters <- lapply(targetCenters, sf::st_transform, crs = 4326)
+    targetCenters <- lapply(targetCenters, sf::st_set_geometry, value = "geom")
     targetDists <- lapply(targetCenters, function (x)
-      distFromPos(sf::st_coordinates(x$geometry)))
+      distFromPos(sf::st_coordinates(x$geom)))
     targetDists <- rep(targetDists, each = length(originCombos2))
     originRelAbunds <- rep(originRelAbunds, times = length(targetCombos2))
     if (verbose>0)
       cat(length(originRelAbunds), "total abundance sets generated\n")
     psis <- mapply(calcTransition, originAssignment = originAssignments,
                    targetAssignment = targetAssignments)
-    if (verbose>0)
+    if (verbose>0) {
       cat(length(psis), "transition probability matrices generated\n")
+      # for (i in 1:length(psis)) {
+      #   print(i)
+      #   print(originDists[[i]])
+      #   print(targetDists[[i]])
+      #   print(originRelAbunds[[i]])
+      #   print(originAssignments[[i]])
+      #   print(targetAssignments[[i]])
+      #   print(psis[[i]])
+      # }
+    }
     MCs <- mapply(calcMC, originDist = originDists, targetDist = targetDists,
                   originRelAbund = originRelAbunds, psi = psis,
                   MoreArgs = list(sampleSize = length(originSamples)))
