@@ -697,27 +697,20 @@ calcNMC <- function(psi, originRelAbund = NULL) {
   }
 }
 
-setsUnion <- function(sets, geom) {
-  x <- max(sets)
-  out <- c()
-  for (i in 1:x) {
-    out <- c(out, sf::st_union(geom[sets==i, ]))
-  }
-  return(sf::st_sf(out))
-}
-
 #' Optimal site arrangement on origin and/or target side
 #'
-#' @param originSamples
-#' @param targetSamples
-#' @param originBlocks
-#' @param targetBlocks
-#' @param algorithm
-#' @param originRelAbund
-#' @param originFixed
-#' @param targetFixed
-#' @param originTies
-#' @param targetTies
+#' @param originSamples which blocks got pulled
+#' @param targetSamples which blocks got pulled
+#' @param originBlocks origin range divided up into blocks around telemetry and
+#'   geolocator points
+#' @param targetBlocks target range divided up into blocks around telemetry and
+#'   geolocator points
+#' @param algorithm "maxMC" or something that hasn't been set up yet
+#' @param originRelAbund for calculating MC
+#' @param originFixed if TRUE, only optimizes target side
+#' @param targetFixed if TRUE, only optimizes origin side
+#' @param originTies not used yet
+#' @param targetTies not used yet
 #'
 #' @returns list
 #' @export
@@ -726,19 +719,25 @@ setsUnion <- function(sets, geom) {
 optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
                        algorithm = "maxMC", originRelAbund = NULL,
                        originFixed = FALSE, targetFixed = FALSE,
-                       originTies = NULL, targetTies = NULL) {
+                       originTies = NULL, targetTies = NULL, verbose = 0) {
   if (algorithm == "maxMC" && is.null(originRelAbund))
     stop("To use algorithm 'maxMC' you need to provide originRelAbund")
   if (!originFixed) {
     originCombos <- partitions::setparts(nrow(originBlocks))[ , -1]
+    if (verbose>0)
+      print(originCombos)
     if (!is.null(originTies)){
 
     }
     originCombos2 <- apply(originCombos, 2, setsUnion, geom = originBlocks,
                            simplify = FALSE)
+    if (verbose>0)
+      print(originCombos2)
     if (!is.null(originRelAbund)) {
       originRelAbunds <- apply(originCombos, 2, rowsum, x = originRelAbund,
                                simplify = FALSE)
+      if (verbose>0)
+        print(originRelAbunds)
     }
   }
   else {
@@ -748,11 +747,15 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
   }
   if (!targetFixed) {
     targetCombos <- partitions::setparts(nrow(targetBlocks))[ , -1]
+    if (verbose>0)
+      print(targetCombos)
     if (!is.null(targetTies)){
 
     }
     targetCombos2 <- apply(targetCombos, 2, setsUnion, geom = targetBlocks,
                            simplify = FALSE)
+    if (verbose>0)
+      print(targetCombos2)
   }
   else {
     targetCombos2 <- list(targetBlocks)
@@ -760,10 +763,17 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
   k <- length(originCombos2) * length(targetCombos2)
   originAssignments <- apply(originCombos, 2, function(x, y) x[y],
                              y = originSamples, simplify = FALSE)
+  if (verbose>0)
+    cat(length(originAssignments), "origin assignments generated\n")
   originAssignments <- rep(originAssignments, times = length(targetCombos2))
   targetAssignments <- apply(targetCombos, 2, function(x, y) x[y],
                              y = targetSamples, simplify = FALSE)
+  if (verbose>0)
+    cat(length(targetAssignments), "target assignments generated\n")
   targetAssignments <- rep(targetAssignments, each = length(originCombos2))
+  if (verbose>0)
+    cat(length(originAssignments), "=", length(targetAssignments),
+        "total assignments generated\n")
   if (algorithm == "maxMC") {
     originCenters <- lapply(originCombos2, function(x)
       suppressWarnings(sf::st_centroid(x)))
@@ -778,11 +788,17 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
       distFromPos(sf::st_coordinates(x$geometry)))
     targetDists <- rep(targetDists, each = length(originCombos2))
     originRelAbunds <- rep(originRelAbunds, times = length(targetCombos2))
+    if (verbose>0)
+      cat(length(originRelAbunds), "total abundance sets generated\n")
     psis <- mapply(calcTransition, originAssignment = originAssignments,
                    targetAssignment = targetAssignments)
+    if (verbose>0)
+      cat(length(psis), "transition probability matrices generated\n")
     MCs <- mapply(calcMC, originDist = originDists, targetDist = targetDists,
                   originRelAbund = originRelAbunds, psi = psis,
                   MoreArgs = list(sampleSize = length(originSamples)))
+    if (verbose>0)
+      cat(length(MCs), "MC values generated\n")
     whichCombos <- which.max(MCs)
     whichTargetCombo <- ceiling(whichCombos / length(originCombos2))
     whichOriginCombo <- whichCombos %% length(originCombos2)

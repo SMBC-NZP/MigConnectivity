@@ -14,11 +14,32 @@ optimSites(
   originFixed = FALSE,
   targetFixed = FALSE,
   originTies = NULL,
-  targetTies = NULL
+  targetTies = NULL,
+  verbose = 0
 )
 }
 \arguments{
-\item{targetTies}{}
+\item{originSamples}{which blocks got pulled}
+
+\item{targetSamples}{which blocks got pulled}
+
+\item{originBlocks}{origin range divided up into blocks around telemetry and
+geolocator points}
+
+\item{targetBlocks}{target range divided up into blocks around telemetry and
+geolocator points}
+
+\item{algorithm}{"maxMC" or something that hasn't been set up yet}
+
+\item{originRelAbund}{for calculating MC}
+
+\item{originFixed}{if TRUE, only optimizes target side}
+
+\item{targetFixed}{if TRUE, only optimizes origin side}
+
+\item{originTies}{not used yet}
+
+\item{targetTies}{not used yet}
 }
 \value{
 list

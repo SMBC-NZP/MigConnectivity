@@ -803,72 +803,9 @@ estTransitionBoot <- function(originSites = NULL,
   if (is.null(originAssignment)){
     if (verbose > 0)
       cat("Creating originAssignment\n")
-    # if geolocator, telemetry and captured in origin then simply get the origin site
-    if (all(isGL | isTelemetry | captured != "target") && !is.null(originPoints)){
-      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
-                                                          y = originSites,
-                                                          sparse = TRUE)))
-    # if raster and not captured in origin sites then determine the origin site
-    }
-    else if (all(isRaster & captured != "origin")) {
-      # if isRaster == TRUE and captured != origin
-      # WEIGHTED XY COORDIANTES FROM THE RASTER
-      # get geographically weighted median value
-      xyOriginRast <- apply(originRasterXYZ[,3:ncol(originRasterXYZ)],
-                            MARGIN = 2,
-                            FUN = function(x){
-                        # xy <-cbind(weighted.mean(originRasterXYZ[,1], w = x, na.rm = TRUE),
-                        #           weighted.mean(originRasterXYZ[,2], w = x, na.rm = TRUE))
-                  #select the cell with the highest posterior probability #
-                              xy <- cbind(originRasterXYZ[which.max(x)[1],1],
-                                          originRasterXYZ[which.max(x)[1],2])
-                        return(xy)})
-      # returns a point estimate for each bird - turn it into a sf object
-      xyOriginRast <- t(xyOriginRast)
-      colnames(xyOriginRast) <- c("x","y")
-      # right now the assignment CRS is WGS84 - should be the same as the origin raster
-
-      #cat("--originRasterXYZcrs -- \n")
-      originAssignRast <- sf::st_as_sf(data.frame(xyOriginRast),
-                                       coords = c("x","y"),
-                                       crs = originRasterXYZcrs)
-                                       # crs = sf::st_crs(originRasterXYZcrs))
-                                      # crs = 4326)
-      # transform to match originSites
-      originAssignRast <- sf::st_transform(originAssignRast, sf::st_crs(originSites))
-      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originAssignRast,
-                                            y = originSites,
-                                            sparse = TRUE)))
-    }   # originAssignment <- what # need point assignment for raster (mean location?)
-    else if (!is.null(originPoints))
-      # originAssignment <- what # points over where we have them, raster assignment otherwise
-      originAssignment <- suppressMessages(unclass(sf::st_intersects(x = originPoints,
-                                                                 y = originSites,
-                                                                sparse = TRUE)))
-    else
-      originAssignment <- NULL
-    if (!is.null(originAssignment)) {
-      originAssignment[lengths(originAssignment)==0] <- NA
-      if (any(lengths(originAssignment)>1)){
-        warning("Overlapping originSites may cause issues\n")
-        originAssignment <- lapply(originAssignment, function (x) x[1])
-      }
-      originAssignment <- array(unlist(originAssignment))
-      duds <- is.na(originAssignment) & captured[1:nAnimals] == "origin"
-      if (any(duds)){
-        if (verbose > 0)
-          cat("Not all origin capture locations are within originSites. Assigning to closest site\n")
-        warning("Not all origin capture locations are within originSites. Assigning to closest site.\n",
-                "Affects animals: ", paste(which(duds), collapse = ","))
-        originAssignment[duds] <-
-          sf::st_nearest_feature(x = originPoints[duds,],
-                                 y = originSites)
-
-      }
-    }
+    originAssignment <- makeAssignment()#####Fill in stuff!#####
     if (!is.null(reencountered)) {
-      originAssignment <- array(c(originAssignment,
-                                  rep(1:length(banded), banded)))
+      originAssignment <- array(c(originAssignment, rep(1:length(banded), banded)))
     }
   }
   else if (!is.null(reencountered)) {
@@ -885,10 +822,9 @@ estTransitionBoot <- function(originSites = NULL,
     else {
       nOriginSites <- length(banded)
       originAssignment <- array(c(originAssignment,
-                                rep(1:nOriginSites, banded)))
+                                  rep(1:nOriginSites, banded)))
     }
   }
-
   if (is.null(targetAssignment)){
     if (verbose > 0)
       cat("Creating targetAssignment\n")
@@ -4128,7 +4064,16 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                         captured = "origin",
                         geoBias = NULL, geoVCov = NULL,
                         geoBiasOrigin = geoBias, geoVCovOrigin = geoVCov,
-                        targetRaster = NULL, originRaster = NULL,
+                        originRaster = NULL,
+                        originRasterXYZ = NULL,
+                        originRasterXYZcrs = NULL,
+                        originSingleCell = NULL,
+                        originPointsAssigned = NULL,
+                        targetRaster = NULL,
+                        targetRasterXYZ = NULL,
+                        targetRasterXYZcrs = NULL,
+                        targetSingleCell = NULL,
+                        targetPointsAssigned = NULL,
                         verbose = 0, alpha = 0.05,
                         resampleProjection = 'ESRI:102010',
                         nSim = ifelse(any(isRaster & isGL), 5000,
@@ -4137,7 +4082,7 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                         maxTries = 300,
                         dataOverlapSetting = c("dummy", "none", "named"),
                         originRelAbund = NULL, targetRelAbund = NULL,
-                        algorithm = c("maxMC", "cluster"),
+                        algorithm = "maxMC",
                         method = "bootstrap",
                         originSites = NULL, targetSites = NULL,
                         originNames = NULL, targetNames = NULL,
@@ -4145,6 +4090,86 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
   m <- nAnimals
   nOriginSitesMax <- nrow(originBlocks)
   nTargetSitesMax <- nrow(targetBlocks)
+  if (originFixed)
+    originFunctSites <- originSites
+  else
+    originFunctSites <- originBlocks
+  if (targetFixed)
+    targetFunctSites <- targetSites
+  else
+    targetFunctSites <- targetBlocks
+  originAssignment <- makeAssignment(isGL = (isGL & captured!='origin'),
+                                     isTelemetry = (isTelemetry |
+                                                      captured=='origin'),
+                                     isRaster = (isRaster & captured!='origin'),
+                                     capturedThisSide = captured=='origin',
+                                     nAnimals = nAnimals,
+                                     points = originPoints,
+                                     sites = originFunctSites,
+                                     rasterXYZ = originRasterXYZ,
+                                     rasterXYZcrs = originRasterXYZcrs)
+  targetAssignment <- makeAssignment(isGL = (isGL & captured!='target'),
+                                     isTelemetry = (isTelemetry |
+                                                      captured=='target'),
+                                     isRaster = (isRaster & captured!='target'),
+                                     capturedThisSide = captured=='target',
+                                     nAnimals = nAnimals,
+                                     points = targetPoints,
+                                     sites = targetFunctSites,
+                                     rasterXYZ = targetRasterXYZ,
+                                     rasterXYZcrs = targetRasterXYZcrs)
+  targetPointsInSites <- FALSE
+
+  if (targetPointsAssigned && !is.null(targetSites) && any(isRaster)) {
+    if (verbose > 0){
+      cat('Checking if single cell target points in targetSites, may take a moment\n')}
+    targetPointSample2 <- apply(targetSingleCell,
+                                FUN = function(x){sf::st_as_sf(data.frame(x),
+                                                               coords = c("Longitude", "Latitude"),
+                                                               crs = 4326)},
+                                MARGIN = 3)
+    if(!sf::st_crs(targetSites)==sf::st_crs(targetPointSample2[[1]])){
+      targetPointSample2 <- sapply(targetPointSample2, sf::st_transform, crs = resampleProjection)
+    }
+
+    targetCon <- sapply(targetPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = targetSites,
+                                                            sparse = TRUE))))})
+
+    if (!any(is.na(targetCon)))
+      targetPointsInSites <- TRUE
+    else if (verbose > 0)
+      cat('Single cell target points supplied, but some points (proportion',
+          format(sum(is.na(targetCon))/length(targetCon), digits = 2), ') not in targetSites\n')
+  }else {targetCon <- NULL}
+
+  originPointsInSites <- FALSE
+  if (originPointsAssigned && !is.null(originSites) && any(isRaster)) {
+    if (verbose > 0)
+      cat('Checking if single cell origin points in originSites, may take a moment\n')
+    nSamples <- dim(originSingleCell)[1]
+    originPointSample2 <- apply(originSingleCell,
+                                FUN = function(x){sf::st_as_sf(data.frame(x),
+                                                               coords = c("Longitude", "Latitude"),
+                                                               crs = 4326)},
+                                MARGIN = 3)
+    if(!sf::st_crs(originSites)==sf::st_crs(originPointSample2[[1]])){
+      originPointSample2 <- sapply(originPointSample2, sf::st_transform,
+                                   crs = resampleProjection)
+    }
+
+    originCon <- sapply(originPointSample2, FUN = function(z){
+      suppressMessages(as.numeric(unclass(sf::st_intersects(x = z, y = originSites,
+                                                            sparse = TRUE))))})
+    if (!any(is.na(originCon)))
+      originPointsInSites <- TRUE
+    else if (verbose > 0){
+      cat('Single cell origin points supplied, but some points (proportion',
+          sum(is.na(originCon))/length(originCon), ') not in originSites\n')
+    }
+  }else{
+    originCon <- NULL
+  }
   o.sites.list <- t.sites.list <- psi.list <- MC.list <- vector("list", nSamples)
   boot <- 1
   if (verbose > 0)
@@ -4156,7 +4181,7 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
     origin.sample <- c() # Start with zero origin sites
     #while (length(unique(origin.sample)) < nOriginSitesMax) { #2
     # Sample individual animals with replacement
-    animal.sample <- sample.int(m, replace=TRUE, prob = weights[boot,])
+    animal.sample <- sample.int(m, replace=TRUE) #, prob = weights[boot,]
     if (any(captured[animal.sample]!='origin')) {
       if (length(dim(originAssignment))==2)
         assignment <- originAssignment[animal.sample, , drop = FALSE]
@@ -4166,7 +4191,6 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                          isRaster = (isRaster[animal.sample] & captured[animal.sample]!='origin'),
                          isProb = rep(FALSE, m),
                          isTelemetry = (isTelemetry[animal.sample] |
-                                          isCMR[animal.sample] |
                                           captured[animal.sample]=='origin'),
                          geoBias = geoBiasOrigin,
                          geoVCov = geoVCovOrigin,
@@ -4220,7 +4244,6 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
                          isRaster = (isRaster[animal.sample] & captured[animal.sample] != "target"),
                          isProb = (isProb[animal.sample] & captured[animal.sample] != "target"),
                          isTelemetry = (isTelemetry[animal.sample] |
-                                          isCMR[animal.sample] |
                                           captured[animal.sample] == "target"),
                          geoBias = geoBias, geoVCov = geoVCov,
                          points = targetPoints[animal.sample, ],
@@ -4265,10 +4288,12 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
         target.sample <- targetAssignment[animal.sample]
     }
     # Now that we have breeding and non-breeding blocks for point...
-    sites <- optimSites(originSample = origin.sample,
-                        targetSample = target.sample, algorithm = algorithm,
+    sites <- optimSites(originSamples  = origin.sample,
+                        targetSamples = target.sample, algorithm = algorithm,
                         originBlocks = originBlocks, targetBlocks = targetBlocks,
-                        originFixed = originFixed, targetFixed = targetFixed)
+                        originFixed = originFixed, targetFixed = targetFixed,
+                        originRelAbund = originRelAbund,
+                        verbose = ifelse(verbose>2, 1, 0))
     o.sites.list[[boot]] <- sites$originSites
     t.sites.list[[boot]] <- sites$targetSites
 
@@ -4354,43 +4379,47 @@ idSitesBoot <- function(originGrid = NULL, targetGrid = NULL,
 
 #' Find optimal sites (regions, populations)
 #'
-#' @param originGrid
-#' @param targetGrid
-#' @param originBlocks
-#' @param targetBlocks
-#' @param originRange
-#' @param targetRange
-#' @param originPoints
-#' @param targetPoints
-#' @param nSamples
-#' @param isGL
-#' @param isTelemetry
-#' @param isRaster
-#' @param captured
-#' @param geoBias
-#' @param geoVCov
-#' @param geoBiasOrigin
-#' @param geoVCovOrigin
-#' @param targetRaster
-#' @param originRaster
-#' @param verbose
-#' @param alpha
-#' @param resampleProjection
-#' @param nSim
-#' @param maxTries
-#' @param nBurnin
-#' @param nChains
-#' @param nThin
-#' @param dataOverlapSetting
-#' @param originRelAbund
-#' @param targetRelAbund
-#' @param algorithm
-#' @param method
-#' @param originSites
-#' @param targetSites
-#' @param originNames
-#' @param targetNames
-#' @param returnAllInput
+#' @param originGrid grid for the origin range
+#' @param targetGrid grid for the target range
+#' @param originBlocks origin range divided up into blocks around telemetry and
+#'   geolocator points
+#' @param targetBlocks target range divided up into blocks around telemetry and
+#'   geolocator points
+#' @param originRange origin range
+#' @param targetRange target range
+#' @param originPoints locations of telemetry and geolocator animals on origin
+#'   range
+#' @param targetPoints locations of telemetry and geolocator animals on target
+#'   range
+#' @param nSamples number of bootstrap runs to make
+#' @param isGL geolocator
+#' @param isTelemetry telemetry animals
+#' @param isRaster raster-data animals
+#' @param captured for each animal, "origin" (default), "target," or "neither"
+#' @param geoBias geolocator location bias in target range
+#' @param geoVCov geolocator location variance-covariance in target range
+#' @param geoBiasOrigin geolocator location bias in origin range
+#' @param geoVCovOrigin geolocator location variance-covariance in origin range
+#' @param targetRaster raster data
+#' @param originRaster more raster data
+#' @param verbose 0 1 or 2
+#' @param alpha not used yet
+#' @param resampleProjection man this thing has a lot of arguments
+#' @param nSim location resampling tuner
+#' @param maxTries when does it give up resampling locations?
+#' @param nBurnin not used yet
+#' @param nChains not used yet
+#' @param nThin not used yet
+#' @param dataOverlapSetting not used yet
+#' @param originRelAbund relative abundances
+#' @param targetRelAbund relative abundances
+#' @param algorithm "maxMC" or something that hasn't been set up yet
+#' @param method "bootstrap" or something that hasn't been set up yet
+#' @param originSites only if you don't want it to ID sites on the origin side
+#' @param targetSites only if you don't want it to ID sites on the target side
+#' @param originNames goes with originSites
+#' @param targetNames goes with targetSites
+#' @param returnAllInput what do you want to store?
 #'
 #' @returns list
 #' @export
@@ -4435,7 +4464,7 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
                              originPoints = originPoints,
                              targetPoints = targetPoints,
                              method = method,
-                             isGL = iGL,
+                             isGL = isGL,
                              isTelemetry = isTelemetry,
                              isRaster = isRaster,
                              captured = captured,
@@ -4445,7 +4474,8 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
                              geoBiasOrigin = geoBiasOrigin,
                              geoVCovOrigin = geoVCovOrigin,
                              targetRaster = targetRaster,
-                             originRaster = originRaster)
+                             originRaster = originRaster,
+                             dataOverlapSetting = dataOverlapSetting)
   originPoints <- check$originPoints
   targetPoints <- check$targetPoints
   originAssignment <- check$originAssignment
@@ -4456,9 +4486,11 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
   captured <- check$captured
   originRaster <- check$originRaster
   originRasterXYZ <- check$originRasterXYZ
+  originRasterXYZcrs <- check$originRasterXYZcrs
   originSingleCell <- check$originSingleCell
   targetRaster <- check$targetRaster
   targetRasterXYZ <- check$targetRasterXYZ
+  targetRasterXYZcrs <- check$targetRasterXYZcrs
   targetSingleCell <- check$targetSingleCell
   nAnimals <- check$nAnimals
   nAnimalsTotal <- check$nAnimalsTotal
@@ -4473,10 +4505,21 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
         originGrid <- sf::st_sf(sf::st_make_grid(originRange, n = c(50, 50)))
         originGrid <- sf::st_intersection(originGrid, originRange)
       }
-      originBlocks <- generateBlocks(originGrid, originPoints, originRaster,
+      blocksList <- generateBlocks(originGrid, originPoints, originRaster,
                                      geoBiasOrigin,
                                      isGL = (isGL & captured != "origin"),
-                                     resampleProjection)
+                                     isTelemetry = isTelemetry,
+                                     resampleProjection = resampleProjection)
+      originBlocks <- blocksList$blocks
+      if (verbose > 0){
+        cat(nrow(originBlocks), "origin blocks generated\n")
+        print(originBlocks)
+      }
+      if (!is.null(originRelAbund)){
+        originRelAbund <- rowsum(originRelAbund, blocksList$closest)
+        if (verbose > 0)
+          cat(originRelAbund, "origin abundance consolidated\n")
+      }
     }
   }
   else {
@@ -4493,10 +4536,14 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
         targetGrid <- sf::st_sf(sf::st_make_grid(targetRange, n = c(50, 50)))
         targetGrid <- sf::st_intersection(targetGrid, targetRange)
       }
-      targetBlocks <- generateBlocks(targetGrid, targetPoints, targetRaster,
+      blocksList <- generateBlocks(targetGrid, targetPoints, targetRaster,
                                      geoBias,
                                      isGL = (isGL & captured != "target"),
-                                     resampleProjection)
+                                     isTelemetry = isTelemetry,
+                                     resampleProjection = resampleProjection)
+      targetBlocks <- blocksList$blocks
+      if (verbose > 0)
+        cat(nrow(targetBlocks), "target blocks generated\n")
     }
   }
   else {
@@ -4525,6 +4572,14 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
                          originNames=originNames, targetNames=targetNames,
                          targetRaster = targetRaster,
                          originRaster = originRaster,
+                         originRasterXYZ = originRasterXYZ,
+                         targetRasterXYZ = targetRasterXYZ,
+                         originRasterXYZcrs = originRasterXYZcrs,
+                         targetRasterXYZcrs = targetRasterXYZcrs,
+                         originSingleCell = originSingleCell,
+                         targetSingleCell = targetSingleCell,
+                         originPointsAssigned = check$originPointsAssigned,
+                         targetPointsAssigned = check$targetPointsAssigned,
                          captured = captured,
                          nSamples = nSamples, verbose=verbose,
                          nSim = nSim, alpha = alpha,
@@ -4533,7 +4588,7 @@ idSites <- function(originGrid = NULL, targetGrid = NULL,
                          dataOverlapSetting = dataOverlapSetting,
                          originRelAbund = originRelAbund,
                          targetRelAbund = targetRelAbund,
-                         method = method,
+                         method = method, algorithm = algorithm,
                          returnAllInput = returnAllInput)
   }
   class(sites) <- c("idSites", "estMigConnectivity")

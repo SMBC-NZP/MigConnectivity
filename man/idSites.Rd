@@ -46,7 +46,83 @@ idSites(
 )
 }
 \arguments{
-\item{returnAllInput}{}
+\item{originGrid}{grid for the origin range}
+
+\item{targetGrid}{grid for the target range}
+
+\item{originBlocks}{origin range divided up into blocks around telemetry and
+geolocator points}
+
+\item{targetBlocks}{target range divided up into blocks around telemetry and
+geolocator points}
+
+\item{originRange}{origin range}
+
+\item{targetRange}{target range}
+
+\item{originPoints}{locations of telemetry and geolocator animals on origin
+range}
+
+\item{targetPoints}{locations of telemetry and geolocator animals on target
+range}
+
+\item{nSamples}{number of bootstrap runs to make}
+
+\item{isGL}{geolocator}
+
+\item{isTelemetry}{telemetry animals}
+
+\item{isRaster}{raster-data animals}
+
+\item{captured}{for each animal, "origin" (default), "target," or "neither"}
+
+\item{geoBias}{geolocator location bias in target range}
+
+\item{geoVCov}{geolocator location variance-covariance in target range}
+
+\item{geoBiasOrigin}{geolocator location bias in origin range}
+
+\item{geoVCovOrigin}{geolocator location variance-covariance in origin range}
+
+\item{targetRaster}{raster data}
+
+\item{originRaster}{more raster data}
+
+\item{verbose}{0 1 or 2}
+
+\item{alpha}{not used yet}
+
+\item{resampleProjection}{man this thing has a lot of arguments}
+
+\item{nSim}{location resampling tuner}
+
+\item{maxTries}{when does it give up resampling locations?}
+
+\item{nBurnin}{not used yet}
+
+\item{nChains}{not used yet}
+
+\item{nThin}{not used yet}
+
+\item{dataOverlapSetting}{not used yet}
+
+\item{originRelAbund}{relative abundances}
+
+\item{targetRelAbund}{relative abundances}
+
+\item{algorithm}{"maxMC" or something that hasn't been set up yet}
+
+\item{method}{"bootstrap" or something that hasn't been set up yet}
+
+\item{originSites}{only if you don't want it to ID sites on the origin side}
+
+\item{targetSites}{only if you don't want it to ID sites on the target side}
+
+\item{originNames}{goes with originSites}
+
+\item{targetNames}{goes with targetSites}
+
+\item{returnAllInput}{what do you want to store?}
 }
 \value{
 list

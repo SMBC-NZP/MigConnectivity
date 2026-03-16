@@ -1641,7 +1641,9 @@ checkMovementData <- function(originSites = NULL,
                               geoBiasOrigin = geoBias,
                               geoVCovOrigin = geoVCov,
                               targetRaster = NULL,
-                              originRaster = NULL) {
+                              originRaster = NULL,
+                              banded = NULL, reencountered = NULL,
+                              dataOverlapSetting = "dummy") {
   # Input checking and assignment
   if (any(captured != "origin" & captured != "target" & captured != "neither")){
     stop("captured should be 'origin', 'target', 'neither', or a vector of those options")}
@@ -1778,16 +1780,29 @@ checkMovementData <- function(originSites = NULL,
               isProb = isProb, captured = captured,
               originRaster = originRaster,
               originRasterXYZ = originRasterXYZ,
+              originRasterXYZcrs = originRasterXYZcrs,
+              originPointsAssigned = originPointsAssigned,
               originSingleCell = originSingleCell,
               targetRaster = targetRaster,
               targetRasterXYZ = targetRasterXYZ,
+              targetRasterXYZcrs = targetRasterXYZcrs,
+              targetPointsAssigned = targetPointsAssigned,
               targetSingleCell = targetSingleCell,
               nAnimals = nAnimals, nAnimalsTotal = nAnimalsTotal))
 
 }
 
+setsUnion <- function(sets, geom) {
+  out <- data.frame()
+  for (i in unique(sets)) {
+    out <- rbind(out, sf::st_sf(geom = sf::st_union(geom[sets==i, ]), name = i))
+  }
+  return(out)
+}
+
 generateBlocks <- function(grid, points = NULL, raster = NULL, geoBias = NULL,
-                           isGL = FALSE, resampleProjection = 'ESRI:53027') {
+                           isGL = FALSE, isTelemetry = FALSE, isRaster = FALSE,
+                           resampleProjection = 'ESRI:53027') {
   if (any(isGL) && !is.null(geoBias)) {
     geoBias2 <- array(rep(geoBias, sum(isGL)), c(2, sum(isGL)))
     point.sample0 <- sf::st_coordinates(points)[isGL, , drop = FALSE] - geoBias2
@@ -1797,5 +1812,72 @@ generateBlocks <- function(grid, points = NULL, raster = NULL, geoBias = NULL,
                                   crs = resampleProjection)
     points[isGL, ] <- point.sample0
   }
+  if (!is.null(points)) {
+    closest <- sf::st_nearest_feature(grid, points[isGL | isTelemetry, ])
+    print(closest)
+    blocks <- setsUnion(closest, grid)
+    print(blocks)
+  }
+  else if (!is.null(raster)) {
+    blocks <- huhDunno
+  }
+  else {
+    stop("What are you thinking of making the blocks of? Nothing?")
+  }
+  return(list(blocks = blocks, closest = closest))
+}
 
+makeAssignment <- function(isGL = FALSE, isTelemetry = FALSE, isRaster = FALSE,
+                           capturedThisSide = TRUE, nAnimals = 1,
+                           points = NULL, sites = NULL,
+                           rasterXYZ = NULL, rasterXYZcrs = 'ESRI:53027') {
+  # if geolocator, telemetry, or captured this side then simply get the site
+  if (all(isGL | isTelemetry | capturedThisSide) && !is.null(points)){
+    assignment <- suppressMessages(unclass(sf::st_intersects(x = points,
+                                                             y = sites,
+                                                             sparse = TRUE)))
+  }
+  # if raster and not captured on this side then determine the site
+  else if (all(isRaster & !capturedThisSide)) {
+    xyRast <- apply(rasterXYZ[,3:ncol(rasterXYZ)],
+                    MARGIN = 2,
+                    FUN = function(x){
+                      #select the cell with the highest posterior probability #
+                      xy <- cbind(rasterXYZ[which.max(x)[1],1],
+                                  rasterXYZ[which.max(x)[1],2])
+                      return(xy)})
+    # returns a point estimate for each animal - turn it into a sf object
+    xyRast <- t(xyRast)
+    colnames(xyRast) <- c("x","y")
+    assignRast <- sf::st_as_sf(data.frame(xyRast), coords = c("x","y"),
+                               crs = rasterXYZcrs)
+    # transform to match sites
+    assignRast <- sf::st_transform(assignRast, sf::st_crs(sites))
+    assignment <- suppressMessages(unclass(sf::st_intersects(x = assignRast,
+                                                             y = sites,
+                                                             sparse = TRUE)))
+  }
+  else if (!is.null(points))
+    assignment <- suppressMessages(unclass(sf::st_intersects(x = points,
+                                                             y = sites,
+                                                             sparse = TRUE)))
+  else
+    assignment <- NULL
+  if (!is.null(assignment)) {
+    assignment[lengths(assignment)==0] <- NA
+    if (any(lengths(assignment)>1)){
+      warning("Overlapping sites may cause issues\n")
+      assignment <- lapply(assignment, function (x) x[1])
+    }
+    assignment <- array(unlist(assignment))
+    duds <- is.na(assignment) & capturedThisSide[1:nAnimals]
+    if (any(duds)){
+      if (verbose > 0)
+        cat("Not all capture locations are within sites. Assigning to closest site\n")
+      warning("Not all capture locations are within sites. Assigning to closest site.\n",
+              "Affects animals: ", paste(which(duds), collapse = ","))
+      assignment[duds] <- sf::st_nearest_feature(x = points[duds,], y = sites)
+    }
+  }
+  return(assignment)
 }
