@@ -723,6 +723,7 @@ optimSites <- function(originSamples, targetSamples, originBlocks, targetBlocks,
   if (algorithm == "maxMC" && is.null(originRelAbund))
     stop("To use algorithm 'maxMC' you need to provide originRelAbund")
   if (!originFixed) {
+    originNeighbors <- sf::st_touches(originBlocks)
     originCombos <- partitions::setparts(nrow(originBlocks))[ , -1]
     # if (verbose>0)
     #   print(originCombos)
