@@ -1,8 +1,8 @@
 Type: Package
 Package: MigConnectivity
 Title: Estimate Migratory Connectivity for Migratory Animals
-Version: 0.5.0
-Date: 2025-08-01
+Version: 0.5.0.9005
+Date: 2026-10-26
 Authors@R: c(
     person("Jeffrey A.", "Hostetler", , "jhostetler@usgs.gov", role = c("cre", "aut")),
     person("Michael T.", "Hallworth", role = "aut"),
@@ -56,5 +56,5 @@ VignetteBuilder:
 Encoding: UTF-8
 LazyData: true
 LazyDataCompression: xz
-RoxygenNote: 7.3.2
 SystemRequirements: JAGS (https://mcmc-jags.sourceforge.net)
+Config/roxygen2/version: 8.1.1

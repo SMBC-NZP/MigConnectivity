@@ -3797,6 +3797,189 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
                    class = c('diffMantel', 'diffMigConnectivity')))
 }
 
+#' Pairwise differences between two or more independent psi estimates
+#'
+#' Estimates mean (and median) differences in transition probabilities (psi),
+#' and includes measures of uncertainty (SE and CI).  For those measures of
+#' uncertainty to be accurate, only apply this function to psi estimates where
+#' all data sources are independent (e.g., different species).
+#'
+#' @param estimates List of at least two psi estimates, provided by the
+#'    \code{estTransition} function. If this is a named list (recommended), the
+#'    function will use these names in labeling the differences.
+#' @param nSamples A positive integer, number of samples (with replacement)
+#'    to draw from each pair of psi estimates (default 100000).  If set to NULL,
+#'    compares all psi samples from each pair (could be very slow).
+#' @param alpha Level for confidence/credible intervals provided.
+#' @param returnSamples Should the function return all the sampled differences?
+#'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
+#'    compute your own summary statistics.
+#'
+#' @return  \code{diffTransition} returns a list with elements:
+#' \describe{
+#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
+#'      differences for each pairwise comparison. Estimates of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+#'      pairwise comparison, estimated from SD of sampled differences.}
+#'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
+#'      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sampleMC}.}
+#'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
+#'      intervals for MC differences for each pairwise comparison. Preferable
+#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+#'      difference. \code{simpleCI} is preferred when
+#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
+#   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+#      differences for each pairwise comparison, etimated using the highest
+#      posterior density (HPD) method.}
+#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
+#'      List of sampled values for each pairwise MC difference.}
+#' }
+#' @export
+#'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658 - 669.
+#' \doi{10.1111/ecog.03974}
+#'
+#' @examples
+#' \donttest{
+#' data('OVENdata')
+#' ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
+#'                  isTelemetry = !OVENdata$isGL,
+#'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
+#'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+#'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
+#'                  originSites = OVENdata$originSites, # Breeding origin sites
+#'                  originPoints = OVENdata$originPoints, # Capture Locations
+#'                  targetPoints = OVENdata$targetPoints, # Device target locations
+#'                  verbose = 0,   # output options
+#'                  nSamples = 100, # This is set low for example
+#'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
+#' ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
+#'                  originDist = OVENdata$originDist, # originSites distance matrix
+#'                  originRelAbund = OVENdata$originRelAbund,#Origin relative abund
+#'                  psi = ovenPsi,
+#'                  verbose = 1,   # output options
+#'                  nSamples = 1000)
+#' fm <- getCMRexample()
+#' originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
+#'                         rep(seq(49, 31, -2), 10)), 100, 2)
+#' targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
+#'                         rep(seq(9, -9, -2), 10)), 100, 2)
+#' originPosCMR <- rowsum(originPos13, c(rep(1:2, 5, each = 5),
+#'                                       rep(3:4, 5, each = 5))) / 25
+#' targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
+#'                                       rep(3:4, 5, each = 5))) / 25
+#' originDist <- distFromPos(originPosCMR, 'ellipsoid')
+#' targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
+#' originRelAbundTrue <- rep(0.25, 4)
+
+#' theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
+#'                   originDist = originDist, targetDist = targetDist,
+#'                   originSites = 5:8, targetSites = c(3,2,1,4),
+#'                   nSamples = 1000, verbose = 0,
+#'                   sampleSize = length(grep("[2-5]", fm$data$data$ch)))
+#' ovenEst
+#' theorEst
+#' diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
+#'                 nSamples = 10000, returnSamples = TRUE)
+#'
+#' }
+diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
+                   returnSamples = FALSE) {
+  nEst <- length(estimates)
+  nComparisons <- choose(nEst, 2)
+  for (i in 1:nEst)
+    if (!is.array(estimates[[i]]))
+      estimates[[i]] <- estimates[[i]]$psi$sample
+  nSamplesEst <- sapply(estimates, function(x) dim(x)[[1]])
+  nOriginSites <- sapply(estimates, function(x) dim(x)[[2]])
+  nTargetSites <- sapply(estimates, function(x) dim(x)[[3]])
+  if (any(nOriginSites != nOriginSites[1])) {
+    warning("Number of origin sites not consistent between estimates. ",
+            "Trying to match by name.")
+    smallest <- which.min(nOriginSites)
+    allName <- lapply(estimates, function(x) dimnames(x)[[2]])
+    smallNames <- Reduce(intersect, allName)
+    if (length(smallNames)==0) {
+      stop("Origin names not provided or not consistent.")
+    }
+    estimates <- lapply(estimates, function(x) x[ , smallNames, ])
+  }
+  nOriginSites <- dim(estimates[[1]])[[2]]
+  originNames <- dimnames(estimates[[1]])[[2]]
+  if (any(nTargetSites != nTargetSites[1])) {
+    warning("Number of target sites not consistent between estimates. ",
+            "Trying to match by name.")
+    largest <- which.max(nTargetSites)
+    largeNames <- dimnames(estimates[[largest]])[[3]]
+    if (is.null(largeNames) ||
+        any(is.na(sapply(estimates,
+                         function(x) match(dimnames(x)[[3]], largeNames))))) {
+      stop("Target names not provided or not consistent.")
+    }
+    for (i in 1:nEst) {
+      if (nTargetSites[i]==max(nTargetSites))
+        next
+      theseNames <- dimnames(estimates[[i]])[[3]]
+      newArray <- array(0,
+                        c(nSamplesEst[i], nOriginSites, max(nTargetSites)),
+                        dimnames = list(NULL, dimnames(estimates[[i]])[[2]],
+                                        largeNames))
+      newArray[ , , theseNames] <- estimates[[i]]
+      estimates[[i]] <- newArray
+    }
+  }
+  nTargetSites <- max(nTargetSites)
+  targetNames <- dimnames(estimates[[1]])[[3]]
+  diffSamples <- vector('list', nComparisons)
+  if (is.null(names(estimates)))
+    names(estimates) <- 1:nEst
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
+  for (i in 1:nComparisons) {
+    nSamples1 <- ifelse(is.null(nSamples),
+                        nSamplesEst[comparisons[i, 1]] *
+                          nSamplesEst[comparisons[i, 2]],
+                        nSamples)
+    if (is.null(nSamples)) {
+      nSamples1 <- nSamplesEst[comparisons[i, 1]] *
+        nSamplesEst[comparisons[i, 2]]
+      diffSamples[[i]] <- array(NA,
+                                c(nSamples1, nOriginSites, nTargetSites),
+                                list(NULL, originNames, targetNames))
+      for (s1 in 1:nSamplesEst[comparisons[i, 1]]) {
+        for (s2 in 1:nSamplesEst[comparisons[i, 2]])
+          diffSamples[[i]][s1 + nSamplesEst[comparisons[i, 1]] * (s2 - 1), , ] <-
+            estimates[[comparisons[i, 1]]][s1, , ] -
+            estimates[[comparisons[i, 2]]][s2, , ]
+      }
+    }
+    else
+      diffSamples[[i]] <-
+        estimates[[comparisons[i, 1]]][sample.int(nSamplesEst[comparisons[i, 1]],
+                                                  nSamples, replace = TRUE), , ] -
+        estimates[[comparisons[i, 2]]][sample.int(nSamplesEst[comparisons[i, 2]],
+                                                  nSamples, replace = TRUE), , ]
+  }
+  out <- lapply(diffSamples, summarize3D,
+                nSites1 = nOriginSites, nSites2 = nTargetSites,
+                names1 = originNames, names2 = targetNames, alpha = alpha,
+                returnSamples = returnSamples)
+  names(out) <- paste(names(estimates[comparisons[,1]]), '-',
+                      names(estimates[comparisons[,2]]))
+  out$input <- list(alpha = alpha)
+  return(structure(out, class = c('diffPsi', 'diffMigConnectivity')))
+}
+
 ###############################################################################
 #' Estimate NMC_XY, another type of migratory connectivity strength
 #'
@@ -4120,6 +4303,122 @@ estNMC <- function(psi, originRelAbund = NULL,
   return(nmc)
 }
 
+#' Trend in three or more independent (but sequential) MC estimates
+#'
+#' Estimates mean (and median) differences in MC, and includes measures of
+#' uncertainty (SE and CI).  For those measures of uncertainty to be accurate,
+#' only apply this function to MC estimates where all data sources are
+#' independent (e.g., different species).
+#'
+#' @param estimates List of at least two MC estimates, provided by the estMC
+#'    function. If this is a named list (recommended), the function will use
+#'    these names in labeling the differences.
+#' @param nSamples A positive integer, number of samples (with replacement)
+#'    to draw from each pair of MC estimates (default 100000).  If set to NULL,
+#'    compares all MC samples from each pair.
+#' @param alpha Level for confidence/credible intervals provided.
+#' @param returnSamples Should the function return all the sampled differences?
+#'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
+#'    compute your own summary statistics.
+#'
+#' @return  \code{diffMC} returns a list with elements:
+#' \describe{
+#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
+#'      differences for each pairwise comparison. Estimates of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+#'      pairwise comparison, estimated from SD of sampled differences.}
+#'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
+#'      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sampleMC}.}
+#'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
+#'      intervals for MC differences for each pairwise comparison. Preferable
+#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+#'      difference. \code{simpleCI} is preferred when
+#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      these should be identical.  Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
+#   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+#      differences for each pairwise comparison, etimated using the highest
+#      posterior density (HPD) method.}
+#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
+#'      List of sampled values for each pairwise MC difference.}
+#' }
+#' @export
+#'
+#' @references
+#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
+#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
+#' migratory connectivity for birds en route to breeding through the Gulf of
+#' Mexico. Ecography 42: 658 - 669.
+#' \doi{10.1111/ecog.03974}
+#'
+#' @examples
+#' \donttest{
+#' data('OVENdata')
+#' ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
+#'                  isTelemetry = !OVENdata$isGL,
+#'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
+#'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
+#'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
+#'                  originSites = OVENdata$originSites, # Breeding origin sites
+#'                  originPoints = OVENdata$originPoints, # Capture Locations
+#'                  targetPoints = OVENdata$targetPoints, # Device target locations
+#'                  verbose = 0,   # output options
+#'                  nSamples = 100, # This is set low for example
+#'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
+#' ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
+#'                  originDist = OVENdata$originDist, # originSites distance matrix
+#'                  originRelAbund = OVENdata$originRelAbund,#Origin relative abund
+#'                  psi = ovenPsi,
+#'                  verbose = 1,   # output options
+#'                  nSamples = 1000)
+#' fm <- getCMRexample()
+#' originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
+#'                         rep(seq(49, 31, -2), 10)), 100, 2)
+#' targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
+#'                         rep(seq(9, -9, -2), 10)), 100, 2)
+#' originPosCMR <- rowsum(originPos13, c(rep(1:2, 5, each = 5),
+#'                                       rep(3:4, 5, each = 5))) / 25
+#' targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
+#'                                       rep(3:4, 5, each = 5))) / 25
+#' originDist <- distFromPos(originPosCMR, 'ellipsoid')
+#' targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
+#' originRelAbundTrue <- rep(0.25, 4)
+
+#' theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
+#'                   originDist = originDist, targetDist = targetDist,
+#'                   originSites = 5:8, targetSites = c(3,2,1,4),
+#'                   nSamples = 1000, verbose = 0,
+#'                   sampleSize = length(grep("[2-5]", fm$data$data$ch)))
+#' ovenEst
+#' theorEst
+#' diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
+#'                 nSamples = 10000, returnSamples = TRUE)
+#'
+#' }
+trendMC <- function(estimates, nSamples = 100000, alpha = 0.05,
+                    returnSamples = FALSE) {
+  nEst <- length(estimates)
+  nSamplesEst <- sapply(estimates, function(x) length(x$MC$sample))
+  if (is.null(names(estimates)))
+    names(estimates) <- 1:nEst
+  if (is.null(nSamples)) {
+    nSamples <- max(nSamplesEst)
+  }
+  trendSamples <- array(NA, c(nSamples, nEst))
+  for (i in 1:nEst) {
+    trendSamples[ , i] <- sample(estimates[i]$MC$sample, nSamples,
+                                 replace = TRUE)
+  }
+
+  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
+                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
+                        sampleDiff = sampleDiff, alpha = alpha),
+                   class = c('diffMC', 'diffMigConnectivity')))
+}
 
 #' @rdname estTransition
 #' @export
@@ -4136,3 +4435,4 @@ diffStrength <- diffMC
 #' @rdname diffMantel
 #' @export
 diffCorr <- diffMantel
+

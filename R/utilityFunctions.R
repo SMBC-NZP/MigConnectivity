@@ -1206,8 +1206,8 @@ randomPoints <- function(sites, assignment, geomName = "geometry") {
 }
 
 # Summary functions
-summarize3D <- function(array3D, nSites1, nSites2, names1,
-                         names2, point = NULL, alpha = 0.05) {
+summarize3D <- function(array3D, nSites1, nSites2, names1, names2,
+                        point = NULL, alpha = 0.05, returnSamples = TRUE) {
   meanA <- apply(array3D, 2:3, mean)
   medianA <- apply(array3D, 2:3, median)
   seA <- apply(array3D, 2:3, sd)
@@ -1234,8 +1234,12 @@ summarize3D <- function(array3D, nSites1, nSites2, names1,
                                    na.rm=TRUE, names = FALSE)
     }
   }
-  return(list(sample = array3D, mean = meanA, se = seA,
-              simpleCI = simpleCIA, bcCI = bcCIA, hpdCI = hpdCI,
+  if (returnSamples)
+    samp <- array3D
+  else
+    samp <- NULL
+  return(list(sample = samp, mean = meanA,
+              se = seA, simpleCI = simpleCIA, bcCI = bcCIA, hpdCI = hpdCI,
               median = medianA, point = point))
 }
 
@@ -1615,4 +1619,48 @@ propSpatRaster <- function(assignments) {
   assign2prob <- assignments / test
   terra::crs(assign2prob) <- sf::st_crs(4326)$wkt
   return(assign2prob)
+}
+
+
+
+diffEsts <- function(estimates, nEst, nSamplesEst, nSamples, nOriginSites = 0,
+                     nTargetSites = 0, alpha = 0.05, returnSamples = FALSE) {
+  nComparisons <- choose(nEst, 2)
+  diffSamples <- vector('list', nComparisons)
+  if (is.null(names(estimates)))
+    names(estimates) <- 1:nEst
+  comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
+                        nComparisons, 2)
+  for (i in 1:nComparisons) {
+    if (is.null(nSamples))
+      diffSamples[[i]] <- rep(estimates[[comparisons[i, 1]]],
+                              times = nSamplesEst[comparisons[i, 2]]) -
+        rep(estimates[[comparisons[i, 2]]],
+            each = nSamplesEst[comparisons[i, 1]])
+    else
+      diffSamples[[i]] <- sample(estimates[[comparisons[i, 1]]],
+                                 nSamples, replace = TRUE) -
+        sample(estimates[[comparisons[i, 2]]], nSamples, replace = TRUE)
+  }
+  meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
+  medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
+  seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
+  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
+                     names = FALSE)
+  diff.z0 <- sapply(diffSamples,
+                    function(MC) qnorm(sum(MC<mean(MC, na.rm = TRUE),
+                                           na.rm = TRUE)/length(which(!is.na(MC)))))
+  bcCI <- mapply(function(MC, z0)
+    quantile(MC, pnorm(2*z0+ qnorm(c(alpha/2, 1-alpha/2))),
+             na.rm=TRUE, names = FALSE), diffSamples, diff.z0)
+  names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
+                                                 '-', names(estimates[comparisons[,2]]))
+  names(medianDiff) <- names(seDiff) <- names(diffSamples)
+  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples) #colnames(hpdCI) <-
+  sampleDiff <- ifelse(returnSamples, diffSamples, NA)
+  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
+                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
+                        sampleDiff = sampleDiff, alpha = alpha),
+                   class = c('diffMC', 'diffMigConnectivity')))
+
 }
