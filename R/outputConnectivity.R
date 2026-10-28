@@ -167,9 +167,9 @@ if(inherits(x,"isoAssign")){
 print.diffMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 3L), ...)
 {
   cat("Migratory Connectivity Estimate Differences\n")
-  if (inherits(x, "diffPsi")) {
-    for (i in 1:length(x)) {
-      cat("\nComparison:", names(x)[i], "\n")
+  for (i in 1:(length(x) - 1)) {
+    cat("\nComparison:", names(x)[i], "\n")
+    if (inherits(x, "diffPsi")) {
       cat("Transition probability (psi) differences (mean):\n")
       print(x[[i]]$mean, digits = digits)
       cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
@@ -180,68 +180,35 @@ print.diffMigConnectivity <- function(x, digits = max(3L, getOption("digits") - 
                   dimnames = dimnames(x[[i]]$simpleCI)[-1]),
             quote = FALSE)
     }
-  }
-  if (inherits(x, "diffMC")) {
-    cat("\nMC estimate (mean):", format(x$MC$mean, digits = digits), "+/- (SE)",
-        format(x$MC$se, digits = digits), '\n')
-    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence interval (simple quantile): ",
-        paste(format(x$MC$simpleCI, digits = digits, trim = TRUE),
-              collapse = ' - '), '\n', sep = "")
-  }
-  if (inherits(x, "diffMantel")) {
-    if (is.null(x$corr)) {
-      x$corr <- list(mean = x$meanCorr, se = x$seCorr,
-                     simpleCI = x$simpleCICorr)
-      x$input <- list(alpha = x$alpha)
-    }
-    cat("\nrM estimate (mean):", format(x$corr$mean, digits = digits), "+/- (SE)",
-        format(x$corr$se, digits = digits), '\n')
-    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence interval (simple quantile): ",
-        paste(format(x$corr$simpleCI, digits = digits, trim = TRUE),
-              collapse = ' - '), '\n', sep = "")
-    # cat("   ", ifelse(is.null(x$alpha), "", 100 * (1 - x$alpha)),
-    #     "% confidence interval (bias-corrected): ",
-    #     paste(format(x$bcCICorr, digits = digits, trim = TRUE), collapse = ' - '),
-    #     '\n', sep = "")
-    # cat("   median:", format(x$medianCorr, digits = digits), '\n')
-    # if (!is.na(x$pointCorr))
-    #   cat("   point calculation (not considering error):",
-    #       format(x$pointCorr, digits = digits), '\n')
-  }
-  if (inherits(x, "diffNMC")) {
-    cat("\nNetwork migratory connectivity strength (NMC_XY) estimate (mean):",
-        format(x$NMC$mean, digits = digits), "+/- (SE)",
-        format(x$NMC$se, digits = digits), '\n')
-    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence interval (simple quantile): ",
-        paste(format(x$NMC$simpleCI, digits = digits, trim = TRUE),
-              collapse = ' - '), '\n', sep = "")
-    cat("\nNode-specific NMC_XY estimates (mean):\n")
-    print(x$NMCpop$mean, digits = digits)
-    cat("+/- SE:\n")
-    print(x$NMCpop$se, digits = digits)
-    cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
-        "% confidence intervals (simple quantile):\n", sep = "")
-    print(array(paste(format(x$NMCpop$simpleCI[1,],digits = digits, trim = TRUE),
-                      format(x$NMCpop$simpleCI[2,],digits = digits, trim = TRUE),
-                      sep = ' - '), dim = list(ncol(x$NMCpop$simpleCI), 1),
-                dimnames = list(x$input$originNames, "")),
-          quote = FALSE)
-    if (!is.null(x$NMCa)) {
-      cat("\nAbundance-weighted NMC (NMCa_XY) estimate (mean):",
-          format(x$NMCa$mean, digits = digits), "+/- (SE)",
-          format(x$NMCa$se, digits = digits), '\n')
-      cat(ifelse(is.null(x$input$alpha), "", 100 * (1 - x$input$alpha)),
+    if (inherits(x, "diffMC")) {
+      cat("MC difference (mean):", format(x[[i]]$mean, digits = digits), "+/- (SE)",
+          format(x[[i]]$se, digits = digits), '\n')
+      cat(ifelse(is.null(x[[i]]$input$alpha), "", 100 * (1 - x[[i]]$input$alpha)),
           "% confidence interval (simple quantile): ",
-          paste(format(x$NMCa$simpleCI, digits = digits, trim = TRUE),
+          paste(format(x[[i]]$simpleCI, digits = digits, trim = TRUE),
+                collapse = ' - '), '\n', sep = "")
+    }
+    if (inherits(x, "diffMantel")) {
+      cat("rM difference (mean):", format(x[[i]]$mean, digits = digits), "+/- (SE)",
+          format(x[[i]]$se, digits = digits), '\n')
+      cat(ifelse(is.null(x[[i]]$input$alpha), "", 100 * (1 - x[[i]]$input$alpha)),
+          "% confidence interval (simple quantile): ",
+          paste(format(x[[i]]$simpleCI, digits = digits, trim = TRUE),
+                collapse = ' - '), '\n', sep = "")
+    }
+    if (inherits(x, "diffNMC")) {
+      cat("Network migratory connectivity strength (NMC_XY) difference (mean):",
+          format(x[[i]]$mean, digits = digits), "+/- (SE)",
+          format(x[[i]]$se, digits = digits), '\n')
+      cat(ifelse(is.null(x[[i]]$input$alpha), "", 100 * (1 - x[[i]]$input$alpha)),
+          "% confidence interval (simple quantile): ",
+          paste(format(x[[i]]$simpleCI, digits = digits, trim = TRUE),
                 collapse = ' - '), '\n', sep = "")
     }
   }
   cat("\nThis is a subset of what's available inside this diffMigConnectivity object.\n")
   if (inherits(x, "diffPsi"))
-    cat("For more info, try ?diffTransition or str(obj_name, max.level = 3).\n")
+    cat("For more info, try ?diffTransition or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "diffMC"))
     cat("For more info, try ?diffMC or str(obj_name, max.level = 2).\n")
   else if (inherits(x, "diffMantel"))

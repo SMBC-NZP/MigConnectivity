@@ -5,9 +5,23 @@
 \alias{diffStrength}
 \title{Pairwise differences between two or more independent MC estimates}
 \usage{
-diffMC(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
+diffMC(
+  estimates,
+  nSamples = 1e+05,
+  alpha = 0.05,
+  returnSamples = FALSE,
+  approxSigTest = FALSE,
+  sigConst = 0
+)
 
-diffStrength(estimates, nSamples = 1e+05, alpha = 0.05, returnSamples = FALSE)
+diffStrength(
+  estimates,
+  nSamples = 1e+05,
+  alpha = 0.05,
+  returnSamples = FALSE,
+  approxSigTest = FALSE,
+  sigConst = 0
+)
 }
 \arguments{
 \item{estimates}{List of at least two MC estimates, provided by the estMC
@@ -23,29 +37,59 @@ compares all MC samples from each pair.}
 \item{returnSamples}{Should the function return all the sampled differences?
 Defaults to FALSE to reduce storage requirements. Change to TRUE to
 compute your own summary statistics.}
+
+\item{approxSigTest}{Should function compute approximate one-sided
+significance tests (p-values) for differences from the resampling? Default
+is FALSE}
+
+\item{sigConst}{Value to compare MC to in significance test. Default is 0}
 }
 \value{
-\code{diffMC} returns a list with elements:
+\code{diffMC} returns a list with an element for each comparison.
+   Each of these contains the following:
 \describe{
-  \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
-     differences for each pairwise comparison. Estimates of difference
+  \item{\code{sample}}{Only provided if \code{returnSamples} is TRUE.
+     Vector of sampled values for pairwise difference.}
+  \item{\code{mean}}{Mean of sampled
+     differences for pairwise comparison. Estimate of difference
      between MC values incorporating parametric uncertainty.}
-  \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+  \item{\code{se}}{Vector with standard errors of MC differences for each
      pairwise comparison, estimated from SD of sampled differences.}
   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
      quantiles of \code{sampleMC}.}
   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
      intervals for MC differences for each pairwise comparison. Preferable
-     to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+     to \code{simpleCI} when \code{mean} is the best estimate of the MC
      difference. \code{simpleCI} is preferred when
-     \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+     \code{median} is a better estimator. When \code{mean==median},
      these should be identical.  Estimated as the
      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
-     differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
-  \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
-     List of sampled values for each pairwise MC difference.}
+     differences, where z0 is the proportion of \code{sample < mean}.}
+  \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+     differences for each pairwise comparison, estimated using the highest
+     posterior density (HPD) method.}
+  \item{\code{median}}{Median of sampled
+     differences for pairwise comparison. Alternate estimate of difference
+     between MC values incorporating parametric uncertainty.}
+  \item{\code{point}}{Simple difference of the provided point estimates.
+     Alternate estimate of difference
+     between MC values, not incorporating parametric uncertainty.}
+  \item{\code{simpleP}}{Approximate p-value for MC difference, estimated as
+     the proportion of bootstrap iterations where difference <
+     \code{sigConst} (or difference >
+     \code{sigConst} if \code{mean < sigConst}).  Note that if the
+     proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+     but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+     \code{approxSigTest==FALSE}.}
+  \item{\code{bcP}}{Approximate bias-corrected p-value for difference,
+     estimated as
+     \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+     \code{sample < mean}.  May be a better approximation of the p-value
+     than \code{simpleP}, but many of the same limitations apply.  NULL when
+     \code{approxSigTest==FALSE}.}
+
 }
 }
 \description{

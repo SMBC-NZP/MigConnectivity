@@ -124,13 +124,13 @@ function are included in the output.}
      values), not accounting for sampling error.
      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
-     \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+     \code{sigConst} if \code{point < sigConst}).  Note that if the
      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
      \code{approxSigTest==FALSE}.
-     \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
-     \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
-     \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+     \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated
+     as \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+     \code{sample < mean}.  May be a better approximation of the p-value
      than \code{simpleP}, but many of the same limitations apply.  NULL when
      \code{approxSigTest==FALSE}.
    }

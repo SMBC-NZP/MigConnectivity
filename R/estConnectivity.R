@@ -93,13 +93,13 @@
 #'      values), not accounting for sampling error.
 #'      \item{\code{simpleP}} Approximate p-value for MC, estimated as the
 #'      proportion of bootstrap iterations where MC < \code{sigConst} (or MC >
-#'      \code{sigConst} if \code{pointMC < sigConst}).  Note that if the
+#'      \code{sigConst} if \code{point < sigConst}).  Note that if the
 #'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
 #'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
 #'      \code{approxSigTest==FALSE}.
-#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated as
-#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
-#'      \code{sampleMC < meanMC}.  May be a better approximation of the p-value
+#'      \item{\code{bcP}} Approximate bias-corrected p-value for MC, estimated
+#'      as \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sample < mean}.  May be a better approximation of the p-value
 #'      than \code{simpleP}, but many of the same limitations apply.  NULL when
 #'      \code{approxSigTest==FALSE}.
 #'    }
@@ -3570,31 +3570,56 @@ getCMRexample <- function(number = 1) {
 #' @param returnSamples Should the function return all the sampled differences?
 #'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
 #'    compute your own summary statistics.
+#' @param approxSigTest Should function compute approximate one-sided
+#'    significance tests (p-values) for differences from the resampling? Default
+#'    is FALSE
+#' @param sigConst Value to compare MC to in significance test. Default is 0
 #'
-#' @return  \code{diffMC} returns a list with elements:
+#' @return \code{diffMC} returns a list with an element for each comparison.
+#'    Each of these contains the following:
 #' \describe{
-#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
-#'      differences for each pairwise comparison. Estimates of difference
+#'   \item{\code{sample}}{Only provided if \code{returnSamples} is TRUE.
+#'      Vector of sampled values for pairwise difference.}
+#'   \item{\code{mean}}{Mean of sampled
+#'      differences for pairwise comparison. Estimate of difference
 #'      between MC values incorporating parametric uncertainty.}
-#'   \item{\code{seDiff}}{Vector with standard errors of MC differences for each
+#'   \item{\code{se}}{Vector with standard errors of MC differences for each
 #'      pairwise comparison, estimated from SD of sampled differences.}
 #'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
 #'      MC differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
 #'      quantiles of \code{sampleMC}.}
 #'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
 #'      intervals for MC differences for each pairwise comparison. Preferable
-#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the MC
+#'      to \code{simpleCI} when \code{mean} is the best estimate of the MC
 #'      difference. \code{simpleCI} is preferred when
-#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      \code{median} is a better estimator. When \code{mean==median},
 #'      these should be identical.  Estimated as the
 #'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
 #'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
-#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
-#   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
-#      differences for each pairwise comparison, etimated using the highest
-#      posterior density (HPD) method.}
-#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
-#'      List of sampled values for each pairwise MC difference.}
+#'      differences, where z0 is the proportion of \code{sample < mean}.}
+#'   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for MC
+#'      differences for each pairwise comparison, estimated using the highest
+#'      posterior density (HPD) method.}
+#'   \item{\code{median}}{Median of sampled
+#'      differences for pairwise comparison. Alternate estimate of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{point}}{Simple difference of the provided point estimates.
+#'      Alternate estimate of difference
+#'      between MC values, not incorporating parametric uncertainty.}
+#'   \item{\code{simpleP}}{Approximate p-value for MC difference, estimated as
+#'      the proportion of bootstrap iterations where difference <
+#'      \code{sigConst} (or difference >
+#'      \code{sigConst} if \code{mean < sigConst}).  Note that if the
+#'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+#'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+#'      \code{approxSigTest==FALSE}.}
+#'   \item{\code{bcP}}{Approximate bias-corrected p-value for difference,
+#'      estimated as
+#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sample < mean}.  May be a better approximation of the p-value
+#'      than \code{simpleP}, but many of the same limitations apply.  NULL when
+#'      \code{approxSigTest==FALSE}.}
+#'
 #' }
 #' @export
 #'
@@ -3650,7 +3675,8 @@ getCMRexample <- function(number = 1) {
 #'
 #' }
 diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
-                   returnSamples = FALSE) {
+                   returnSamples = FALSE,
+                   approxSigTest = FALSE, sigConst = 0) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   for (i in 1:nEst)
@@ -3673,25 +3699,19 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
                                  nSamples, replace = TRUE) -
         sample(estimates[[comparisons[i, 2]]]$MC$sample, nSamples, replace = TRUE)
   }
-  meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
-  medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
-  seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
-  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                     names = FALSE)
-  diff.z0 <- sapply(diffSamples,
-                    function(MC) qnorm(sum(MC<mean(MC, na.rm = TRUE),
-                                           na.rm = TRUE)/length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0)
-    quantile(MC, pnorm(2*z0+ qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, names = FALSE), diffSamples, diff.z0)
-  names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
-                                                 '-', names(estimates[comparisons[,2]]))
-  names(medianDiff) <- names(seDiff) <- names(diffSamples)
-  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples) #colnames(hpdCI) <-
-  sampleDiff <- ifelse(returnSamples, diffSamples, NA)
-  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
-                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        sampleDiff = sampleDiff, alpha = alpha),
+  out <- lapply(diffSamples, summarizeVector,
+                alpha = alpha, returnSamples = returnSamples,
+                approxSigTest = approxSigTest, sigConst = sigConst)
+  if (all(!is.null(sapply(estimates, function(x) x$MC$point)))) {
+    for (i in 1:nComparisons) {
+      out[[i]]$point <- estimates[[comparisons[i, 1]]]$MC$point -
+        estimates[[comparisons[i, 2]]]$MC$point
+    }
+  }
+  names(out) <- paste(names(estimates[comparisons[,1]]), '-',
+                      names(estimates[comparisons[,2]]))
+  out$input <- list(alpha = alpha)
+  return(structure(out,
                    class = c('diffMC', 'diffMigConnectivity')))
 }
 
@@ -3714,31 +3734,56 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
 #' @param returnSamples Should the function return all the sampled differences?
 #'    Defaults to FALSE to reduce storage requirements. Change to TRUE to
 #'    compute your own summary statistics.
+#' @param approxSigTest Should function compute approximate one-sided
+#'    significance tests (p-values) for differences from the resampling? Default
+#'    is FALSE
+#' @param sigConst Value to compare differences to in significance test. Default
+#'    is 0
 #'
-#' @return  \code{diffMantel} returns a list with elements:
+#' @return \code{diffMantel} returns a list with an element for each comparison.
+#'    Each of these contains the following:
 #' \describe{
-#'   \item{\code{meanDiff, medianDiff}}{Vectors with mean and medians of sampled
-#'      differences for each pairwise comparison. Estimates of difference
-#'      between rM values incorporating parametric uncertainty.}
-#'   \item{\code{seDiff}}{Vector with standard errors of rM differences for each
+#'   \item{\code{sample}}{Only provided if \code{returnSamples} is TRUE.
+#'      Vector of sampled values for pairwise difference.}
+#'   \item{\code{mean}}{Mean of sampled
+#'      differences for pairwise comparison. Estimate of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{se}}{Vector with standard errors of differences for each
 #'      pairwise comparison, estimated from SD of sampled differences.}
 #'   \item{\code{simpleCI}}{Matrix of \code{1 - alpha} confidence intervals for
-#'      rM differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
-#'      quantiles of \code{sampleCorr}.}
+#'      Mantel differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sampleMC}.}
 #'   \item{\code{bcCI}}{Matrix of bias-corrected \code{1 - alpha} confidence
-#'      intervals for rM differences for each pairwise comparison. Preferable
-#'      to \code{simpleCI} when \code{meanDiff} is the best estimate of the rM
+#'      intervals for differences for each pairwise comparison. Preferable
+#'      to \code{simpleCI} when \code{mean} is the best estimate of the
 #'      difference. \code{simpleCI} is preferred when
-#'      \code{medianDiff} is a better estimator. When \code{meanDiff==medianDiff},
+#'      \code{median} is a better estimator. When \code{mean==median},
 #'      these should be identical.  Estimated as the
 #'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
 #'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
-#'      differences, where z0 is the proportion of \code{sampleDiff < meanDiff}.}
-#   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for rM
-#      differences for each pairwise comparison, etimated using the highest
-#      posterior density (HPD) method.}
-#'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
-#'      List of sampled values for each pairwise rM difference.}
+#'      differences, where z0 is the proportion of \code{sample < mean}.}
+#'   \item{\code{hpdCI}}{Matrix of \code{1 - alpha} credible intervals for
+#'      differences for each pairwise comparison, estimated using the highest
+#'      posterior density (HPD) method.}
+#'   \item{\code{median}}{Median of sampled
+#'      differences for pairwise comparison. Alternate estimate of difference
+#'      between MC values incorporating parametric uncertainty.}
+#'   \item{\code{point}}{Simple difference of the provided point estimates.
+#'      Alternate estimate of difference
+#'      between Mantel values, not incorporating parametric uncertainty.}
+#'   \item{\code{simpleP}}{Approximate p-value for difference, estimated as
+#'      the proportion of bootstrap iterations where difference <
+#'      \code{sigConst} (or difference >
+#'      \code{sigConst} if \code{mean < sigConst}).  Note that if the
+#'      proportion is 0, a default value of 0.5 / \code{nSamples} is provided,
+#'      but this is best interpreted as p < 1 / \code{nSamples}.  NULL when
+#'      \code{approxSigTest==FALSE}.}
+#'   \item{\code{bcP}}{Approximate bias-corrected p-value for difference,
+#'      estimated as
+#'      \code{pnorm(qnorm(simpleP) - 2 * z0)}, where z0 is the proportion of
+#'      \code{sample < mean}.  May be a better approximation of the p-value
+#'      than \code{simpleP}, but many of the same limitations apply.  NULL when
+#'      \code{approxSigTest==FALSE}.}
 #' }
 #' @export
 #'
@@ -3751,7 +3796,8 @@ diffMC <- function(estimates, nSamples = 100000, alpha = 0.05,
 #'
 # @examples
 diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
-                       returnSamples = FALSE) {
+                       returnSamples = FALSE,
+                       approxSigTest = FALSE, sigConst = 0) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   for (i in 1:nEst)
@@ -3775,25 +3821,19 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
         sample(estimates[[comparisons[i, 2]]]$corr$sample, nSamples,
                replace = TRUE)
   }
-  meanDiff <- sapply(diffSamples, mean, na.rm=TRUE)
-  medianDiff <- sapply(diffSamples, median, na.rm=TRUE)
-  seDiff <- sapply(diffSamples, sd, na.rm=TRUE)
-  simpleCI <- sapply(diffSamples, quantile, c(alpha/2, 1-alpha/2), na.rm=TRUE,
-                     names = FALSE)
-  diff.z0 <- sapply(diffSamples,
-                    function(MC) qnorm(sum(MC<mean(MC, na.rm = TRUE), na.rm = TRUE)/
-                                         length(which(!is.na(MC)))))
-  bcCI <- mapply(function(MC, z0) quantile(MC,
-                                           pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
-                       na.rm=TRUE, names = FALSE), diffSamples, diff.z0)
-  names(diffSamples) <- names(meanDiff) <- paste(names(estimates[comparisons[,1]]),
-                                                 '-', names(estimates[comparisons[,2]]))
-  names(medianDiff) <- names(seDiff) <- names(diffSamples)
-  colnames(simpleCI) <- colnames(bcCI) <- names(diffSamples)
-  sampleDiff <- ifelse(returnSamples, diffSamples, NA)
-  return(structure(list(meanDiff = meanDiff, medianDiff = medianDiff,
-                        seDiff = seDiff, simpleCI = simpleCI, bcCI = bcCI,
-                        sampleDiff = sampleDiff, alpha = alpha),
+  out <- lapply(diffSamples, summarizeVector,
+                alpha = alpha, returnSamples = returnSamples,
+                approxSigTest = approxSigTest, sigConst = sigConst)
+  names(out) <- paste(names(estimates[comparisons[,1]]), '-',
+                      names(estimates[comparisons[,2]]))
+  if (all(!is.null(sapply(estimates, function(x) x$corr$point)))) {
+    for (i in 1:nComparisons) {
+      out[[i]]$point <- estimates[[comparisons[i, 1]]]$corr$point -
+        estimates[[comparisons[i, 2]]]$corr$point
+    }
+  }
+  out$input <- list(alpha = alpha)
+  return(structure(out,
                    class = c('diffMantel', 'diffMigConnectivity')))
 }
 
@@ -3802,13 +3842,19 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #' Estimates mean (and median) differences in transition probabilities (psi),
 #' and includes measures of uncertainty (SE and CI).  For those measures of
 #' uncertainty to be accurate, only apply this function to psi estimates where
-#' all data sources are independent (e.g., different species).
+#' all data sources are independent (e.g., different species). For them to be
+#' meaningful (and not throw an error), at least some origin sites and target
+#' sites should be in common between all species. Origin sites not found in all
+#' species will be left out of comparison; target sites not found in all species
+#' will be assumed to be 0 for all transitions where they are missing. Be
+#' careful: if all species have the same number of origin sites (or the same
+#' number of target sites), the function assumes these are the same sites.
 #'
 #' @param estimates List of at least two psi estimates, provided by the
 #'    \code{estTransition} function. If this is a named list (recommended), the
 #'    function will use these names in labeling the differences.
 #' @param nSamples A positive integer, number of samples (with replacement)
-#'    to draw from each pair of psi estimates (default 100000).  If set to NULL,
+#'    to draw from each pair of psi estimates (default 10000).  If set to NULL,
 #'    compares all psi samples from each pair (could be very slow).
 #' @param alpha Level for confidence/credible intervals provided.
 #' @param returnSamples Should the function return all the sampled differences?
@@ -3840,63 +3886,46 @@ diffMantel <- function(estimates, nSamples = 100000, alpha = 0.05,
 #'   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
 #'      List of sampled values for each pairwise MC difference.}
 #' }
+#' @return \code{diffTransition} returns a list with an element for each
+#'    comparison. Each of these contains the following:
+#' \describe{
+#'   \item{\code{sample}}{Only provided if \code{returnSamples} is TRUE.
+#'      Array of sampled values for pairwise difference.}
+#'   \item{\code{mean}}{Matrix of mean of sampled
+#'      differences for pairwise comparison. Estimate of difference
+#'      between transition probability values incorporating parametric
+#'      uncertainty.}
+#'   \item{\code{se}}{Matrix with standard errors of differences, estimated from
+#'      SD of sampled differences.}
+#'   \item{\code{simpleCI}}{Array of \code{1 - alpha} confidence intervals for
+#'      differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+#'      quantiles of \code{sample}.}
+#'   \item{\code{bcCI}}{Array of bias-corrected \code{1 - alpha} confidence
+#'      intervals for differences. Estimated as the
+#'      \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+#'      \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+#'      differences, where z0 is the proportion of \code{sample < mean}.}
+#'   \item{\code{hpdCI}}{Array of \code{1 - alpha} credible intervals for
+#'      differences for each pairwise comparison, estimated using the highest
+#'      posterior density (HPD) method.}
+#'   \item{\code{median}}{Matrix of median of sampled
+#'      differences for pairwise comparison. Alternate estimate of difference
+#'      between psi values incorporating parametric uncertainty.}
+#'   \item{\code{point}}{Simple difference of the provided point estimates.
+#'      Alternate estimate of difference
+#'      between psi values, not incorporating parametric uncertainty.}
+#' }
 #' @export
 #'
-#' @references
-#' Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-#' M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
-#' migratory connectivity for birds en route to breeding through the Gulf of
-#' Mexico. Ecography 42: 658 - 669.
-#' \doi{10.1111/ecog.03974}
-#'
-#' @examples
-#' \donttest{
-#' data('OVENdata')
-#' ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
-#'                  isTelemetry = !OVENdata$isGL,
-#'                  geoBias = OVENdata$geo.bias, # Light-level GL location bias
-#'                  geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-#'                  targetSites = OVENdata$targetSites, # Non-breeding target sites
-#'                  originSites = OVENdata$originSites, # Breeding origin sites
-#'                  originPoints = OVENdata$originPoints, # Capture Locations
-#'                  targetPoints = OVENdata$targetPoints, # Device target locations
-#'                  verbose = 0,   # output options
-#'                  nSamples = 100, # This is set low for example
-#'                  resampleProjection = sf::st_crs(OVENdata$targetSites))
-#' ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
-#'                  originDist = OVENdata$originDist, # originSites distance matrix
-#'                  originRelAbund = OVENdata$originRelAbund,#Origin relative abund
-#'                  psi = ovenPsi,
-#'                  verbose = 1,   # output options
-#'                  nSamples = 1000)
-#' fm <- getCMRexample()
-#' originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
-#'                         rep(seq(49, 31, -2), 10)), 100, 2)
-#' targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
-#'                         rep(seq(9, -9, -2), 10)), 100, 2)
-#' originPosCMR <- rowsum(originPos13, c(rep(1:2, 5, each = 5),
-#'                                       rep(3:4, 5, each = 5))) / 25
-#' targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
-#'                                       rep(3:4, 5, each = 5))) / 25
-#' originDist <- distFromPos(originPosCMR, 'ellipsoid')
-#' targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
-#' originRelAbundTrue <- rep(0.25, 4)
-
-#' theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
-#'                   originDist = originDist, targetDist = targetDist,
-#'                   originSites = 5:8, targetSites = c(3,2,1,4),
-#'                   nSamples = 1000, verbose = 0,
-#'                   sampleSize = length(grep("[2-5]", fm$data$data$ch)))
-#' ovenEst
-#' theorEst
-#' diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
-#'                 nSamples = 10000, returnSamples = TRUE)
-#'
-#' }
 diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
                    returnSamples = FALSE) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
+  pointEst <- rep(NA, nEst)
+  for (i in 1:nEst) {
+    if (!is.null(estimates$psi))
+      pointEst[i] <- estimates[[i]]$psi$point
+  }
   for (i in 1:nEst)
     if (!is.array(estimates[[i]]))
       estimates[[i]] <- estimates[[i]]$psi$sample
@@ -3905,7 +3934,8 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
   nTargetSites <- sapply(estimates, function(x) dim(x)[[3]])
   if (any(nOriginSites != nOriginSites[1])) {
     warning("Number of origin sites not consistent between estimates. ",
-            "Trying to match by name.")
+            "Trying to match by name. If there's no error, apparently with ",
+            "success.")
     smallest <- which.min(nOriginSites)
     allName <- lapply(estimates, function(x) dimnames(x)[[2]])
     smallNames <- Reduce(intersect, allName)
@@ -3919,32 +3949,35 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
   if (any(nTargetSites != nTargetSites[1])) {
     warning("Number of target sites not consistent between estimates. ",
             "Trying to match by name.")
-    largest <- which.max(nTargetSites)
-    largeNames <- dimnames(estimates[[largest]])[[3]]
+    # largest <- which.max(nTargetSites)
+    # largeNames <- dimnames(estimates[[largest]])[[3]]
+    allName <- lapply(estimates, function(x) dimnames(x)[[3]])
+    largeNames <- Reduce(union, allName)
     if (is.null(largeNames) ||
         any(is.na(sapply(estimates,
                          function(x) match(dimnames(x)[[3]], largeNames))))) {
       stop("Target names not provided or not consistent.")
     }
     for (i in 1:nEst) {
-      if (nTargetSites[i]==max(nTargetSites))
+      if (nTargetSites[i]==length(largeNames))
         next
       theseNames <- dimnames(estimates[[i]])[[3]]
       newArray <- array(0,
-                        c(nSamplesEst[i], nOriginSites, max(nTargetSites)),
+                        c(nSamplesEst[i], nOriginSites, length(largeNames)),
                         dimnames = list(NULL, dimnames(estimates[[i]])[[2]],
                                         largeNames))
       newArray[ , , theseNames] <- estimates[[i]]
       estimates[[i]] <- newArray
     }
   }
-  nTargetSites <- max(nTargetSites)
+  nTargetSites <- dim(estimates[[1]])[[3]]
   targetNames <- dimnames(estimates[[1]])[[3]]
   diffSamples <- vector('list', nComparisons)
   if (is.null(names(estimates)))
     names(estimates) <- 1:nEst
   comparisons <- matrix(c(sequence(1:(nEst - 1)), rep(2:nEst, 1:(nEst - 1))),
                         nComparisons, 2)
+  # print(sapply(estimates, dim))
   for (i in 1:nComparisons) {
     nSamples1 <- ifelse(is.null(nSamples),
                         nSamplesEst[comparisons[i, 1]] *
@@ -3976,6 +4009,12 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
                 returnSamples = returnSamples)
   names(out) <- paste(names(estimates[comparisons[,1]]), '-',
                       names(estimates[comparisons[,2]]))
+  if (all(!is.null(pointEst)) && all(!is.na(pointEst))) {
+    for (i in 1:nComparisons) {
+      out[[i]]$point <- pointEst[comparisons[i, 1]] -
+        pointEst[comparisons[i, 2]]
+    }
+  }
   out$input <- list(alpha = alpha)
   return(structure(out, class = c('diffPsi', 'diffMigConnectivity')))
 }
@@ -4435,4 +4474,8 @@ diffStrength <- diffMC
 #' @rdname diffMantel
 #' @export
 diffCorr <- diffMantel
+
+#' @rdname diffTransition
+#' @export
+diffPsi <- diffTransition
 

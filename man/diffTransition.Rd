@@ -2,6 +2,7 @@
 % Please edit documentation in R/estConnectivity.R
 \name{diffTransition}
 \alias{diffTransition}
+\alias{diffPsi}
 \title{Pairwise differences between two or more independent psi estimates}
 \usage{
 diffTransition(
@@ -10,6 +11,8 @@ diffTransition(
   alpha = 0.05,
   returnSamples = FALSE
 )
+
+diffPsi(estimates, nSamples = 10000, alpha = 0.05, returnSamples = FALSE)
 }
 \arguments{
 \item{estimates}{List of at least two psi estimates, provided by the
@@ -17,7 +20,7 @@ diffTransition(
 function will use these names in labeling the differences.}
 
 \item{nSamples}{A positive integer, number of samples (with replacement)
-to draw from each pair of psi estimates (default 100000).  If set to NULL,
+to draw from each pair of psi estimates (default 10000).  If set to NULL,
 compares all psi samples from each pair (could be very slow).}
 
 \item{alpha}{Level for confidence/credible intervals provided.}
@@ -49,61 +52,46 @@ compute your own summary statistics.}
   \item{\code{sampleDiff}}{Only provided if \code{returnSamples} is TRUE.
      List of sampled values for each pairwise MC difference.}
 }
+
+\code{diffTransition} returns a list with an element for each
+   comparison. Each of these contains the following:
+\describe{
+  \item{\code{sample}}{Only provided if \code{returnSamples} is TRUE.
+     Array of sampled values for pairwise difference.}
+  \item{\code{mean}}{Matrix of mean of sampled
+     differences for pairwise comparison. Estimate of difference
+     between transition probability values incorporating parametric
+     uncertainty.}
+  \item{\code{se}}{Matrix with standard errors of differences, estimated from
+     SD of sampled differences.}
+  \item{\code{simpleCI}}{Array of \code{1 - alpha} confidence intervals for
+     differences, estimated as \code{alpha/2} and \code{1 - alpha/2}
+     quantiles of \code{sample}.}
+  \item{\code{bcCI}}{Array of bias-corrected \code{1 - alpha} confidence
+     intervals for differences. Estimated as the
+     \code{pnorm(2 * z0 + qnorm(alpha / 2))} and
+     \code{pnorm(2 * z0 + qnorm(1 - alpha / 2))} quantiles of sampled
+     differences, where z0 is the proportion of \code{sample < mean}.}
+  \item{\code{hpdCI}}{Array of \code{1 - alpha} credible intervals for
+     differences for each pairwise comparison, estimated using the highest
+     posterior density (HPD) method.}
+  \item{\code{median}}{Matrix of median of sampled
+     differences for pairwise comparison. Alternate estimate of difference
+     between psi values incorporating parametric uncertainty.}
+  \item{\code{point}}{Simple difference of the provided point estimates.
+     Alternate estimate of difference
+     between psi values, not incorporating parametric uncertainty.}
+}
 }
 \description{
 Estimates mean (and median) differences in transition probabilities (psi),
 and includes measures of uncertainty (SE and CI).  For those measures of
 uncertainty to be accurate, only apply this function to psi estimates where
-all data sources are independent (e.g., different species).
-}
-\examples{
-\donttest{
-data('OVENdata')
-ovenPsi <- estTransition(isGL = OVENdata$isGL, #Logical vector:light-level GL(T)
-                 isTelemetry = !OVENdata$isGL,
-                 geoBias = OVENdata$geo.bias, # Light-level GL location bias
-                 geoVCov = OVENdata$geo.vcov, # Location covariance matrix
-                 targetSites = OVENdata$targetSites, # Non-breeding target sites
-                 originSites = OVENdata$originSites, # Breeding origin sites
-                 originPoints = OVENdata$originPoints, # Capture Locations
-                 targetPoints = OVENdata$targetPoints, # Device target locations
-                 verbose = 0,   # output options
-                 nSamples = 100, # This is set low for example
-                 resampleProjection = sf::st_crs(OVENdata$targetSites))
-ovenEst <- estStrength(targetDist = OVENdata$targetDist, # targetSites distance matrix
-                 originDist = OVENdata$originDist, # originSites distance matrix
-                 originRelAbund = OVENdata$originRelAbund,#Origin relative abund
-                 psi = ovenPsi,
-                 verbose = 1,   # output options
-                 nSamples = 1000)
-fm <- getCMRexample()
-originPos13 <- matrix(c(rep(seq(-99, -81, 2), each = 10),
-                        rep(seq(49, 31, -2), 10)), 100, 2)
-targetPos13 <- matrix(c(rep(seq(-79, -61, 2), each = 10),
-                        rep(seq(9, -9, -2), 10)), 100, 2)
-originPosCMR <- rowsum(originPos13, c(rep(1:2, 5, each = 5),
-                                      rep(3:4, 5, each = 5))) / 25
-targetPosCMR <- rowsum(targetPos13, c(rep(1:2, 5, each = 5),
-                                      rep(3:4, 5, each = 5))) / 25
-originDist <- distFromPos(originPosCMR, 'ellipsoid')
-targetDist <- distFromPos(targetPosCMR, 'ellipsoid')
-originRelAbundTrue <- rep(0.25, 4)
-theorEst <- estStrength(originRelAbund = originRelAbundTrue, psi = fm,
-                  originDist = originDist, targetDist = targetDist,
-                  originSites = 5:8, targetSites = c(3,2,1,4),
-                  nSamples = 1000, verbose = 0,
-                  sampleSize = length(grep("[2-5]", fm$data$data$ch)))
-ovenEst
-theorEst
-diff1 <- diffMC(estimates = list(Ovenbird = ovenEst, Theorybird = theorEst),
-                nSamples = 10000, returnSamples = TRUE)
-
-}
-}
-\references{
-Cohen, E. B., C. S. Rushing, F. R. Moore, M. T. Hallworth, J. A. Hostetler,
-M. Gutierrez Ramirez, and P. P. Marra. 2019. The strength of
-migratory connectivity for birds en route to breeding through the Gulf of
-Mexico. Ecography 42: 658 - 669.
-\doi{10.1111/ecog.03974}
+all data sources are independent (e.g., different species). For them to be
+meaningful (and not throw an error), at least some origin sites and target
+sites should be in common between all species. Origin sites not found in all
+species will be left out of comparison; target sites not found in all species
+will be assumed to be 0 for all transitions where they are missing. Be
+careful: if all species have the same number of origin sites (or the same
+number of target sites), the function assumes these are the same sites.
 }

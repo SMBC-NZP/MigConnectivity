@@ -1267,6 +1267,43 @@ summarizeAbund <- function(abund, nSites1, names1, pointAbund = NULL,
               point = pointAbund))
 }
 
+summarizeVector <- function(samples, pointEst = NULL, alpha = 0.05,
+                            returnSamples = TRUE,
+                            approxSigTest = FALSE, sigConst = 0) {
+  nSamples <- length(samples)
+  meanA <- mean(samples, na.rm=TRUE)
+  medianA <- median(samples, na.rm=TRUE)
+  se <- sd(samples, na.rm=TRUE)
+  # Calculate confidence intervals using quantiles of sampled MC
+  simpleCI <- quantile(samples, probs = c(alpha/2, 1-alpha/2), na.rm=TRUE)
+  z0 <- qnorm(sum((samples)<meanA)/nSamples)
+  bcCI <- quantile(samples, pnorm(2*z0+qnorm(c(alpha/2, 1-alpha/2))),
+                   na.rm=TRUE)
+  mcmcA <- coda::as.mcmc(samples)
+  hpdCI <- as.vector(coda::HPDinterval(mcmcA, 1-alpha))
+  names(hpdCI) <- names(bcCI) <- names(simpleCI) <- c("lower", "upper")
+  if (returnSamples)
+    samp <- samples
+  else
+    samp <- NULL
+  if (!approxSigTest)
+    simpleP <- bcP <- NULL
+  else {
+    if (meanA > sigConst)
+      simpleP <- sum(samples < sigConst) / nSamples
+    else
+      simpleP <- sum(samples > sigConst) / nSamples
+    if (simpleP == 0)
+      simpleP <- 0.5 / nSamples
+    bcP <- pnorm(qnorm(simpleP) - 2 * z0)
+    if (meanA < sigConst)
+      bcP <- 1 - bcP
+  }
+  return(list(sample = samp, mean = meanA, se = se,
+              simpleCI = simpleCI, bcCI = bcCI, hpdCI = hpdCI, median = medianA,
+              point = pointEst, simpleP = simpleP, bcP = bcP))
+}
+
 # Currently called through reverseTransition (in calcConnectivity.R)
 reverseEstTransition <- function(psi, originRelAbund, pi = NULL,
                                   originSites=NULL, targetSites=NULL,
