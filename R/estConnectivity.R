@@ -3922,10 +3922,11 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
   pointEst <- rep(NA, nEst)
-  for (i in 1:nEst) {
-    if (!is.null(estimates$psi))
-      pointEst[i] <- estimates[[i]]$psi$point
-  }
+  if (is.list(estimates))
+    for (i in 1:nEst) {
+      if (!is.null(estimates$psi))
+        pointEst[i] <- estimates[[i]]$psi$point
+    }
   for (i in 1:nEst)
     if (!is.array(estimates[[i]]))
       estimates[[i]] <- estimates[[i]]$psi$sample
