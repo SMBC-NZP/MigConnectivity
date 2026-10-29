@@ -3921,12 +3921,12 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
                    returnSamples = FALSE) {
   nEst <- length(estimates)
   nComparisons <- choose(nEst, 2)
-  pointEst <- rep(NA, nEst)
-  if (is.list(estimates))
-    for (i in 1:nEst) {
-      if (!is.null(estimates$psi))
-        pointEst[i] <- estimates[[i]]$psi$point
-    }
+  pointEst <- vector("list", nEst)
+  for (i in 1:nEst) {
+    if (is.list(estimates[[i]]) && !is.null(estimates[[i]]$psi))
+      pointEst[[i]] <- estimates[[i]]$psi$point
+    #print(pointEst[[i]])
+  }
   for (i in 1:nEst)
     if (!is.array(estimates[[i]]))
       estimates[[i]] <- estimates[[i]]$psi$sample
@@ -4008,12 +4008,14 @@ diffTransition <- function(estimates, nSamples = 10000, alpha = 0.05,
                 nSites1 = nOriginSites, nSites2 = nTargetSites,
                 names1 = originNames, names2 = targetNames, alpha = alpha,
                 returnSamples = returnSamples)
-  names(out) <- paste(names(estimates[comparisons[,1]]), '-',
-                      names(estimates[comparisons[,2]]))
+  names(out) <- paste(names(estimates)[comparisons[,1]], '-',
+                      names(estimates)[comparisons[,2]])
   if (all(!is.null(pointEst)) && all(!is.na(pointEst))) {
     for (i in 1:nComparisons) {
-      out[[i]]$point <- pointEst[comparisons[i, 1]] -
-        pointEst[comparisons[i, 2]]
+      if (isTRUE(all.equal(dimnames(pointEst[[comparisons[i, 1]]]),
+                           dimnames(pointEst[[comparisons[i, 2]]]))))
+        out[[i]]$point <- pointEst[[comparisons[i, 1]]] -
+          pointEst[[comparisons[i, 2]]]
     }
   }
   out$input <- list(alpha = alpha)
