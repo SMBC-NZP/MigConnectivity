@@ -149,6 +149,8 @@ estStrength <- function(originDist, targetDist, originRelAbund, psi,
       stop('Number of origin sites must be constant between distance matrix and abundance')
     abundBase <- originRelAbund
   }
+  if (nOriginSites==1)
+    stop("MC can only be estimated with two or more origin sites")
   if (is.matrix(psi)) {
     psiFixed <- TRUE
     psiVCV <- NULL
